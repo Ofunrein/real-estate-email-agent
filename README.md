@@ -6,6 +6,22 @@ Built for solo agents and small teams (1-20 agents). Each client gets their own 
 
 ---
 
+## Screenshots
+
+**Live Zillow search results** — "show me 3-bed homes under $500k in Round Rock":
+
+![Search results with Zillow photos](docs/screenshot-search-results.png)
+
+**Property detail reply** — photo, price, beds/baths/sqft, mortgage rates, Calendly button:
+
+![Property detail reply](docs/screenshot-property-detail.png)
+
+**Seller lead qualification** — asks one question + free home valuation CTA:
+
+![Seller lead reply](docs/screenshot-seller-lead.png)
+
+---
+
 ## What it does
 
 | Email type | What happens |
