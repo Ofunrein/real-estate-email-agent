@@ -1,0 +1,20 @@
+# Secrets — never commit these
+.env
+credentials.json
+token.json
+
+# Runtime state
+state.json
+agent.log
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
