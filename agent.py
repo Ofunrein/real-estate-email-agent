@@ -471,8 +471,8 @@ def apify_zillow_search(area: str, max_price: int = None, min_beds: int = None, 
             "zip": item.get("zip_code", ""),
             "price": str(price),
             "beds": str(beds),
-            "baths": str(item.get("baths_full", "")),
-            "sqft": str(item.get("sqft", "")),
+            "baths": str(item.get("baths_full") or ""),
+            "sqft": str(item.get("sqft") or ""),
             "status": "Active",
             "listing_url": item.get("property_url", ""),
             "photo_url": item.get("primary_photo", ""),
@@ -858,7 +858,9 @@ def apify_zillow_lookup(address: str) -> dict:
     real_photos = [p["url"] for p in photos if p.get("url") and "maps.googleapis" not in p["url"]]
     sv_photos   = [p["url"] for p in photos if p.get("url") and "maps.googleapis" in p["url"]]
     # kawsar actor returns imgSrc as a flat string instead of responsivePhotos
-    fallback_img = item.get("imgSrc", "") or item.get("image", "") or item.get("photo", "")
+    fallback_img = (item.get("imgSrc") or item.get("hiResImageLink") or
+                    item.get("desktopWebHdpImageLink") or item.get("image") or
+                    item.get("photo") or item.get("primaryPhoto") or "")
     photo_url = real_photos[0] if real_photos else (sv_photos[0] if sv_photos else (fallback_img or ""))
 
     nb = item.get("nearbyNeighborhoods", [])
@@ -874,14 +876,14 @@ def apify_zillow_lookup(address: str) -> dict:
         "city": item.get("city", ""),
         "state": item.get("state", ""),
         "zip": item.get("zipcode", ""),
-        "price": str(item.get("price", "")),
-        "beds": str(item.get("bedrooms", "")),
-        "baths": str(item.get("bathrooms", "")),
+        "price": str(item.get("price") or ""),
+        "beds": str(item.get("bedrooms") or ""),
+        "baths": str(item.get("bathrooms") or ""),
         "sqft": str(item.get("livingArea") or item.get("livingAreaValue") or ""),
-        "year_built": str(item.get("yearBuilt", "")),
+        "year_built": str(item.get("yearBuilt") or ""),
         "neighborhood": neighborhood,
         "property_type": prop_type,
-        "days_on_market": str(item.get("daysOnZillow", "")),
+        "days_on_market": str(item.get("daysOnZillow") or ""),
         "photo_url": photo_url,
         "description": item.get("description", ""),
         "status": item.get("homeStatus", "Active").replace("_", " ").title(),
@@ -1071,9 +1073,9 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str, comps: 
         price_fmt = f"${float(price_raw):,.0f}"
     except ValueError:
         price_fmt = listing.get("price", "")
-    beds = listing.get("beds", "")
-    baths = listing.get("baths", "")
-    sqft_raw = re.sub(r"[^\d]", "", listing.get("sqft", ""))
+    beds = listing.get("beds") or ""
+    baths = listing.get("baths") or ""
+    sqft_raw = re.sub(r"[^\d]", "", listing.get("sqft") or "")
     try:
         sqft_fmt = f"{int(sqft_raw):,}" if sqft_raw else ""
     except ValueError:
@@ -1177,9 +1179,9 @@ def generate_search_reply(listings: list[dict], calendly: str,
         city = l.get("city", "")
         state_val = l.get("state", "")
         full_addr = addr if addr else f"{city}, {state_val}".strip(", ")
-        beds_val = l.get("beds", "") or l.get("bedrooms", "")
-        baths_val = l.get("baths", "") or l.get("bathrooms", "")
-        sqft_raw = re.sub(r"[^\d]", "", l.get("sqft", ""))
+        beds_val = l.get("beds") or l.get("bedrooms") or ""
+        baths_val = l.get("baths") or l.get("bathrooms") or ""
+        sqft_raw = re.sub(r"[^\d]", "", l.get("sqft") or "")
         sqft_fmt = f"{int(sqft_raw):,}" if sqft_raw.isdigit() else ""
         listing_url = l.get("listing_url", "")
         desc = (l.get("description", "") or "")[:100]
@@ -1254,9 +1256,9 @@ def generate_multi_property_html(listings_data: list[dict], calendly: str) -> tu
         except ValueError:
             price_fmt = listing.get("price", "")
 
-        beds = listing.get("beds", "")
-        baths = listing.get("baths", "")
-        sqft_raw = re.sub(r"[^\d]", "", listing.get("sqft", ""))
+        beds = listing.get("beds") or ""
+        baths = listing.get("baths") or ""
+        sqft_raw = re.sub(r"[^\d]", "", listing.get("sqft") or "")
         sqft_fmt = f"{int(sqft_raw):,}" if sqft_raw.isdigit() else listing.get("sqft", "")
         status = listing.get("status", "")
         desc = listing.get("description", "")[:120] if listing.get("description") else ""
@@ -1413,10 +1415,10 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                             "city": rentcast_data.get("city", ""),
                             "state": rentcast_data.get("state", ""),
                             "zip": rentcast_data.get("zipCode", ""),
-                            "price": str(rentcast_data.get("price", "")),
-                            "beds": str(rentcast_data.get("bedrooms", "")),
-                            "baths": str(rentcast_data.get("bathrooms", "")),
-                            "sqft": str(rentcast_data.get("squareFootage", "")),
+                            "price": str(rentcast_data.get("price") or ""),
+                            "beds": str(rentcast_data.get("bedrooms") or ""),
+                            "baths": str(rentcast_data.get("bathrooms") or ""),
+                            "sqft": str(rentcast_data.get("squareFootage") or ""),
                             "status": "Active",
                             "listing_url": "",
                             "photo_url": rentcast_data.get("photoUrl", ""),
@@ -1480,7 +1482,7 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
             if price_str:
                 max_price = int(float(price_str) * multiplier)
         # Area: use classifier result, fallback to regex scan of email body
-        area_search = lead_fields.get("area", "").strip()
+        area_search = (lead_fields.get("area") or "").strip()
         if not area_search:
             body_lower = parsed["body"].lower() + " " + parsed["subject"].lower()
             for city in ["round rock", "cedar park", "pflugerville", "georgetown", "lakeway",
@@ -1528,7 +1530,6 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
         html_body, text_body = generate_showing_reply(CALENDLY_URL, address or "")
 
     elif intent in ("buyer_lead", "seller_lead", "renter_lead"):
-        labels.append("AUTO_REPLIED")
 
         existing = state["lead_state"].get(thread_id, {
             "intent": intent,
