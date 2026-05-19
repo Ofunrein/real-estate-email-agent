@@ -862,6 +862,8 @@ def apify_zillow_lookup(address: str) -> dict:
                     item.get("desktopWebHdpImageLink") or item.get("image") or
                     item.get("photo") or item.get("primaryPhoto") or "")
     photo_url = real_photos[0] if real_photos else (sv_photos[0] if sv_photos else (fallback_img or ""))
+    if photo_url and "maps.googleapis" in photo_url:
+        photo_url = photo_url.replace("size=400x300", "size=600x400")
 
     nb = item.get("nearbyNeighborhoods", [])
     neighborhood = nb[0]["name"] if nb else ""
@@ -967,6 +969,7 @@ Hard rules:
 - Keep it under 130 words total
 - If comps are provided, mention 1-2 naturally
 - If mortgage rates are provided, mention them once naturally
+- Do NOT include any URLs or links — buttons are added separately
 - Last sentence: offer to answer questions or set up a showing
 - Do NOT include any signature or sign-off — that is added automatically
 - Return raw HTML paragraphs only, nothing else""" + FAQ_CONTEXT
@@ -1059,9 +1062,6 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str, comps: 
     # Photo URL: sheet column "Photo URL" normalises to "photo_url"; also check Apify/RentCast variants
     photo_url = (listing.get("photo_url") or listing.get("photo url") or
                  rentcast.get("photoUrl") or rentcast.get("photo_url") or "")
-    # Skip Google Maps static/Street View images — they render as grey boxes in email
-    if photo_url and ("maps.googleapis" in photo_url or "streetviewpixels" in photo_url):
-        photo_url = ""
     listing_url = listing.get("listing_url", "")
     address = listing.get("address", "")
     city = listing.get("city", "")
@@ -1099,6 +1099,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str, comps: 
         property_summary += f"\n\nNeighborhood median income: {neighborhood['median_income']}"
 
     ai_body = _claude(CLAUDE_RESPOND, PROPERTY_REPLY_PROMPT, property_summary)
+    ai_body = re.sub(r'(?<!href=")(?<!src=")(https?://[^\s<>"]+)', r'<a href="\1">\1</a>', ai_body)
 
     hero_img = ""
     if photo_url:
@@ -1187,8 +1188,6 @@ def generate_search_reply(listings: list[dict], calendly: str,
         desc = (l.get("description", "") or "")[:100]
 
         photo = l.get("photo_url", "") or l.get("photo url", "")
-        if photo and "maps.googleapis" in photo:
-            photo = ""
 
         details = []
         if beds_val: details.append(f"{beds_val} bed")
@@ -1265,8 +1264,6 @@ def generate_multi_property_html(listings_data: list[dict], calendly: str) -> tu
         listing_url = listing.get("listing_url", "")
 
         photo_url = listing.get("photo_url") or listing.get("photo url") or ""
-        if photo_url and ("maps.googleapis" in photo_url or "streetviewpixels" in photo_url):
-            photo_url = ""
 
         details = []
         if beds: details.append(f"{beds} bed")
@@ -1434,7 +1431,7 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
             else:
                 rentcast_data = {}
                 photo = listing.get("photo_url") or listing.get("photo url") or ""
-                if not photo or "maps.googleapis" in photo:
+                if not photo:
                     apify_data = apify_zillow_lookup(addr)
                     if apify_data.get("photo_url"):
                         listing = dict(listing)
