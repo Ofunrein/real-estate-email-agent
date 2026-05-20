@@ -49,7 +49,7 @@ All replies include a consistent signature and are sent as threaded replies to t
 | Google Sheet | Your own active listings (primary cache) | Free |
 | Zillow via Apify | Live property details + photos for any address | ~$0.002/lookup |
 | Zillow search via Apify | Live inventory search by area/beds/price | ~$0.002/result |
-| Redfin via Apify | Recently sold comps | ~$0.002/result |
+| Zillow sold comps via Apify | Max 2 comps, only on explicit price/value questions | ~$0.006/trigger |
 | RentCast | Rental value estimates | Free (50 req/month) |
 | FRED API | Current 30yr/15yr mortgage rates | Free |
 | Census ACS | Neighborhood median income by ZIP | Free |
@@ -73,7 +73,7 @@ New properties fetched from Zillow/RentCast are automatically appended to your G
 Create a sheet with a tab named **`properties_update`**. Row 1 headers (exact order):
 
 ```
-Address | Price | Beds | Bath | City | State | Description | Neighborhood | Property Type | Features | Days on Market | Photo URL | Agent Name | Agent Email
+Address | Price | Beds | Bath | City | State | Description | Neighborhood | Property Type | Features | Days on Market | Photo URL | Sq Ft | Year Built | Agent Name | Agent Email
 ```
 
 Copy the Sheet ID from the URL: `https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
