@@ -1377,6 +1377,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
 
     ai_body = _claude(CLAUDE_RESPOND, PROPERTY_REPLY_PROMPT, property_summary)
     ai_body = re.sub(r'(?<!href=")(?<!src=")(https?://[^\s<>"]+)', r'<a href="\1">\1</a>', ai_body)
+    ai_body = re.sub(r"<p(?![^>]*style=)", '<p style="margin:0 0 14px;line-height:1.55"', ai_body)
 
     hero_img = ""
     if photo_url:
@@ -1397,17 +1398,17 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
     if status: details.append(f'<span style="color:#1a6b3c;font-weight:bold">{status}</span>')
     details_line = " &bull; ".join(details)
 
-    sig = '<p style="margin-top:20px;color:#555">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>'
+    sig = '<p style="margin:20px 0 0;color:#555;line-height:1.45">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>'
 
-    html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;color:#222">
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;color:#222;line-height:1.45">
 {hero_img}
-<h2 style="margin-top:0">{full_address}</h2>
-<p style="font-size:18px;font-weight:bold">{price_fmt}</p>
-{"<p>" + details_line + "</p>" if details_line else ""}
-<hr style="border:none;border-top:1px solid #eee;margin:16px 0" />
+<h2 style="margin:0 0 12px;line-height:1.25">{full_address}</h2>
+<p style="font-size:18px;font-weight:bold;margin:0 0 12px;line-height:1.35">{price_fmt}</p>
+{"<p style='margin:0 0 18px;line-height:1.45'>" + details_line + "</p>" if details_line else ""}
+<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
 {ai_body}
 {sig}
-<div style="margin-top:20px">
+<div style="margin-top:22px">
 {view_btn}{cal_btn}
 </div>
 </div>"""
