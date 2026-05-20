@@ -660,21 +660,21 @@ def get_new_messages(gmail, since_ts: str, my_email: str) -> list[dict]:
     return full
 
 
+def _payload_text_plain(payload: dict) -> str:
+    if payload.get("mimeType") == "text/plain":
+        data = payload.get("body", {}).get("data", "")
+        if data:
+            return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+    for part in payload.get("parts", []) or []:
+        text = _payload_text_plain(part)
+        if text:
+            return text
+    return ""
+
+
 def parse_message(msg: dict) -> dict:
     headers = {h["name"].lower(): h["value"] for h in msg["payload"]["headers"]}
-    body = ""
-    parts = msg["payload"].get("parts", [])
-    if parts:
-        for part in parts:
-            if part.get("mimeType") == "text/plain":
-                data = part.get("body", {}).get("data", "")
-                if data:
-                    body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
-                    break
-    else:
-        data = msg["payload"].get("body", {}).get("data", "")
-        if data:
-            body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+    body = _payload_text_plain(msg["payload"])
     return {
         "id": msg["id"],
         "thread_id": msg["threadId"],
@@ -684,6 +684,29 @@ def parse_message(msg: dict) -> dict:
         "references": headers.get("references", ""),
         "body": body.strip(),
     }
+
+
+def get_thread_context(gmail, thread_id: str, current_msg_id: str, limit: int = 4) -> str:
+    """Return recent prior thread text so short replies can keep context."""
+    if not thread_id:
+        return ""
+    try:
+        thread = _google_execute(
+            gmail.users().threads().get(userId="me", id=thread_id, format="full"),
+            f"Gmail thread get {thread_id}",
+        )
+        snippets = []
+        for msg in thread.get("messages", []):
+            if msg.get("id") == current_msg_id:
+                continue
+            parsed = parse_message(msg)
+            body = re.sub(r"\s+", " ", parsed.get("body", "")).strip()
+            if body:
+                snippets.append(f"From: {parsed.get('from', '')}\nSubject: {parsed.get('subject', '')}\nBody: {body[:700]}")
+        return "\n\n---\n\n".join(snippets[-limit:])
+    except Exception as exc:
+        log.warning("Thread context unavailable for %s: %s", thread_id, exc)
+        return ""
 
 
 def send_reply(gmail, parsed: dict, html_body: str, text_body: str):
@@ -856,6 +879,17 @@ def _addresses_match(left: str, right: str) -> bool:
     return left_key == right_key or left_key in right_key or right_key in left_key
 
 
+def _is_missing_value(value) -> bool:
+    if value is None:
+        return True
+    text = str(value).strip().lower()
+    return text in ("", "none", "null", "n/a", "na", "unknown", "-")
+
+
+def _clean_value(value) -> str:
+    return "" if _is_missing_value(value) else str(value).strip()
+
+
 def append_property_to_sheet(sheets, listing: dict):
     """Append a newly discovered property to properties_update tab."""
     if not SHEET_ID:
@@ -921,9 +955,15 @@ def notify_agent(gmail, agent_email: str, agent_name: str, lead_email: str,
 
 def search_listings_by_address(listings: list[dict], query: str) -> list[dict]:
     q = (query or "").lower()
-    return [l for l in listings
-            if _addresses_match(query, l.get("address", ""))
-            or (q and q in l.get("city", "").lower())]
+    matches = [l for l in listings
+               if _addresses_match(query, l.get("address", ""))
+               or (q and q in l.get("city", "").lower())]
+    return sorted(matches, key=_listing_quality_score, reverse=True)
+
+
+def _listing_quality_score(listing: dict) -> int:
+    fields = ("beds", "baths", "price", "sqft", "year_built", "photo_url", "listing_url")
+    return sum(1 for field in fields if not _is_missing_value(listing.get(field)))
 
 
 def search_listings_by_criteria(listings: list[dict], beds: int = None, max_price: int = None, status: str = None) -> list[dict]:
@@ -1244,12 +1284,18 @@ def _claude(model: str, system: str, user: str) -> str:
     return text.strip()
 
 
-def classify_email(parsed: dict) -> dict:
+def classify_email(parsed: dict, thread_context: str = "") -> dict:
     # Strip quoted reply lines (lines starting with >) to focus on the new message
     body_lines = parsed["body"].split("\n")
     new_lines = [l for l in body_lines if not l.strip().startswith(">") and not l.strip().startswith("On ")]
     clean_body = "\n".join(new_lines).strip() or parsed["body"]
-    content = f"Subject: {parsed['subject']}\n\n{clean_body}"
+    content = f"Current email subject: {parsed['subject']}\n\nCurrent email body:\n{clean_body}"
+    if thread_context:
+        content += (
+            "\n\nRecent prior thread context for resolving short follow-ups. "
+            "Use only if the current email depends on earlier messages:\n"
+            f"{thread_context}"
+        )
     raw = _claude(CLAUDE_CLASSIFY, CLASSIFY_PROMPT, content)
     try:
         return json.loads(raw)
@@ -1277,19 +1323,29 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
         price_fmt = f"${float(price_raw):,.0f}"
     except ValueError:
         price_fmt = listing.get("price", "")
-    beds = listing.get("beds") or ""
-    baths = listing.get("baths") or ""
+    beds = _clean_value(listing.get("beds"))
+    baths = _clean_value(listing.get("baths"))
     sqft_raw = re.sub(r"[^\d]", "", listing.get("sqft") or "")
     try:
         sqft_fmt = f"{int(sqft_raw):,}" if sqft_raw else ""
     except ValueError:
         sqft_fmt = listing.get("sqft", "")
-    status = listing.get("status", "")
+    status = _clean_value(listing.get("status"))
 
-    property_summary = (
-        f"Address: {full_address}\nPrice: {price_fmt}\nBeds: {beds} | Baths: {baths} | Sqft: {sqft_fmt}\n"
-        f"Status: {status}\nListing URL: {listing_url}"
-    )
+    property_summary = f"Address: {full_address}\nPrice: {price_fmt}\n"
+    facts = []
+    if beds:
+        facts.append(f"Beds: {beds}")
+    if baths:
+        facts.append(f"Baths: {baths}")
+    if sqft_fmt:
+        facts.append(f"Sqft: {sqft_fmt}")
+    if facts:
+        property_summary += " | ".join(facts) + "\n"
+    if status:
+        property_summary += f"Status: {status}\n"
+    if listing_url:
+        property_summary += f"Listing URL: {listing_url}"
     if rentcast:
         extras = {k: v for k, v in rentcast.items() if k not in ("photoUrl", "photo_url") and v}
         if extras:
@@ -1356,7 +1412,19 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
 </div>
 </div>"""
 
-    plain = f"{full_address}\n{price_fmt} | {beds}bd/{baths}ba | {sqft_fmt} sqft | {status}\n\n"
+    plain_detail = []
+    if beds:
+        plain_detail.append(f"{beds}bd")
+    if baths:
+        plain_detail.append(f"{baths}ba")
+    if sqft_fmt:
+        plain_detail.append(f"{sqft_fmt} sqft")
+    if status:
+        plain_detail.append(status)
+    plain = f"{full_address}\n{price_fmt}"
+    if plain_detail:
+        plain += " | " + " | ".join(plain_detail)
+    plain += "\n\n"
     if listing_url:
         plain += f"View listing: {listing_url}\n"
     if calendly:
@@ -1555,7 +1623,8 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
     log.info("--- Processing message id=%s from=%s subject='%s'", msg_id, parsed["from"], parsed["subject"])
 
-    classification = classify_email(parsed)
+    thread_context = get_thread_context(gmail, thread_id, msg_id)
+    classification = classify_email(parsed, thread_context)
     intent = classification.get("intent", "human_required")
     address = classification.get("address")
     addresses = classification.get("addresses", [])
