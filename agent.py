@@ -1324,7 +1324,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
 
     hero_img = ""
     if photo_url:
-        hero_img = f'<img src="{photo_url}" style="width:100%;max-width:600px;border-radius:8px;margin-bottom:16px;display:block" alt="Property photo" />'
+        hero_img = f'<img src="{photo_url}" style="width:100%;max-width:520px;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:14px;display:block" alt="Property photo" />'
 
     view_btn = ""
     if listing_url:
@@ -1343,7 +1343,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
 
     sig = '<p style="margin-top:20px;color:#555">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>'
 
-    html = f"""<div style="font-family:Arial,sans-serif;max-width:600px;color:#222">
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;color:#222">
 {hero_img}
 <h2 style="margin-top:0">{full_address}</h2>
 <p style="font-size:18px;font-weight:bold">{price_fmt}</p>
