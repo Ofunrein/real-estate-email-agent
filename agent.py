@@ -15,6 +15,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 import anthropic
 
 load_dotenv()
@@ -61,10 +62,12 @@ RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY", "")
 CALENDLY_URL = os.getenv("CALENDLY_URL", "")
 FILLOUT_VALUATION_URL = os.getenv("FILLOUT_VALUATION_URL", "")
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "apify_api_Qr4C2XqIE1J1qoFLieQ4AXfCrk0pRR2Fgap5")
+APIFY_SOLD_COMPS_ACTOR_ID = os.getenv("APIFY_SOLD_COMPS_ACTOR_ID", "")
+SOLD_COMPS_MAX_RESULTS = max(0, min(2, int(os.getenv("SOLD_COMPS_MAX_RESULTS", "2"))))
 TEAM_NAME = os.getenv("TEAM_NAME", "Austin Realty")
 TEAM_LEAD_EMAIL = os.getenv("TEAM_LEAD_EMAIL", "")
 PROPERTY_MANAGER_EMAIL = os.getenv("PROPERTY_MANAGER_EMAIL", "")
-HUBSPOT_API_KEY = os.getenv("HUBSPOT_API_KEY", "")
+HUBSPOT_API_KEY = os.getenv("HUBSPOT_ACCESS_TOKEN") or os.getenv("HUBSPOT_API_KEY", "")
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 CENSUS_API_KEY = os.getenv("CENSUS_API_KEY", "")
 TWILIO_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
@@ -73,6 +76,11 @@ TWILIO_FROM = os.getenv("TWILIO_FROM", "")
 AGENT_PHONE = os.getenv("AGENT_PHONE", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 STATE_FILE = "state.json"
+GOOGLE_RETRY_ATTEMPTS = int(os.getenv("GOOGLE_RETRY_ATTEMPTS", "4"))
+CLAUDE_RETRY_ATTEMPTS = int(os.getenv("CLAUDE_RETRY_ATTEMPTS", "5"))
+RETRY_BASE_SECONDS = float(os.getenv("RETRY_BASE_SECONDS", "2"))
+RETRY_MAX_SECONDS = float(os.getenv("RETRY_MAX_SECONDS", "60"))
+TRANSIENT_HTTP_STATUS = {408, 429, 500, 502, 503, 504, 529}
 
 FOLLOWUP_DAY3_HOURS = 72    # first follow-up
 FOLLOWUP_DAY7_HOURS = 168   # last-touch before cold
@@ -130,6 +138,53 @@ claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 _rentcast_cache: dict = {}
 _apify_cache:   dict = {}
 _rates_cache: dict = {}
+_hubspot_disabled = False
+
+
+class TransientServiceError(RuntimeError):
+    """External service failed in a way that should be retried on a later poll."""
+
+
+def _retry_delay(attempt: int) -> float:
+    return min(RETRY_MAX_SECONDS, RETRY_BASE_SECONDS * (2 ** (attempt - 1)))
+
+
+def _google_error_status(exc: Exception) -> int | None:
+    if isinstance(exc, HttpError) and getattr(exc, "resp", None):
+        return getattr(exc.resp, "status", None)
+    return None
+
+
+def _is_transient_google_error(exc: Exception) -> bool:
+    status = _google_error_status(exc)
+    if status in TRANSIENT_HTTP_STATUS:
+        return True
+    return isinstance(exc, (OSError, TimeoutError))
+
+
+def _google_execute(request, label: str):
+    for attempt in range(1, GOOGLE_RETRY_ATTEMPTS + 1):
+        try:
+            return request.execute()
+        except Exception as exc:
+            if not _is_transient_google_error(exc):
+                raise
+            if attempt == GOOGLE_RETRY_ATTEMPTS:
+                raise TransientServiceError(f"{label} failed after retries: {exc}") from exc
+            delay = _retry_delay(attempt)
+            status = _google_error_status(exc)
+            status_msg = f" status={status}" if status else ""
+            log.warning("%s transient Google error%s: %s; retry %d/%d in %.1fs",
+                        label, status_msg, exc, attempt + 1, GOOGLE_RETRY_ATTEMPTS, delay)
+            time.sleep(delay)
+
+
+def _is_transient_claude_error(exc: Exception) -> bool:
+    if isinstance(exc, (anthropic.APIConnectionError, anthropic.APITimeoutError, anthropic.RateLimitError)):
+        return True
+    if isinstance(exc, anthropic.APIStatusError):
+        return getattr(exc, "status_code", None) in TRANSIENT_HTTP_STATUS
+    return False
 
 def get_mortgage_rates() -> dict:
     """Fetch current 30yr and 15yr fixed mortgage rates from FRED. Cached 24hrs."""
@@ -170,15 +225,25 @@ def get_neighborhood_stats(zipcode: str) -> dict:
         if zipcode in _census_cache:
             log.info("Census ZIP %s — cache hit", zipcode)
         return _census_cache.get(zipcode, {})
+    if not CENSUS_API_KEY:
+        log.info("Census ZIP %s — skipped (no CENSUS_API_KEY)", zipcode)
+        _census_cache[zipcode] = {}
+        return {}
     try:
         params = {
             "get": "B19013_001E,B01003_001E",
             "for": f"zip code tabulation area:{zipcode}",
-            "key": CENSUS_API_KEY or ""
+            "key": CENSUS_API_KEY
         }
         r = _timed_request("GET", "https://api.census.gov/data/2022/acs/acs5",
                            f"Census/ZIP:{zipcode}", params=params, timeout=5)
         if r and r.status_code == 200:
+            content_type = r.headers.get("content-type", "")
+            if "json" not in content_type.lower():
+                log.warning("Census ZIP %s — non-JSON response; check CENSUS_API_KEY (%s)",
+                            zipcode, r.text[:80].strip().replace("\n", " "))
+                _census_cache[zipcode] = {}
+                return {}
             data = r.json()
             if len(data) > 1:
                 median_income = data[1][0]
@@ -196,48 +261,83 @@ def get_neighborhood_stats(zipcode: str) -> dict:
     return {}
 
 
-_comps_cache: dict = {}
+_sold_comps_cache: dict = {}
+_SOLD_COMP_TERMS = [
+    "good price", "good deal", "bad deal", "overpriced", "underpriced",
+    "price fair", "fair price", "worth it", "market value", "appraised value",
+    "comps", "comparable", "nearby sales", "sold nearby", "recent sales",
+    "how does it compare", "compare to", "price compare", "value compare",
+]
 
-def get_redfin_comps(address: str, zipcode: str) -> list[dict]:
-    """Fetch recently sold comps near an address via Redfin Apify scraper."""
-    key = f"{address}_{zipcode}"
-    if key in _comps_cache:
-        log.info("Redfin comps — cache hit for %s", address)
-        return _comps_cache[key]
-    if not APIFY_TOKEN or not zipcode:
-        log.info("Redfin comps — skipped (no token or ZIP)")
+
+def should_fetch_sold_comps(intent: str, addresses: list[str], body: str,
+                            listing: dict, zipcode: str) -> bool:
+    """Hard gate paid sold-comps calls to explicit price/value questions."""
+    if intent != "property_details":
+        return False
+    if len(addresses) != 1:
+        return False
+    if not APIFY_TOKEN or not APIFY_SOLD_COMPS_ACTOR_ID or SOLD_COMPS_MAX_RESULTS < 1:
+        return False
+    if not zipcode or not listing.get("price"):
+        return False
+    body_l = (body or "").lower()
+    return any(term in body_l for term in _SOLD_COMP_TERMS)
+
+
+def _comp_value(item: dict, *keys: str) -> str:
+    for key in keys:
+        value = item.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
+def get_sold_comps(zipcode: str) -> list[dict]:
+    """Fetch at most SOLD_COMPS_MAX_RESULTS recently sold Zillow comps."""
+    if zipcode in _sold_comps_cache:
+        log.info("Sold comps ZIP %s — cache hit", zipcode)
+        return _sold_comps_cache[zipcode]
+    if not APIFY_TOKEN or not APIFY_SOLD_COMPS_ACTOR_ID or SOLD_COMPS_MAX_RESULTS < 1:
         return []
-    log.info("Redfin comps — fetching for ZIP %s", zipcode)
+
+    payload = {
+        "search": zipcode,
+        "mode": "SOLD",
+        "maxItems": SOLD_COMPS_MAX_RESULTS,
+        "scrapeDetails": False,
+    }
+    log.info("Sold comps — fetching ZIP %s max=%d", zipcode, SOLD_COMPS_MAX_RESULTS)
     try:
         r = _timed_request(
             "POST",
-            f"https://api.apify.com/v2/acts/maxcopell~redfin-scraper/run-sync-get-dataset-items"
-            f"?token={APIFY_TOKEN}&timeout=30&memory=512",
-            f"Apify/redfin-scraper/ZIP:{zipcode}",
-            json={"searchUrl": f"https://www.redfin.com/zipcode/{zipcode}/filter/property-type=house,min-beds=1,status=sold"},
-            timeout=45
+            f"https://api.apify.com/v2/acts/{APIFY_SOLD_COMPS_ACTOR_ID}/run-sync-get-dataset-items"
+            f"?token={APIFY_TOKEN}&timeout=60&memory=512",
+            f"Apify/{APIFY_SOLD_COMPS_ACTOR_ID}/sold/{zipcode}",
+            json=payload,
+            timeout=90,
         )
-        if r and r.status_code == 200:
-            items = r.json()[:5]
+        if r and r.status_code in (200, 201):
+            items = r.json()[:SOLD_COMPS_MAX_RESULTS]
             comps = []
             for item in items:
                 comps.append({
-                    "address": item.get("address", ""),
-                    "price": item.get("price", ""),
-                    "beds": item.get("beds", ""),
-                    "baths": item.get("baths", ""),
-                    "sqft": item.get("sqft", ""),
-                    "sold_date": item.get("soldDate", "")
+                    "address": _comp_value(item, "address", "streetAddress", "formattedAddress"),
+                    "price": _comp_value(item, "price", "soldPrice", "unformattedPrice"),
+                    "beds": _comp_value(item, "beds", "bedrooms"),
+                    "baths": _comp_value(item, "baths", "bathrooms"),
+                    "sqft": _comp_value(item, "livingArea", "sqft", "area"),
+                    "sold_date": _comp_value(item, "dateSold", "soldDate", "soldOn"),
                 })
-            log.info("Redfin comps — got %d results for ZIP %s", len(comps), zipcode)
             if comps:
-                cost = len(comps) * _APIFY_COST_PER_RESULT["redfin-scraper"]
-                _log_cost("apify", cost, f"redfin-scraper x{len(comps)}")
-            _comps_cache[key] = comps
+                cost = len(comps) * _APIFY_COST_PER_RESULT["crawlerbros/zillow-sold-comps"]
+                _log_cost("apify", cost, f"crawlerbros/zillow-sold-comps x{len(comps)}")
+            log.info("Sold comps — got %d result(s) for ZIP %s", len(comps), zipcode)
+            _sold_comps_cache[zipcode] = comps
             return comps
     except Exception as exc:
-        log.error("Redfin comps error for %s: %s", address, exc)
-    _comps_cache[key] = []
+        log.error("Sold comps error for ZIP %s: %s", zipcode, exc)
+    _sold_comps_cache[zipcode] = []
     return []
 
 
@@ -245,6 +345,10 @@ def hubspot_upsert_contact(email: str, name: str, intent: str,
                             budget: str, timeline: str, area: str,
                             assigned_agent: str) -> str:
     """Create or update a HubSpot contact. Returns contact ID or empty string."""
+    global _hubspot_disabled
+    if _hubspot_disabled:
+        log.info("HubSpot upsert — skipped (disabled after auth failure)")
+        return ""
     if not HUBSPOT_API_KEY or not email:
         log.info("HubSpot upsert — skipped (no API key or email)")
         return ""
@@ -277,6 +381,10 @@ def hubspot_upsert_contact(email: str, name: str, intent: str,
             json={"filterGroups": [{"filters": [{"propertyName": "email", "operator": "EQ", "value": email}]}]},
             timeout=5
         )
+        if search_r and search_r.status_code in (401, 403):
+            _hubspot_disabled = True
+            log.warning("HubSpot upsert — disabled for this run after auth failure; update HUBSPOT_API_KEY")
+            return ""
         if search_r and search_r.status_code == 200:
             results = search_r.json().get("results", [])
             if results:
@@ -289,6 +397,10 @@ def hubspot_upsert_contact(email: str, name: str, intent: str,
         create_r = _timed_request("POST", "https://api.hubapi.com/crm/v3/objects/contacts",
                                    "HubSpot/contacts/create",
                                    headers=headers, json={"properties": properties}, timeout=5)
+        if create_r and create_r.status_code in (401, 403):
+            _hubspot_disabled = True
+            log.warning("HubSpot create — disabled for this run after auth failure; update HUBSPOT_API_KEY")
+            return ""
         if create_r and create_r.status_code in (200, 201):
             contact_id = create_r.json().get("id", "")
             log.info("HubSpot — created contact %s for %s", contact_id, email)
@@ -300,7 +412,7 @@ def hubspot_upsert_contact(email: str, name: str, intent: str,
 
 def hubspot_add_note(contact_id: str, note_body: str):
     """Add a note to a HubSpot contact."""
-    if not HUBSPOT_API_KEY or not contact_id:
+    if _hubspot_disabled or not HUBSPOT_API_KEY or not contact_id:
         return
     log.info("HubSpot note — adding to contact %s (%d chars)", contact_id, len(note_body))
     try:
@@ -522,7 +634,7 @@ def get_gmail_service():
 # ── Gmail helpers ─────────────────────────────────────────────────────────────
 
 def get_my_email(gmail) -> str:
-    profile = gmail.users().getProfile(userId="me").execute()
+    profile = _google_execute(gmail.users().getProfile(userId="me"), "Gmail profile")
     return profile["emailAddress"].lower()
 
 
@@ -536,11 +648,14 @@ def ts_to_epoch(iso_ts: str) -> int:
 def get_new_messages(gmail, since_ts: str, my_email: str) -> list[dict]:
     epoch = ts_to_epoch(since_ts)
     query = f"after:{epoch} -from:{my_email}"
-    result = gmail.users().messages().list(userId="me", q=query).execute()
+    result = _google_execute(gmail.users().messages().list(userId="me", q=query), "Gmail message list")
     messages = result.get("messages", [])
     full = []
     for m in messages:
-        msg = gmail.users().messages().get(userId="me", id=m["id"], format="full").execute()
+        msg = _google_execute(
+            gmail.users().messages().get(userId="me", id=m["id"], format="full"),
+            f"Gmail message get {m['id']}",
+        )
         full.append(msg)
     return full
 
@@ -583,10 +698,13 @@ def send_reply(gmail, parsed: dict, html_body: str, text_body: str):
     msg.attach(MIMEText(html_body, "html"))
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     log.info("Gmail send — to=%s subject='%s'", parsed["from"], msg["Subject"])
-    gmail.users().messages().send(
-        userId="me",
-        body={"raw": raw, "threadId": parsed["thread_id"]}
-    ).execute()
+    _google_execute(
+        gmail.users().messages().send(
+            userId="me",
+            body={"raw": raw, "threadId": parsed["thread_id"]}
+        ),
+        f"Gmail send {parsed['id']}",
+    )
     log.info("Gmail send — delivered")
 
 
@@ -596,37 +714,69 @@ def apply_labels(gmail, msg_id: str, label_names: list[str]):
     label_ids = []
     for name in label_names:
         if name not in _label_id_cache:
-            existing = gmail.users().labels().list(userId="me").execute().get("labels", [])
+            existing = _google_execute(gmail.users().labels().list(userId="me"), "Gmail labels list").get("labels", [])
             existing_map = {l["name"]: l["id"] for l in existing}
             if name in existing_map:
                 _label_id_cache[name] = existing_map[name]
             else:
-                created = gmail.users().labels().create(
-                    userId="me",
-                    body={"name": name, "labelListVisibility": "labelShow", "messageListVisibility": "show"}
-                ).execute()
+                created = _google_execute(
+                    gmail.users().labels().create(
+                        userId="me",
+                        body={"name": name, "labelListVisibility": "labelShow", "messageListVisibility": "show"}
+                    ),
+                    f"Gmail label create {name}",
+                )
                 _label_id_cache[name] = created["id"]
                 log.info("Gmail label created — '%s' (id=%s)", name, created["id"])
         label_ids.append(_label_id_cache[name])
     if label_ids:
-        gmail.users().messages().modify(
-            userId="me",
-            id=msg_id,
-            body={"addLabelIds": label_ids}
-        ).execute()
+        _google_execute(
+            gmail.users().messages().modify(
+                userId="me",
+                id=msg_id,
+                body={"addLabelIds": label_ids}
+            ),
+            f"Gmail label apply {msg_id}",
+        )
         log.info("Gmail label applied — msg=%s labels=%s", msg_id, label_names)
 
 # ── Google Sheets ─────────────────────────────────────────────────────────────
 
+def _sheet_header_key(header: str) -> str:
+    key = (header or "").lower().strip().replace(" ", "_")
+    aliases = {
+        "bath": "baths",
+        "sq_ft": "sqft",
+        "square_feet": "sqft",
+        "year_built": "year_built",
+    }
+    return aliases.get(key, key)
+
+
+def _get_sheet_headers(sheets) -> list[str]:
+    result = _google_execute(
+        sheets.spreadsheets().values().get(
+            spreadsheetId=SHEET_ID,
+            range="properties_update!1:1"
+        ),
+        "Sheets headers get",
+    )
+    raw_headers = result.get("values", [[]])[0]
+    return [_sheet_header_key(h) for h in raw_headers]
+
+
 def get_listings(sheets) -> list[dict]:
-    result = sheets.spreadsheets().values().get(
-        spreadsheetId=SHEET_ID,
-        range="properties_update!A:N"
-    ).execute()
+    result = _google_execute(
+        sheets.spreadsheets().values().get(
+            spreadsheetId=SHEET_ID,
+            range="properties_update!A:P"
+        ),
+        "Sheets listings get",
+    )
     rows = result.get("values", [])
     if not rows:
         return []
-    headers = [h.lower().strip().replace(" ", "_") for h in rows[0]]
+    headers = [_sheet_header_key(h) for h in rows[0]]
     listings = []
     for row in rows[1:]:
         padded = row + [""] * (len(headers) - len(row))
@@ -676,29 +826,62 @@ def enrich_missing_fields(listing: dict) -> dict:
         return listing
 
 
-# Sheet column order matches properties_update!A:N header row
+# Fallback order for local docs; live app appends by the sheet's header row.
 _SHEET_COLUMNS = ["address", "price", "beds", "baths", "city", "state",
                   "description", "neighborhood", "property_type", "features",
-                  "days_on_market", "photo_url", "agent_name", "agent_email"]
+                  "days_on_market", "photo_url", "sqft", "year_built",
+                  "agent_name", "agent_email"]
+
+
+def _normalize_address_key(address: str) -> str:
+    street = (address or "").split(",", 1)[0].lower()
+    street = re.sub(r"\b(street|st)\b", "st", street)
+    street = re.sub(r"\b(road|rd)\b", "rd", street)
+    street = re.sub(r"\b(avenue|ave)\b", "ave", street)
+    street = re.sub(r"\b(trail|trl)\b", "trl", street)
+    street = re.sub(r"\b(drive|dr)\b", "dr", street)
+    street = re.sub(r"\b(lane|ln)\b", "ln", street)
+    street = re.sub(r"\b(court|ct)\b", "ct", street)
+    street = re.sub(r"\b(place|pl)\b", "pl", street)
+    street = re.sub(r"\b(path)\b", "path", street)
+    street = re.sub(r"[^a-z0-9]+", " ", street)
+    return re.sub(r"\s+", " ", street).strip()
+
+
+def _addresses_match(left: str, right: str) -> bool:
+    left_key = _normalize_address_key(left)
+    right_key = _normalize_address_key(right)
+    if not left_key or not right_key:
+        return False
+    return left_key == right_key or left_key in right_key or right_key in left_key
 
 
 def append_property_to_sheet(sheets, listing: dict):
     """Append a newly discovered property to properties_update tab."""
     if not SHEET_ID:
         return
-    # Don't append if address already in sheet (belt-and-suspenders check)
-    addr = listing.get("address", "").lower().strip()
-    if not addr:
+    addr = listing.get("address", "").strip()
+    addr_key = _normalize_address_key(addr)
+    if not addr_key:
         return
     try:
-        row = [listing.get(col, "") or "" for col in _SHEET_COLUMNS]
-        sheets.spreadsheets().values().append(
-            spreadsheetId=SHEET_ID,
-            range="properties_update!A:N",
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body={"values": [row]}
-        ).execute()
+        existing = get_listings(sheets)
+        for row in existing:
+            if _addresses_match(addr, row.get("address", "")):
+                log.info("Sheet append — skipped duplicate %s", addr)
+                return
+        headers = _get_sheet_headers(sheets) or _SHEET_COLUMNS
+        row = [listing.get(col, "") or "" for col in headers]
+        _google_execute(
+            sheets.spreadsheets().values().append(
+                spreadsheetId=SHEET_ID,
+                range="properties_update!A:P",
+                valueInputOption="RAW",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [row]}
+            ),
+            f"Sheets append {listing.get('address', '')}",
+        )
         log.info("Sheet append — added %s to properties_update", listing.get("address", ""))
     except Exception as exc:
         log.error("Sheet append failed for %s: %s", listing.get("address", ""), exc)
@@ -727,15 +910,20 @@ def notify_agent(gmail, agent_email: str, agent_name: str, lead_email: str,
     msg.attach(MIMEText(body, "plain"))
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     try:
-        gmail.users().messages().send(userId="me", body={"raw": raw}).execute()
+        _google_execute(
+            gmail.users().messages().send(userId="me", body={"raw": raw}),
+            f"Gmail agent notification {lead_email}",
+        )
         log.info("Agent notification sent — to=%s intent=%s lead=%s", agent_email, intent, lead_email)
     except Exception as exc:
         log.error("Agent notification failed to %s: %s", agent_email, exc)
 
 
 def search_listings_by_address(listings: list[dict], query: str) -> list[dict]:
-    q = query.lower()
-    return [l for l in listings if q in l.get("address", "").lower() or q in l.get("city", "").lower()]
+    q = (query or "").lower()
+    return [l for l in listings
+            if _addresses_match(query, l.get("address", ""))
+            or (q and q in l.get("city", "").lower())]
 
 
 def search_listings_by_criteria(listings: list[dict], beds: int = None, max_price: int = None, status: str = None) -> list[dict]:
@@ -967,7 +1155,7 @@ Hard rules:
 - No filler like "thrilled", "fantastic", "wonderful"
 - Only state facts you actually have, never invent details
 - Keep it under 130 words total
-- If comps are provided, mention 1-2 naturally
+- If sold comps are provided, mention 1-2 naturally
 - If mortgage rates are provided, mention them once naturally
 - Do NOT include any URLs or links — buttons are added separately
 - Last sentence: offer to answer questions or set up a showing
@@ -1004,7 +1192,7 @@ _CLAUDE_PRICING = {
 _APIFY_COST_PER_RESULT = {
     "maxcopell/zillow-detail-scraper": 0.003,
     "kawsar/affordable-zillow":        0.002,
-    "redfin-scraper":                  0.002,
+    "crawlerbros/zillow-sold-comps":    0.003,
 }
 
 _session_cost: dict = {"claude": 0.0, "apify": 0.0, "total": 0.0}
@@ -1023,12 +1211,26 @@ def _claude(model: str, system: str, user: str) -> str:
     system = system.strip() or "You are a helpful real estate assistant."
     user = user.strip() or "Please respond."
     t0 = time.time()
-    msg = claude.messages.create(
-        model=model,
-        max_tokens=256,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
+    for attempt in range(1, CLAUDE_RETRY_ATTEMPTS + 1):
+        try:
+            msg = claude.messages.create(
+                model=model,
+                max_tokens=256,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+            break
+        except Exception as exc:
+            if not _is_transient_claude_error(exc):
+                raise
+            if attempt == CLAUDE_RETRY_ATTEMPTS:
+                raise TransientServiceError(f"Claude {model} failed after retries: {exc}") from exc
+            delay = _retry_delay(attempt)
+            status = getattr(exc, "status_code", None)
+            status_msg = f" status={status}" if status else ""
+            log.warning("Claude %s transient error%s: %s; retry %d/%d in %.1fs",
+                        model, status_msg, exc, attempt + 1, CLAUDE_RETRY_ATTEMPTS, delay)
+            time.sleep(delay)
     elapsed = int((time.time() - t0) * 1000)
     text = msg.content[0].text.strip()
     in_tok = msg.usage.input_tokens
@@ -1058,7 +1260,9 @@ def classify_email(parsed: dict) -> dict:
         return {"intent": "human_required", "address": None, "lead_fields": {}}
 
 
-def generate_property_html(listing: dict, rentcast: dict, calendly: str, comps: list = None, rates: dict = None, neighborhood: dict = None) -> tuple[str, str]:
+def generate_property_html(listing: dict, rentcast: dict, calendly: str,
+                           rates: dict = None, neighborhood: dict = None,
+                           comps: list[dict] = None) -> tuple[str, str]:
     # Photo URL: sheet column "Photo URL" normalises to "photo_url"; also check Apify/RentCast variants
     photo_url = (listing.get("photo_url") or listing.get("photo url") or
                  rentcast.get("photoUrl") or rentcast.get("photo_url") or "")
@@ -1091,8 +1295,25 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str, comps: 
         if extras:
             property_summary += "\n\nAdditional details:\n" + "\n".join(f"{k}: {v}" for k, v in list(extras.items())[:10])
     if comps:
-        comp_lines = [f"- {c.get('address','')}: ${c.get('price','')}, {c.get('beds','')}bd/{c.get('baths','')}ba, sold {c.get('sold_date','')}" for c in comps[:3]]
-        property_summary += "\n\nNearby sold comps:\n" + "\n".join(comp_lines)
+        lines = []
+        for comp in comps[:2]:
+            comp_price_raw = re.sub(r"[^\d.]", "", comp.get("price", ""))
+            try:
+                comp_price = f"${float(comp_price_raw):,.0f}" if comp_price_raw else comp.get("price", "")
+            except ValueError:
+                comp_price = comp.get("price", "")
+            details = []
+            if comp.get("beds"):
+                details.append(f"{comp['beds']}bd")
+            if comp.get("baths"):
+                details.append(f"{comp['baths']}ba")
+            if comp.get("sqft"):
+                details.append(f"{comp['sqft']} sqft")
+            sold = f", sold {comp['sold_date']}" if comp.get("sold_date") else ""
+            lines.append(f"- {comp.get('address', '')}: {comp_price}"
+                         f"{' | ' + '/'.join(details) if details else ''}{sold}")
+        if lines:
+            property_summary += "\n\nRecently sold comps:\n" + "\n".join(lines)
     if rates:
         property_summary += f"\n\nCurrent mortgage rates: 30yr fixed {rates.get('rate_30yr','N/A')}%, 15yr fixed {rates.get('rate_15yr','N/A')}%"
     if neighborhood and neighborhood.get("median_income"):
@@ -1439,11 +1660,16 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
             zip_code_match = re.search(r'\b(\d{5})\b', addr)
             zipcode = zip_code_match.group(1) if zip_code_match else listing.get("zip", "")
-            comps = get_redfin_comps(addr, zipcode)
+            comps = []
+            if should_fetch_sold_comps(intent, addresses, parsed["body"], listing, zipcode):
+                comps = get_sold_comps(zipcode)
+            else:
+                log.info("Sold comps — skipped (trigger gate not met)")
             rates = get_mortgage_rates()
             neighborhood = get_neighborhood_stats(zipcode)
 
-            html_body, text_body = generate_property_html(listing, rentcast_data, CALENDLY_URL, comps, rates, neighborhood)
+            html_body, text_body = generate_property_html(listing, rentcast_data, CALENDLY_URL,
+                                                          rates, neighborhood, comps)
 
             agent_email, agent_name = get_assigned_agent(listing)
             notify_agent(gmail, agent_email, agent_name, parsed["from"], parsed["subject"], intent,
@@ -1582,6 +1808,8 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
     if html_body:
         send_reply(gmail, parsed, html_body, text_body)
+        if msg_id not in state["replied_ids"]:
+            state["replied_ids"].append(msg_id)
         apply_labels(gmail, msg_id, labels)
         log.info("Reply sent — to=%s intent=%s labels=%s", parsed["from"], intent, labels)
     else:
@@ -1591,7 +1819,8 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
     log.info("--- Message done — claude=$%.5f apify=$%.5f session_total=$%.4f",
              _session_cost.get("claude", 0), _session_cost.get("apify", 0), _session_cost.get("total", 0))
-    state["replied_ids"].append(msg_id)
+    if msg_id not in state["replied_ids"]:
+        state["replied_ids"].append(msg_id)
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -1612,6 +1841,9 @@ def main():
                 for msg in new_msgs:
                     try:
                         process_message(gmail, sheets, state, msg, my_email)
+                    except TransientServiceError as exc:
+                        log.warning("Transient processing error for message %s; leaving unprocessed for retry: %s",
+                                    msg["id"], exc)
                     except Exception as exc:
                         log.error("Error processing message %s: %s", msg["id"], exc, exc_info=True)
                     save_state(state)
@@ -1622,8 +1854,12 @@ def main():
             try:
                 check_followups(gmail, state, my_email)
                 save_state(state)
+            except TransientServiceError as exc:
+                log.warning("Transient follow-up error; will retry next poll: %s", exc)
             except Exception as exc:
                 log.error("Follow-up check error: %s", exc, exc_info=True)
+        except TransientServiceError as exc:
+            log.warning("Transient poll error; will retry next poll: %s", exc)
         except Exception as exc:
             log.error("Poll error: %s", exc, exc_info=True)
         time.sleep(POLL_INTERVAL)
