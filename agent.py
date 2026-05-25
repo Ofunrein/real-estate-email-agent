@@ -89,6 +89,63 @@ FOLLOWUP_DAY7_HOURS = 168   # last-touch before cold
 CLAUDE_CLASSIFY = "claude-haiku-4-5"
 CLAUDE_RESPOND  = "claude-sonnet-4-6"
 
+VALID_INTENTS = {
+    "property_search",
+    "property_details",
+    "showing_request",
+    "seller_lead",
+    "buyer_lead",
+    "renter_lead",
+    "human_required",
+    "spam",
+}
+
+ROLE_TO_INTENT = {
+    "buyer": "buyer_lead",
+    "first_time_buyer": "buyer_lead",
+    "second_time_buyer": "buyer_lead",
+    "seller": "seller_lead",
+    "expired_listing_seller": "seller_lead",
+    "renter": "renter_lead",
+    "landlord": "renter_lead",
+    "property_management_lead": "renter_lead",
+    "investor": "buyer_lead",
+    "open_house_lead": "buyer_lead",
+    "mortgage_adjacent_lead": "human_required",
+}
+
+SENSITIVE_FLAGS = {
+    "fair_housing",
+    "mortgage_license",
+    "legal",
+    "contract_terms",
+    "angry_or_complaint",
+    "privacy",
+    "broker_approval",
+}
+
+STOP_OUTREACH_PATTERNS = [
+    r"\bunsubscribe\b",
+    r"\bdo not contact\b",
+    r"\bdon't contact\b",
+    r"\bremove me\b",
+    r"\bstop contacting\b",
+    r"\bstop emailing\b",
+]
+
+CLEAR_NO_PATTERNS = [
+    r"\bnot interested\b",
+    r"\bno thanks\b",
+    r"\bno thank you\b",
+    r"\bstop asking\b",
+    r"\bi only want to rent\b",
+    r"\bonly looking to rent\b",
+    r"\bi do not want to sell\b",
+    r"\bi don't want to sell\b",
+    r"\balready have a lender\b",
+    r"\bjust browsing\b",
+]
+
 # ── Knowledge base (FAQ baked in — no file dependency) ────────────────────────
 
 FAQ_CONTENT = """
@@ -352,6 +409,11 @@ def hubspot_upsert_contact(email: str, name: str, intent: str,
     if not HUBSPOT_API_KEY or not email:
         log.info("HubSpot upsert — skipped (no API key or email)")
         return ""
+    parsed_name, parsed_email = email_lib.utils.parseaddr(email)
+    if parsed_email:
+        email = parsed_email.lower()
+        if not name and parsed_name:
+            name = parsed_name
     score = "cold"
     if timeline:
         t = timeline.lower()
@@ -483,6 +545,12 @@ def check_followups(gmail, state: dict, my_email: str):
         last_ts = lead.get("last_contact_ts")
         if not last_ts:
             continue
+        _, lead_addr = _sender_parts(lead.get("lead_email", ""))
+        memory = state.get("lead_memory", {}).get(lead_addr) if lead_addr else None
+        if memory and (memory.get("do_not_contact") or memory.get("no_count", 0) >= 3):
+            lead["cold"] = True
+            log.info("Follow-up skipped — lead stopped or no_count reached (%s)", lead_addr)
+            continue
         hours_elapsed = (now - last_ts) / 3600
         fu1_sent = lead.get("followup1_sent", False)
         fu2_sent = lead.get("followup2_sent", False)
@@ -603,9 +671,10 @@ def load_state() -> dict:
             s = json.load(f)
         s.setdefault("replied_ids", [])
         s.setdefault("lead_state", {})
+        s.setdefault("lead_memory", {})
         return s
     ts = datetime.now(timezone.utc).isoformat()
-    state = {"startup_ts": ts, "replied_ids": [], "lead_state": {}}
+    state = {"startup_ts": ts, "replied_ids": [], "lead_state": {}, "lead_memory": {}}
     save_state(state)
     print(f"Agent started. Monitoring new emails from {ts}")
     return state
@@ -1158,9 +1227,10 @@ def rentcast_lookup(address: str) -> dict:
 # ── Prompts & LLM ─────────────────────────────────────────────────────────────
 
 CLASSIFY_PROMPT = """You are an assistant for a real estate agency.
-Classify the email below into exactly ONE intent and extract any relevant fields.
+Classify the email below into one operational intent and one or more lead roles.
+Focus on hidden opportunity capture, emotional state, and safe routing.
 
-Intents:
+Operational intents:
 - property_search: asking about available listings, general search
 - property_details: asking about a specific property or address
 - showing_request: wants to schedule a showing or tour
@@ -1170,21 +1240,71 @@ Intents:
 - human_required: complaint, legal, complex negotiation, unclear
 - spam: irrelevant, promotional, or junk
 
+Lead roles:
+- buyer
+- seller
+- first_time_buyer
+- second_time_buyer
+- renter
+- landlord
+- investor
+- expired_listing_seller
+- open_house_lead
+- property_management_lead
+- mortgage_adjacent_lead
+- unknown
+
+Opportunity tags:
+- valuation_interest
+- mortgage_interest
+- renter_purchase_potential
+- sell_before_buy
+- high_urgency
+- stale_lead
+- confused_lead
+- angry_lead
+- compliance_sensitive
+- needs_human_trust
+
+Compliance flags:
+- fair_housing
+- mortgage_license
+- legal
+- contract_terms
+- angry_or_complaint
+- privacy
+- broker_approval
+
 Reply ONLY with valid JSON:
 {
   "intent": "<intent>",
+  "message_intent": "<same as intent unless a more exact intent is needed>",
+  "primary_lead_role": "<lead role>",
+  "secondary_roles": ["<lead role>"],
+  "opportunity_tags": ["<tag>"],
+  "tone_state": "neutral|warm|skeptical|price_sensitive|overwhelmed|annoyed|confused|urgent|sensitive",
+  "urgency": "low|medium|high|unknown",
+  "compliance_flags": ["<flag>"],
+  "confidence": 0.0,
   "address": "<first address string or null>",
   "addresses": ["<addr1>", "<addr2>"],
   "lead_fields": {
     "timeline": "<value or null>",
     "budget": "<dollar amount or null>",
     "area": "<city/neighborhood name or null>",
-    "beds": "<number or null>"
-  }
+    "beds": "<number or null>",
+    "current_property_status": "owns|rents|listed|expired|under_contract|sold|unknown|null",
+    "preferred_channel": "email|phone|sms|unknown|null"
+  },
+  "next_best_question": "<one concise question or null>",
+  "recommended_next_action": "reply_and_qualify|send_booking_link|route_human|nurture|stop|review",
+  "human_handoff_reason": "<reason or null>"
 }
 
 If multiple addresses appear in the email, list ALL of them in "addresses".
-If only one address, put it in both "address" and "addresses"."""
+If only one address, put it in both "address" and "addresses".
+Ask only one next_best_question. If Fair Housing, legal, contract, broker approval,
+or mortgage qualification/advice is involved, set intent to human_required and route_human."""
 
 PROPERTY_REPLY_PROMPT = """You are a real estate agent at Austin Realty replying to a property inquiry.
 Write 2-3 short conversational paragraphs about the property.
@@ -1214,8 +1334,11 @@ Hard rules:
 
 LEAD_QUALIFY_PROMPT = """You are a real estate agent assistant for Austin Realty qualifying a lead.
 The lead is a {lead_type}. The following fields are still unknown: {missing_fields}.
-Write a 1-2 sentence plain-text reply that asks for AT MOST 1 of the missing fields.
-Start with a brief friendly greeting. Do NOT use filler phrases.
+Tone state: {tone_state}. Opportunity tags: {opportunity_tags}.
+Preferred next question: {next_question}.
+Write a 1-2 sentence plain-text reply that first acknowledges the lead's situation, then asks AT MOST 1 question.
+If a preferred next question is provided, ask that question naturally.
+Start with a brief friendly greeting. Do NOT use filler phrases, pressure, or fake personal claims.
 Do NOT ask about fields already collected.
 Do NOT include any sign-off or signature.
 Return ONLY plain text.""" + FAQ_CONTEXT
@@ -1245,7 +1368,7 @@ def _log_cost(service: str, amount: float, detail: str = ""):
              amount, service, f" ({detail})" if detail else "", _session_cost["total"])
 
 
-def _claude(model: str, system: str, user: str) -> str:
+def _claude(model: str, system: str, user: str, max_tokens: int = 512) -> str:
     """Single helper for all Claude calls."""
     # Guard: API rejects empty content blocks
     system = system.strip() or "You are a helpful real estate assistant."
@@ -1255,7 +1378,7 @@ def _claude(model: str, system: str, user: str) -> str:
         try:
             msg = claude.messages.create(
                 model=model,
-                max_tokens=256,
+                max_tokens=max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user}],
             )
@@ -1284,6 +1407,314 @@ def _claude(model: str, system: str, user: str) -> str:
     return text.strip()
 
 
+def _sender_parts(sender: str) -> tuple[str, str]:
+    name, addr = email_lib.utils.parseaddr(sender or "")
+    return name.strip(), addr.lower().strip()
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _as_list(value) -> list:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [v for v in value if v not in (None, "")]
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    return [value]
+
+
+def _merge_unique(existing: list, incoming: list) -> list:
+    result = list(existing or [])
+    seen = {str(v).lower() for v in result}
+    for value in incoming:
+        if value in (None, ""):
+            continue
+        key = str(value).lower()
+        if key not in seen:
+            result.append(value)
+            seen.add(key)
+    return result
+
+
+def _extract_json_dict(raw: str) -> dict:
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+    return {}
+
+
+def normalize_classification(classification: dict) -> dict:
+    classification = classification if isinstance(classification, dict) else {}
+    lead_fields = classification.get("lead_fields")
+    if not isinstance(lead_fields, dict):
+        lead_fields = {}
+    for key in ("timeline", "budget", "area", "beds", "current_property_status", "preferred_channel"):
+        lead_fields.setdefault(key, None)
+
+    addresses = _as_list(classification.get("addresses"))
+    address = classification.get("address")
+    if address and address not in addresses:
+        addresses.insert(0, address)
+    address = addresses[0] if addresses else address
+
+    intent = classification.get("intent") or classification.get("message_intent")
+    primary_role = classification.get("primary_lead_role") or "unknown"
+    if intent not in VALID_INTENTS:
+        intent = ROLE_TO_INTENT.get(primary_role, "human_required")
+
+    message_intent = classification.get("message_intent") or intent
+    if message_intent not in VALID_INTENTS:
+        message_intent = intent
+
+    confidence = classification.get("confidence", 0.75)
+    try:
+        confidence = float(confidence)
+    except (TypeError, ValueError):
+        confidence = 0.75
+
+    return {
+        **classification,
+        "intent": intent,
+        "message_intent": message_intent,
+        "primary_lead_role": primary_role,
+        "secondary_roles": _as_list(classification.get("secondary_roles")),
+        "opportunity_tags": _as_list(classification.get("opportunity_tags")),
+        "tone_state": classification.get("tone_state") or "neutral",
+        "urgency": classification.get("urgency") or "unknown",
+        "compliance_flags": _as_list(classification.get("compliance_flags")),
+        "confidence": confidence,
+        "address": address,
+        "addresses": addresses,
+        "lead_fields": lead_fields,
+        "next_best_question": classification.get("next_best_question"),
+        "recommended_next_action": classification.get("recommended_next_action") or "reply_and_qualify",
+        "human_handoff_reason": classification.get("human_handoff_reason"),
+    }
+
+
+def get_lead_memory(state: dict, parsed: dict) -> tuple[str, dict]:
+    state.setdefault("lead_memory", {})
+    name, addr = _sender_parts(parsed.get("from", ""))
+    key = addr or f"thread:{parsed.get('thread_id', '')}"
+    now = _iso_now()
+    memory = state["lead_memory"].setdefault(key, {
+        "created_at": now,
+        "lead_source": "email",
+        "source_detail": parsed.get("subject", ""),
+        "lead_email": addr,
+        "lead_name": name,
+        "email_thread_ids": [],
+        "property_interest": [],
+        "lead_role": "unknown",
+        "secondary_roles": [],
+        "opportunity_tags": [],
+        "first_time_buyer": None,
+        "second_time_buyer": None,
+        "sell_before_buy": None,
+        "current_property_status": "unknown",
+        "renter_purchase_potential": "unknown",
+        "mortgage_interest": "none",
+        "valuation_interest": "none",
+        "preferred_channel": "email",
+        "last_ai_touch_at": None,
+        "last_inbound_at": now,
+        "no_count": 0,
+        "no_message_ids": [],
+        "do_not_contact": False,
+        "human_handoff_reason": "",
+        "assigned_owner": "",
+        "next_action": "",
+        "lead_fields": {"timeline": None, "budget": None, "area": None, "beds": None},
+        "tone_state": "neutral",
+        "compliance_flags": [],
+        "last_user_message": "",
+    })
+    if addr:
+        memory["lead_email"] = addr
+    if name and not memory.get("lead_name"):
+        memory["lead_name"] = name
+    memory["email_thread_ids"] = _merge_unique(memory.get("email_thread_ids", []), [parsed.get("thread_id", "")])
+    memory["last_inbound_at"] = now
+    memory["last_user_message"] = (parsed.get("body") or "")[:1000]
+    if parsed.get("subject") and not memory.get("source_detail"):
+        memory["source_detail"] = parsed["subject"]
+    return key, memory
+
+
+def detect_no_signal(body: str) -> tuple[bool, bool]:
+    text = re.sub(r"\s+", " ", (body or "").lower()).strip()
+    exact_stop = text in {"stop", "unsubscribe", "remove me"}
+    stop = exact_stop or any(re.search(pattern, text) for pattern in STOP_OUTREACH_PATTERNS)
+    exact_no = text in {"no", "no.", "no thanks", "no thank you", "nah", "not interested"}
+    clear_no = exact_no or any(re.search(pattern, text) for pattern in CLEAR_NO_PATTERNS)
+    return clear_no or stop, stop
+
+
+def detect_compliance_flags(text: str) -> list[str]:
+    text_l = re.sub(r"\s+", " ", (text or "").lower())
+    flags = []
+    if any(term in text_l for term in [
+        "safe neighborhood", "good neighborhood for families", "families with kids",
+        "people like me", "demographics", "ethnicity", "race", "religion",
+        "mostly families", "mostly young", "crime rate",
+    ]):
+        flags.append("fair_housing")
+    if any(term in text_l for term in [
+        "do i qualify", "can i qualify", "will i qualify", "get approved",
+        "approved for a loan", "what rate can i get", "which loan should",
+        "should i choose fha", "nmls",
+    ]):
+        flags.append("mortgage_license")
+    if any(term in text_l for term in [
+        "legal advice", "attorney", "lawyer", "lawsuit", "sue", "break my lease",
+        "evict", "eviction",
+    ]):
+        flags.append("legal")
+    if any(term in text_l for term in [
+        "waive inspection", "contract", "counteroffer", "commission", "buyer agreement",
+        "listing agreement", "agency agreement", "representation agreement",
+    ]):
+        flags.append("contract_terms")
+    if any(term in text_l for term in [
+        "scam", "fraud", "bait and switch", "report you", "harassment",
+        "stop spamming", "spam complaint",
+    ]):
+        flags.append("angry_or_complaint")
+    if any(term in text_l for term in ["social security", "ssn", "bank account", "routing number"]):
+        flags.append("privacy")
+    return flags
+
+
+def update_lead_memory(memory: dict, classification: dict, parsed: dict, addresses: list[str]) -> tuple[bool, bool]:
+    lead_fields = classification.get("lead_fields", {})
+    memory["lead_role"] = classification.get("primary_lead_role") or memory.get("lead_role", "unknown")
+    memory["secondary_roles"] = _merge_unique(memory.get("secondary_roles", []), classification.get("secondary_roles", []))
+    memory["opportunity_tags"] = _merge_unique(memory.get("opportunity_tags", []), classification.get("opportunity_tags", []))
+    memory["property_interest"] = _merge_unique(memory.get("property_interest", []), addresses)
+    memory["tone_state"] = classification.get("tone_state") or memory.get("tone_state", "neutral")
+    memory["next_action"] = classification.get("recommended_next_action") or memory.get("next_action", "")
+
+    memory.setdefault("lead_fields", {"timeline": None, "budget": None, "area": None, "beds": None})
+    for key in ("timeline", "budget", "area", "beds"):
+        if lead_fields.get(key):
+            memory["lead_fields"][key] = lead_fields[key]
+
+    current_status = lead_fields.get("current_property_status")
+    if current_status and current_status not in ("null", "unknown"):
+        memory["current_property_status"] = current_status
+    preferred_channel = lead_fields.get("preferred_channel")
+    if preferred_channel and preferred_channel not in ("null", "unknown"):
+        memory["preferred_channel"] = preferred_channel
+
+    roles = [memory.get("lead_role")] + memory.get("secondary_roles", [])
+    tags = set(memory.get("opportunity_tags", []))
+    memory["first_time_buyer"] = True if "first_time_buyer" in roles else memory.get("first_time_buyer")
+    memory["second_time_buyer"] = True if "second_time_buyer" in roles else memory.get("second_time_buyer")
+    memory["sell_before_buy"] = True if "sell_before_buy" in tags else memory.get("sell_before_buy")
+    if "renter_purchase_potential" in tags:
+        memory["renter_purchase_potential"] = "possible"
+    if "mortgage_interest" in tags or memory.get("lead_role") == "mortgage_adjacent_lead":
+        memory["mortgage_interest"] = "possible"
+    if "valuation_interest" in tags:
+        memory["valuation_interest"] = "possible"
+
+    flags = _merge_unique(classification.get("compliance_flags", []), detect_compliance_flags(parsed.get("body", "")))
+    memory["compliance_flags"] = _merge_unique(memory.get("compliance_flags", []), flags)
+
+    is_no, is_stop = detect_no_signal(parsed.get("body", ""))
+    if is_no and parsed.get("id") not in memory.get("no_message_ids", []):
+        memory["no_count"] = int(memory.get("no_count") or 0) + 1
+        memory["no_message_ids"] = _merge_unique(memory.get("no_message_ids", []), [parsed.get("id")])
+    if is_stop:
+        memory["do_not_contact"] = True
+        memory["next_action"] = "stop"
+        memory["human_handoff_reason"] = "opt_out_or_stop_request"
+    if memory.get("no_count", 0) >= 3:
+        memory["next_action"] = "stop_conversion_push"
+    if classification.get("human_handoff_reason"):
+        memory["human_handoff_reason"] = classification["human_handoff_reason"]
+    return is_no, is_stop
+
+
+def should_route_human(classification: dict, memory: dict) -> bool:
+    flags = set(classification.get("compliance_flags", [])) | set(memory.get("compliance_flags", []))
+    if flags & SENSITIVE_FLAGS:
+        return True
+    if classification.get("intent") == "human_required":
+        return True
+    if classification.get("recommended_next_action") in {"route_human", "review"}:
+        return True
+    if classification.get("human_handoff_reason"):
+        return True
+    if memory.get("do_not_contact"):
+        return True
+    if classification.get("confidence", 1.0) < 0.35:
+        return True
+    return False
+
+
+def derive_next_question(intent: str, classification: dict, memory: dict) -> str:
+    if memory.get("do_not_contact") or memory.get("no_count", 0) >= 3:
+        return ""
+    if set(memory.get("compliance_flags", [])) & SENSITIVE_FLAGS:
+        return ""
+    question = (classification.get("next_best_question") or "").strip()
+    if question and question.lower() not in {"null", "none"}:
+        return question
+    current_status = memory.get("current_property_status") or "unknown"
+    if intent in {"property_details", "property_search", "showing_request", "buyer_lead"} and current_status == "unknown":
+        return "Are you buying your first place, or would you also need to sell a current home before buying?"
+    if intent == "renter_lead" and memory.get("renter_purchase_potential") == "unknown":
+        return "Are you only looking to rent right now, or would you consider buying if the numbers made sense?"
+    if intent == "seller_lead" and not memory.get("lead_fields", {}).get("timeline"):
+        return "Are you hoping to sell soon, or are you mainly looking for a current value estimate?"
+    return ""
+
+
+def append_question_to_reply(html_body: str, text_body: str, question: str) -> tuple[str, str]:
+    question = (question or "").strip()
+    if not question:
+        return html_body, text_body
+    question_html = f"<p>{question}</p>"
+    if "Best regards" in html_body:
+        html_body = html_body.replace("<p style=\"margin:20px 0 0;color:#555;line-height:1.45\">Best regards,", question_html + "\n<p style=\"margin:20px 0 0;color:#555;line-height:1.45\">Best regards,", 1)
+        html_body = html_body.replace("<p style=\"margin-top:20px;color:#555\">Best regards,", question_html + "\n<p style=\"margin-top:20px;color:#555\">Best regards,", 1)
+    else:
+        html_body += question_html
+    if "\n\nBest regards" in text_body:
+        text_body = text_body.replace("\n\nBest regards", f"\n\n{question}\n\nBest regards", 1)
+    else:
+        text_body += f"\n\n{question}"
+    return html_body, text_body
+
+
+def build_handoff_summary(parsed: dict, classification: dict, memory: dict, intent: str) -> str:
+    fields = memory.get("lead_fields", {})
+    summary_lines = [
+        f"Lead: {memory.get('lead_name') or 'Unknown'} <{memory.get('lead_email') or parsed.get('from', '')}>",
+        f"Source: {memory.get('lead_source', 'email')} / {memory.get('source_detail') or parsed.get('subject', '')}",
+        f"Intent: {intent}",
+        f"Role: {memory.get('lead_role', 'unknown')}",
+        f"Opportunity tags: {', '.join(memory.get('opportunity_tags', []) or ['none'])}",
+        f"Property interest: {', '.join(memory.get('property_interest', []) or ['none'])}",
+        f"Timeline: {fields.get('timeline') or 'unknown'} | Budget: {fields.get('budget') or 'unknown'} | Area: {fields.get('area') or 'unknown'}",
+        f"Current property status: {memory.get('current_property_status', 'unknown')} | Sell before buy: {memory.get('sell_before_buy')}",
+        f"Mortgage interest: {memory.get('mortgage_interest', 'none')} | Valuation interest: {memory.get('valuation_interest', 'none')}",
+        f"Tone: {memory.get('tone_state', 'neutral')} | No count: {memory.get('no_count', 0)}",
+        f"Compliance flags: {', '.join(memory.get('compliance_flags', []) or ['none'])}",
+        f"Handoff reason: {memory.get('human_handoff_reason') or classification.get('human_handoff_reason') or classification.get('recommended_next_action') or 'lead update'}",
+        f"Next action: {memory.get('next_action') or classification.get('recommended_next_action') or 'review'}",
+        f"Last message: {(parsed.get('body') or '').strip()[:700]}",
+    ]
+    return "\n".join(summary_lines)
+
+
 def classify_email(parsed: dict, thread_context: str = "") -> dict:
     # Strip quoted reply lines (lines starting with >) to focus on the new message
     body_lines = parsed["body"].split("\n")
@@ -1296,14 +1727,11 @@ def classify_email(parsed: dict, thread_context: str = "") -> dict:
             "Use only if the current email depends on earlier messages:\n"
             f"{thread_context}"
         )
-    raw = _claude(CLAUDE_CLASSIFY, CLASSIFY_PROMPT, content)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        return {"intent": "human_required", "address": None, "lead_fields": {}}
+    raw = _claude(CLAUDE_CLASSIFY, CLASSIFY_PROMPT, content, max_tokens=700)
+    parsed_json = _extract_json_dict(raw)
+    if not parsed_json:
+        parsed_json = {"intent": "human_required", "address": None, "lead_fields": {}}
+    return normalize_classification(parsed_json)
 
 
 def generate_property_html(listing: dict, rentcast: dict, calendly: str,
@@ -1511,17 +1939,40 @@ def generate_search_reply(listings: list[dict], calendly: str,
     return html, plain
 
 
-def generate_lead_reply(lead_type: str, existing: dict) -> tuple[str, str]:
+def generate_lead_reply(lead_type: str, existing: dict,
+                        classification: dict = None,
+                        memory: dict = None,
+                        next_question: str = "") -> tuple[str, str]:
+    classification = classification or {}
+    memory = memory or {}
     missing = [k for k, v in existing.items() if not v]
     text = _claude(
         CLAUDE_RESPOND,
-        LEAD_QUALIFY_PROMPT.format(lead_type=lead_type, missing_fields=", ".join(missing[:2])),
+        LEAD_QUALIFY_PROMPT.format(
+            lead_type=lead_type,
+            missing_fields=", ".join(missing[:2]),
+            tone_state=memory.get("tone_state") or classification.get("tone_state") or "neutral",
+            opportunity_tags=", ".join(memory.get("opportunity_tags", []) or classification.get("opportunity_tags", []) or ["none"]),
+            next_question=next_question or "none",
+        ),
         "Write the reply."
     )
     text = re.sub(r'\n*Best regards[\s\S]*$', '', text, flags=re.IGNORECASE).strip()
     sig_html = '<p style="margin-top:20px;color:#555">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>'
     html = "<p>" + text.replace("\n\n", "</p><p>").replace("\n", "<br>") + "</p>" + sig_html
     text += "\n\nBest regards,\nAustin Realty\n(512) 555-0192"
+    return html, text
+
+
+def generate_closeout_reply() -> tuple[str, str]:
+    text = ("Hello,\n\nNo problem. I will stop asking about that. "
+            "If anything changes, you can reply here and we will pick it back up.\n\n"
+            "Best regards,\nAustin Realty\n(512) 555-0192")
+    html = ("<p>Hello,</p>"
+            "<p>No problem. I will stop asking about that. If anything changes, "
+            "you can reply here and we will pick it back up.</p>"
+            "<p style=\"margin-top:20px;color:#555\">Best regards,<br>"
+            "<strong>Austin Realty</strong><br>(512) 555-0192</p>")
     return html, text
 
 
@@ -1632,8 +2083,19 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
     if not addresses and address:
         addresses = [address]
     lead_fields = classification.get("lead_fields", {})
+    lead_key, lead_memory = get_lead_memory(state, parsed)
+    update_lead_memory(lead_memory, classification, parsed, addresses)
+    next_question = derive_next_question(intent, classification, lead_memory)
+    handoff_summary = build_handoff_summary(parsed, classification, lead_memory, intent)
 
-    log.info("Intent: %s | Addresses: %s | Lead fields: %s", intent, addresses or "none", lead_fields)
+    log.info("Intent: %s | Role: %s | Tags: %s | Tone: %s | No count: %s | Addresses: %s | Lead fields: %s",
+             intent,
+             lead_memory.get("lead_role", "unknown"),
+             lead_memory.get("opportunity_tags", []),
+             lead_memory.get("tone_state", "neutral"),
+             lead_memory.get("no_count", 0),
+             addresses or "none",
+             lead_fields)
 
     if intent == "spam":
         apply_labels(gmail, msg_id, ["NEEDS_HUMAN"])
@@ -1641,8 +2103,19 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
         state["replied_ids"].append(msg_id)
         return
 
-    if intent == "human_required":
+    if should_route_human(classification, lead_memory):
         apply_labels(gmail, msg_id, ["NEEDS_HUMAN"])
+        contact_id = hubspot_upsert_contact(
+            email=parsed["from"], name="", intent=intent,
+            budget=lead_memory.get("lead_fields", {}).get("budget", ""),
+            timeline=lead_memory.get("lead_fields", {}).get("timeline", ""),
+            area=lead_memory.get("lead_fields", {}).get("area", ""),
+            assigned_agent=TEAM_LEAD_EMAIL,
+        )
+        if contact_id:
+            hubspot_add_note(contact_id, handoff_summary)
+        notify_agent(gmail, TEAM_LEAD_EMAIL, TEAM_NAME, parsed["from"],
+                     parsed["subject"], intent, handoff_summary)
         log.info("Human required — labeled NEEDS_HUMAN, no reply sent")
         state["replied_ids"].append(msg_id)
         return
@@ -1673,15 +2146,16 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                 listings_data.append({"address": addr, "listing": listing})
 
             html_body, text_body = generate_multi_property_html(listings_data, CALENDLY_URL)
+            html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
             contact_id = hubspot_upsert_contact(
                 email=parsed["from"], name="", intent=intent, budget="", timeline="",
                 area="Austin", assigned_agent=TEAM_LEAD_EMAIL
             )
             if contact_id:
-                hubspot_add_note(contact_id, f"Multi-property inquiry: {', '.join(addresses[:5])}\n\n{parsed['body'][:1000]}")
+                hubspot_add_note(contact_id, handoff_summary)
             notify_agent(gmail, TEAM_LEAD_EMAIL, TEAM_NAME, parsed["from"], parsed["subject"], intent,
-                         f"Inquiry about {len(addresses)} properties: {', '.join(addresses[:3])}")
+                         handoff_summary)
 
         else:
             # ── Single property ───────────────────────────────────────────────────
@@ -1740,16 +2214,18 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
             html_body, text_body = generate_property_html(listing, rentcast_data, CALENDLY_URL,
                                                           rates, neighborhood, comps)
+            html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
             agent_email, agent_name = get_assigned_agent(listing)
+            lead_memory["assigned_owner"] = agent_email
             notify_agent(gmail, agent_email, agent_name, parsed["from"], parsed["subject"], intent,
-                         f"Inquiry about {addr}. Price: {listing.get('price','N/A')}")
+                         build_handoff_summary(parsed, classification, lead_memory, intent))
             contact_id = hubspot_upsert_contact(
                 email=parsed["from"], name="", intent=intent, budget="", timeline="",
                 area=listing.get("city", ""), assigned_agent=agent_email
             )
             if contact_id:
-                hubspot_add_note(contact_id, f"Inquiry about {addr}\n\n{parsed['body'][:1000]}")
+                hubspot_add_note(contact_id, build_handoff_summary(parsed, classification, lead_memory, intent))
 
     elif intent == "property_search":
         beds = None
@@ -1818,9 +2294,11 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                      len(new_from_zillow), len(matches))
 
         html_body, text_body = generate_search_reply(matches, CALENDLY_URL, area_search, beds, max_price)
+        html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
     elif intent == "showing_request":
         html_body, text_body = generate_showing_reply(CALENDLY_URL, address or "")
+        html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
     elif intent in ("buyer_lead", "seller_lead", "renter_lead"):
 
@@ -1859,14 +2337,24 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
             assigned_agent=TEAM_LEAD_EMAIL
         )
         if contact_id:
-            hubspot_add_note(contact_id, f"Lead type: {intent}\n\n{parsed['body'][:1000]}")
+            hubspot_add_note(contact_id, handoff_summary)
         notify_agent(gmail, TEAM_LEAD_EMAIL, TEAM_NAME, parsed["from"],
                      parsed["subject"], intent,
-                     f"New {intent}: budget={existing['collected'].get('budget','?')}, timeline={existing['collected'].get('timeline','?')}, area={existing['collected'].get('area','?')}")
+                     build_handoff_summary(parsed, classification, lead_memory, intent))
 
         missing = [k for k, v in existing["collected"].items() if not v]
-        if missing:
-            html_body, text_body = generate_lead_reply(intent.replace("_lead", ""), existing["collected"])
+        if lead_memory.get("no_count", 0) >= 3:
+            html_body, text_body = generate_closeout_reply()
+            existing["cold"] = True
+            labels.append("NEEDS_HUMAN")
+        elif missing:
+            html_body, text_body = generate_lead_reply(
+                intent.replace("_lead", ""),
+                existing["collected"],
+                classification,
+                lead_memory,
+                next_question,
+            )
             if intent == "seller_lead" and FILLOUT_VALUATION_URL:
                 val_html = f'<p style="margin-top:16px"><a href="{FILLOUT_VALUATION_URL}" style="display:inline-block;padding:10px 20px;background:#1a6b3c;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Get Free Home Valuation</a></p>'
                 html_body = html_body + val_html
@@ -1878,6 +2366,7 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 
     if html_body:
         send_reply(gmail, parsed, html_body, text_body)
+        lead_memory["last_ai_touch_at"] = _iso_now()
         if msg_id not in state["replied_ids"]:
             state["replied_ids"].append(msg_id)
         apply_labels(gmail, msg_id, labels)
