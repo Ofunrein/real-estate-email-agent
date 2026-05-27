@@ -8,6 +8,7 @@ state.json
 agent.log
 *.log
 .superpowers/
+.playwright-mcp/
 
 # Python
 __pycache__/
