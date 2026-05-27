@@ -70,10 +70,10 @@ New properties fetched from Zillow/RentCast are automatically appended to your G
 
 ### 2. Google Sheet
 
-Create a sheet with a tab named **`properties_update`**. Row 1 headers (exact order):
+Create a sheet with a tab named **`properties`**. Row 1 headers (exact order):
 
 ```
-Address | Price | Beds | Bath | City | State | Description | Neighborhood | Property Type | Features | Days on Market | Photo URL | Sq Ft | Year Built | Agent Name | Agent Email
+address | price | beds | baths | city | state | zip | description | neighborhood | property_type | features | days_on_market | photo_url | sqft | year_built | status | listing_url | agent_name | agent_email
 ```
 
 Copy the Sheet ID from the URL: `https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
