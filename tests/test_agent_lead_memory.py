@@ -162,6 +162,48 @@ class LeadMemoryTests(unittest.TestCase):
         self.assertIn("Similar homes:", text)
         self.assertIn("125 Main St", text)
 
+    def test_build_email_memory_update_from_lead_memory(self):
+        parsed = parsed_msg("Can I see 123 Main St?")
+        classification = agent.normalize_classification({
+            "intent": "property_details",
+            "primary_lead_role": "buyer",
+            "address": "123 Main St",
+            "lead_fields": {"area": "Austin", "budget": "$500,000"},
+            "recommended_next_action": "reply_and_qualify",
+        })
+        memory = {
+            "lead_email": "Lead Person <lead@example.com>",
+            "lead_name": "Lead Person",
+            "lead_role": "buyer",
+            "property_interest": ["123 Main St"],
+            "lead_fields": {"area": "Austin", "budget": "$500,000", "timeline": None},
+            "assigned_owner": "agent@example.com",
+            "next_action": "reply_and_qualify",
+        }
+
+        update = agent.build_email_lead_memory_update(parsed, classification, memory, "agent@example.com")
+
+        self.assertEqual(update["email"], "lead@example.com")
+        self.assertEqual(update["full_name"], "Lead Person")
+        self.assertEqual(update["property_interest"], "123 Main St")
+        self.assertEqual(update["assigned_owner"], "agent@example.com")
+
+    def test_build_email_conversation_event_marks_iris(self):
+        parsed = parsed_msg("Can I see 123 Main St?")
+        event = agent.build_email_conversation_event(
+            parsed=parsed,
+            direction="outbound",
+            event_type="ai_reply",
+            message_text="Here are the details.",
+            summary="Iris replied with listing details.",
+            ai_action="reply_sent",
+            status="sent",
+        )
+
+        self.assertEqual(event["channel"], "email")
+        self.assertEqual(event["agent_name"], "Iris")
+        self.assertEqual(event["thread_ref"], "thread-1")
+
 
 if __name__ == "__main__":
     unittest.main()
