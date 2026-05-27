@@ -16,6 +16,12 @@ def parsed_msg(body: str, sender: str = "Lead Person <lead@example.com>") -> dic
 
 
 class LeadMemoryTests(unittest.TestCase):
+    def setUp(self):
+        self.original_claude = agent._claude
+
+    def tearDown(self):
+        agent._claude = self.original_claude
+
     def test_normalize_classification_maps_role_to_legacy_intent(self):
         result = agent.normalize_classification({
             "primary_lead_role": "second_time_buyer",
@@ -97,6 +103,64 @@ class LeadMemoryTests(unittest.TestCase):
         self.assertIn("<p>Are you buying your first place?</p>", new_html)
         self.assertLess(new_html.index("Are you buying"), new_html.index("Best regards"))
         self.assertIn("\n\nAre you buying your first place?\n\nBest regards", new_text)
+
+    def test_find_similar_homes_prefers_same_city_and_price_band(self):
+        source = {
+            "address": "123 Main St",
+            "city": "Austin",
+            "zip": "78701",
+            "price": "500000",
+            "beds": "3",
+            "baths": "2",
+            "property_type": "Single-Family Home",
+        }
+        candidates = [
+            {"address": "125 Main St", "city": "Austin", "zip": "78701", "price": "510000", "beds": "3", "baths": "2", "property_type": "Single-Family Home", "status": "Active"},
+            {"address": "127 Main St", "city": "Austin", "zip": "78701", "price": "530000", "beds": "4", "baths": "2", "property_type": "Single-Family Home", "status": "Active"},
+            {"address": "900 Other St", "city": "Dallas", "zip": "75001", "price": "505000", "beds": "3", "baths": "2", "property_type": "Single-Family Home", "status": "Active"},
+            {"address": "129 Main St", "city": "Austin", "zip": "78701", "price": "900000", "beds": "3", "baths": "2", "property_type": "Single-Family Home", "status": "Active"},
+        ]
+
+        similar = agent.find_similar_homes(source, candidates, limit=3)
+
+        self.assertEqual([home["address"] for home in similar], ["125 Main St", "127 Main St"])
+
+    def test_generate_property_html_includes_similar_homes_block(self):
+        agent._claude = lambda *args, **kwargs: "<p>Test reply.</p>"
+        listing = {
+            "address": "123 Main St",
+            "city": "Austin",
+            "state": "TX",
+            "zip": "78701",
+            "price": "500000",
+            "beds": "3",
+            "baths": "2",
+            "sqft": "1800",
+            "status": "Active",
+            "listing_url": "https://example.com/123",
+            "photo_url": "https://example.com/123.jpg",
+        }
+        similar = [
+            {
+                "address": "125 Main St",
+                "city": "Austin",
+                "state": "TX",
+                "price": "510000",
+                "beds": "3",
+                "baths": "2",
+                "status": "For sale",
+                "listing_url": "https://example.com/125",
+                "photo_url": "https://example.com/125.jpg",
+            }
+        ]
+
+        html, text = agent.generate_property_html(listing, {}, "https://calendly.test", similar_homes=similar)
+
+        self.assertIn("Similar homes", html)
+        self.assertIn("125 Main St", html)
+        self.assertIn("https://example.com/125", html)
+        self.assertIn("Similar homes:", text)
+        self.assertIn("125 Main St", text)
 
 
 if __name__ == "__main__":

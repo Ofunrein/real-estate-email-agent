@@ -26,7 +26,7 @@ Built for solo agents and small teams (1-20 agents). Each client gets their own 
 
 | Email type | What happens |
 |---|---|
-| Single property inquiry | HTML reply with hero photo, price, beds/baths/sqft, mortgage rates, neighborhood stats, Calendly button |
+| Single property inquiry | HTML reply with hero photo, price, beds/baths/sqft, mortgage rates, neighborhood stats, Calendly button, and optional similar homes block |
 | Multi-property inquiry | Card-per-property reply with photos and details for all addresses |
 | Property search (e.g. "3-bed under $500k in Round Rock") | Searches your sheet first, hits live Zillow if sheet has fewer than 3 matches, appends new results to sheet |
 | Showing request | Reply with Calendly booking link |
@@ -124,6 +124,7 @@ TEAM_NAME=Austin Realty          # Used in replies and notifications
 TEAM_LEAD_EMAIL=                 # Receives lead notifications + fallback routing
 AGENT_PHONE=+1xxxxxxxxxx         # SMS destination for hot leads
 POLL_INTERVAL_SECONDS=60         # How often to check for new emails
+ENABLE_SIMILAR_HOMES=false       # Optional similar-home cards on single-property inquiry emails
 ```
 
 **Agent routing:** Add `Agent Name` and `Agent Email` columns to your sheet. Inquiries about a specific listing are CC'd to that agent automatically.

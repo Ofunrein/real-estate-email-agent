@@ -75,6 +75,9 @@ TWILIO_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM = os.getenv("TWILIO_FROM", "")
 AGENT_PHONE = os.getenv("AGENT_PHONE", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
+ENABLE_SIMILAR_HOMES = os.getenv("ENABLE_SIMILAR_HOMES", "false").strip().lower() in {"1", "true", "yes", "on"}
+SIMILAR_HOMES_MAX = max(0, min(6, int(os.getenv("SIMILAR_HOMES_MAX", "3"))))
+SIMILAR_HOMES_PRICE_VARIANCE = max(0.05, min(1.0, float(os.getenv("SIMILAR_HOMES_PRICE_VARIANCE", "0.25"))))
 STATE_FILE = "state.json"
 GOOGLE_RETRY_ATTEMPTS = int(os.getenv("GOOGLE_RETRY_ATTEMPTS", "4"))
 CLAUDE_RETRY_ATTEMPTS = int(os.getenv("CLAUDE_RETRY_ATTEMPTS", "5"))
@@ -959,6 +962,165 @@ def _clean_value(value) -> str:
     return "" if _is_missing_value(value) else str(value).strip()
 
 
+def _parse_int_like(value) -> int | None:
+    text = re.sub(r"[^\d]", "", str(value or ""))
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def _parse_price(value) -> float | None:
+    text = re.sub(r"[^\d.]", "", str(value or ""))
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def find_similar_homes(source_listing: dict, listings: list[dict], limit: int = None) -> list[dict]:
+    limit = SIMILAR_HOMES_MAX if limit is None else max(0, limit)
+    if limit < 1:
+        return []
+
+    source_address = source_listing.get("address", "")
+    source_city = _clean_value(source_listing.get("city")).lower()
+    source_zip = _clean_value(source_listing.get("zip"))
+    source_price = _parse_price(source_listing.get("price"))
+    source_beds = _parse_int_like(source_listing.get("beds"))
+    source_baths = _parse_int_like(source_listing.get("baths"))
+    source_type = _clean_value(source_listing.get("property_type")).lower()
+
+    price_floor = None
+    price_ceiling = None
+    if source_price:
+        price_floor = source_price * (1 - SIMILAR_HOMES_PRICE_VARIANCE)
+        price_ceiling = source_price * (1 + SIMILAR_HOMES_PRICE_VARIANCE)
+
+    ranked = []
+    for candidate in listings:
+        candidate_address = candidate.get("address", "")
+        if not candidate_address or _addresses_match(source_address, candidate_address):
+            continue
+
+        status = _clean_value(candidate.get("status")).lower()
+        if status and status not in {"active", "for sale"}:
+            continue
+
+        candidate_city = _clean_value(candidate.get("city")).lower()
+        if source_city and candidate_city and source_city != candidate_city:
+            continue
+
+        candidate_price = _parse_price(candidate.get("price"))
+        if source_price and candidate_price and (candidate_price < price_floor or candidate_price > price_ceiling):
+            continue
+
+        score = 0.0
+        if source_city and candidate_city == source_city:
+            score += 4
+        if source_zip and _clean_value(candidate.get("zip")) == source_zip:
+            score += 2
+
+        candidate_beds = _parse_int_like(candidate.get("beds"))
+        if source_beds is not None and candidate_beds is not None:
+            diff = abs(candidate_beds - source_beds)
+            if diff == 0:
+                score += 3
+            elif diff == 1:
+                score += 1.5
+
+        candidate_baths = _parse_int_like(candidate.get("baths"))
+        if source_baths is not None and candidate_baths is not None:
+            diff = abs(candidate_baths - source_baths)
+            if diff == 0:
+                score += 2
+            elif diff == 1:
+                score += 1
+
+        candidate_type = _clean_value(candidate.get("property_type")).lower()
+        if source_type and candidate_type and candidate_type == source_type:
+            score += 1.5
+
+        if source_price and candidate_price:
+            score += max(0, 3 - abs(candidate_price - source_price) / max(source_price * 0.1, 1))
+
+        if score <= 0:
+            continue
+        ranked.append((score, _listing_quality_score(candidate), candidate))
+
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return [item[2] for item in ranked[:limit]]
+
+
+def render_similar_homes_section(similar_homes: list[dict]) -> tuple[str, str]:
+    homes = [home for home in (similar_homes or []) if home][:SIMILAR_HOMES_MAX]
+    if not homes:
+        return "", ""
+
+    card_cells = []
+    plain_lines = ["", "Similar homes:"]
+    for home in homes:
+        address = _clean_value(home.get("address")) or ", ".join(
+            part for part in [_clean_value(home.get("city")), _clean_value(home.get("state"))] if part
+        )
+        price_val = _parse_price(home.get("price"))
+        price_fmt = f"${price_val:,.0f}" if price_val is not None else _clean_value(home.get("price"))
+        beds = _clean_value(home.get("beds"))
+        baths = _clean_value(home.get("baths"))
+        listing_url = _clean_value(home.get("listing_url"))
+        photo_url = _clean_value(home.get("photo_url") or home.get("photo url"))
+        status = _clean_value(home.get("status")) or "For sale"
+        facts = "  ".join(part for part in [f"{beds} bd" if beds else "", f"{baths} bth" if baths else ""] if part)
+        photo_html = (
+            f'<img src="{photo_url}" alt="" style="display:block;width:100%;height:86px;object-fit:cover;'
+            f'border-radius:8px;margin-bottom:8px" />'
+        ) if photo_url else ""
+        price_html = f'<div style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 6px">{price_fmt}</div>' if price_fmt else ""
+        facts_html = f'<div style="font-size:12px;color:#d6d6d6;line-height:1.4">{facts}</div>' if facts else ""
+        status_html = (
+            '<div style="font-size:12px;color:#8fdb95;margin:0 0 8px">'
+            f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3bb54a;'
+            f'margin-right:6px;vertical-align:middle"></span>{status}</div>'
+        )
+        body_html = (
+            f'{photo_html}{status_html}{price_html}{facts_html}'
+            f'<div style="font-size:12px;color:#f0f0f0;line-height:1.4;margin-top:8px">{address}</div>'
+        )
+        if listing_url:
+            body_html = f'<a href="{listing_url}" style="text-decoration:none;color:inherit">{body_html}</a>'
+        card_cells.append(
+            '<td valign="top" width="33.33%" style="padding-right:10px">'
+            f'<div style="background:#2f3134;border-radius:10px;padding:10px;min-height:220px">{body_html}</div>'
+            '</td>'
+        )
+        line = f"- {address}"
+        if price_fmt:
+            line += f" | {price_fmt}"
+        if facts:
+            line += f" | {facts}"
+        if listing_url:
+            line += f" | {listing_url}"
+        plain_lines.append(line)
+
+    while len(card_cells) < 3:
+        card_cells.append('<td valign="top" width="33.33%" style="padding-right:10px"></td>')
+
+    html = f"""
+<div style="margin-top:24px;background:#1f2124;border:1px solid #3a3d42;border-radius:12px;padding:16px;color:#ffffff">
+<h3 style="margin:0 0 14px;font-size:28px;line-height:1.1;color:#ffffff">Similar homes</h3>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+<tr>
+{''.join(card_cells)}
+</tr>
+</table>
+</div>"""
+    return html, "\n".join(plain_lines)
+
+
 def append_property_to_sheet(sheets, listing: dict):
     """Append a newly discovered property to properties_update tab."""
     if not SHEET_ID:
@@ -1736,7 +1898,7 @@ def classify_email(parsed: dict, thread_context: str = "") -> dict:
 
 def generate_property_html(listing: dict, rentcast: dict, calendly: str,
                            rates: dict = None, neighborhood: dict = None,
-                           comps: list[dict] = None) -> tuple[str, str]:
+                           comps: list[dict] = None, similar_homes: list[dict] = None) -> tuple[str, str]:
     # Photo URL: sheet column "Photo URL" normalises to "photo_url"; also check Apify/RentCast variants
     photo_url = (listing.get("photo_url") or listing.get("photo url") or
                  rentcast.get("photoUrl") or rentcast.get("photo_url") or "")
@@ -1827,6 +1989,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
     details_line = " &bull; ".join(details)
 
     sig = '<p style="margin:20px 0 0;color:#555;line-height:1.45">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>'
+    similar_homes_html, similar_homes_text = render_similar_homes_section(similar_homes)
 
     html = f"""<div style="font-family:Arial,sans-serif;max-width:520px;color:#222;line-height:1.45">
 {hero_img}
@@ -1839,6 +2002,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
 <div style="margin-top:22px">
 {view_btn}{cal_btn}
 </div>
+{similar_homes_html}
 </div>"""
 
     plain_detail = []
@@ -1858,6 +2022,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
         plain += f"View listing: {listing_url}\n"
     if calendly:
         plain += f"Schedule a showing: {calendly}\n"
+    plain += similar_homes_text
     plain += "\nBest regards,\nAustin Realty\n(512) 555-0192"
     return html, plain
 
@@ -2211,9 +2376,10 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                 log.info("Sold comps — skipped (trigger gate not met)")
             rates = get_mortgage_rates()
             neighborhood = get_neighborhood_stats(zipcode)
+            similar_homes = find_similar_homes(listing, listings) if ENABLE_SIMILAR_HOMES else []
 
             html_body, text_body = generate_property_html(listing, rentcast_data, CALENDLY_URL,
-                                                          rates, neighborhood, comps)
+                                                          rates, neighborhood, comps, similar_homes)
             html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
             agent_email, agent_name = get_assigned_agent(listing)
