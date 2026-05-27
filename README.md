@@ -131,6 +131,38 @@ ENABLE_SIMILAR_HOMES=false       # Optional similar-home cards on single-propert
 
 ---
 
+## Agent Inbox V1
+
+Agent Inbox is a read-only monitor for the shared Google Sheet workbook. It shows lead memory, conversation events, email threads, and basic metrics.
+
+Prepare the workbook:
+
+```bash
+python3 scripts/setup_agent_inbox_sheets.py
+```
+
+Run the email agent:
+
+```bash
+python3 agent.py
+```
+
+Run Agent Inbox:
+
+```bash
+python3 -m agent_inbox.app
+```
+
+Open `http://127.0.0.1:8787`.
+
+V1 uses three required tabs in the same Google Sheet workbook:
+
+- `properties`
+- `lead_memory`
+- `conversation_events`
+
+---
+
 ## Gmail labels
 
 | Label | Meaning |
