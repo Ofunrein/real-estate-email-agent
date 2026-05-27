@@ -84,6 +84,7 @@ TWILIO_FROM = os.getenv("TWILIO_FROM", "")
 AGENT_PHONE = os.getenv("AGENT_PHONE", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 ENABLE_SIMILAR_HOMES = os.getenv("ENABLE_SIMILAR_HOMES", "false").strip().lower() in {"1", "true", "yes", "on"}
+ENABLE_EMAIL_AGENT = os.getenv("ENABLE_EMAIL_AGENT", "true").strip().lower() in {"1", "true", "yes", "on"}
 SIMILAR_HOMES_MAX = max(0, min(6, int(os.getenv("SIMILAR_HOMES_MAX", "3"))))
 SIMILAR_HOMES_PRICE_VARIANCE = max(0.05, min(1.0, float(os.getenv("SIMILAR_HOMES_PRICE_VARIANCE", "0.25"))))
 STATE_FILE = "state.json"
@@ -2648,6 +2649,10 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
+    if not ENABLE_EMAIL_AGENT:
+        log.info("Iris email agent disabled by ENABLE_EMAIL_AGENT=false")
+        return
+
     state = load_state()
     gmail, sheets = get_gmail_service()
     my_email = get_my_email(gmail)

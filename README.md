@@ -144,16 +144,35 @@ python3 scripts/setup_agent_inbox_sheets.py
 Run the email agent:
 
 ```bash
-python3 agent.py
+python3 -m channels.iris_email
 ```
 
-Run Agent Inbox:
+The legacy `python3 agent.py` entry point still works. Disable Iris with `ENABLE_EMAIL_AGENT=false`.
+
+Run the local Python Agent Inbox debug viewer:
 
 ```bash
 python3 -m agent_inbox.app
 ```
 
 Open `http://127.0.0.1:8787`.
+
+Run the Next.js Agent Inbox:
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:3000`.
+
+Property hygiene checks:
+
+```bash
+python3 scripts/property_hygiene.py
+python3 scripts/property_hygiene.py --repair
+python3 scripts/property_hygiene.py --enrich --limit 25
+```
 
 V1 uses three required tabs in the same Google Sheet workbook:
 
