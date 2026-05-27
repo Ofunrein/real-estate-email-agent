@@ -24,6 +24,7 @@ from core.event_logger import (
     build_lead_memory_update,
     upsert_lead_memory,
 )
+from core.sheet_schema import PROPERTIES_HEADERS, PROPERTIES_TAB
 
 load_dotenv()
 
@@ -859,7 +860,7 @@ def _get_sheet_headers(sheets) -> list[str]:
     result = _google_execute(
         sheets.spreadsheets().values().get(
             spreadsheetId=SHEET_ID,
-            range="properties_update!1:1"
+            range=f"{PROPERTIES_TAB}!1:1"
         ),
         "Sheets headers get",
     )
@@ -871,7 +872,7 @@ def get_listings(sheets) -> list[dict]:
     result = _google_execute(
         sheets.spreadsheets().values().get(
             spreadsheetId=SHEET_ID,
-            range="properties_update!A:P"
+            range=f"{PROPERTIES_TAB}!A:ZZ"
         ),
         "Sheets listings get",
     )
@@ -929,10 +930,7 @@ def enrich_missing_fields(listing: dict) -> dict:
 
 
 # Fallback order for local docs; live app appends by the sheet's header row.
-_SHEET_COLUMNS = ["address", "price", "beds", "baths", "city", "state",
-                  "description", "neighborhood", "property_type", "features",
-                  "days_on_market", "photo_url", "sqft", "year_built",
-                  "agent_name", "agent_email"]
+_SHEET_COLUMNS = PROPERTIES_HEADERS
 
 
 def _normalize_address_key(address: str) -> str:
@@ -1129,7 +1127,7 @@ def render_similar_homes_section(similar_homes: list[dict]) -> tuple[str, str]:
 
 
 def append_property_to_sheet(sheets, listing: dict):
-    """Append a newly discovered property to properties_update tab."""
+    """Append a newly discovered property to the properties tab."""
     if not SHEET_ID:
         return
     addr = listing.get("address", "").strip()
@@ -1147,14 +1145,14 @@ def append_property_to_sheet(sheets, listing: dict):
         _google_execute(
             sheets.spreadsheets().values().append(
                 spreadsheetId=SHEET_ID,
-                range="properties_update!A:P",
+                range=f"{PROPERTIES_TAB}!A:ZZ",
                 valueInputOption="RAW",
                 insertDataOption="INSERT_ROWS",
                 body={"values": [row]}
             ),
             f"Sheets append {listing.get('address', '')}",
         )
-        log.info("Sheet append — added %s to properties_update", listing.get("address", ""))
+        log.info("Sheet append — added %s to %s", listing.get("address", ""), PROPERTIES_TAB)
     except Exception as exc:
         log.error("Sheet append failed for %s: %s", listing.get("address", ""), exc)
 
