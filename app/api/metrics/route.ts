@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loadAgentInboxData } from "@/lib/googleSheets";
+import { loadAgentInboxData } from "@/lib/dataSource";
 import { buildMetrics, buildPropertyHealth } from "@/lib/inboxData";
 
 export const dynamic = "force-dynamic";

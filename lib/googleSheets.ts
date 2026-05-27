@@ -107,7 +107,7 @@ export async function readSheets(tabs: string[]): Promise<Record<string, SheetRo
   }));
 }
 
-export async function loadAgentInboxData() {
+export async function loadAgentInboxDataFromSheets() {
   if (inboxCache && Date.now() - inboxCache.loadedAt < CACHE_TTL_MS) {
     return inboxCache.data;
   }

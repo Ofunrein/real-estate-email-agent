@@ -166,6 +166,15 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
+For hosted/multi-client deployment, run the Postgres schema and sync Sheets into the database:
+
+```bash
+psql "$DATABASE_URL" -f db/migrations/001_agent_os.sql
+npm run sync:sheets
+```
+
+See [docs/hosted-client-onboarding.md](/Users/martinofunrein/Downloads/real-estate-email-agent/docs/hosted-client-onboarding.md).
+
 Property hygiene checks:
 
 ```bash
