@@ -18,6 +18,13 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import anthropic
 
+from core.event_logger import (
+    append_conversation_event,
+    build_conversation_event,
+    build_lead_memory_update,
+    upsert_lead_memory,
+)
+
 load_dotenv()
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
@@ -1877,6 +1884,59 @@ def build_handoff_summary(parsed: dict, classification: dict, memory: dict, inte
     return "\n".join(summary_lines)
 
 
+def build_email_lead_memory_update(parsed: dict, classification: dict, memory: dict, assigned_owner: str = "") -> dict:
+    _, email_addr = _sender_parts(parsed.get("from", ""))
+    fields = memory.get("lead_fields", {})
+    return build_lead_memory_update(
+        email=email_addr,
+        phone=memory.get("phone", ""),
+        full_name=memory.get("lead_name", ""),
+        lead_source="email",
+        source_detail=parsed.get("subject", ""),
+        lead_role=memory.get("lead_role", classification.get("primary_lead_role", "")),
+        intent=classification.get("intent", ""),
+        property_interest=memory.get("property_interest", []),
+        budget=fields.get("budget") or "",
+        area=fields.get("area") or "",
+        timeline=fields.get("timeline") or "",
+        preferred_channel=memory.get("preferred_channel", "email"),
+        assigned_owner=assigned_owner or memory.get("assigned_owner", ""),
+        handoff_status="needs_human" if classification.get("intent") == "human_required" else "",
+        handoff_reason=memory.get("human_handoff_reason", ""),
+        next_action=memory.get("next_action", ""),
+        summary=build_handoff_summary(parsed, classification, memory, classification.get("intent", "")),
+    )
+
+
+def build_email_conversation_event(
+    *,
+    parsed: dict,
+    direction: str,
+    event_type: str,
+    message_text: str,
+    summary: str,
+    ai_action: str,
+    status: str,
+    handoff_reason: str = "",
+) -> dict:
+    name, email_addr = _sender_parts(parsed.get("from", ""))
+    return build_conversation_event(
+        channel="email",
+        direction=direction,
+        email=email_addr,
+        full_name=name,
+        source="gmail",
+        thread_ref=parsed.get("thread_id", ""),
+        agent_name="Iris",
+        event_type=event_type,
+        message_text=message_text,
+        summary=summary,
+        ai_action=ai_action,
+        handoff_reason=handoff_reason,
+        status=status,
+    )
+
+
 def classify_email(parsed: dict, thread_context: str = "") -> dict:
     # Strip quoted reply lines (lines starting with >) to focus on the new message
     body_lines = parsed["body"].split("\n")
@@ -2281,6 +2341,26 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
             hubspot_add_note(contact_id, handoff_summary)
         notify_agent(gmail, TEAM_LEAD_EMAIL, TEAM_NAME, parsed["from"],
                      parsed["subject"], intent, handoff_summary)
+        if SHEET_ID:
+            upsert_lead_memory(
+                sheets,
+                SHEET_ID,
+                build_email_lead_memory_update(parsed, classification, lead_memory, TEAM_LEAD_EMAIL),
+            )
+            append_conversation_event(
+                sheets,
+                SHEET_ID,
+                build_email_conversation_event(
+                    parsed=parsed,
+                    direction="inbound",
+                    event_type="human_handoff",
+                    message_text=parsed.get("body", ""),
+                    summary=handoff_summary,
+                    ai_action="route_human",
+                    handoff_reason=lead_memory.get("human_handoff_reason", ""),
+                    status="needs_human",
+                ),
+            )
         log.info("Human required — labeled NEEDS_HUMAN, no reply sent")
         state["replied_ids"].append(msg_id)
         return
@@ -2533,6 +2613,26 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
     if html_body:
         send_reply(gmail, parsed, html_body, text_body)
         lead_memory["last_ai_touch_at"] = _iso_now()
+        if SHEET_ID:
+            owner = lead_memory.get("assigned_owner", TEAM_LEAD_EMAIL)
+            upsert_lead_memory(
+                sheets,
+                SHEET_ID,
+                build_email_lead_memory_update(parsed, classification, lead_memory, owner),
+            )
+            append_conversation_event(
+                sheets,
+                SHEET_ID,
+                build_email_conversation_event(
+                    parsed=parsed,
+                    direction="outbound",
+                    event_type="ai_reply",
+                    message_text=text_body,
+                    summary=f"Iris replied to {intent}",
+                    ai_action="reply_sent",
+                    status="sent",
+                ),
+            )
         if msg_id not in state["replied_ids"]:
             state["replied_ids"].append(msg_id)
         apply_labels(gmail, msg_id, labels)
