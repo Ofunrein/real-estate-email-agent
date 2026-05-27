@@ -1,5 +1,5 @@
 import { AgentInboxClient } from "@/components/AgentInboxClient";
-import { loadAgentInboxData } from "@/lib/googleSheets";
+import { loadAgentInboxData } from "@/lib/dataSource";
 import { composeInboxData } from "@/lib/inboxData";
 
 export const dynamic = "force-dynamic";
