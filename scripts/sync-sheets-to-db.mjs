@@ -131,7 +131,7 @@ async function appendEvents(pool, clientId, rows) {
   if (!rows.length) {
     return;
   }
-  await pool.query("delete from conversation_events where client_id = $1 and source = 'sheets'", [clientId]);
+  await pool.query("delete from conversation_events where client_id = $1", [clientId]);
   for (const row of rows) {
     const values = CONVERSATION_EVENTS_HEADERS.map((header) => row[header] || "");
     await pool.query(
