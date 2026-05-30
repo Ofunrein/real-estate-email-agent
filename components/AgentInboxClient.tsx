@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AgentInboxData, Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
@@ -96,10 +96,12 @@ function PropertyTable({
   properties,
   selectedIndex,
   onSelect,
+  onOpenCard,
 }: {
   properties: SheetRow[];
   selectedIndex: number;
   onSelect: (index: number) => void;
+  onOpenCard: (index: number) => void;
 }) {
   if (!properties.length) {
     return <div className="empty">No property rows loaded</div>;
@@ -133,8 +135,20 @@ function PropertyTable({
               <tr
                 className={selectedIndex === index ? "active" : ""}
                 key={`${property.address || "property"}-${index}`}
-                onClick={() => onSelect(index)}
+                aria-label={`Open mobile card for ${property.address || "property"}`}
+                onClick={() => {
+                  onSelect(index);
+                  onOpenCard(index);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(index);
+                    onOpenCard(index);
+                  }
+                }}
                 onMouseDown={() => onSelect(index)}
+                tabIndex={0}
               >
                 <td className="property-address">
                   <strong>{property.address || "Blank address"}</strong>
@@ -162,6 +176,93 @@ function PropertyTable({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function propertyFeatureList(property: SheetRow) {
+  return (property.features || "")
+    .split(",")
+    .map((feature) => feature.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function PropertyMobileCard({
+  property,
+  onClose,
+}: {
+  property: SheetRow;
+  onClose: () => void;
+}) {
+  const features = propertyFeatureList(property);
+  const location = [property.city, property.state, property.zip].filter(Boolean).join(", ");
+
+  return (
+    <div className="property-card-stage" role="dialog" aria-modal="true" aria-label="Property mobile card preview">
+      <button className="property-card-scrim" onClick={onClose} aria-label="Close property card preview" />
+      <section className="property-phone" aria-label={property.address || "Property preview"}>
+        <div className="phone-bar">
+          <span>9:41</span>
+          <span className="phone-notch" />
+          <span>Agent OS</span>
+        </div>
+        <div className="phone-card">
+          <div className="phone-hero">
+            <PropertyPhoto property={property} large />
+            <button className="phone-close" onClick={onClose}>Close</button>
+            <div className="phone-hero-copy">
+              <span>{property.status || "Sheet listing"}</span>
+              <strong>{formatPrice(property.price)}</strong>
+            </div>
+          </div>
+
+          <div className="phone-content">
+            <div className="phone-facts" aria-label="Property facts">
+              <div><strong>{displayValue(property.beds)}</strong><span>beds</span></div>
+              <div><strong>{displayValue(property.baths)}</strong><span>baths</span></div>
+              <div><strong>{displayValue(property.sqft)}</strong><span>sqft</span></div>
+            </div>
+
+            <div className="phone-address">
+              <h3>{property.address || "Untitled property"}</h3>
+              <p>{location || displayValue(property.neighborhood)}</p>
+            </div>
+
+            <div className="phone-meta-grid">
+              <div>
+                <span>Type</span>
+                <strong>{displayValue(property.property_type)}</strong>
+              </div>
+              <div>
+                <span>Built</span>
+                <strong>{displayValue(property.year_built)}</strong>
+              </div>
+              <div>
+                <span>Market</span>
+                <strong>{displayValue(property.days_on_market)} days</strong>
+              </div>
+              <div>
+                <span>Area</span>
+                <strong>{displayValue(property.neighborhood)}</strong>
+              </div>
+            </div>
+
+            <p className="phone-description">{displayValue(property.description)}</p>
+
+            {features.length ? (
+              <div className="phone-features">
+                {features.map((feature) => <span key={feature}>{feature}</span>)}
+              </div>
+            ) : null}
+
+            <div className="phone-actions">
+              {property.listing_url ? <a href={property.listing_url} rel="noreferrer" target="_blank">View listing</a> : null}
+              {property.photo_url ? <a href={property.photo_url} rel="noreferrer" target="_blank">Open image</a> : null}
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -337,6 +438,7 @@ export function AgentInboxClient({
 }) {
   const [view, setView] = useState<View>("overview");
   const [selectedPropertyIndex, setSelectedPropertyIndex] = useState(0);
+  const [mobileCardIndex, setMobileCardIndex] = useState<number | null>(null);
   const threadEntries = useMemo(() => Object.entries(data.threads), [data.threads]);
   const selectedChannel = channelViews.find((channel) => channel.key === view)?.channel;
   const selectedChannelLabel = channelViews.find((channel) => channel.channel === selectedChannel)?.label || "Channel";
@@ -353,6 +455,20 @@ export function AgentInboxClient({
   const dataStatus = loadError ? "Limited" : "Live";
   const safeSelectedPropertyIndex = Math.min(selectedPropertyIndex, Math.max(data.properties.length - 1, 0));
   const selectedProperty = data.properties[safeSelectedPropertyIndex] || {};
+  const mobileCardProperty = mobileCardIndex == null ? null : data.properties[mobileCardIndex] || null;
+
+  useEffect(() => {
+    if (mobileCardIndex == null) {
+      return;
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileCardIndex(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileCardIndex]);
 
   return (
     <div className="app-shell">
@@ -483,6 +599,7 @@ export function AgentInboxClient({
                 <span className="status">{data.propertyHealth.total} rows</span>
               </div>
               <PropertyTable
+                onOpenCard={setMobileCardIndex}
                 onSelect={setSelectedPropertyIndex}
                 properties={data.properties}
                 selectedIndex={safeSelectedPropertyIndex}
@@ -509,6 +626,9 @@ export function AgentInboxClient({
           </div>
         )}
       </main>
+      {mobileCardProperty ? (
+        <PropertyMobileCard property={mobileCardProperty} onClose={() => setMobileCardIndex(null)} />
+      ) : null}
     </div>
   );
 }
