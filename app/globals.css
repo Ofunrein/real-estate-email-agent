@@ -480,7 +480,7 @@ button {
   background: #f6f1e9;
   padding: 11px 12px;
   line-height: 1.45;
-  white-space: pre-wrap;
+  overflow: hidden;
 }
 
 .message.outbound {
@@ -501,6 +501,71 @@ button {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.message-content {
+  display: grid;
+  gap: 12px;
+}
+
+.message-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.empty-message {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.message-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+
+.message-image-link {
+  display: block;
+  overflow: hidden;
+  border: 1px solid #ded4c6;
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.message-image-link img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.email-rendered {
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  color: #201f1b;
+}
+
+.email-rendered,
+.email-rendered p,
+.email-rendered div,
+.email-rendered span {
+  max-width: 100%;
+}
+
+.email-rendered img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.email-rendered table {
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.email-rendered a {
+  color: var(--copper-dark);
+  font-weight: 800;
 }
 
 .detail-panel,
