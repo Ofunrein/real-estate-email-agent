@@ -44,6 +44,195 @@ function latestEvent(events: SheetRow[]) {
   return events[events.length - 1] || {};
 }
 
+function formatPrice(value?: string) {
+  if (!value) return "Blank";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  return `$${numeric.toLocaleString()}`;
+}
+
+function displayValue(value?: string) {
+  return value && value !== "None" ? value : "Blank";
+}
+
+const corePropertyFields = [
+  "price",
+  "beds",
+  "baths",
+  "photo_url",
+  "sqft",
+  "year_built",
+  "city",
+  "state",
+  "zip",
+  "property_type",
+];
+
+function missingPropertyFields(property: SheetRow) {
+  return corePropertyFields.filter((field) => !property[field] || property[field] === "None");
+}
+
+function propertyLabel(property: SheetRow) {
+  const location = [property.city, property.state, property.zip].filter(Boolean).join(", ");
+  return location ? `${property.address || "Untitled property"} · ${location}` : property.address || "Untitled property";
+}
+
+function PropertyPhoto({ property, large = false }: { property: SheetRow; large?: boolean }) {
+  const photoUrl = property.photo_url;
+  if (!photoUrl) {
+    return <div className={large ? "property-photo missing large" : "property-photo missing"}>No photo</div>;
+  }
+  return (
+    <img
+      alt={`${property.address || "Property"} photo`}
+      className={large ? "property-photo large" : "property-photo"}
+      loading="lazy"
+      src={photoUrl}
+    />
+  );
+}
+
+function PropertyTable({
+  properties,
+  selectedIndex,
+  onSelect,
+}: {
+  properties: SheetRow[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  if (!properties.length) {
+    return <div className="empty">No property rows loaded</div>;
+  }
+
+  return (
+    <div className="property-table-wrap">
+      <table className="property-table">
+        <thead>
+          <tr>
+            <th>Address</th>
+            <th>Price</th>
+            <th>Beds</th>
+            <th>Baths</th>
+            <th>Photo</th>
+            <th>Sqft</th>
+            <th>Year</th>
+            <th>Status</th>
+            <th>City</th>
+            <th>Zip</th>
+            <th>Type</th>
+            <th>Days</th>
+            <th>Agent</th>
+            <th>Missing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {properties.map((property, index) => {
+            const missing = missingPropertyFields(property);
+            return (
+              <tr
+                className={selectedIndex === index ? "active" : ""}
+                key={`${property.address || "property"}-${index}`}
+                onClick={() => onSelect(index)}
+                onMouseDown={() => onSelect(index)}
+              >
+                <td className="property-address">
+                  <strong>{property.address || "Blank address"}</strong>
+                  <span>{property.neighborhood || property.description || ""}</span>
+                </td>
+                <td>{formatPrice(property.price)}</td>
+                <td>{displayValue(property.beds)}</td>
+                <td>{displayValue(property.baths)}</td>
+                <td><PropertyPhoto property={property} /></td>
+                <td>{displayValue(property.sqft)}</td>
+                <td>{displayValue(property.year_built)}</td>
+                <td><span className="status">{property.status || "sheet"}</span></td>
+                <td>{displayValue(property.city)}</td>
+                <td>{displayValue(property.zip)}</td>
+                <td>{displayValue(property.property_type)}</td>
+                <td>{displayValue(property.days_on_market)}</td>
+                <td>{displayValue(property.agent_name)}</td>
+                <td>
+                  <span className={missing.length ? "missing-pill" : "complete-pill"}>
+                    {missing.length ? `${missing.length} missing` : "complete"}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PropertyDetail({ property }: { property: SheetRow }) {
+  if (!Object.keys(property).length) {
+    return (
+      <aside className="panel property-detail-panel">
+        <div className="empty">Select a property row</div>
+      </aside>
+    );
+  }
+
+  const missing = missingPropertyFields(property);
+  const details = [
+    ["Price", formatPrice(property.price)],
+    ["Beds / baths", `${displayValue(property.beds)} bd / ${displayValue(property.baths)} bth`],
+    ["Sqft", displayValue(property.sqft)],
+    ["Year built", displayValue(property.year_built)],
+    ["Type", displayValue(property.property_type)],
+    ["Neighborhood", displayValue(property.neighborhood)],
+    ["Days on market", displayValue(property.days_on_market)],
+    ["Agent", displayValue(property.agent_name)],
+  ];
+
+  return (
+    <aside className="panel property-detail-panel">
+      <div className="property-detail-media">
+        <PropertyPhoto property={property} large />
+      </div>
+      <div className="property-detail-body">
+        <span className="eyebrow">Selected property</span>
+        <h3>{propertyLabel(property)}</h3>
+        <div className="property-detail-grid">
+          {details.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="property-copy-block">
+          <span>Description</span>
+          <p>{displayValue(property.description)}</p>
+        </div>
+        <div className="property-copy-block">
+          <span>Features</span>
+          <p>{displayValue(property.features)}</p>
+        </div>
+
+        <div className="property-link-row">
+          {property.listing_url ? <a href={property.listing_url} rel="noreferrer" target="_blank">Listing</a> : null}
+          {property.photo_url ? <a href={property.photo_url} rel="noreferrer" target="_blank">Photo URL</a> : null}
+        </div>
+
+        <div className="missing-block">
+          <span>Missing fields</span>
+          {missing.length ? (
+            <div className="missing-list">
+              {missing.map((field) => <em key={field}>{field}</em>)}
+            </div>
+          ) : (
+            <strong>Core data complete</strong>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 function TableRows({ events, emptyLabel = "No conversations yet" }: { events: SheetRow[]; emptyLabel?: string }) {
   if (!events.length) {
     return <div className="empty">{emptyLabel}</div>;
@@ -147,6 +336,7 @@ export function AgentInboxClient({
   sourceLabel?: string;
 }) {
   const [view, setView] = useState<View>("overview");
+  const [selectedPropertyIndex, setSelectedPropertyIndex] = useState(0);
   const threadEntries = useMemo(() => Object.entries(data.threads), [data.threads]);
   const selectedChannel = channelViews.find((channel) => channel.key === view)?.channel;
   const selectedChannelLabel = channelViews.find((channel) => channel.channel === selectedChannel)?.label || "Channel";
@@ -161,6 +351,8 @@ export function AgentInboxClient({
     : 0;
   const activeThreads = threadEntries.length;
   const dataStatus = loadError ? "Limited" : "Live";
+  const safeSelectedPropertyIndex = Math.min(selectedPropertyIndex, Math.max(data.properties.length - 1, 0));
+  const selectedProperty = data.properties[safeSelectedPropertyIndex] || {};
 
   return (
     <div className="app-shell">
@@ -287,19 +479,16 @@ export function AgentInboxClient({
             </section>
             <section className="panel property-panel">
               <div className="panel-header">
-                <h2 className="panel-title">Sheet Preview</h2>
+                <h2 className="panel-title">Property Sheet</h2>
                 <span className="status">{data.propertyHealth.total} rows</span>
               </div>
-              <TableRows
-                emptyLabel="No property rows loaded"
-                events={data.properties.slice(0, 15).map((property) => ({
-                  ...property,
-                  summary: `${property.price ? `$${Number(property.price).toLocaleString()} ` : ""}${property.beds || ""} bd ${property.baths || ""} bth`,
-                  status: property.status || "sheet",
-                  email: property.address,
-                }))}
+              <PropertyTable
+                onSelect={setSelectedPropertyIndex}
+                properties={data.properties}
+                selectedIndex={safeSelectedPropertyIndex}
               />
             </section>
+            <PropertyDetail property={selectedProperty} />
           </div>
         ) : (
           <div className="workspace">
