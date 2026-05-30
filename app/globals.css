@@ -382,7 +382,8 @@ button {
 }
 
 .property-layout {
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 270px minmax(0, 1fr) 390px;
+  align-items: start;
 }
 
 .panel {
@@ -581,6 +582,230 @@ button {
   font-size: 28px;
 }
 
+.property-panel,
+.property-detail-panel {
+  min-height: 560px;
+}
+
+.property-table-wrap {
+  max-height: calc(100vh - 310px);
+  min-height: 520px;
+  overflow: auto;
+}
+
+.property-table {
+  width: max(100%, 1380px);
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.property-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--line);
+  background: #f8f3eb;
+  color: var(--muted);
+  padding: 10px 12px;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.property-table tbody tr {
+  border-bottom: 1px solid #ebe5dc;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+}
+
+.property-table tbody tr:hover,
+.property-table tbody tr.active {
+  background: #fff8ef;
+}
+
+.property-table tbody tr.active {
+  box-shadow: inset 4px 0 0 var(--copper);
+}
+
+.property-table td {
+  padding: 9px 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.property-address {
+  min-width: 260px;
+  max-width: 340px;
+}
+
+.property-address strong,
+.property-address span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.property-address span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.property-photo {
+  display: grid;
+  width: 72px;
+  height: 52px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #efe8dc;
+  color: var(--muted);
+  object-fit: cover;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.property-photo.large {
+  width: 100%;
+  height: 238px;
+  border: 0;
+  border-radius: 0;
+}
+
+.property-photo.missing.large {
+  min-height: 238px;
+}
+
+.missing-pill,
+.complete-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.missing-pill {
+  background: #f9eadf;
+  color: var(--copper-dark);
+}
+
+.complete-pill {
+  background: #ecf4ef;
+  color: #1d6240;
+}
+
+.property-detail-panel {
+  position: sticky;
+  top: 28px;
+}
+
+.property-detail-media {
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: #efe8dc;
+}
+
+.property-detail-body {
+  padding: 17px;
+}
+
+.property-detail-body h3 {
+  margin: 3px 0 15px;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.property-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.property-detail-grid div {
+  min-width: 0;
+  background: #fffbf5;
+  padding: 11px;
+}
+
+.property-detail-grid span,
+.property-copy-block span,
+.missing-block span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.property-detail-grid strong {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.property-copy-block,
+.missing-block {
+  margin-top: 14px;
+  border-top: 1px solid #eee7dd;
+  padding-top: 13px;
+}
+
+.property-copy-block p {
+  margin: 7px 0 0;
+  color: var(--muted-strong);
+  line-height: 1.45;
+}
+
+.property-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.property-link-row a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fffbf5;
+  color: var(--copper-dark);
+  padding: 7px 10px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.missing-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.missing-list em {
+  border-radius: 999px;
+  background: #f9eadf;
+  color: var(--copper-dark);
+  padding: 5px 8px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.missing-block strong {
+  display: block;
+  margin-top: 8px;
+  color: #1d6240;
+}
+
 .empty,
 .empty-state {
   color: var(--muted);
@@ -632,6 +857,14 @@ button {
   .workspace,
   .property-layout {
     grid-template-columns: 1fr;
+  }
+
+  .property-detail-panel {
+    position: static;
+  }
+
+  .property-table-wrap {
+    max-height: 620px;
   }
 }
 
