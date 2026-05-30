@@ -92,6 +92,33 @@ function PropertyPhoto({ property, large = false }: { property: SheetRow; large?
   );
 }
 
+function PreviewIcon() {
+  return (
+    <svg aria-hidden="true" className="preview-icon" fill="none" viewBox="0 0 20 20">
+      <path d="M7.25 4.75h-2.5v2.5M12.75 4.75h2.5v2.5M7.25 15.25h-2.5v-2.5M12.75 15.25h2.5v-2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+      <path d="M8 10a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function PropertyPreviewButton({ property, onOpen }: { property: SheetRow; onOpen: () => void }) {
+  return (
+    <button
+      className="property-preview-button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+      title="Open mobile preview"
+      type="button"
+    >
+      <PropertyPhoto property={property} />
+      <span><PreviewIcon /></span>
+    </button>
+  );
+}
+
 function PropertyTable({
   properties,
   selectedIndex,
@@ -135,14 +162,20 @@ function PropertyTable({
               <tr
                 className={selectedIndex === index ? "active" : ""}
                 key={`${property.address || "property"}-${index}`}
-                aria-label={`Open mobile card for ${property.address || "property"}`}
+                aria-label={`Select ${property.address || "property"}. Double click to open mobile preview.`}
                 onClick={() => {
+                  onSelect(index);
+                }}
+                onDoubleClick={() => {
                   onSelect(index);
                   onOpenCard(index);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
+                    onSelect(index);
+                  }
+                  if (event.key === "v" || event.key === "V") {
                     onSelect(index);
                     onOpenCard(index);
                   }
@@ -157,7 +190,9 @@ function PropertyTable({
                 <td>{formatPrice(property.price)}</td>
                 <td>{displayValue(property.beds)}</td>
                 <td>{displayValue(property.baths)}</td>
-                <td><PropertyPhoto property={property} /></td>
+                <td>
+                  <PropertyPreviewButton property={property} onOpen={() => onOpenCard(index)} />
+                </td>
                 <td>{displayValue(property.sqft)}</td>
                 <td>{displayValue(property.year_built)}</td>
                 <td><span className="status">{property.status || "sheet"}</span></td>
@@ -267,7 +302,7 @@ function PropertyMobileCard({
   );
 }
 
-function PropertyDetail({ property }: { property: SheetRow }) {
+function PropertyDetail({ property, onOpenCard }: { property: SheetRow; onOpenCard: () => void }) {
   if (!Object.keys(property).length) {
     return (
       <aside className="panel property-detail-panel">
@@ -291,7 +326,10 @@ function PropertyDetail({ property }: { property: SheetRow }) {
   return (
     <aside className="panel property-detail-panel">
       <div className="property-detail-media">
-        <PropertyPhoto property={property} large />
+        <button className="property-detail-preview" onClick={onOpenCard} type="button">
+          <PropertyPhoto property={property} large />
+          <span><PreviewIcon /> Mobile preview</span>
+        </button>
       </div>
       <div className="property-detail-body">
         <span className="eyebrow">Selected property</span>
@@ -605,7 +643,7 @@ export function AgentInboxClient({
                 selectedIndex={safeSelectedPropertyIndex}
               />
             </section>
-            <PropertyDetail property={selectedProperty} />
+            <PropertyDetail property={selectedProperty} onOpenCard={() => setMobileCardIndex(safeSelectedPropertyIndex)} />
           </div>
         ) : (
           <div className="workspace">
