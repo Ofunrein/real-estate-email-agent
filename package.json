@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "sync:sheets": "node scripts/sync-sheets-to-db.mjs"
+    "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
+    "sync:ghl": "node scripts/sync-events-to-ghl.mjs",
+    "setup:neon": "bash scripts/setup-neon.sh"
   },
   "dependencies": {
     "googleapis": "^144.0.0",

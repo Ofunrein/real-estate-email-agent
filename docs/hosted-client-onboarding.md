@@ -39,7 +39,9 @@ Each client should get:
 Run:
 
 ```bash
-psql "$DATABASE_URL" -f db/migrations/001_agent_os.sql
+for migration in db/migrations/*.sql; do
+  psql "$DATABASE_URL" -f "$migration"
+done
 ```
 
 Sync Sheets into the database:
@@ -47,6 +49,21 @@ Sync Sheets into the database:
 ```bash
 npm run sync:sheets
 ```
+
+Bootstrap a brand new Neon project from the CLI:
+
+```bash
+npm run setup:neon
+```
+
+Required env for Neon bootstrap:
+
+- `NEON_API_KEY`
+- optional `NEON_ORG_ID`
+- optional `NEON_PROJECT_NAME`
+- optional `NEON_REGION_ID`
+- optional `NEON_DATABASE_NAME`
+- optional `NEON_ROLE_NAME`
 
 The dashboard uses the database when `DATABASE_URL` is set. If no database is configured, it falls back to Google Sheets.
 
@@ -113,3 +130,30 @@ Use this split:
 - Agent Inbox: read-only monitor and troubleshooting view.
 
 This keeps onboarding simple while avoiding Google Sheets quota limits as traffic grows.
+
+## GoHighLevel Mirror
+
+The safe V1 mirror into GoHighLevel is:
+
+- Upsert contacts into GHL using `email` and `phone`.
+- Mirror `conversation_events` into GHL as `InternalComment` messages first.
+- Do not send historical SMS or email payloads through GHL unless you explicitly want those messages delivered again.
+
+Required env:
+
+- `GHL_PRIVATE_INTEGRATION_TOKEN`
+- `GHL_LOCATION_ID`
+
+Dry run:
+
+```bash
+npm run sync:ghl
+```
+
+Live mirror as internal comments:
+
+```bash
+npm run sync:ghl -- --live
+```
+
+If you intentionally want to use a customer-facing GHL message type, pass a different `--message-type` plus `--unsafe-external-send`. That path can contact real leads and should only be used after provider/channel validation.
