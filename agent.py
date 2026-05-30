@@ -2624,6 +2624,19 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                 SHEET_ID,
                 build_email_conversation_event(
                     parsed=parsed,
+                    direction="inbound",
+                    event_type="email_received",
+                    message_text=parsed.get("body", ""),
+                    summary=handoff_summary,
+                    ai_action="classify",
+                    status="processed",
+                ),
+            )
+            append_conversation_event(
+                sheets,
+                SHEET_ID,
+                build_email_conversation_event(
+                    parsed=parsed,
                     direction="outbound",
                     event_type="ai_reply",
                     message_text=text_body,
@@ -2637,6 +2650,21 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
         apply_labels(gmail, msg_id, labels)
         log.info("Reply sent — to=%s intent=%s labels=%s", parsed["from"], intent, labels)
     else:
+        if SHEET_ID:
+            append_conversation_event(
+                sheets,
+                SHEET_ID,
+                build_email_conversation_event(
+                    parsed=parsed,
+                    direction="inbound",
+                    event_type="manual_review",
+                    message_text=parsed.get("body", ""),
+                    summary=handoff_summary,
+                    ai_action="route_human",
+                    handoff_reason=lead_memory.get("human_handoff_reason", ""),
+                    status="needs_human",
+                ),
+            )
         apply_labels(gmail, msg_id, ["NEEDS_HUMAN"])
         log.warning("No reply generated — labeled NEEDS_HUMAN for manual review (from=%s subject='%s')",
                     parsed["from"], parsed["subject"])
