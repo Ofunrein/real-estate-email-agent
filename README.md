@@ -169,11 +169,20 @@ Open `http://127.0.0.1:3000`.
 For hosted/multi-client deployment, run the Postgres schema and sync Sheets into the database:
 
 ```bash
-psql "$DATABASE_URL" -f db/migrations/001_agent_os.sql
+for migration in db/migrations/*.sql; do
+  psql "$DATABASE_URL" -f "$migration"
+done
 npm run sync:sheets
 ```
 
 See [docs/hosted-client-onboarding.md](/Users/martinofunrein/Downloads/real-estate-email-agent/docs/hosted-client-onboarding.md).
+
+Neon bootstrap and GoHighLevel mirror:
+
+```bash
+npm run setup:neon
+npm run sync:ghl
+```
 
 Property hygiene checks:
 
