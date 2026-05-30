@@ -36,6 +36,69 @@ function eventText(event: SheetRow) {
   return event.message_text || event.summary || event.ai_action || "";
 }
 
+function looksLikeHtml(value: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function sanitizeEmailHtml(value: string) {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<object[\s\S]*?<\/object>/gi, "")
+    .replace(/<embed[\s\S]*?>/gi, "")
+    .replace(/<form[\s\S]*?<\/form>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\s(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "")
+    .replace(/\s(href|src)\s*=\s*(["'])\s*data:(?!image\/(?:png|jpe?g|gif|webp);)[\s\S]*?\2/gi, "");
+}
+
+function extractUrls(value: string) {
+  return Array.from(new Set(value.match(/https?:\/\/[^\s<>"')]+/gi) || []));
+}
+
+function isDisplayableImageUrl(value: string) {
+  const lower = value.toLowerCase();
+  return (
+    /\.(png|jpe?g|gif|webp)(?:[?#].*)?$/.test(lower) ||
+    lower.includes("photos.zillowstatic.com/") ||
+    lower.includes("maps.googleapis.com/maps/api/streetview") ||
+    lower.includes("maps.googleapis.com/maps/api/staticmap")
+  );
+}
+
+function MessageContent({ event }: { event: SheetRow }) {
+  const text = eventText(event);
+  if (!text) {
+    return <div className="message-text empty-message">No message text recorded</div>;
+  }
+
+  if (looksLikeHtml(text)) {
+    return (
+      <div
+        className="email-rendered"
+        dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(text) }}
+      />
+    );
+  }
+
+  const imageUrls = extractUrls(text).filter(isDisplayableImageUrl);
+  return (
+    <div className="message-content">
+      <div className="message-text">{text}</div>
+      {imageUrls.length ? (
+        <div className="message-images" aria-label="Images mentioned in message">
+          {imageUrls.map((url) => (
+            <a className="message-image-link" href={url} key={url} rel="noreferrer" target="_blank">
+              <img alt="Message attachment preview" loading="lazy" src={url} />
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function eventChannel(event: SheetRow) {
   return (event.channel || "unknown").toLowerCase();
 }
@@ -421,7 +484,7 @@ function ThreadViewer({ threads, channelLabel }: { threads: [string, SheetRow[]]
                   <span>{event.direction || "event"} {event.agent_name ? `via ${event.agent_name}` : ""}</span>
                   <span>{event.event_at || ""}</span>
                 </div>
-                {eventText(event) || "No message text recorded"}
+                <MessageContent event={event} />
               </div>
             ))}
           </article>
