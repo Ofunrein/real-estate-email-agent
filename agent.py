@@ -2639,7 +2639,7 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
                     parsed=parsed,
                     direction="outbound",
                     event_type="ai_reply",
-                    message_text=text_body,
+                    message_text=html_body,
                     summary=f"Iris replied to {intent}",
                     ai_action="reply_sent",
                     status="sent",
