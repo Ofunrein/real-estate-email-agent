@@ -158,6 +158,17 @@ function formatTheoPropertyLinks(properties: SheetRow[] = []): string {
   return `Here are the listing links:\n\n${lines.join("\n\n")}`;
 }
 
+function formatTheoPropertyPhotos(properties: SheetRow[] = []): string {
+  const photographed = properties.filter((property) => usablePhotoUrl(property.photo_url));
+  if (!photographed.length) return "";
+  const lines = photographed.slice(0, 3).flatMap((property, index) => [
+    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
+    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
+  ].filter(Boolean));
+  const intro = photographed.length === 1 ? "Sending the property photo for:" : "Sending the property photos for:";
+  return `${intro}\n\n${lines.join("\n\n")}`;
+}
+
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
   if (!smsImagesEnabled()) return [];
   if (classification.intent === "spam") return [];
@@ -168,7 +179,7 @@ export function selectTheoMediaUrls(context: TheoReplyContext, classification: T
   if (mode === "on_request" && !wantsPropertyImage(context.message)) return [];
   if (!["on_request", "property_reply"].includes(mode)) return [];
 
-  const maxImages = Math.max(0, Number(process.env.SMS_MAX_IMAGES || "1"));
+  const maxImages = Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3"));
   return (context.properties || [])
     .map((property) => usablePhotoUrl(property.photo_url))
     .filter(Boolean)
@@ -268,6 +279,23 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       status: "needs_human",
       metrics,
     };
+  }
+
+  if (wantsPropertyImage(context.message)) {
+    const mediaUrls = selectTheoMediaUrls(context, classification);
+    const photoReply = formatTheoPropertyPhotos(context.properties);
+    if (mediaUrls.length && photoReply) {
+      return {
+        classification,
+        reply: truncateSms(photoReply, LINK_SMS_LIMIT),
+        mediaUrls,
+        shouldSend: true,
+        aiAction: "property_photos_reply_ready",
+        handoffReason: "",
+        status: "ready_to_reply",
+        metrics,
+      };
+    }
   }
 
   if (wantsPropertyLinks(context.message)) {

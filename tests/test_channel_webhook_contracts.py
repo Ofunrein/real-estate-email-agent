@@ -34,6 +34,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("findPropertiesByAddressesFromDatabase", sms_route)
         self.assertIn("extractTheoListedPropertyAddresses", sms_route)
         self.assertIn("referencesPriorProperties", sms_route)
+        self.assertIn("requestedAddressRows", sms_route)
         self.assertIn('"reply_sent"', sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
         self.assertIn("[Theo SMS]", sms_route)
@@ -74,6 +75,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("wantsPropertyLinks", theo_agent)
         self.assertIn("formatTheoPropertyLinks", theo_agent)
         self.assertIn("property_links_reply_ready", theo_agent)
+        self.assertIn("formatTheoPropertyPhotos", theo_agent)
+        self.assertIn("property_photos_reply_ready", theo_agent)
+        self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -139,6 +143,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("theo_enrichment_budget", theo_data)
         self.assertIn("metrics", theo_data)
         self.assertIn("extractTheoAddress", theo_data)
+        self.assertIn("extractTheoAddresses", theo_data)
         self.assertIn("extractTheoPropertySearchQuery", theo_data)
         self.assertIn("extractTheoListedPropertyAddresses", theo_data)
 
@@ -165,6 +170,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("MediaUrl", twilio_sender)
         self.assertIn("mediaUrls", twilio_sender)
         self.assertIn("mediaCount", twilio_sender)
+        self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', twilio_sender)
         self.assertIn("smsMessageWithMediaLog", twilio_sender)
         self.assertIn("MMS image:", twilio_sender)
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
