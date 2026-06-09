@@ -59,12 +59,16 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("SMS_IMAGE_MODE", theo_agent)
         self.assertIn("SMS_MAX_IMAGES", theo_agent)
         self.assertIn('classification.intent === "human_required"', theo_agent)
+        self.assertIn("asksForSafePropertyFact", theo_agent)
+        self.assertIn("canShareSafeFactsDuringHandoff", theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
         self.assertIn("AGENCY_KNOWLEDGE_CONTEXT", theo_llm)
         self.assertIn("No emojis.", theo_llm)
         self.assertIn("Live enrichment context", theo_llm)
+        self.assertIn("still answer simple safe facts", theo_llm)
+        self.assertIn("Answer the safe factual part first", theo_llm)
         for property_field in [
             "description",
             "neighborhood",
