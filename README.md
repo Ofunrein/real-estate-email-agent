@@ -125,6 +125,10 @@ TEAM_LEAD_EMAIL=                 # Receives lead notifications + fallback routin
 AGENT_PHONE=+1xxxxxxxxxx         # SMS destination for hot leads
 POLL_INTERVAL_SECONDS=60         # How often to check for new emails
 ENABLE_SIMILAR_HOMES=false       # Optional similar-home cards on single-property inquiry emails
+ENABLE_SMS_AGENT=false           # Set true only after Twilio dry-run checks pass
+TWILIO_ACCOUNT_SID=              # Required for Theo outbound SMS
+TWILIO_AUTH_TOKEN=               # Required for Theo outbound SMS
+TWILIO_FROM=+1xxxxxxxxxx         # Twilio sender number
 ```
 
 **Agent routing:** Add `Agent Name` and `Agent Email` columns to your sheet. Inquiries about a specific listing are CC'd to that agent automatically.
@@ -193,7 +197,11 @@ Hosted channel webhooks write to Neon and then appear in the dashboard:
 | Voice | Aria | `/api/webhooks/aria-voice` |
 | Website chat | Olivia | `/api/webhooks/olivia-website` |
 
-Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. These V1 webhooks log inbound activity and shared memory only; they do not send customer-facing replies yet.
+Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. V1 behavior:
+
+- Theo SMS logs inbound messages, updates shared memory, generates one safe reply, sends through Twilio only when `ENABLE_SMS_AGENT=true`, then logs the outbound reply.
+- Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
+- WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 
 Property hygiene checks:
 
