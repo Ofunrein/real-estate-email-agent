@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
-import { enrichTheoData } from "@/lib/theoData";
+import { enrichTheoData, extractTheoAddress } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
-import { sendTheoHandoffAlert, sendTheoSms } from "@/lib/twilioSms";
+import { sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
@@ -171,10 +171,12 @@ export async function POST(request: NextRequest) {
 
     const lookupStarted = nowMs();
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
-    const propertyQuery = [payload.Body || "", lead?.property_interest || ""].filter(Boolean).join(" ");
+    const extractedAddress = extractTheoAddress(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
+    const propertyQuery = extractedAddress || [payload.Body || "", lead?.property_interest || ""].filter(Boolean).join(" ");
     logTheo("lead lookup complete", {
       leadPhone: payload.From,
       found: Boolean(lead),
+      propertyQuery,
       elapsedMs: elapsedMs(lookupStarted),
       totalMs: elapsedMs(requestStarted),
     });
@@ -232,6 +234,7 @@ export async function POST(request: NextRequest) {
       elapsedMs: elapsedMs(aiStarted),
       cost: formatUsd(aiCost),
       sessionCost: formatUsd(theoSessionCost()),
+      mediaCount: reply.mediaUrls.length,
       replyPreview: reply.reply.slice(0, 160),
     });
 
@@ -253,7 +256,7 @@ export async function POST(request: NextRequest) {
     }
 
     const sendStarted = nowMs();
-    const sendResult = await sendTheoSms(payload.From || "", reply.reply);
+    const sendResult = await sendTheoSms(payload.From || "", reply.reply, reply.mediaUrls);
     const sendMs = elapsedMs(sendStarted);
     let handoffAlertSent = false;
     let handoffAlertError = "";
@@ -280,6 +283,7 @@ export async function POST(request: NextRequest) {
       replySent: sendResult.sent,
       replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
       elapsedMs: sendMs,
+      mediaCount: sendResult.mediaCount,
       sendError: sendResult.error || "",
       handoffAlertSent,
       handoffAlertError,
@@ -291,8 +295,8 @@ export async function POST(request: NextRequest) {
       sourceDetail: payload.To ? `to ${payload.To}` : "",
       threadRef: result.event.thread_ref,
       eventType: reply.status === "needs_human" ? "sms_handoff_reply" : "sms_ai_reply",
-      messageText: reply.reply,
-      summary: `Theo ${sendResult.sent ? "sent" : "prepared"} SMS reply for ${reply.classification.intent}.`,
+      messageText: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
+      summary: `Theo ${sendResult.sent ? "sent" : "prepared"} SMS reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
       aiAction: sendResult.sent ? "reply_sent" : "reply_generated",
       handoffReason: reply.handoffReason || sendResult.error,
       status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",

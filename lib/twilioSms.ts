@@ -3,6 +3,7 @@ export type TwilioSendResult = {
   skipped: boolean;
   sid: string;
   error: string;
+  mediaCount: number;
 };
 
 function envFlag(value?: string): boolean {
@@ -18,20 +19,35 @@ function missingConfig(): string {
   return missing.join(", ");
 }
 
-export async function sendTheoSms(to: string, body: string): Promise<TwilioSendResult> {
+function cleanMediaUrls(mediaUrls: string[] = []): string[] {
+  return mediaUrls
+    .map((url) => url.trim())
+    .filter((url) => /^https:\/\//i.test(url))
+    .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "1")));
+}
+
+export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
+  const cleanBody = body.trim();
+  const cleanUrls = cleanMediaUrls(mediaUrls);
+  if (!cleanUrls.length) return cleanBody;
+  return [cleanBody, "", ...cleanUrls.map((url) => `MMS image: ${url}`)].join("\n");
+}
+
+export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
+  const cleanUrls = cleanMediaUrls(mediaUrls);
   if (!smsAgentEnabled()) {
-    return { sent: false, skipped: true, sid: "", error: "ENABLE_SMS_AGENT is not true" };
+    return { sent: false, skipped: true, sid: "", error: "ENABLE_SMS_AGENT is not true", mediaCount: cleanUrls.length };
   }
 
   const missing = missingConfig();
   if (missing) {
-    return { sent: false, skipped: true, sid: "", error: `Missing Twilio config: ${missing}` };
+    return { sent: false, skipped: true, sid: "", error: `Missing Twilio config: ${missing}`, mediaCount: cleanUrls.length };
   }
 
   const recipient = to.trim();
   const message = body.trim();
   if (!recipient || !message) {
-    return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or body" };
+    return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or body", mediaCount: cleanUrls.length };
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
@@ -42,6 +58,9 @@ export async function sendTheoSms(to: string, body: string): Promise<TwilioSendR
     From: process.env.TWILIO_FROM || "",
     Body: message,
   });
+  for (const mediaUrl of cleanUrls) {
+    form.append("MediaUrl", mediaUrl);
+  }
 
   try {
     const response = await fetch(url, {
@@ -59,15 +78,17 @@ export async function sendTheoSms(to: string, body: string): Promise<TwilioSendR
         skipped: false,
         sid: "",
         error: String(payload.message || response.statusText || "Twilio send failed"),
+        mediaCount: cleanUrls.length,
       };
     }
-    return { sent: true, skipped: false, sid: String(payload.sid || ""), error: "" };
+    return { sent: true, skipped: false, sid: String(payload.sid || ""), error: "", mediaCount: cleanUrls.length };
   } catch (error) {
     return {
       sent: false,
       skipped: false,
       sid: "",
       error: error instanceof Error ? error.message : "Twilio send failed",
+      mediaCount: cleanUrls.length,
     };
   }
 }
@@ -85,7 +106,7 @@ export async function sendTheoHandoffAlert(input: {
 }): Promise<TwilioSendResult> {
   const to = agentAlertPhone();
   if (!to) {
-    return { sent: false, skipped: true, sid: "", error: "AGENT_PHONE is not configured" };
+    return { sent: false, skipped: true, sid: "", error: "AGENT_PHONE is not configured", mediaCount: 0 };
   }
 
   const lead = input.leadName || input.leadPhone || "Unknown lead";
