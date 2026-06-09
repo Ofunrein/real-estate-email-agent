@@ -117,6 +117,31 @@ async function findMatchingLead(incoming: SheetRow): Promise<SheetRow | null> {
   return result.rows[0] ? rowToStrings(LEAD_MEMORY_HEADERS, result.rows[0]) : null;
 }
 
+export async function findLeadInDatabase(incoming: Partial<SheetRow>): Promise<SheetRow | null> {
+  return findMatchingLead(cleanRow(LEAD_MEMORY_HEADERS, incoming));
+}
+
+export async function findCandidatePropertiesFromDatabase(query = "", limit = 5): Promise<SheetRow[]> {
+  const search = `%${query.trim().toLowerCase()}%`;
+  const result = await getPool().query(
+    `select ${PROPERTIES_HEADERS.join(", ")}
+       from properties
+      where client_id = $1
+        and (
+          $2 = '%%'
+          or lower(address) like $2
+          or lower(city) like $2
+          or lower(zip) like $2
+          or lower(neighborhood) like $2
+          or lower(property_type) like $2
+        )
+      order by updated_at desc, address asc
+      limit $3`,
+    [clientId(), search, limit],
+  );
+  return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
+}
+
 export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): Promise<SheetRow> {
   await ensureClientInDatabase();
   const cleaned = cleanRow(LEAD_MEMORY_HEADERS, incoming);
