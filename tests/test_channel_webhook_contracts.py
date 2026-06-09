@@ -40,7 +40,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("elapsedMs", sms_route)
         self.assertIn("reply.mediaUrls", sms_route)
         self.assertIn("smsMessageWithMediaLog", sms_route)
-        self.assertIn("extractTheoAddress", sms_route)
+        self.assertIn("extractTheoPropertySearchQuery", sms_route)
         self.assertIn("mediaCount", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
@@ -61,6 +61,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('classification.intent === "human_required"', theo_agent)
         self.assertIn("asksForSafePropertyFact", theo_agent)
         self.assertIn("canShareSafeFactsDuringHandoff", theo_agent)
+        self.assertIn("asksForAlternativeProperties", theo_agent)
+        self.assertIn("latestMessageHasSensitiveTopic", theo_agent)
+        self.assertIn('recommendedNextAction: "reply_and_qualify"', theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -69,6 +72,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("Live enrichment context", theo_llm)
         self.assertIn("still answer simple safe facts", theo_llm)
         self.assertIn("Answer the safe factual part first", theo_llm)
+        self.assertIn("list up to the requested number", theo_llm)
+        self.assertIn("Do not use human_required only because prior messages had service friction", theo_llm)
         for property_field in [
             "description",
             "neighborhood",
@@ -121,6 +126,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("theo_enrichment_budget", theo_data)
         self.assertIn("metrics", theo_data)
         self.assertIn("extractTheoAddress", theo_data)
+        self.assertIn("extractTheoPropertySearchQuery", theo_data)
 
     def test_theo_claude_calls_report_costs(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -156,7 +162,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("sendTheoSms", website_route)
         self.assertIn("reply.mediaUrls", website_route)
         self.assertIn("smsMessageWithMediaLog", website_route)
-        self.assertIn("extractTheoAddress", website_route)
+        self.assertIn("extractTheoPropertySearchQuery", website_route)
         self.assertIn("sms_reply_sent", website_route)
         self.assertIn("phone && hasSmsConsent", website_route)
 

@@ -176,7 +176,8 @@ Lead roles: buyer, seller, first_time_buyer, second_time_buyer, renter, landlord
 Opportunity tags: valuation_interest, mortgage_interest, renter_purchase_potential, sell_before_buy, high_urgency, stale_lead, confused_lead, angry_lead, compliance_sensitive, needs_human_trust.
 Compliance flags: fair_housing, mortgage_license, legal, contract_terms, angry_or_complaint, privacy, broker_approval.
 
-Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.`;
+Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.
+If the latest SMS asks for other homes, options, alternatives, similar properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.`;
   const user = `Latest lead SMS: ${context.message}
 
 Lead memory: ${leadSummary(context.lead)}
@@ -233,6 +234,7 @@ Rules:
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
+- If the lead asks for other homes, options, alternatives, similar properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
 - If the classification says needs_human, still answer simple safe facts from the provided property rows when useful, such as price, beds, baths, sqft, status, address, features, photo/link availability, or listing agent fields.
 - If the classification says needs_human, do not answer the sensitive part: Fair Housing, lending qualification, legal/contract, negotiation, pricing judgment, privacy, broker judgment, or angry complaint resolution. Answer the safe factual part first, then say a real person will follow up on the part that needs human review.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
