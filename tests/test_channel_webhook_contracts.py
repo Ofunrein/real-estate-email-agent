@@ -157,6 +157,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("TWILIO_ACCOUNT_SID", twilio_sender)
         self.assertIn("TWILIO_AUTH_TOKEN", twilio_sender)
         self.assertIn("TWILIO_FROM", twilio_sender)
+        self.assertIn("TWILIO_MESSAGING_SERVICE_SID", twilio_sender)
+        self.assertIn("MessagingServiceSid", twilio_sender)
         self.assertIn("AGENT_PHONE", twilio_sender)
         self.assertIn("ENABLE_SMS_AGENT", twilio_sender)
         self.assertIn("sendTheoHandoffAlert", twilio_sender)
