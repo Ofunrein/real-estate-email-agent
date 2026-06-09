@@ -4,6 +4,7 @@ import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type 
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData } from "@/lib/theoData";
+import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert, sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
@@ -33,6 +34,21 @@ function logTheo(message: string, details: Record<string, unknown> = {}) {
   console.info(`[Theo SMS] ${message}`, safeDetails);
 }
 
+function logTheoMetrics(metrics: TheoMetric[]) {
+  for (const metric of metrics) {
+    const sessionTotal = addTheoSessionCost(metric.costUsd || 0);
+    logTheo("metric", {
+      service: metric.service,
+      label: metric.label,
+      status: metric.status,
+      elapsedMs: metric.elapsedMs,
+      cost: formatUsd(metric.costUsd || 0),
+      sessionCost: formatUsd(sessionTotal),
+      detail: metric.detail || "",
+    });
+  }
+}
+
 async function recordTheoOutbound(input: TheoOutboundInput) {
   return recordChannelInteraction({
     ...input,
@@ -46,21 +62,31 @@ async function recordTheoOutbound(input: TheoOutboundInput) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestStarted = nowMs();
   try {
     assertWebhookSecret(request);
+    const parseStarted = nowMs();
     const payload = stringPayload(await parseWebhookPayload(request));
     logTheo("inbound received", {
       from: payload.From,
       to: payload.To,
       messageSid: payload.MessageSid || "",
       bodyPreview: (payload.Body || "").slice(0, 120),
+      parseMs: elapsedMs(parseStarted),
     });
     const inboundInput = twilioSmsIngestInput(payload);
+    const inboundWriteStarted = nowMs();
     const result = await recordChannelInteraction(inboundInput);
+    logTheo("inbound logged", {
+      threadRef: result.event.thread_ref,
+      eventType: result.event.event_type,
+      elapsedMs: elapsedMs(inboundWriteStarted),
+      totalMs: elapsedMs(requestStarted),
+    });
     const controlAction = smsControlAction(payload.Body || "");
 
     if (controlAction === "stop") {
-      logTheo("opt-out recorded", { from: payload.From, threadRef: result.event.thread_ref });
+      logTheo("opt-out recorded", { from: payload.From, threadRef: result.event.thread_ref, totalMs: elapsedMs(requestStarted) });
       return NextResponse.json({
         ok: true,
         channel: result.event.channel,
@@ -74,10 +100,13 @@ export async function POST(request: NextRequest) {
       const body = controlAction === "start"
         ? "You're opted back in. What home or area can I help with?"
         : "Theo with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
+      const controlSendStarted = nowMs();
       const sendResult = await sendTheoSms(payload.From || "", body);
+      const controlSendMs = elapsedMs(controlSendStarted);
       let handoffAlertSent = false;
       let handoffAlertError = "";
       if (controlAction === "help") {
+        const alertStarted = nowMs();
         const alertResult = await sendTheoHandoffAlert({
           leadPhone: payload.From || "",
           leadName: payload.ProfileName || "",
@@ -87,16 +116,24 @@ export async function POST(request: NextRequest) {
         });
         handoffAlertSent = alertResult.sent;
         handoffAlertError = alertResult.error;
+        logTheo("handoff alert processed", {
+          leadPhone: payload.From,
+          sent: handoffAlertSent,
+          elapsedMs: elapsedMs(alertStarted),
+          error: handoffAlertError,
+        });
       }
       logTheo("control reply processed", {
         action: controlAction,
         leadPhone: payload.From,
         replySent: sendResult.sent,
         replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
+        elapsedMs: controlSendMs,
         sendError: sendResult.error || "",
         handoffAlertSent,
         handoffAlertError,
       });
+      const outboundWriteStarted = nowMs();
       await recordTheoOutbound({
         phone: payload.From || "",
         fullName: payload.ProfileName || "",
@@ -108,6 +145,17 @@ export async function POST(request: NextRequest) {
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
         handoffReason: sendResult.error,
         nextAction: controlAction === "help" ? "human_follow_up" : "await_response",
+      });
+      logTheo("outbound logged", {
+        leadPhone: payload.From,
+        elapsedMs: elapsedMs(outboundWriteStarted),
+        totalMs: elapsedMs(requestStarted),
+      });
+      logTheo("webhook complete", {
+        leadPhone: payload.From,
+        action: sendResult.sent ? "control_reply_sent" : "control_reply_generated",
+        totalMs: elapsedMs(requestStarted),
+        sessionCost: formatUsd(theoSessionCost()),
       });
       return NextResponse.json({
         ok: true,
@@ -121,18 +169,45 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const lookupStarted = nowMs();
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
     const propertyQuery = [payload.Body || "", lead?.property_interest || ""].filter(Boolean).join(" ");
+    logTheo("lead lookup complete", {
+      leadPhone: payload.From,
+      found: Boolean(lead),
+      elapsedMs: elapsedMs(lookupStarted),
+      totalMs: elapsedMs(requestStarted),
+    });
+    const contextReadStarted = nowMs();
     const [properties, recentEvents] = await Promise.all([
       findCandidatePropertiesFromDatabase(propertyQuery, 5),
       readEventsForThreadFromDatabase(result.event.thread_ref, 12),
     ]);
+    logTheo("context read complete", {
+      leadPhone: payload.From,
+      propertyRows: properties.length,
+      threadEvents: recentEvents.length,
+      elapsedMs: elapsedMs(contextReadStarted),
+      totalMs: elapsedMs(requestStarted),
+    });
+    const enrichmentStarted = nowMs();
     const enriched = await enrichTheoData({
       message: payload.Body || "",
       lead: lead || result.lead,
       properties,
       propertyInterest: lead?.property_interest || result.lead.property_interest || "",
     });
+    logTheoMetrics(enriched.metrics);
+    logTheo("data enrichment complete", {
+      leadPhone: payload.From,
+      propertyRows: enriched.properties.length,
+      contextChars: enriched.context.length,
+      elapsedMs: elapsedMs(enrichmentStarted),
+      reportedElapsedMs: enriched.elapsedMs,
+      cost: formatUsd(enriched.costUsd),
+      totalMs: elapsedMs(requestStarted),
+    });
+    const aiStarted = nowMs();
     const reply = await generateTheoReply({
       message: payload.Body || "",
       lead: lead || result.lead,
@@ -142,6 +217,8 @@ export async function POST(request: NextRequest) {
       source: "sms",
       dataContext: enriched.context,
     });
+    logTheoMetrics(reply.metrics);
+    const aiCost = reply.metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
     logTheo("reply generated", {
       leadPhone: payload.From,
       intent: reply.classification.intent,
@@ -152,6 +229,9 @@ export async function POST(request: NextRequest) {
       status: reply.status,
       action: reply.aiAction,
       handoffReason: reply.handoffReason,
+      elapsedMs: elapsedMs(aiStarted),
+      cost: formatUsd(aiCost),
+      sessionCost: formatUsd(theoSessionCost()),
       replyPreview: reply.reply.slice(0, 160),
     });
 
@@ -161,6 +241,7 @@ export async function POST(request: NextRequest) {
         status: reply.status,
         action: reply.aiAction,
         handoffReason: reply.handoffReason,
+        totalMs: elapsedMs(requestStarted),
       });
       return NextResponse.json({
         ok: true,
@@ -171,10 +252,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const sendStarted = nowMs();
     const sendResult = await sendTheoSms(payload.From || "", reply.reply);
+    const sendMs = elapsedMs(sendStarted);
     let handoffAlertSent = false;
     let handoffAlertError = "";
     if (reply.status === "needs_human") {
+      const alertStarted = nowMs();
       const alertResult = await sendTheoHandoffAlert({
         leadPhone: payload.From || "",
         leadName: payload.ProfileName || "",
@@ -184,15 +268,23 @@ export async function POST(request: NextRequest) {
       });
       handoffAlertSent = alertResult.sent;
       handoffAlertError = alertResult.error;
+      logTheo("handoff alert processed", {
+        leadPhone: payload.From,
+        sent: handoffAlertSent,
+        elapsedMs: elapsedMs(alertStarted),
+        error: handoffAlertError,
+      });
     }
     logTheo("reply send processed", {
       leadPhone: payload.From,
       replySent: sendResult.sent,
       replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
+      elapsedMs: sendMs,
       sendError: sendResult.error || "",
       handoffAlertSent,
       handoffAlertError,
     });
+    const outboundWriteStarted = nowMs();
     await recordTheoOutbound({
       phone: payload.From || "",
       fullName: payload.ProfileName || "",
@@ -210,6 +302,18 @@ export async function POST(request: NextRequest) {
       handoffStatus: reply.status === "needs_human" ? "needs_human" : "",
       nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_response",
     });
+    logTheo("outbound logged", {
+      leadPhone: payload.From,
+      elapsedMs: elapsedMs(outboundWriteStarted),
+      totalMs: elapsedMs(requestStarted),
+    });
+    logTheo("webhook complete", {
+      leadPhone: payload.From,
+      action: sendResult.sent ? "reply_sent" : "reply_generated",
+      replySent: sendResult.sent,
+      totalMs: elapsedMs(requestStarted),
+      sessionCost: formatUsd(theoSessionCost()),
+    });
 
     return NextResponse.json({
       ok: true,
@@ -223,7 +327,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Theo SMS webhook.";
-    logTheo("webhook error", { error: message });
+    logTheo("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

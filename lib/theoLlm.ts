@@ -2,8 +2,11 @@ import type { SheetRow } from "@/lib/sheetSchema";
 
 import { AGENCY_KNOWLEDGE_CONTEXT } from "@/lib/agencyKnowledge";
 import type { TheoClassification } from "@/lib/theoAgent";
+import { claudeCostUsd, elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type AnthropicTextBlock = { type: "text"; text: string };
+type AnthropicUsage = { input_tokens?: number; output_tokens?: number };
+type AnthropicMessageResult = TheoMetric & { text: string; inputTokens: number; outputTokens: number; model: string };
 
 export type TheoLlmContext = {
   message: string;
@@ -109,10 +112,11 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
 }
 
-async function anthropicMessage(model: string, system: string, user: string, maxTokens: number): Promise<string> {
+async function anthropicMessage(model: string, system: string, user: string, maxTokens: number, label: string): Promise<AnthropicMessageResult> {
   const key = anthropicKey();
   if (!key) throw new Error("ANTHROPIC_API_KEY is required for Theo AI replies");
 
+  const started = nowMs();
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -138,7 +142,22 @@ async function anthropicMessage(model: string, system: string, user: string, max
   }
 
   const content = Array.isArray(payload.content) ? payload.content as AnthropicTextBlock[] : [];
-  return content.find((block) => block.type === "text")?.text?.trim() || "";
+  const usage = (payload.usage || {}) as AnthropicUsage;
+  const inputTokens = Number(usage.input_tokens || 0);
+  const outputTokens = Number(usage.output_tokens || 0);
+  const costUsd = claudeCostUsd(model, inputTokens, outputTokens);
+  return {
+    service: "claude",
+    label,
+    status: "ok",
+    elapsedMs: elapsedMs(started),
+    costUsd,
+    detail: `${model} ${inputTokens}in/${outputTokens}out`,
+    text: content.find((block) => block.type === "text")?.text?.trim() || "",
+    inputTokens,
+    outputTokens,
+    model,
+  };
 }
 
 function parseJsonObject(value: string): Record<string, unknown> {
@@ -176,8 +195,8 @@ ${AGENCY_KNOWLEDGE_CONTEXT}
 Return:
 {"intent":"...","leadRole":"buyer|seller|first_time_buyer|second_time_buyer|renter|landlord|investor|expired_listing_seller|open_house_lead|property_management_lead|mortgage_adjacent_lead|unknown","secondaryRoles":[],"opportunityTags":[],"toneState":"neutral|warm|skeptical|price_sensitive|overwhelmed|annoyed|confused|urgent|sensitive","urgency":"low|medium|high|unknown","complianceFlags":[],"nextBestQuestion":"","recommendedNextAction":"reply_and_qualify|send_booking_link|route_human|nurture|stop|review","status":"ready_to_reply|needs_human","handoffReason":""}`;
 
-  const raw = await anthropicMessage(classifyModel(), system, user, 400);
-  const parsed = parseJsonObject(raw);
+  const call = await anthropicMessage(classifyModel(), system, user, 400, "theo_classify");
+  const parsed = parseJsonObject(call.text);
   const intent = String(parsed.intent || "buyer_lead") as TheoClassification["intent"];
   const status = String(parsed.status || (intent === "human_required" ? "needs_human" : "ready_to_reply"));
   return {
@@ -190,12 +209,18 @@ Return:
     complianceFlags: stringArray(parsed.complianceFlags || parsed.compliance_flags),
     nextBestQuestion: String(parsed.nextBestQuestion || parsed.next_best_question || ""),
     recommendedNextAction: String(parsed.recommendedNextAction || parsed.recommended_next_action || ""),
+    metrics: [call],
     status,
     handoffReason: String(parsed.handoffReason || parsed.handoff_reason || ""),
   };
 }
 
-export async function generateTheoSmsWithLlm(context: TheoLlmContext, classification: TheoClassification): Promise<string> {
+export type TheoSmsGeneration = {
+  reply: string;
+  metrics: TheoMetric[];
+};
+
+export async function generateTheoSmsWithLlm(context: TheoLlmContext, classification: TheoClassification): Promise<TheoSmsGeneration> {
   const system = `You are Theo, the SMS personality for Austin Realty.
 Write one natural SMS reply. Be concise, human, emotionally intelligent, and useful.
 Mirror the feel of a good human real estate assistant: casual, clear, not robotic, not pushy.
@@ -231,6 +256,9 @@ ${AGENCY_KNOWLEDGE_CONTEXT}
 
 Write only the SMS reply.`;
 
-  const reply = await anthropicMessage(respondModel(), system, user, 420);
-  return truncateSms(reply);
+  const call = await anthropicMessage(respondModel(), system, user, 420, "theo_reply");
+  return {
+    reply: truncateSms(call.text),
+    metrics: [call],
+  };
 }
