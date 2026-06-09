@@ -116,7 +116,7 @@ function formatCurrency(value?: string): string {
   return Number.isFinite(amount) ? `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : clean(value);
 }
 
-function extractAddress(...values: string[]): string {
+export function extractTheoAddress(...values: string[]): string {
   const text = values.map(clean).filter(Boolean).join(" ");
   const streetPattern = STREET_TERMS.join("|");
   const match = text.match(new RegExp(`\\b\\d{2,6}\\s+[A-Za-z0-9 .#-]+?\\s(?:${streetPattern})\\b(?:\\s+(?:unit|apt|#)\\s*[A-Za-z0-9-]+)?(?:,?\\s+[A-Za-z .]+)?(?:,?\\s+TX|,?\\s+Texas)?(?:\\s+\\d{5})?`, "i"));
@@ -325,7 +325,7 @@ async function runTheoDataEnrichment(input: {
   const metrics: TheoMetric[] = [];
   const properties = [...(input.properties || [])];
   const first = properties[0] || {};
-  const address = clean(first.address || extractAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
+  const address = clean(first.address || extractTheoAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
   const emptyEnrichment = { property: {}, context: "" };
 
   if (address && (!properties.length || needsPropertyEnrichment(first))) {

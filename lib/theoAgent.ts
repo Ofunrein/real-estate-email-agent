@@ -39,6 +39,7 @@ export type TheoReplyContext = {
 export type TheoReplyResult = {
   classification: TheoClassification;
   reply: string;
+  mediaUrls: string[];
   shouldSend: boolean;
   aiAction: string;
   handoffReason: string;
@@ -72,6 +73,46 @@ function truncateSms(value: string): string {
   const clean = cleanText(value);
   if (clean.length <= SMS_LIMIT) return clean;
   return `${clean.slice(0, SMS_LIMIT - 1).trimEnd()}...`;
+}
+
+function envFlag(value?: string): boolean {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function smsImagesEnabled(): boolean {
+  return envFlag(process.env.ENABLE_SMS_IMAGES);
+}
+
+function smsImageMode(): string {
+  return (process.env.SMS_IMAGE_MODE || "on_request").trim().toLowerCase();
+}
+
+function wantsPropertyImage(message: string): boolean {
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(message);
+}
+
+function usablePhotoUrl(value?: string): string {
+  const url = cleanText(value);
+  if (!/^https:\/\//i.test(url)) return "";
+  if (/\.(jpe?g|png|gif)(\?|$)/i.test(url)) return url;
+  if (/zillowstatic\.com|maps\.googleapis\.com|googleusercontent\.com/i.test(url)) return url;
+  return "";
+}
+
+export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
+  if (!smsImagesEnabled()) return [];
+  if (classification.intent === "human_required" || classification.intent === "spam") return [];
+
+  const mode = smsImageMode();
+  if (mode === "off") return [];
+  if (mode === "on_request" && !wantsPropertyImage(context.message)) return [];
+  if (!["on_request", "property_reply"].includes(mode)) return [];
+
+  const maxImages = Math.max(0, Number(process.env.SMS_MAX_IMAGES || "1"));
+  return (context.properties || [])
+    .map((property) => usablePhotoUrl(property.photo_url))
+    .filter(Boolean)
+    .slice(0, maxImages);
 }
 
 export function classifyTheoMessage(message: string): TheoClassification {
@@ -130,6 +171,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     return {
       classification,
       reply: "",
+      mediaUrls: [],
       shouldSend: false,
       aiAction: "auto_reply_blocked",
       handoffReason: classification.handoffReason || "Theo should not auto-reply to this SMS",
@@ -150,6 +192,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     return {
       classification,
       reply: truncateSms(handoffReply),
+      mediaUrls: [],
       shouldSend: true,
       aiAction: "handoff_reply_ready",
       handoffReason: classification.handoffReason,
@@ -172,6 +215,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         status: "needs_human",
       },
       reply: "I'm going to have a real person follow up so we handle that correctly.",
+      mediaUrls: [],
       shouldSend: true,
       aiAction: "handoff_reply_ready",
       handoffReason: "Theo AI reply generation failed",
@@ -182,6 +226,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   return {
     classification,
     reply: truncateSms(reply),
+    mediaUrls: selectTheoMediaUrls(context, classification),
     shouldSend: true,
     aiAction: "ai_reply_ready",
     handoffReason: "",

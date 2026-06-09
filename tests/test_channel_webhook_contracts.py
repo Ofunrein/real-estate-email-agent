@@ -38,6 +38,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("webhook complete", sms_route)
         self.assertIn("sessionCost", sms_route)
         self.assertIn("elapsedMs", sms_route)
+        self.assertIn("reply.mediaUrls", sms_route)
+        self.assertIn("smsMessageWithMediaLog", sms_route)
+        self.assertIn("extractTheoAddress", sms_route)
+        self.assertIn("mediaCount", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
         whatsapp_route = read("app/api/webhooks/theo-whatsapp/route.ts")
@@ -50,6 +54,11 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("Mortgage/licensed lending question", theo_agent)
         self.assertIn("Legal or contract-sensitive question", theo_agent)
         self.assertIn("smsOptIn", theo_agent)
+        self.assertIn("selectTheoMediaUrls", theo_agent)
+        self.assertIn("ENABLE_SMS_IMAGES", theo_agent)
+        self.assertIn("SMS_IMAGE_MODE", theo_agent)
+        self.assertIn("SMS_MAX_IMAGES", theo_agent)
+        self.assertIn('classification.intent === "human_required"', theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -107,6 +116,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("THEO_APIFY_TIMEOUT_SECONDS", theo_data)
         self.assertIn("theo_enrichment_budget", theo_data)
         self.assertIn("metrics", theo_data)
+        self.assertIn("extractTheoAddress", theo_data)
 
     def test_theo_claude_calls_report_costs(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -126,6 +136,11 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("AGENT_PHONE", twilio_sender)
         self.assertIn("ENABLE_SMS_AGENT", twilio_sender)
         self.assertIn("sendTheoHandoffAlert", twilio_sender)
+        self.assertIn("MediaUrl", twilio_sender)
+        self.assertIn("mediaUrls", twilio_sender)
+        self.assertIn("mediaCount", twilio_sender)
+        self.assertIn("smsMessageWithMediaLog", twilio_sender)
+        self.assertIn("MMS image:", twilio_sender)
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
         self.assertNotIn("AC4758", twilio_sender)
         self.assertNotIn("c0e300", twilio_sender)
@@ -135,6 +150,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("smsOptIn", website_route)
         self.assertIn("enrichTheoData", website_route)
         self.assertIn("sendTheoSms", website_route)
+        self.assertIn("reply.mediaUrls", website_route)
+        self.assertIn("smsMessageWithMediaLog", website_route)
+        self.assertIn("extractTheoAddress", website_route)
         self.assertIn("sms_reply_sent", website_route)
         self.assertIn("phone && hasSmsConsent", website_route)
 

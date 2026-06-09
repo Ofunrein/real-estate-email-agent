@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
-import { enrichTheoData } from "@/lib/theoData";
-import { sendTheoSms } from "@/lib/twilioSms";
+import { enrichTheoData, extractTheoAddress } from "@/lib/theoData";
+import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
@@ -50,8 +50,10 @@ export async function POST(request: NextRequest) {
 
     if (phone && hasSmsConsent) {
       const lead = await findLeadInDatabase({ phone, email, full_name: fullName });
+      const extractedAddress = extractTheoAddress(propertyInterest, message, lead?.property_interest || "");
+      const propertyQuery = extractedAddress || `${propertyInterest} ${message}`;
       const [properties, recentEvents] = await Promise.all([
-        findCandidatePropertiesFromDatabase(`${propertyInterest} ${message}`, 5),
+        findCandidatePropertiesFromDatabase(propertyQuery, 5),
         readEventsForThreadFromDatabase(`sms:${phone}`, 12),
       ]);
       const enriched = await enrichTheoData({
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (reply.shouldSend) {
-        const sendResult = await sendTheoSms(phone, reply.reply);
+        const sendResult = await sendTheoSms(phone, reply.reply, reply.mediaUrls);
         smsReplySent = sendResult.sent;
         smsStatus = sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed";
         smsAction = sendResult.sent ? "reply_sent" : "reply_generated";
@@ -81,8 +83,8 @@ export async function POST(request: NextRequest) {
           email,
           fullName,
           threadRef: `sms:${phone}`,
-          messageText: reply.reply,
-          summary: `Theo ${sendResult.sent ? "sent" : "prepared"} first SMS reply from website opt-in.`,
+          messageText: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
+          summary: `Theo ${sendResult.sent ? "sent" : "prepared"} first SMS reply from website opt-in${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
           aiAction: smsAction,
           handoffReason: reply.handoffReason || sendResult.error,
           status: smsStatus,
