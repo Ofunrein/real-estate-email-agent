@@ -26,7 +26,7 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
   return mediaUrls
     .map((url) => url.trim())
     .filter((url) => /^https:\/\//i.test(url))
-    .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "1")));
+    .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
 }
 
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
