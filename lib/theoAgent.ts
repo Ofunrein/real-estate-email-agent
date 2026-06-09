@@ -95,6 +95,15 @@ function asksForSafePropertyFact(message: string): boolean {
   return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
 }
 
+function asksForAlternativeProperties(message: string): boolean {
+  return /\b(other|another|similar|alternative|options?|properties|homes?|listings?)\b/i.test(message)
+    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?)\b/i.test(message);
+}
+
+function latestMessageHasSensitiveTopic(message: string): boolean {
+  return SENSITIVE_PATTERNS.some(({ pattern }) => pattern.test(message));
+}
+
 function canShareSafeFactsDuringHandoff(classification: TheoClassification): boolean {
   const flags = (classification.complianceFlags || []).map((flag) => flag.toLowerCase());
   return !flags.some((flag) => ["fair_housing", "mortgage_license", "legal", "contract_terms", "privacy", "broker_approval"].includes(flag));
@@ -173,6 +182,15 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         status: "needs_human",
       };
     }
+  }
+  if (asksForAlternativeProperties(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
+    classification = {
+      ...classification,
+      intent: "property_details",
+      status: "ready_to_reply",
+      handoffReason: "",
+      recommendedNextAction: "reply_and_qualify",
+    };
   }
   const lead = context.lead || {};
   const shouldReply = shouldTheoAutoReply(classification, lead);

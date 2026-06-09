@@ -52,6 +52,26 @@ const STREET_TERMS = [
   "cove",
 ];
 
+const PROPERTY_SEARCH_AREAS = [
+  "Austin",
+  "Round Rock",
+  "Cedar Park",
+  "Georgetown",
+  "Pflugerville",
+  "Leander",
+  "Buda",
+  "Kyle",
+  "Manchaca",
+  "Zilker",
+  "Downtown Austin",
+  "South Congress",
+  "South Lamar",
+  "Hyde Park",
+  "Brentwood",
+  "Crestview",
+  "East Austin",
+];
+
 function clean(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
@@ -121,6 +141,15 @@ export function extractTheoAddress(...values: string[]): string {
   const streetPattern = STREET_TERMS.join("|");
   const match = text.match(new RegExp(`\\b\\d{2,6}\\s+[A-Za-z0-9 .#-]+?\\s(?:${streetPattern})\\b(?:\\s+(?:unit|apt|#)\\s*[A-Za-z0-9-]+)?(?:,?\\s+[A-Za-z .]+)?(?:,?\\s+TX|,?\\s+Texas)?(?:\\s+\\d{5})?`, "i"));
   return clean(match?.[0] || "");
+}
+
+export function extractTheoPropertySearchQuery(...values: string[]): string {
+  const text = values.map(clean).filter(Boolean).join(" ");
+  const address = extractTheoAddress(text);
+  if (address) return address;
+  const lower = text.toLowerCase();
+  const area = PROPERTY_SEARCH_AREAS.find((candidate) => new RegExp(`\\b${candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").toLowerCase()}\\b`, "i").test(lower));
+  return area || clean(values.find((value) => truthy(value)) || "");
 }
 
 function mergeProperty(base: SheetRow, extra: Partial<SheetRow>): SheetRow {
