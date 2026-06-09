@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
@@ -49,11 +49,15 @@ export async function POST(request: NextRequest) {
 
     if (phone && hasSmsConsent) {
       const lead = await findLeadInDatabase({ phone, email, full_name: fullName });
-      const properties = await findCandidatePropertiesFromDatabase(`${propertyInterest} ${message}`, 5);
-      const reply = generateTheoReply({
+      const [properties, recentEvents] = await Promise.all([
+        findCandidatePropertiesFromDatabase(`${propertyInterest} ${message}`, 5),
+        readEventsForThreadFromDatabase(`sms:${phone}`, 12),
+      ]);
+      const reply = await generateTheoReply({
         message: message || propertyInterest || "website inquiry",
         lead: lead || result.lead,
         properties,
+        recentEvents,
         propertyInterest,
         source: "form",
       });

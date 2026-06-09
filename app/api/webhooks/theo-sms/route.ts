@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { sendTheoHandoffAlert, sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
@@ -122,11 +122,15 @@ export async function POST(request: NextRequest) {
 
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
     const propertyQuery = [payload.Body || "", lead?.property_interest || ""].filter(Boolean).join(" ");
-    const properties = await findCandidatePropertiesFromDatabase(propertyQuery, 5);
-    const reply = generateTheoReply({
+    const [properties, recentEvents] = await Promise.all([
+      findCandidatePropertiesFromDatabase(propertyQuery, 5),
+      readEventsForThreadFromDatabase(result.event.thread_ref, 12),
+    ]);
+    const reply = await generateTheoReply({
       message: payload.Body || "",
       lead: lead || result.lead,
       properties,
+      recentEvents,
       propertyInterest: lead?.property_interest || result.lead.property_interest || "",
       source: "sms",
     });
