@@ -32,6 +32,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("recordTheoOutbound", sms_route)
         self.assertIn('"reply_sent"', sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
+        self.assertIn("[Theo SMS]", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
         whatsapp_route = read("app/api/webhooks/theo-whatsapp/route.ts")
@@ -63,6 +64,13 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("sendTheoSms", website_route)
         self.assertIn("sms_reply_sent", website_route)
         self.assertIn("phone && hasSmsConsent", website_route)
+
+    def test_theo_local_test_command_exists(self):
+        package_json = read("package.json")
+        script = read("scripts/test-theo-sms.mjs")
+        self.assertIn('"theo:test"', package_json)
+        self.assertIn("/api/webhooks/theo-sms", script)
+        self.assertIn("SM_TEST_", script)
 
 
 if __name__ == "__main__":
