@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
+import { enrichTheoData } from "@/lib/theoData";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
@@ -53,13 +54,20 @@ export async function POST(request: NextRequest) {
         findCandidatePropertiesFromDatabase(`${propertyInterest} ${message}`, 5),
         readEventsForThreadFromDatabase(`sms:${phone}`, 12),
       ]);
-      const reply = await generateTheoReply({
+      const enriched = await enrichTheoData({
         message: message || propertyInterest || "website inquiry",
         lead: lead || result.lead,
         properties,
+        propertyInterest,
+      });
+      const reply = await generateTheoReply({
+        message: message || propertyInterest || "website inquiry",
+        lead: lead || result.lead,
+        properties: enriched.properties,
         recentEvents,
         propertyInterest,
         source: "form",
+        dataContext: enriched.context,
       });
 
       if (reply.shouldSend) {
