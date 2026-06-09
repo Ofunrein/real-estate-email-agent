@@ -13,6 +13,13 @@ export type TheoIntent =
 export type TheoClassification = {
   intent: TheoIntent;
   leadRole: string;
+  secondaryRoles?: string[];
+  opportunityTags?: string[];
+  toneState?: string;
+  urgency?: string;
+  complianceFlags?: string[];
+  nextBestQuestion?: string;
+  recommendedNextAction?: string;
   handoffReason: string;
   status: string;
 };

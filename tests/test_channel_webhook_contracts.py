@@ -46,6 +46,41 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("Legal or contract-sensitive question", theo_agent)
         self.assertIn("smsOptIn", theo_agent)
 
+    def test_theo_llm_gets_iris_level_context(self):
+        theo_llm = read("lib/theoLlm.ts")
+        self.assertIn("AGENCY_KNOWLEDGE_CONTEXT", theo_llm)
+        for property_field in [
+            "description",
+            "neighborhood",
+            "property_type",
+            "features",
+            "days_on_market",
+            "photo_url_available",
+            "agent_name",
+            "agent_email",
+            "listing_url",
+        ]:
+            self.assertIn(property_field, theo_llm)
+        for lead_field in [
+            "lead_source",
+            "source_detail",
+            "budget",
+            "area",
+            "timeline",
+            "handoff_status",
+            "handoff_reason",
+        ]:
+            self.assertIn(lead_field, theo_llm)
+        for classifier_signal in [
+            "opportunityTags",
+            "toneState",
+            "urgency",
+            "complianceFlags",
+            "nextBestQuestion",
+            "recommendedNextAction",
+        ]:
+            self.assertIn(classifier_signal, theo_llm)
+
     def test_twilio_sender_uses_env_only(self):
         twilio_sender = read("lib/twilioSms.ts")
         self.assertIn("TWILIO_ACCOUNT_SID", twilio_sender)
