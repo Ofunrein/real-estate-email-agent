@@ -155,6 +155,21 @@ export async function findCandidatePropertiesFromDatabase(query = "", limit = 5)
   return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
 }
 
+export async function findPropertiesByAddressesFromDatabase(addresses: string[], limit = 5): Promise<SheetRow[]> {
+  const cleaned = addresses.map((address) => address.trim().toLowerCase()).filter(Boolean);
+  if (!cleaned.length) return [];
+  const result = await getPool().query(
+    `select ${PROPERTIES_HEADERS.join(", ")}
+       from properties
+      where client_id = $1
+        and lower(address) = any($2::text[])
+      order by array_position($2::text[], lower(address)), updated_at desc
+      limit $3`,
+    [clientId(), cleaned, limit],
+  );
+  return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
+}
+
 export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): Promise<SheetRow> {
   await ensureClientInDatabase();
   const cleaned = cleanRow(LEAD_MEMORY_HEADERS, incoming);

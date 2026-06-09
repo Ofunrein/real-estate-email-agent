@@ -152,6 +152,24 @@ export function extractTheoPropertySearchQuery(...values: string[]): string {
   return area || clean(values.find((value) => truthy(value)) || "");
 }
 
+export function extractTheoListedPropertyAddresses(...values: string[]): string[] {
+  const seen = new Set<string>();
+  const addresses: string[] = [];
+  for (const value of values) {
+    for (const rawLine of String(value || "").split(/\n+/)) {
+      const line = clean(rawLine.replace(/^\d+\.\s*/, ""));
+      const addressText = clean(line.split(/\s[-–]\s/)[0] || "");
+      const address = extractTheoAddress(addressText);
+      if (!address) continue;
+      const key = address.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      addresses.push(address);
+    }
+  }
+  return addresses;
+}
+
 function mergeProperty(base: SheetRow, extra: Partial<SheetRow>): SheetRow {
   const merged = { ...base };
   for (const [key, value] of Object.entries(extra)) {

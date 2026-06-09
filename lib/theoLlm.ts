@@ -34,13 +34,24 @@ function clean(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
+function cleanSmsReply(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n(?=\d+\.\s)/g, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function compact(value?: string, limit = 260): string {
   const text = clean(value);
   return text.length <= limit ? text : `${text.slice(0, limit - 3).trimEnd()}...`;
 }
 
 function truncateSms(value: string): string {
-  const text = clean(value);
+  const text = cleanSmsReply(value);
   return text.length <= 320 ? text : `${text.slice(0, 317).trimEnd()}...`;
 }
 
@@ -235,6 +246,11 @@ Rules:
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
 - If the lead asks for other homes, options, alternatives, similar properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
+- When listing multiple properties, put a blank line before each numbered listing. Format like:
+  1. Address - $price, beds/baths, area
+
+  2. Address - $price, beds/baths, area
+- If the lead asks for links and provided property rows include listing_url, send the listing_url values. Do not say links are not loaded when listing_url is present.
 - If the classification says needs_human, still answer simple safe facts from the provided property rows when useful, such as price, beds, baths, sqft, status, address, features, photo/link availability, or listing agent fields.
 - If the classification says needs_human, do not answer the sensitive part: Fair Housing, lending qualification, legal/contract, negotiation, pricing judgment, privacy, broker judgment, or angry complaint resolution. Answer the safe factual part first, then say a real person will follow up on the part that needs human review.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.

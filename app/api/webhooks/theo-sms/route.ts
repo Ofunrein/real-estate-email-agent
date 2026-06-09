@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
-import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
+import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
@@ -47,6 +47,10 @@ function logTheoMetrics(metrics: TheoMetric[]) {
       detail: metric.detail || "",
     });
   }
+}
+
+function referencesPriorProperties(message = ""): boolean {
+  return /\b(those|that|these|them|links?|urls?|photos?|pictures?)\b/i.test(message);
 }
 
 async function recordTheoOutbound(input: TheoOutboundInput) {
@@ -180,13 +184,17 @@ export async function POST(request: NextRequest) {
       totalMs: elapsedMs(requestStarted),
     });
     const contextReadStarted = nowMs();
-    const [properties, recentEvents] = await Promise.all([
-      findCandidatePropertiesFromDatabase(propertyQuery, 5),
-      readEventsForThreadFromDatabase(result.event.thread_ref, 12),
-    ]);
+    const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
+    const priorAddresses = referencesPriorProperties(payload.Body || "")
+      ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
+      : [];
+    const properties = priorAddresses.length
+      ? await findPropertiesByAddressesFromDatabase(priorAddresses, 5)
+      : await findCandidatePropertiesFromDatabase(propertyQuery, 5);
     logTheo("context read complete", {
       leadPhone: payload.From,
       propertyRows: properties.length,
+      priorAddressRows: priorAddresses.length,
       threadEvents: recentEvents.length,
       elapsedMs: elapsedMs(contextReadStarted),
       totalMs: elapsedMs(requestStarted),
