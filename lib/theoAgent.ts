@@ -1,4 +1,5 @@
 import type { SheetRow } from "@/lib/sheetSchema";
+import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
 
 export type TheoIntent =
   | "property_details"
@@ -22,6 +23,7 @@ export type TheoReplyContext = {
   properties?: SheetRow[];
   propertyInterest?: string;
   source?: "sms" | "form";
+  recentEvents?: SheetRow[];
 };
 
 export type TheoReplyResult = {
@@ -61,39 +63,6 @@ function truncateSms(value: string): string {
   return `${clean.slice(0, SMS_LIMIT - 1).trimEnd()}...`;
 }
 
-function firstProperty(properties: SheetRow[] = [], interest = "", message = ""): SheetRow | undefined {
-  const needle = normalize(interest || message);
-  if (!properties.length) return undefined;
-  if (!needle) return properties[0];
-  return properties.find((property) => {
-    const address = normalize(property.address);
-    const street = address.split(",", 1)[0];
-    return Boolean(address && (needle.includes(address) || address.includes(needle) || needle.includes(street)));
-  }) || properties[0];
-}
-
-function propertyLabel(property?: SheetRow): string {
-  const address = cleanText(property?.address || "");
-  return address ? address.split(",", 1)[0] : "that property";
-}
-
-function numberText(value: string): string {
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return numeric.toLocaleString();
-  return value;
-}
-
-function propertyFacts(property?: SheetRow): string {
-  if (!property) return "";
-  const facts = [
-    property.price ? `$${numberText(property.price)}` : "",
-    property.beds ? `${property.beds} bed` : "",
-    property.baths ? `${property.baths} bath` : "",
-    property.sqft ? `${numberText(property.sqft)} sqft` : "",
-  ].filter(Boolean);
-  return facts.join(", ");
-}
-
 export function classifyTheoMessage(message: string): TheoClassification {
   const text = normalize(message);
   if (!text || SPAM_PATTERNS.some((pattern) => pattern.test(text))) {
@@ -126,15 +95,23 @@ export function shouldTheoAutoReply(classification: TheoClassification, lead: Pa
   return true;
 }
 
-export function generateTheoReply(context: TheoReplyContext): TheoReplyResult {
-  const classification = classifyTheoMessage(context.message);
+export async function generateTheoReply(context: TheoReplyContext): Promise<TheoReplyResult> {
+  let classification: TheoClassification;
+  try {
+    classification = await classifyTheoWithLlm(context);
+  } catch {
+    classification = classifyTheoMessage(context.message);
+    if (classification.status !== "needs_human") {
+      classification = {
+        intent: "human_required",
+        leadRole: classification.leadRole || "unknown",
+        handoffReason: "Theo AI classification failed",
+        status: "needs_human",
+      };
+    }
+  }
   const lead = context.lead || {};
   const shouldReply = shouldTheoAutoReply(classification, lead);
-  const property = firstProperty(
-    context.properties || [],
-    context.propertyInterest || lead.property_interest || "",
-    context.message,
-  );
 
   if (!shouldReply) {
     return {
@@ -148,9 +125,15 @@ export function generateTheoReply(context: TheoReplyContext): TheoReplyResult {
   }
 
   if (classification.intent === "human_required") {
+    let handoffReply = "I'm going to have a real person follow up on that so we handle it correctly.";
+    try {
+      handoffReply = await generateTheoSmsWithLlm(context, classification);
+    } catch {
+      // Keep a safe handoff response if the model is unavailable.
+    }
     return {
       classification,
-      reply: "I'm going to have a real person follow up on that so we handle it correctly.",
+      reply: truncateSms(handoffReply),
       shouldSend: true,
       aiAction: "handoff_reply_ready",
       handoffReason: classification.handoffReason,
@@ -158,31 +141,29 @@ export function generateTheoReply(context: TheoReplyContext): TheoReplyResult {
     };
   }
 
-  const label = propertyLabel(property);
-  const facts = propertyFacts(property);
-  let reply = "";
-
-  if (context.source === "form") {
-    reply = `Hey, this is Theo with Austin Realty. Got your inquiry about ${context.propertyInterest || label}. Are you looking to tour, get details, or compare similar homes?`;
-  } else if (classification.intent === "showing_request") {
-    reply = `Got it. I can help with ${label}. What day/time works best for a quick showing?`;
-  } else if (classification.intent === "seller_lead") {
-    reply = "Got it. Are you looking for a quick home value estimate, or are you thinking about listing soon?";
-  } else if (classification.intent === "renter_lead") {
-    reply = "Got it. Are you only looking to rent right now, or would you consider buying if the numbers made sense?";
-  } else if (property) {
-    reply = facts
-      ? `Got it. ${label} is showing in our sheet at ${facts}. Are you looking to tour it or compare similar homes?`
-      : `Got it. I found ${label} in our sheet. Are you looking to tour it or get more details?`;
-  } else {
-    reply = "Got it. Are you looking for a specific home, or should I help you compare a few options?";
+  let reply: string;
+  try {
+    reply = await generateTheoSmsWithLlm(context, classification);
+  } catch {
+    return {
+      classification: {
+        intent: "human_required",
+        leadRole: classification.leadRole || "unknown",
+        handoffReason: "Theo AI reply generation failed",
+        status: "needs_human",
+      },
+      reply: "I'm going to have a real person follow up so we handle that correctly.",
+      shouldSend: true,
+      aiAction: "handoff_reply_ready",
+      handoffReason: "Theo AI reply generation failed",
+      status: "needs_human",
+    };
   }
-
   return {
     classification,
     reply: truncateSms(reply),
     shouldSend: true,
-    aiAction: "reply_ready",
+    aiAction: "ai_reply_ready",
     handoffReason: "",
     status: "ready_to_reply",
   };
