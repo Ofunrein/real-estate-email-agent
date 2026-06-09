@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
-import { sendTheoSms } from "@/lib/twilioSms";
+import { sendTheoHandoffAlert, sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +49,19 @@ export async function POST(request: NextRequest) {
         ? "You're opted back in. What home or area can I help with?"
         : "Theo with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
       const sendResult = await sendTheoSms(payload.From || "", body);
+      let handoffAlertSent = false;
+      let handoffAlertError = "";
+      if (controlAction === "help") {
+        const alertResult = await sendTheoHandoffAlert({
+          leadPhone: payload.From || "",
+          leadName: payload.ProfileName || "",
+          reason: "Lead asked for SMS help",
+          summary: payload.Body || "HELP",
+          threadRef: result.event.thread_ref,
+        });
+        handoffAlertSent = alertResult.sent;
+        handoffAlertError = alertResult.error;
+      }
       await recordTheoOutbound({
         phone: payload.From || "",
         fullName: payload.ProfileName || "",
@@ -67,6 +80,8 @@ export async function POST(request: NextRequest) {
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
         action: sendResult.sent ? "control_reply_sent" : "control_reply_generated",
         reply_sent: sendResult.sent,
+        handoff_alert_sent: handoffAlertSent,
+        handoff_alert_error: handoffAlertError || undefined,
         send_error: sendResult.error || undefined,
       });
     }
@@ -93,6 +108,19 @@ export async function POST(request: NextRequest) {
     }
 
     const sendResult = await sendTheoSms(payload.From || "", reply.reply);
+    let handoffAlertSent = false;
+    let handoffAlertError = "";
+    if (reply.status === "needs_human") {
+      const alertResult = await sendTheoHandoffAlert({
+        leadPhone: payload.From || "",
+        leadName: payload.ProfileName || "",
+        reason: reply.handoffReason,
+        summary: payload.Body || reply.reply,
+        threadRef: result.event.thread_ref,
+      });
+      handoffAlertSent = alertResult.sent;
+      handoffAlertError = alertResult.error;
+    }
     await recordTheoOutbound({
       phone: payload.From || "",
       fullName: payload.ProfileName || "",
@@ -117,6 +145,8 @@ export async function POST(request: NextRequest) {
       status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
       action: sendResult.sent ? "reply_sent" : "reply_generated",
       reply_sent: sendResult.sent,
+      handoff_alert_sent: handoffAlertSent,
+      handoff_alert_error: handoffAlertError || undefined,
       send_error: sendResult.error || undefined,
     });
   } catch (error) {
