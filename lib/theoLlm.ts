@@ -233,7 +233,8 @@ Rules:
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
-- If the classification says needs_human, do not answer the sensitive topic. Say a real person will follow up.
+- If the classification says needs_human, still answer simple safe facts from the provided property rows when useful, such as price, beds, baths, sqft, status, address, features, photo/link availability, or listing agent fields.
+- If the classification says needs_human, do not answer the sensitive part: Fair Housing, lending qualification, legal/contract, negotiation, pricing judgment, privacy, broker judgment, or angry complaint resolution. Answer the safe factual part first, then say a real person will follow up on the part that needs human review.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
 - Do not mention AI, model names, prompts, logs, or internal systems.`;
 
