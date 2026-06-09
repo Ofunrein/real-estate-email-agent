@@ -25,7 +25,7 @@ function formatNumber(value: number | string) {
 function metric(label: string, value: number | string, note = "") {
   return (
     <div className="metric">
-      <span>{label}</span>
+      <span className="metric-label">{label}</span>
       <strong>{formatNumber(value)}</strong>
       {note ? <small>{note}</small> : null}
     </div>
@@ -105,6 +105,26 @@ function eventChannel(event: SheetRow) {
 
 function latestEvent(events: SheetRow[]) {
   return events[events.length - 1] || {};
+}
+
+function formatEventTime(value?: string) {
+  if (!value) return "No timestamp";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function directionCount(events: SheetRow[], direction: string) {
+  return events.filter((event) => event.direction === direction).length;
+}
+
+function statusText(value?: string) {
+  return value ? value.replaceAll("_", " ") : "waiting";
 }
 
 function formatPrice(value?: string) {
@@ -522,6 +542,91 @@ function LeadDetail({ leads }: { leads: SheetRow[] }) {
   );
 }
 
+function ContextRail({
+  currentEvents,
+  latest,
+  selectedChannelLabel,
+  selectedChannel,
+  activeThreads,
+  propertyHealthScore,
+  propertiesNeedingReview,
+}: {
+  currentEvents: SheetRow[];
+  latest: SheetRow;
+  selectedChannelLabel: string;
+  selectedChannel?: Channel;
+  activeThreads: number;
+  propertyHealthScore: number;
+  propertiesNeedingReview: number;
+}) {
+  const inbound = directionCount(currentEvents, "inbound");
+  const outbound = directionCount(currentEvents, "outbound");
+  const label = selectedChannel ? selectedChannelLabel : "All channels";
+  const latestIdentity = latest.email || latest.phone || latest.full_name || "No lead selected";
+
+  return (
+    <aside className="context-rail" aria-label="Conversation context">
+      <section className="context-card">
+        <span className="rail-label">Watching</span>
+        <h2>{label}</h2>
+        <div className="rail-metric-grid">
+          <div>
+            <strong>{currentEvents.length}</strong>
+            <span>events</span>
+          </div>
+          <div>
+            <strong>{activeThreads}</strong>
+            <span>threads</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="context-card">
+        <span className="rail-label">Last activity</span>
+        <h3>{latestIdentity}</h3>
+        <p>{latest.summary || latest.ai_action || latest.event_type || "No conversation activity loaded yet."}</p>
+        <dl className="rail-facts">
+          <div>
+            <dt>Status</dt>
+            <dd>{statusText(latest.status || latest.event_type)}</dd>
+          </div>
+          <div>
+            <dt>When</dt>
+            <dd>{formatEventTime(latest.event_at)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="context-card">
+        <span className="rail-label">Flow balance</span>
+        <div className="flow-balance" aria-label={`${inbound} inbound and ${outbound} outbound messages`}>
+          <span style={{ width: `${currentEvents.length ? Math.max(12, (inbound / currentEvents.length) * 100) : 0}%` }} />
+          <span style={{ width: `${currentEvents.length ? Math.max(12, (outbound / currentEvents.length) * 100) : 0}%` }} />
+        </div>
+        <dl className="rail-facts compact">
+          <div>
+            <dt>Inbound</dt>
+            <dd>{inbound}</dd>
+          </div>
+          <div>
+            <dt>AI replies</dt>
+            <dd>{outbound}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="context-card">
+        <span className="rail-label">Data readiness</span>
+        <div className="readiness-ring" style={{ ["--score" as string]: `${propertyHealthScore}%` }}>
+          <strong>{propertyHealthScore}</strong>
+          <span>property health</span>
+        </div>
+        <p>{propertiesNeedingReview ? `${propertiesNeedingReview} property rows still need review.` : "Property rows are ready for agent use."}</p>
+      </section>
+    </aside>
+  );
+}
+
 function viewTitle(view: View) {
   if (view === "overview") return "Conversation Command";
   if (view === "website_chat") return "Website Chat";
@@ -553,6 +658,7 @@ export function AgentInboxClient({
     ? Math.max(0, Math.round(((data.propertyHealth.total - data.propertyHealth.missing_core) / data.propertyHealth.total) * 100))
     : 0;
   const activeThreads = threadEntries.length;
+  const latestCurrentEvent = latestEvent(currentEvents);
   const dataStatus = loadError ? "Limited" : "Live";
   const safeSelectedPropertyIndex = Math.min(selectedPropertyIndex, Math.max(data.properties.length - 1, 0));
   const selectedProperty = data.properties[safeSelectedPropertyIndex] || {};
@@ -583,7 +689,7 @@ export function AgentInboxClient({
         </div>
 
         <div className="source-card">
-          <span>{sourceLabel}</span>
+          <span>Database</span>
           <strong>{dataStatus}</strong>
           <div className="source-meter" aria-label={`Property data health ${propertyHealthScore}%`}>
             <span style={{ width: `${propertyHealthScore}%` }} />
@@ -626,9 +732,9 @@ export function AgentInboxClient({
       <main className="main">
         <div className="topbar">
           <div>
-            <span className="eyebrow">Urban Mail workspace</span>
+            <span className="eyebrow">Urban Mail command center</span>
             <h1>{viewTitle(view)}</h1>
-            <p>Live AI replies, channel handoffs, lead memory, and property sheet health in one place.</p>
+            <p>Monitor real AI conversations, channel readiness, lead memory, and property data quality without replacing the client CRM.</p>
           </div>
           <div className="top-actions">
             <div className="sync-status">{sourceLabel} {dataStatus.toLowerCase()}</div>
@@ -710,11 +816,14 @@ export function AgentInboxClient({
           </div>
         ) : (
           <div className="workspace">
-            <section className="panel">
+            <section className="panel conversation-panel">
               <div className="panel-header">
-                <h2 className="panel-title">
-                  {selectedChannel ? `${selectedChannelLabel} Threads` : "Recent Activity"}
-                </h2>
+                <div>
+                  <h2 className="panel-title">
+                    {selectedChannel ? `${selectedChannelLabel} Threads` : "Recent Activity"}
+                  </h2>
+                  <p className="panel-kicker">{selectedChannel ? "Read the exact conversation as the AI handled it." : "Latest cross-channel activity from the shared event log."}</p>
+                </div>
                 <span className="status">{currentEvents.length} events</span>
               </div>
               {selectedChannel ? (
@@ -723,7 +832,15 @@ export function AgentInboxClient({
                 <TableRows events={currentEvents} />
               )}
             </section>
-            <LeadDetail leads={data.leads} />
+            <ContextRail
+              activeThreads={selectedChannel ? channelThreads.length : activeThreads}
+              currentEvents={currentEvents}
+              latest={latestCurrentEvent}
+              propertiesNeedingReview={data.propertyHealth.missing_core}
+              propertyHealthScore={propertyHealthScore}
+              selectedChannel={selectedChannel}
+              selectedChannelLabel={selectedChannelLabel}
+            />
           </div>
         )}
       </main>
