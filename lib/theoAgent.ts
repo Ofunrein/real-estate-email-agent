@@ -1,5 +1,6 @@
 import type { SheetRow } from "@/lib/sheetSchema";
 import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
+import type { TheoMetric } from "@/lib/theoTelemetry";
 
 export type TheoIntent =
   | "property_details"
@@ -20,6 +21,7 @@ export type TheoClassification = {
   complianceFlags?: string[];
   nextBestQuestion?: string;
   recommendedNextAction?: string;
+  metrics?: TheoMetric[];
   handoffReason: string;
   status: string;
 };
@@ -41,6 +43,7 @@ export type TheoReplyResult = {
   aiAction: string;
   handoffReason: string;
   status: string;
+  metrics: TheoMetric[];
 };
 
 const SMS_LIMIT = 320;
@@ -105,8 +108,10 @@ export function shouldTheoAutoReply(classification: TheoClassification, lead: Pa
 
 export async function generateTheoReply(context: TheoReplyContext): Promise<TheoReplyResult> {
   let classification: TheoClassification;
+  const metrics: TheoMetric[] = [];
   try {
     classification = await classifyTheoWithLlm(context);
+    metrics.push(...(classification.metrics || []));
   } catch {
     classification = classifyTheoMessage(context.message);
     if (classification.status !== "needs_human") {
@@ -129,13 +134,16 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       aiAction: "auto_reply_blocked",
       handoffReason: classification.handoffReason || "Theo should not auto-reply to this SMS",
       status: classification.status,
+      metrics,
     };
   }
 
   if (classification.intent === "human_required") {
     let handoffReply = "I'm going to have a real person follow up on that so we handle it correctly.";
     try {
-      handoffReply = await generateTheoSmsWithLlm(context, classification);
+      const generated = await generateTheoSmsWithLlm(context, classification);
+      handoffReply = generated.reply;
+      metrics.push(...generated.metrics);
     } catch {
       // Keep a safe handoff response if the model is unavailable.
     }
@@ -146,12 +154,15 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       aiAction: "handoff_reply_ready",
       handoffReason: classification.handoffReason,
       status: "needs_human",
+      metrics,
     };
   }
 
   let reply: string;
   try {
-    reply = await generateTheoSmsWithLlm(context, classification);
+    const generated = await generateTheoSmsWithLlm(context, classification);
+    reply = generated.reply;
+    metrics.push(...generated.metrics);
   } catch {
     return {
       classification: {
@@ -165,6 +176,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       aiAction: "handoff_reply_ready",
       handoffReason: "Theo AI reply generation failed",
       status: "needs_human",
+      metrics,
     };
   }
   return {
@@ -174,6 +186,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     aiAction: "ai_reply_ready",
     handoffReason: "",
     status: "ready_to_reply",
+    metrics,
   };
 }
 

@@ -34,6 +34,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('"reply_sent"', sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
         self.assertIn("[Theo SMS]", sms_route)
+        self.assertIn("logTheoMetrics", sms_route)
+        self.assertIn("webhook complete", sms_route)
+        self.assertIn("sessionCost", sms_route)
+        self.assertIn("elapsedMs", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
         whatsapp_route = read("app/api/webhooks/theo-whatsapp/route.ts")
@@ -99,6 +103,20 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("fetchMortgageRates", theo_data)
         self.assertIn("fetchCensusZip", theo_data)
         self.assertIn("fetchSoldComps", theo_data)
+        self.assertIn("THEO_ENRICHMENT_TIMEOUT_MS", theo_data)
+        self.assertIn("THEO_APIFY_TIMEOUT_SECONDS", theo_data)
+        self.assertIn("theo_enrichment_budget", theo_data)
+        self.assertIn("metrics", theo_data)
+
+    def test_theo_claude_calls_report_costs(self):
+        theo_llm = read("lib/theoLlm.ts")
+        telemetry = read("lib/theoTelemetry.ts")
+        self.assertIn("input_tokens", theo_llm)
+        self.assertIn("output_tokens", theo_llm)
+        self.assertIn("claudeCostUsd", theo_llm)
+        self.assertIn("claude-haiku-4-5", telemetry)
+        self.assertIn("claude-sonnet-4-6", telemetry)
+        self.assertIn("theoSessionCost", telemetry)
 
     def test_twilio_sender_uses_env_only(self):
         twilio_sender = read("lib/twilioSms.ts")

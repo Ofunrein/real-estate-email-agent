@@ -129,6 +129,8 @@ ENABLE_SMS_AGENT=false           # Set true only after Twilio dry-run checks pas
 TWILIO_ACCOUNT_SID=              # Required for Theo outbound SMS
 TWILIO_AUTH_TOKEN=               # Required for Theo outbound SMS
 TWILIO_FROM=+1xxxxxxxxxx         # Twilio sender number
+THEO_ENRICHMENT_TIMEOUT_MS=2500  # Total live data budget for SMS webhook replies
+THEO_APIFY_TIMEOUT_SECONDS=8     # Keeps live SMS enrichment inside Twilio's webhook window
 ```
 
 **Agent routing:** Add `Agent Name` and `Agent Email` columns to your sheet. Inquiries about a specific listing are CC'd to that agent automatically.
@@ -218,6 +220,19 @@ npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
 ```
 
 Watch the `npm run dev` terminal for `[Theo SMS]` lines. This simulates an inbound Twilio SMS locally, can send a real reply when `ENABLE_SMS_AGENT=true`, and records the same Neon conversation events the dashboard reads.
+
+Theo does not intentionally wait before replying. Inbound SMS is handled as soon as Twilio posts to `/api/webhooks/theo-sms`; response time is the sum of database writes, context reads, live enrichment, Claude classification/reply, Twilio send, and outbound logging. The terminal logs show each phase:
+
+```text
+[Theo SMS] inbound received { parseMs: 4, ... }
+[Theo SMS] inbound logged { elapsedMs: 42, totalMs: 71, ... }
+[Theo SMS] context read complete { propertyRows: 5, threadEvents: 8, elapsedMs: 54, ... }
+[Theo SMS] metric { service: 'claude', label: 'theo_reply', elapsedMs: 1420, cost: '$0.00411', sessionCost: '$0.00495' }
+[Theo SMS] reply send processed { replyStatus: 'sent', elapsedMs: 311, ... }
+[Theo SMS] webhook complete { totalMs: 3840, sessionCost: '$0.00495' }
+```
+
+For live SMS, keep enrichment fast. `THEO_ENRICHMENT_TIMEOUT_MS` defaults to 2500ms for the whole live enrichment step, and `THEO_APIFY_TIMEOUT_SECONDS` defaults to 8 seconds per Apify actor call. Longer data repair should run through sheet/property hygiene jobs, not the live SMS response path.
 
 Property hygiene checks:
 
