@@ -122,7 +122,7 @@ Key variables:
 ```bash
 TEAM_NAME=Austin Realty          # Used in replies and notifications
 TEAM_LEAD_EMAIL=                 # Receives lead notifications + fallback routing
-AGENT_PHONE=+1xxxxxxxxxx         # SMS destination for hot leads
+AGENT_PHONE=+1xxxxxxxxxx         # SMS destination for hot leads and Theo handoff alerts
 POLL_INTERVAL_SECONDS=60         # How often to check for new emails
 ENABLE_SIMILAR_HOMES=false       # Optional similar-home cards on single-property inquiry emails
 ENABLE_SMS_AGENT=false           # Set true only after Twilio dry-run checks pass
@@ -200,6 +200,7 @@ Hosted channel webhooks write to Neon and then appear in the dashboard:
 Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. V1 behavior:
 
 - Theo SMS logs inbound messages, updates shared memory, generates one safe reply, sends through Twilio only when `ENABLE_SMS_AGENT=true`, then logs the outbound reply.
+- Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 

@@ -28,8 +28,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         sms_route = read("app/api/webhooks/theo-sms/route.ts")
         self.assertIn("generateTheoReply", sms_route)
         self.assertIn("sendTheoSms", sms_route)
+        self.assertIn("sendTheoHandoffAlert", sms_route)
         self.assertIn("recordTheoOutbound", sms_route)
         self.assertIn('"reply_sent"', sms_route)
+        self.assertIn("handoff_alert_sent", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
         whatsapp_route = read("app/api/webhooks/theo-whatsapp/route.ts")
@@ -48,7 +50,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("TWILIO_ACCOUNT_SID", twilio_sender)
         self.assertIn("TWILIO_AUTH_TOKEN", twilio_sender)
         self.assertIn("TWILIO_FROM", twilio_sender)
+        self.assertIn("AGENT_PHONE", twilio_sender)
         self.assertIn("ENABLE_SMS_AGENT", twilio_sender)
+        self.assertIn("sendTheoHandoffAlert", twilio_sender)
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
         self.assertNotIn("AC4758", twilio_sender)
         self.assertNotIn("c0e300", twilio_sender)

@@ -71,3 +71,31 @@ export async function sendTheoSms(to: string, body: string): Promise<TwilioSendR
     };
   }
 }
+
+export function agentAlertPhone(): string {
+  return (process.env.AGENT_PHONE || process.env.TEAM_LEAD_PHONE || "").trim();
+}
+
+export async function sendTheoHandoffAlert(input: {
+  leadPhone: string;
+  leadName?: string;
+  reason: string;
+  summary: string;
+  threadRef: string;
+}): Promise<TwilioSendResult> {
+  const to = agentAlertPhone();
+  if (!to) {
+    return { sent: false, skipped: true, sid: "", error: "AGENT_PHONE is not configured" };
+  }
+
+  const lead = input.leadName || input.leadPhone || "Unknown lead";
+  const body = [
+    `Theo handoff: ${lead}`,
+    `Reason: ${input.reason || "Needs human review"}`,
+    `Lead phone: ${input.leadPhone || "unknown"}`,
+    `Thread: ${input.threadRef || "sms thread"}`,
+    input.summary ? `Summary: ${input.summary}` : "",
+  ].filter(Boolean).join("\n").slice(0, 900);
+
+  return sendTheoSms(to, body);
+}
