@@ -15,7 +15,10 @@ export function smsAgentEnabled(): boolean {
 }
 
 function missingConfig(): string {
-  const missing = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM"].filter((key) => !process.env[key]);
+  const missing = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"].filter((key) => !process.env[key]);
+  if (!process.env.TWILIO_MESSAGING_SERVICE_SID && !process.env.TWILIO_FROM) {
+    missing.push("TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM");
+  }
   return missing.join(", ");
 }
 
@@ -52,12 +55,17 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
   const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+  const messagingServiceSid = (process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
   const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
   const form = new URLSearchParams({
     To: recipient,
-    From: process.env.TWILIO_FROM || "",
     Body: message,
   });
+  if (messagingServiceSid) {
+    form.set("MessagingServiceSid", messagingServiceSid);
+  } else {
+    form.set("From", process.env.TWILIO_FROM || "");
+  }
   for (const mediaUrl of cleanUrls) {
     form.append("MediaUrl", mediaUrl);
   }
