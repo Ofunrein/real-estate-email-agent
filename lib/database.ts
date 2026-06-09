@@ -87,6 +87,19 @@ export async function readEventsFromDatabase(): Promise<SheetRow[]> {
   return result.rows.map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }
 
+export async function readEventsForThreadFromDatabase(threadRef: string, limit = 12): Promise<SheetRow[]> {
+  const result = await getPool().query(
+    `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
+       from conversation_events
+      where client_id = $1
+        and thread_ref = $2
+      order by id desc
+      limit $3`,
+    [clientId(), threadRef, limit],
+  );
+  return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
 async function findMatchingLead(incoming: SheetRow): Promise<SheetRow | null> {
   const phone = normalizePhone(incoming.phone);
   const email = normalizeEmail(incoming.email);
