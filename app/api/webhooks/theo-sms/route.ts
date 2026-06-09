@@ -14,6 +14,24 @@ function stringPayload(payload: Record<string, unknown>): Record<string, string>
 
 type TheoOutboundInput = Omit<ChannelIngestInput, "channel" | "direction" | "agentName" | "source" | "preferredChannel">;
 
+function maskPhone(value = "") {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length < 4) return value || "unknown";
+  return `***${digits.slice(-4)}`;
+}
+
+function logTheo(message: string, details: Record<string, unknown> = {}) {
+  const safeDetails = Object.fromEntries(
+    Object.entries(details).map(([key, value]) => {
+      if (key.toLowerCase().includes("phone") || key.toLowerCase() === "from" || key.toLowerCase() === "to") {
+        return [key, maskPhone(String(value || ""))];
+      }
+      return [key, value];
+    }),
+  );
+  console.info(`[Theo SMS] ${message}`, safeDetails);
+}
+
 async function recordTheoOutbound(input: TheoOutboundInput) {
   return recordChannelInteraction({
     ...input,
@@ -30,11 +48,18 @@ export async function POST(request: NextRequest) {
   try {
     assertWebhookSecret(request);
     const payload = stringPayload(await parseWebhookPayload(request));
+    logTheo("inbound received", {
+      from: payload.From,
+      to: payload.To,
+      messageSid: payload.MessageSid || "",
+      bodyPreview: (payload.Body || "").slice(0, 120),
+    });
     const inboundInput = twilioSmsIngestInput(payload);
     const result = await recordChannelInteraction(inboundInput);
     const controlAction = smsControlAction(payload.Body || "");
 
     if (controlAction === "stop") {
+      logTheo("opt-out recorded", { from: payload.From, threadRef: result.event.thread_ref });
       return NextResponse.json({
         ok: true,
         channel: result.event.channel,
@@ -62,6 +87,15 @@ export async function POST(request: NextRequest) {
         handoffAlertSent = alertResult.sent;
         handoffAlertError = alertResult.error;
       }
+      logTheo("control reply processed", {
+        action: controlAction,
+        leadPhone: payload.From,
+        replySent: sendResult.sent,
+        replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
+        sendError: sendResult.error || "",
+        handoffAlertSent,
+        handoffAlertError,
+      });
       await recordTheoOutbound({
         phone: payload.From || "",
         fullName: payload.ProfileName || "",
@@ -96,8 +130,23 @@ export async function POST(request: NextRequest) {
       propertyInterest: lead?.property_interest || result.lead.property_interest || "",
       source: "sms",
     });
+    logTheo("reply generated", {
+      leadPhone: payload.From,
+      intent: reply.classification.intent,
+      leadRole: reply.classification.leadRole,
+      status: reply.status,
+      action: reply.aiAction,
+      handoffReason: reply.handoffReason,
+      replyPreview: reply.reply.slice(0, 160),
+    });
 
     if (!reply.shouldSend) {
+      logTheo("reply blocked", {
+        leadPhone: payload.From,
+        status: reply.status,
+        action: reply.aiAction,
+        handoffReason: reply.handoffReason,
+      });
       return NextResponse.json({
         ok: true,
         channel: result.event.channel,
@@ -121,6 +170,14 @@ export async function POST(request: NextRequest) {
       handoffAlertSent = alertResult.sent;
       handoffAlertError = alertResult.error;
     }
+    logTheo("reply send processed", {
+      leadPhone: payload.From,
+      replySent: sendResult.sent,
+      replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
+      sendError: sendResult.error || "",
+      handoffAlertSent,
+      handoffAlertError,
+    });
     await recordTheoOutbound({
       phone: payload.From || "",
       fullName: payload.ProfileName || "",
@@ -151,6 +208,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Theo SMS webhook.";
+    logTheo("webhook error", { error: message });
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
