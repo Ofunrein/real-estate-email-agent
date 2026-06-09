@@ -91,6 +91,15 @@ function wantsPropertyImage(message: string): boolean {
   return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(message);
 }
 
+function asksForSafePropertyFact(message: string): boolean {
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
+}
+
+function canShareSafeFactsDuringHandoff(classification: TheoClassification): boolean {
+  const flags = (classification.complianceFlags || []).map((flag) => flag.toLowerCase());
+  return !flags.some((flag) => ["fair_housing", "mortgage_license", "legal", "contract_terms", "privacy", "broker_approval"].includes(flag));
+}
+
 function usablePhotoUrl(value?: string): string {
   const url = cleanText(value);
   if (!/^https:\/\//i.test(url)) return "";
@@ -101,7 +110,8 @@ function usablePhotoUrl(value?: string): string {
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
   if (!smsImagesEnabled()) return [];
-  if (classification.intent === "human_required" || classification.intent === "spam") return [];
+  if (classification.intent === "spam") return [];
+  if (classification.intent === "human_required" && (!asksForSafePropertyFact(context.message) || !canShareSafeFactsDuringHandoff(classification))) return [];
 
   const mode = smsImageMode();
   if (mode === "off") return [];
