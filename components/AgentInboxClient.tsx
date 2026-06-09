@@ -12,7 +12,7 @@ const channelViews: { key: View; label: string; agent: string; channel?: Channel
   { key: "sms", label: "SMS", agent: "Theo", channel: "sms" },
   { key: "whatsapp", label: "WhatsApp", agent: "Theo", channel: "whatsapp" },
   { key: "voice", label: "Voice", agent: "Aria", channel: "voice" },
-  { key: "website_chat", label: "Website", agent: "Nova", channel: "website_chat" },
+  { key: "website_chat", label: "Website", agent: "Olivia", channel: "website_chat" },
 ];
 
 function formatNumber(value: number | string) {

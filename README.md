@@ -184,6 +184,17 @@ npm run setup:neon
 npm run sync:ghl
 ```
 
+Hosted channel webhooks write to Neon and then appear in the dashboard:
+
+| Channel | Agent | Webhook |
+|---|---|---|
+| SMS | Theo | `/api/webhooks/theo-sms` |
+| WhatsApp | Theo | `/api/webhooks/theo-whatsapp` |
+| Voice | Aria | `/api/webhooks/aria-voice` |
+| Website chat | Olivia | `/api/webhooks/olivia-website` |
+
+Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. These V1 webhooks log inbound activity and shared memory only; they do not send customer-facing replies yet.
+
 Property hygiene checks:
 
 ```bash
