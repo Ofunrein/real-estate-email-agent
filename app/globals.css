@@ -479,12 +479,51 @@ button {
   background: #fff;
 }
 
+.thread.needs-human {
+  border-color: #d65f35;
+  box-shadow: inset 3px 0 0 #d65f35;
+}
+
 .thread-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   background: linear-gradient(180deg, #fafbf8, #f4f6f1);
   padding: 12px 14px;
+}
+
+.thread-status-stack {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.handoff-badge {
+  border-radius: 999px;
+  background: #f6d8cd;
+  color: #8e3218;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.handoff-note {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid #ead2c8;
+  border-bottom: 1px solid #ead2c8;
+  background: #fff4ef;
+  padding: 10px 14px;
+  color: #6f341f;
+}
+
+.handoff-note strong,
+.message-handoff strong {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-transform: uppercase;
 }
 
 .message {
@@ -526,6 +565,16 @@ button {
 .message-text {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.message-handoff {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  border-top: 1px solid #dfc4b8;
+  padding-top: 9px;
+  color: #7b351e;
+  font-size: 13px;
 }
 
 .empty-message {
@@ -630,6 +679,63 @@ button {
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.human-review-card {
+  border-color: #e2b59f;
+  background: #fff8f4;
+}
+
+.review-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.review-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #ead2c8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.review-item strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.review-item span {
+  color: #7b351e;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.handoff-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid #ead2c8;
+  background: #fff4ef;
+  padding: 11px 14px;
+  color: #74361f;
+}
+
+.handoff-summary strong,
+.handoff-summary span {
+  overflow-wrap: anywhere;
+}
+
+.handoff-summary strong {
+  font-size: 14px;
+}
+
+.handoff-summary span {
+  color: #8a5b48;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .rail-metric-grid {

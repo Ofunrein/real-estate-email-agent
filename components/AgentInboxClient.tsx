@@ -127,6 +127,27 @@ function statusText(value?: string) {
   return value ? value.replaceAll("_", " ") : "waiting";
 }
 
+function eventNeedsHuman(event: SheetRow) {
+  return (
+    event.status === "needs_human" ||
+    event.event_type === "sms_handoff_reply" ||
+    event.ai_action === "handoff_reply_ready" ||
+    Boolean(event.handoff_reason)
+  );
+}
+
+function threadNeedsHuman(events: SheetRow[]) {
+  return events.some(eventNeedsHuman);
+}
+
+function threadHandoffReason(events: SheetRow[]) {
+  return [...events].reverse().find((event) => event.handoff_reason)?.handoff_reason || "Review before continuing.";
+}
+
+function humanReviewThreads(threads: [string, SheetRow[]][]) {
+  return threads.filter(([, events]) => threadNeedsHuman(events));
+}
+
 function formatPrice(value?: string) {
   if (!value) return "Blank";
   const numeric = Number(value);
@@ -486,15 +507,25 @@ function ThreadViewer({ threads, channelLabel }: { threads: [string, SheetRow[]]
     <div className="thread-list">
       {threads.map(([threadRef, events]) => {
         const latest = latestEvent(events);
+        const needsHuman = threadNeedsHuman(events);
         return (
-          <article className="thread" key={threadRef}>
+          <article className={needsHuman ? "thread needs-human" : "thread"} key={threadRef}>
             <div className="thread-head">
               <div>
                 <strong>{latest.email || latest.phone || threadRef}</strong>
                 <div className="brand-subtitle">{threadRef}</div>
               </div>
-              <span className="status">{latest.status || latest.event_type || "active"}</span>
+              <div className="thread-status-stack">
+                {needsHuman ? <span className="handoff-badge">Needs human</span> : null}
+                <span className="status">{latest.status || latest.event_type || "active"}</span>
+              </div>
             </div>
+            {needsHuman ? (
+              <div className="handoff-note">
+                <strong>Human review reason</strong>
+                <span>{threadHandoffReason(events)}</span>
+              </div>
+            ) : null}
             {events.map((event, index) => (
               <div
                 className={`message ${event.direction === "outbound" ? "outbound" : "inbound"}`}
@@ -505,6 +536,12 @@ function ThreadViewer({ threads, channelLabel }: { threads: [string, SheetRow[]]
                   <span>{event.event_at || ""}</span>
                 </div>
                 <MessageContent event={event} />
+                {event.handoff_reason ? (
+                  <div className="message-handoff">
+                    <strong>Flag</strong>
+                    <span>{event.handoff_reason}</span>
+                  </div>
+                ) : null}
               </div>
             ))}
           </article>
@@ -563,6 +600,7 @@ function ContextRail({
   const outbound = directionCount(currentEvents, "outbound");
   const label = selectedChannel ? selectedChannelLabel : "All channels";
   const latestIdentity = latest.email || latest.phone || latest.full_name || "No lead selected";
+  const reviewEvents = currentEvents.filter(eventNeedsHuman).slice(-5).reverse();
 
   return (
     <aside className="context-rail" aria-label="Conversation context">
@@ -595,6 +633,23 @@ function ContextRail({
             <dd>{formatEventTime(latest.event_at)}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className="context-card human-review-card">
+        <span className="rail-label">Human review</span>
+        <h3>{reviewEvents.length ? `${reviewEvents.length} flagged` : "Clear"}</h3>
+        {reviewEvents.length ? (
+          <div className="review-stack">
+            {reviewEvents.map((event, index) => (
+              <div className="review-item" key={`${event.thread_ref}-${event.event_at}-${index}`}>
+                <strong>{event.phone || event.email || event.thread_ref || "Unknown lead"}</strong>
+                <span>{event.handoff_reason || event.summary || "Review this conversation."}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No handoffs in this view.</p>
+        )}
       </section>
 
       <section className="context-card">
@@ -651,6 +706,7 @@ export function AgentInboxClient({
   const channelThreads = selectedChannel
     ? threadEntries.filter(([, events]) => events.some((event) => eventChannel(event) === selectedChannel))
     : [];
+  const selectedHumanThreads = selectedChannel ? humanReviewThreads(channelThreads) : humanReviewThreads(threadEntries);
   const currentEvents = selectedChannel
     ? data.events.filter((event) => eventChannel(event) === selectedChannel)
     : data.events;
@@ -826,6 +882,12 @@ export function AgentInboxClient({
                 </div>
                 <span className="status">{currentEvents.length} events</span>
               </div>
+              {selectedHumanThreads.length ? (
+                <div className="handoff-summary">
+                  <strong>{selectedHumanThreads.length} thread{selectedHumanThreads.length === 1 ? "" : "s"} need human review</strong>
+                  <span>Open the flagged thread before the AI continues beyond the handoff message.</span>
+                </div>
+              ) : null}
               {selectedChannel ? (
                 <ThreadViewer threads={channelThreads} channelLabel={selectedChannelLabel} />
               ) : (
