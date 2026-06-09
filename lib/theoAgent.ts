@@ -31,6 +31,7 @@ export type TheoReplyContext = {
   propertyInterest?: string;
   source?: "sms" | "form";
   recentEvents?: SheetRow[];
+  dataContext?: string;
 };
 
 export type TheoReplyResult = {

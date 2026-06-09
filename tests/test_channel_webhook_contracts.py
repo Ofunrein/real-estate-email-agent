@@ -27,6 +27,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
     def test_theo_sms_route_generates_and_logs_replies(self):
         sms_route = read("app/api/webhooks/theo-sms/route.ts")
         self.assertIn("generateTheoReply", sms_route)
+        self.assertIn("enrichTheoData", sms_route)
         self.assertIn("sendTheoSms", sms_route)
         self.assertIn("sendTheoHandoffAlert", sms_route)
         self.assertIn("recordTheoOutbound", sms_route)
@@ -49,6 +50,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
         self.assertIn("AGENCY_KNOWLEDGE_CONTEXT", theo_llm)
+        self.assertIn("No emojis.", theo_llm)
+        self.assertIn("Live enrichment context", theo_llm)
         for property_field in [
             "description",
             "neighborhood",
@@ -81,6 +84,22 @@ class ChannelWebhookContractTests(unittest.TestCase):
         ]:
             self.assertIn(classifier_signal, theo_llm)
 
+    def test_theo_data_enrichment_matches_email_agent_sources(self):
+        theo_data = read("lib/theoData.ts")
+        for source in [
+            "RENTCAST_API_KEY",
+            "APIFY_TOKEN",
+            "APIFY_SOLD_COMPS_ACTOR_ID",
+            "FRED_API_KEY",
+            "CENSUS_API_KEY",
+        ]:
+            self.assertIn(source, theo_data)
+        self.assertIn("fetchRentCast", theo_data)
+        self.assertIn("fetchApifyZillow", theo_data)
+        self.assertIn("fetchMortgageRates", theo_data)
+        self.assertIn("fetchCensusZip", theo_data)
+        self.assertIn("fetchSoldComps", theo_data)
+
     def test_twilio_sender_uses_env_only(self):
         twilio_sender = read("lib/twilioSms.ts")
         self.assertIn("TWILIO_ACCOUNT_SID", twilio_sender)
@@ -96,6 +115,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
     def test_website_form_sms_requires_opt_in(self):
         website_route = read("app/api/webhooks/olivia-website/route.ts")
         self.assertIn("smsOptIn", website_route)
+        self.assertIn("enrichTheoData", website_route)
         self.assertIn("sendTheoSms", website_route)
         self.assertIn("sms_reply_sent", website_route)
         self.assertIn("phone && hasSmsConsent", website_route)
