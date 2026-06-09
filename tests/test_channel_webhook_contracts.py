@@ -31,6 +31,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("sendTheoSms", sms_route)
         self.assertIn("sendTheoHandoffAlert", sms_route)
         self.assertIn("recordTheoOutbound", sms_route)
+        self.assertIn("findPropertiesByAddressesFromDatabase", sms_route)
+        self.assertIn("extractTheoListedPropertyAddresses", sms_route)
+        self.assertIn("referencesPriorProperties", sms_route)
         self.assertIn('"reply_sent"', sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
         self.assertIn("[Theo SMS]", sms_route)
@@ -64,6 +67,13 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("asksForAlternativeProperties", theo_agent)
         self.assertIn("latestMessageHasSensitiveTopic", theo_agent)
         self.assertIn('recommendedNextAction: "reply_and_qualify"', theo_agent)
+        self.assertIn("cleanSmsReply", theo_agent)
+        self.assertIn(".replace(/\\n(?=\\d+\\.\\s)/g, \"\\n\\n\")", theo_agent)
+        self.assertIn(".replace(/\\n{3,}/g, \"\\n\\n\")", theo_agent)
+        self.assertIn("LINK_SMS_LIMIT = 1200", theo_agent)
+        self.assertIn("wantsPropertyLinks", theo_agent)
+        self.assertIn("formatTheoPropertyLinks", theo_agent)
+        self.assertIn("property_links_reply_ready", theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -73,6 +83,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("still answer simple safe facts", theo_llm)
         self.assertIn("Answer the safe factual part first", theo_llm)
         self.assertIn("list up to the requested number", theo_llm)
+        self.assertIn("put a blank line before each numbered listing", theo_llm)
+        self.assertIn("Do not say links are not loaded when listing_url is present", theo_llm)
+        self.assertIn("cleanSmsReply", theo_llm)
         self.assertIn("Do not use human_required only because prior messages had service friction", theo_llm)
         for property_field in [
             "description",
@@ -127,6 +140,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("metrics", theo_data)
         self.assertIn("extractTheoAddress", theo_data)
         self.assertIn("extractTheoPropertySearchQuery", theo_data)
+        self.assertIn("extractTheoListedPropertyAddresses", theo_data)
 
     def test_theo_claude_calls_report_costs(self):
         theo_llm = read("lib/theoLlm.ts")

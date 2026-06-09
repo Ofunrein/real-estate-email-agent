@@ -48,6 +48,7 @@ export type TheoReplyResult = {
 };
 
 const SMS_LIMIT = 320;
+const LINK_SMS_LIMIT = 1200;
 
 const SENSITIVE_PATTERNS = [
   { pattern: /\b(section 8|voucher|children|kids|family friendly|safe neighborhood|crime|school rating|ethnic|race|religion|disabled|disability)\b/i, reason: "Fair Housing-sensitive question" },
@@ -65,14 +66,25 @@ function cleanText(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
+function cleanSmsReply(value: string): string {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n(?=\d+\.\s)/g, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function normalize(value?: string): string {
   return cleanText(value).toLowerCase();
 }
 
-function truncateSms(value: string): string {
-  const clean = cleanText(value);
-  if (clean.length <= SMS_LIMIT) return clean;
-  return `${clean.slice(0, SMS_LIMIT - 1).trimEnd()}...`;
+function truncateSms(value: string, limit = SMS_LIMIT): string {
+  const clean = cleanSmsReply(value);
+  if (clean.length <= limit) return clean;
+  return `${clean.slice(0, limit - 1).trimEnd()}...`;
 }
 
 function envFlag(value?: string): boolean {
@@ -89,6 +101,10 @@ function smsImageMode(): string {
 
 function wantsPropertyImage(message: string): boolean {
   return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(message);
+}
+
+function wantsPropertyLinks(message: string): boolean {
+  return /\b(link|links|url|urls|website|listing page|zillow)\b/i.test(message);
 }
 
 function asksForSafePropertyFact(message: string): boolean {
@@ -115,6 +131,31 @@ function usablePhotoUrl(value?: string): string {
   if (/\.(jpe?g|png|gif)(\?|$)/i.test(url)) return url;
   if (/zillowstatic\.com|maps\.googleapis\.com|googleusercontent\.com/i.test(url)) return url;
   return "";
+}
+
+function formatPrice(value?: string): string {
+  const numeric = cleanText(value).replace(/[^\d.]/g, "");
+  if (!numeric) return cleanText(value);
+  const amount = Number(numeric);
+  return Number.isFinite(amount) ? `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : cleanText(value);
+}
+
+function formatFacts(property: SheetRow): string {
+  return [
+    formatPrice(property.price),
+    property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
+    property.neighborhood || property.city,
+  ].filter(Boolean).join(", ");
+}
+
+function formatTheoPropertyLinks(properties: SheetRow[] = []): string {
+  const linked = properties.filter((property) => cleanText(property.listing_url));
+  if (!linked.length) return "";
+  const lines = linked.slice(0, 3).flatMap((property, index) => [
+    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
+    cleanText(property.listing_url),
+  ]);
+  return `Here are the listing links:\n\n${lines.join("\n\n")}`;
 }
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
@@ -227,6 +268,22 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       status: "needs_human",
       metrics,
     };
+  }
+
+  if (wantsPropertyLinks(context.message)) {
+    const linkReply = formatTheoPropertyLinks(context.properties);
+    if (linkReply) {
+      return {
+        classification,
+        reply: truncateSms(linkReply, LINK_SMS_LIMIT),
+        mediaUrls: [],
+        shouldSend: true,
+        aiAction: "property_links_reply_ready",
+        handoffReason: "",
+        status: "ready_to_reply",
+        metrics,
+      };
+    }
   }
 
   let reply: string;
