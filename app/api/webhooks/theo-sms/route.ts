@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
-import { enrichTheoData, extractTheoAddress } from "@/lib/theoData";
+import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
@@ -171,8 +171,7 @@ export async function POST(request: NextRequest) {
 
     const lookupStarted = nowMs();
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
-    const extractedAddress = extractTheoAddress(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
-    const propertyQuery = extractedAddress || [payload.Body || "", lead?.property_interest || ""].filter(Boolean).join(" ");
+    const propertyQuery = extractTheoPropertySearchQuery(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
     logTheo("lead lookup complete", {
       leadPhone: payload.From,
       found: Boolean(lead),

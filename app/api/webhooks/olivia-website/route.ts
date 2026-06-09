@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
-import { enrichTheoData, extractTheoAddress } from "@/lib/theoData";
+import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
@@ -50,8 +50,7 @@ export async function POST(request: NextRequest) {
 
     if (phone && hasSmsConsent) {
       const lead = await findLeadInDatabase({ phone, email, full_name: fullName });
-      const extractedAddress = extractTheoAddress(propertyInterest, message, lead?.property_interest || "");
-      const propertyQuery = extractedAddress || `${propertyInterest} ${message}`;
+      const propertyQuery = extractTheoPropertySearchQuery(propertyInterest, message, lead?.property_interest || "");
       const [properties, recentEvents] = await Promise.all([
         findCandidatePropertiesFromDatabase(propertyQuery, 5),
         readEventsForThreadFromDatabase(`sms:${phone}`, 12),
