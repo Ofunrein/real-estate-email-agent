@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply } from "@/lib/theoAgent";
+import { enrichTheoData } from "@/lib/theoData";
 import { sendTheoHandoffAlert, sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
@@ -126,13 +127,20 @@ export async function POST(request: NextRequest) {
       findCandidatePropertiesFromDatabase(propertyQuery, 5),
       readEventsForThreadFromDatabase(result.event.thread_ref, 12),
     ]);
-    const reply = await generateTheoReply({
+    const enriched = await enrichTheoData({
       message: payload.Body || "",
       lead: lead || result.lead,
       properties,
+      propertyInterest: lead?.property_interest || result.lead.property_interest || "",
+    });
+    const reply = await generateTheoReply({
+      message: payload.Body || "",
+      lead: lead || result.lead,
+      properties: enriched.properties,
       recentEvents,
       propertyInterest: lead?.property_interest || result.lead.property_interest || "",
       source: "sms",
+      dataContext: enriched.context,
     });
     logTheo("reply generated", {
       leadPhone: payload.From,

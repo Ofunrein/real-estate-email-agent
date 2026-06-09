@@ -201,7 +201,7 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 
 - Theo SMS logs inbound messages, updates shared memory, generates one safe reply, sends through Twilio only when `ENABLE_SMS_AGENT=true`, then logs the outbound reply.
 - Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
-- Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, and Austin Realty knowledge. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, and listing agent fields into the SMS reply model.
+- Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 

@@ -12,6 +12,7 @@ export type TheoLlmContext = {
   propertyInterest?: string;
   source?: "sms" | "form";
   recentEvents?: SheetRow[];
+  dataContext?: string;
 };
 
 function anthropicKey(): string {
@@ -166,6 +167,9 @@ ${threadSummary(context.recentEvents)}
 Property rows:
 ${propertySummary(context.properties)}
 
+Live enrichment context:
+${context.dataContext || "No live enrichment context."}
+
 Agency knowledge Theo can use:
 ${AGENCY_KNOWLEDGE_CONTEXT}
 
@@ -197,10 +201,12 @@ Write one natural SMS reply. Be concise, human, emotionally intelligent, and use
 Mirror the feel of a good human real estate assistant: casual, clear, not robotic, not pushy.
 Rules:
 - 320 characters max.
+- No emojis.
 - Ask at most one question.
 - Use prior thread context so short replies like "yes", "thanks", or "Wednesday works" make sense.
 - Use only the property facts provided. Never invent listing facts, status, pricing, availability, schools, crime, or neighborhood claims.
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
+- Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
 - If the classification says needs_human, do not answer the sensitive topic. Say a real person will follow up.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
@@ -216,6 +222,9 @@ ${threadSummary(context.recentEvents)}
 
 Property rows Theo can reference:
 ${propertySummary(context.properties)}
+
+Live enrichment context Theo can reference:
+${context.dataContext || "No live enrichment context."}
 
 Agency knowledge Theo can reference:
 ${AGENCY_KNOWLEDGE_CONTEXT}
