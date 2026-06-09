@@ -1,8 +1,12 @@
 import type { SheetRow } from "@/lib/sheetSchema";
+import { elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type TheoEnrichedData = {
   properties: SheetRow[];
   context: string;
+  metrics: TheoMetric[];
+  elapsedMs: number;
+  costUsd: number;
 };
 
 const SOLD_COMP_TERMS = [
@@ -68,6 +72,43 @@ async function getJson(url: string, init: RequestInit = {}, timeoutMs = 7000): P
   return response.json().catch(() => null);
 }
 
+async function measuredDataCall<T>(
+  label: string,
+  service: string,
+  fn: () => Promise<T>,
+  costOnContext = 0,
+): Promise<{ value: T; metric: TheoMetric }> {
+  const started = nowMs();
+  try {
+    const value = await fn();
+    const hasContext = typeof value === "string"
+      ? truthy(value)
+      : Boolean(value && typeof value === "object" && "context" in value && truthy(String((value as { context?: string }).context)));
+    return {
+      value,
+      metric: {
+        service,
+        label,
+        status: hasContext ? "found" : "no_data",
+        elapsedMs: elapsedMs(started),
+        costUsd: hasContext ? costOnContext : 0,
+      },
+    };
+  } catch (error) {
+    return {
+      value: "" as T,
+      metric: {
+        service,
+        label,
+        status: "failed",
+        elapsedMs: elapsedMs(started),
+        costUsd: 0,
+        detail: error instanceof Error ? error.message : "data call failed",
+      },
+    };
+  }
+}
+
 function formatCurrency(value?: string): string {
   const numeric = clean(value).replace(/[^\d.]/g, "");
   if (!numeric) return clean(value);
@@ -128,15 +169,16 @@ function apifyToken(): string {
   return process.env.APIFY_TOKEN || "";
 }
 
-async function runApifyActor(actorId: string, payload: Record<string, unknown>, timeoutSeconds = 60): Promise<Record<string, unknown>> {
+async function runApifyActor(actorId: string, payload: Record<string, unknown>, timeoutSeconds = Number(process.env.THEO_APIFY_TIMEOUT_SECONDS || "8")): Promise<Record<string, unknown>> {
   const token = apifyToken();
   if (!token) return {};
-  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=${timeoutSeconds}&memory=512`;
+  const actorTimeout = Math.max(3, Number(timeoutSeconds || 8));
+  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=${actorTimeout}&memory=512`;
   const data = await getJson(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
-  }, (timeoutSeconds + 20) * 1000);
+  }, (actorTimeout + 2) * 1000);
   const items = Array.isArray(data) ? data : [];
   return (items[0] || {}) as Record<string, unknown>;
 }
@@ -249,18 +291,54 @@ export async function enrichTheoData(input: {
   properties?: SheetRow[];
   propertyInterest?: string;
 }): Promise<TheoEnrichedData> {
+  const started = nowMs();
+  const budgetMs = Math.max(1000, Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "2500"));
+  return Promise.race([
+    runTheoDataEnrichment(input),
+    new Promise<TheoEnrichedData>((resolve) => {
+      setTimeout(() => resolve({
+        properties: input.properties || [],
+        context: "",
+        metrics: [{
+          service: "enrichment",
+          label: "theo_enrichment_budget",
+          status: "timeout",
+          elapsedMs: elapsedMs(started),
+          costUsd: 0,
+          detail: `budget=${budgetMs}ms`,
+        }],
+        elapsedMs: elapsedMs(started),
+        costUsd: 0,
+      }), budgetMs).unref?.();
+    }),
+  ]);
+}
+
+async function runTheoDataEnrichment(input: {
+  message: string;
+  lead?: Partial<SheetRow>;
+  properties?: SheetRow[];
+  propertyInterest?: string;
+}): Promise<TheoEnrichedData> {
+  const started = nowMs();
   const context: string[] = [];
+  const metrics: TheoMetric[] = [];
   const properties = [...(input.properties || [])];
   const first = properties[0] || {};
   const address = clean(first.address || extractAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
+  const emptyEnrichment = { property: {}, context: "" };
 
   if (address && (!properties.length || needsPropertyEnrichment(first))) {
     const [apify, rentcast] = await Promise.allSettled([
-      fetchApifyZillow(address),
-      fetchRentCast(address),
+      measuredDataCall("apify_zillow_lookup", "apify", () => fetchApifyZillow(address), 0.003),
+      measuredDataCall("rentcast_property_lookup", "rentcast", () => fetchRentCast(address)),
     ]);
-    const apifyData = apify.status === "fulfilled" ? apify.value : { property: {}, context: "" };
-    const rentcastData = rentcast.status === "fulfilled" ? rentcast.value : { property: {}, context: "" };
+    const apifyValue = apify.status === "fulfilled" ? apify.value.value : emptyEnrichment;
+    const rentcastValue = rentcast.status === "fulfilled" ? rentcast.value.value : emptyEnrichment;
+    const apifyData = typeof apifyValue === "object" && apifyValue && "property" in apifyValue ? apifyValue : emptyEnrichment;
+    const rentcastData = typeof rentcastValue === "object" && rentcastValue && "property" in rentcastValue ? rentcastValue : emptyEnrichment;
+    if (apify.status === "fulfilled") metrics.push(apify.value.metric);
+    if (rentcast.status === "fulfilled") metrics.push(rentcast.value.metric);
     const merged = mergeProperty(mergeProperty(first, rentcastData.property), apifyData.property);
     if (Object.keys(merged).length) {
       if (properties.length) properties[0] = merged;
@@ -272,16 +350,23 @@ export async function enrichTheoData(input: {
 
   const enrichedFirst = properties[0] || first;
   const [rates, census, comps] = await Promise.allSettled([
-    fetchMortgageRates(),
-    fetchCensusZip(enrichedFirst.zip),
-    fetchSoldComps(enrichedFirst, input.message),
+    measuredDataCall("fred_mortgage_rates", "fred", () => fetchMortgageRates()),
+    measuredDataCall("census_zip_stats", "census", () => fetchCensusZip(enrichedFirst.zip)),
+    measuredDataCall("apify_sold_comps", "apify", () => fetchSoldComps(enrichedFirst, input.message), 0.003),
   ]);
   for (const result of [rates, census, comps]) {
-    if (result.status === "fulfilled" && result.value) context.push(result.value);
+    if (result.status === "fulfilled") {
+      metrics.push(result.value.metric);
+      if (result.value.value) context.push(result.value.value);
+    }
   }
 
+  const costUsd = metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
   return {
     properties,
     context: context.join("\n"),
+    metrics,
+    elapsedMs: elapsedMs(started),
+    costUsd,
   };
 }
