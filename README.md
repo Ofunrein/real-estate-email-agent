@@ -204,6 +204,20 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 
+Local Theo SMS test without a public Twilio webhook:
+
+```bash
+npm run dev
+```
+
+In a second terminal:
+
+```bash
+npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
+```
+
+Watch the `npm run dev` terminal for `[Theo SMS]` lines. This simulates an inbound Twilio SMS locally, can send a real reply when `ENABLE_SMS_AGENT=true`, and records the same Neon conversation events the dashboard reads.
+
 Property hygiene checks:
 
 ```bash
