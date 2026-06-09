@@ -132,7 +132,7 @@ TWILIO_FROM=+1xxxxxxxxxx         # Twilio sender number
 TWILIO_MESSAGING_SERVICE_SID=    # Prefer for RCS-capable Messaging Service send/fallback
 ENABLE_SMS_IMAGES=false          # Optional MMS property photos
 SMS_IMAGE_MODE=on_request        # off | on_request | property_reply
-SMS_MAX_IMAGES=1                 # Keep MMS lightweight
+SMS_MAX_IMAGES=3                 # Max one photo per requested property, capped at 3
 THEO_ENRICHMENT_TIMEOUT_MS=2500  # Total live data budget for SMS webhook replies
 THEO_APIFY_TIMEOUT_SECONDS=8     # Keeps live SMS enrichment inside Twilio's webhook window
 ```
@@ -209,7 +209,7 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 - Theo sends through `TWILIO_MESSAGING_SERVICE_SID` when set. Use this for RCS-capable Twilio Messaging Services; Twilio can fall back to SMS/MMS when the recipient is not RCS-capable. Keep `TWILIO_FROM` configured as the direct-number fallback.
 - Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
 - Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
-- Theo can send MMS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so a photo is attached only when the lead asks for photos/pictures/images and Theo has a public HTTPS `photo_url`. `property_reply` can attach one image on normal property replies. Sensitive/handoff replies never attach images.
+- Theo can send MMS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has public HTTPS `photo_url` values. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. `property_reply` can attach images on normal property replies. Sensitive/handoff replies never attach images.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 

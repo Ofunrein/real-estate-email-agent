@@ -185,15 +185,18 @@ export async function POST(request: NextRequest) {
     });
     const contextReadStarted = nowMs();
     const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
-    const priorAddresses = referencesPriorProperties(payload.Body || "")
+    const requestedAddresses = extractTheoListedPropertyAddresses(payload.Body || "");
+    const priorAddresses = !requestedAddresses.length && referencesPriorProperties(payload.Body || "")
       ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
       : [];
-    const properties = priorAddresses.length
-      ? await findPropertiesByAddressesFromDatabase(priorAddresses, 5)
+    const exactAddresses = requestedAddresses.length ? requestedAddresses : priorAddresses;
+    const properties = exactAddresses.length
+      ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : await findCandidatePropertiesFromDatabase(propertyQuery, 5);
     logTheo("context read complete", {
       leadPhone: payload.From,
       propertyRows: properties.length,
+      requestedAddressRows: requestedAddresses.length,
       priorAddressRows: priorAddresses.length,
       threadEvents: recentEvents.length,
       elapsedMs: elapsedMs(contextReadStarted),

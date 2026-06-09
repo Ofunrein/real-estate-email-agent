@@ -137,10 +137,23 @@ function formatCurrency(value?: string): string {
 }
 
 export function extractTheoAddress(...values: string[]): string {
+  return extractTheoAddresses(...values)[0] || "";
+}
+
+export function extractTheoAddresses(...values: string[]): string[] {
   const text = values.map(clean).filter(Boolean).join(" ");
   const streetPattern = STREET_TERMS.join("|");
-  const match = text.match(new RegExp(`\\b\\d{2,6}\\s+[A-Za-z0-9 .#-]+?\\s(?:${streetPattern})\\b(?:\\s+(?:unit|apt|#)\\s*[A-Za-z0-9-]+)?(?:,?\\s+[A-Za-z .]+)?(?:,?\\s+TX|,?\\s+Texas)?(?:\\s+\\d{5})?`, "i"));
-  return clean(match?.[0] || "");
+  const pattern = new RegExp(`\\b\\d{2,6}\\s+[A-Za-z0-9 .#-]+?\\s(?:${streetPattern})\\b(?:\\s+(?:unit|apt|#)\\s*[A-Za-z0-9-]+)?(?:,?\\s+[A-Za-z .]+)?(?:,?\\s+TX|,?\\s+Texas)?(?:\\s+\\d{5})?`, "gi");
+  const seen = new Set<string>();
+  const addresses: string[] = [];
+  for (const match of text.matchAll(pattern)) {
+    const address = clean(match[0].replace(/[.,;:]+$/, ""));
+    const key = address.toLowerCase();
+    if (!address || seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(address);
+  }
+  return addresses;
 }
 
 export function extractTheoPropertySearchQuery(...values: string[]): string {
@@ -159,12 +172,12 @@ export function extractTheoListedPropertyAddresses(...values: string[]): string[
     for (const rawLine of String(value || "").split(/\n+/)) {
       const line = clean(rawLine.replace(/^\d+\.\s*/, ""));
       const addressText = clean(line.split(/\s[-–]\s/)[0] || "");
-      const address = extractTheoAddress(addressText);
-      if (!address) continue;
-      const key = address.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      addresses.push(address);
+      for (const address of extractTheoAddresses(addressText)) {
+        const key = address.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        addresses.push(address);
+      }
     }
   }
   return addresses;
