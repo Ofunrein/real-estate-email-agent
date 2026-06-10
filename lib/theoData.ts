@@ -81,12 +81,19 @@ function truthy(value?: string): boolean {
 }
 
 function parseAddressParts(address: string): Partial<SheetRow> {
-  const match = clean(address).match(/^(.*?)(?:,\s*([^,]+))?(?:,\s*(TX|Texas))?(?:\s+(\d{5}))?$/i);
+  const text = clean(address).replace(/\bUnited States\b/gi, "").trim();
+  const zip = text.match(/\b(\d{5})(?:-\d{4})?\b/)?.[1] || "";
+  const state = text.match(/\b(TX|Texas)\b/i)?.[1]?.replace(/^Texas$/i, "TX") || "";
+  const beforeState = clean(text.replace(/\b(TX|Texas)\b.*$/i, "").replace(/[,\s]+$/, ""));
+  const commaParts = beforeState.split(",").map(clean).filter(Boolean);
+  const streetMatch = beforeState.match(/^(.+?\b(?:st|street|dr|drive|rd|road|ave|avenue|blvd|boulevard|ln|lane|way|ct|court|cir|circle|trl|trail|path|cv|cove)\b)\s+(.+)$/i);
+  const street = commaParts[0] || streetMatch?.[1] || beforeState || text;
+  const city = commaParts.length > 1 ? commaParts[1] : clean(streetMatch?.[2] || "");
   return {
-    address: clean(address),
-    city: clean(match?.[2] || ""),
-    state: clean(match?.[3] || "").replace(/^Texas$/i, "TX"),
-    zip: clean(match?.[4] || ""),
+    address: [street, city, state].filter(Boolean).join(", ") + (zip ? ` ${zip}` : ""),
+    city,
+    state,
+    zip,
   };
 }
 
@@ -207,6 +214,10 @@ function needsPropertyEnrichment(property: SheetRow): boolean {
   return !property.photo_url || !property.sqft || !property.year_built || !property.zip || !property.description;
 }
 
+function wantsPropertyImage(message: string): boolean {
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(message);
+}
+
 function googleStreetViewProperty(address: string): { property: Partial<SheetRow>; context: string } {
   const key = process.env.GOOGLE_MAPS_API_KEY || "";
   if (!key || !address) return { property: {}, context: "" };
@@ -219,6 +230,39 @@ function googleStreetViewProperty(address: string): { property: Partial<SheetRow
   return {
     property,
     context: `Google Street View fallback prepared for ${address}.`,
+  };
+}
+
+function timeoutFallbackData(input: {
+  message: string;
+  lead?: Partial<SheetRow>;
+  properties?: SheetRow[];
+  propertyInterest?: string;
+}, started: number, budgetMs: number): TheoEnrichedData {
+  const properties = [...(input.properties || [])];
+  const address = clean(properties[0]?.address || extractTheoAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
+  const context: string[] = [];
+  if (address && !properties.some((property) => truthy(property.photo_url))) {
+    const fallback = googleStreetViewProperty(address);
+    if (Object.keys(fallback.property).length) {
+      if (properties.length) properties[0] = mergeProperty(properties[0], fallback.property);
+      else properties.push(fallback.property as SheetRow);
+      if (fallback.context) context.push(fallback.context);
+    }
+  }
+  return {
+    properties,
+    context: context.join("\n"),
+    metrics: [{
+      service: "enrichment",
+      label: "theo_enrichment_budget",
+      status: "timeout",
+      elapsedMs: elapsedMs(started),
+      costUsd: 0,
+      detail: `budget=${budgetMs}ms`,
+    }],
+    elapsedMs: elapsedMs(started),
+    costUsd: 0,
   };
 }
 
@@ -381,20 +425,7 @@ export async function enrichTheoData(input: {
   return Promise.race([
     runTheoDataEnrichment(input),
     new Promise<TheoEnrichedData>((resolve) => {
-      setTimeout(() => resolve({
-        properties: input.properties || [],
-        context: "",
-        metrics: [{
-          service: "enrichment",
-          label: "theo_enrichment_budget",
-          status: "timeout",
-          elapsedMs: elapsedMs(started),
-          costUsd: 0,
-          detail: `budget=${budgetMs}ms`,
-        }],
-        elapsedMs: elapsedMs(started),
-        costUsd: 0,
-      }), budgetMs).unref?.();
+      setTimeout(() => resolve(timeoutFallbackData(input, started, budgetMs)), budgetMs).unref?.();
     }),
   ]);
 }
@@ -411,9 +442,10 @@ async function runTheoDataEnrichment(input: {
   const properties = [...(input.properties || [])];
   const first = properties[0] || {};
   const address = clean(first.address || extractTheoAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
+  const cachedPhotoReady = properties.length > 0 && truthy(first.photo_url) && wantsPropertyImage(input.message);
   const emptyEnrichment = { property: {}, context: "" };
 
-  if (address && (!properties.length || needsPropertyEnrichment(first))) {
+  if (address && !cachedPhotoReady && (!properties.length || needsPropertyEnrichment(first))) {
     const [apify, rentcast] = await Promise.allSettled([
       measuredDataCall("apify_zillow_lookup", "apify", () => fetchApifyZillow(address), 0.003),
       measuredDataCall("rentcast_property_lookup", "rentcast", () => fetchRentCast(address)),
