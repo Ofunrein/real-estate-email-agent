@@ -55,7 +55,7 @@ function referencesPriorProperties(message = ""): boolean {
 }
 
 function wantsRelatedProperties(message = ""): boolean {
-  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(message);
+  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(message);
 }
 
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
@@ -217,19 +217,35 @@ export async function POST(request: NextRequest) {
 
     const lookupStarted = nowMs();
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
-    const propertySearch = extractTheoPropertySearchIntent(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
-    const propertyQuery = extractTheoPropertySearchQuery(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
     logTheo("lead lookup complete", {
       leadPhone: payload.From,
       found: Boolean(lead),
-      propertyQuery,
-      propertySearchMode: propertySearch.mode,
-      propertySearchArea: propertySearch.area || "",
       elapsedMs: elapsedMs(lookupStarted),
       totalMs: elapsedMs(requestStarted),
     });
     const contextReadStarted = nowMs();
     const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
+    const recentSearchContext = recentEvents
+      .slice(-6)
+      .filter((event) => event.direction === "inbound")
+      .map((event) => event.message_text || event.summary || "")
+      .join(" ");
+    const propertySearch = extractTheoPropertySearchIntent(
+      payload.Body || "",
+      lead?.area || "",
+      result.lead.area || "",
+      lead?.property_interest || "",
+      result.lead.property_interest || "",
+      recentSearchContext,
+    );
+    const propertyQuery = extractTheoPropertySearchQuery(
+      payload.Body || "",
+      lead?.area || "",
+      result.lead.area || "",
+      lead?.property_interest || "",
+      result.lead.property_interest || "",
+      recentSearchContext,
+    );
     const requestedAddresses = extractTheoListedPropertyAddresses(payload.Body || "");
     const referencedInboundAddresses = !requestedAddresses.length && referencesPriorProperties(payload.Body || "")
       ? recentInboundAddresses(recentEvents)
@@ -255,6 +271,9 @@ export async function POST(request: NextRequest) {
       propertyRows: properties.length,
       referencePropertyRows: referenceProperties.length,
       relatedRequest,
+      propertyQuery,
+      propertySearchMode: propertySearch.mode,
+      propertySearchArea: propertySearch.area || "",
       requestedAddressRows: requestedAddresses.length,
       referencedInboundAddressRows: referencedInboundAddresses.length,
       priorAddressRows: priorAddresses.length,
