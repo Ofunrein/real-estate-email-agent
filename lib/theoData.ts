@@ -1,4 +1,5 @@
 import type { SheetRow } from "@/lib/sheetSchema";
+import { CENTRAL_TEXAS_SEARCH_AREAS } from "@/lib/serviceAreas";
 import { elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type TheoEnrichedData = {
@@ -52,49 +53,7 @@ const STREET_TERMS = [
   "cove",
 ];
 
-const PROPERTY_SEARCH_AREAS = [
-  "Greater Austin",
-  "Austin Metro",
-  "Austin Area",
-  "Central Texas",
-  "Downtown Austin",
-  "Southwest Austin",
-  "Southeast Austin",
-  "Northwest Austin",
-  "Northeast Austin",
-  "South Austin",
-  "North Austin",
-  "East Austin",
-  "West Austin",
-  "Round Rock",
-  "Cedar Park",
-  "Georgetown",
-  "Pflugerville",
-  "Flugerville",
-  "Leander",
-  "Buda",
-  "Kyle",
-  "Manchaca",
-  "Lakeway",
-  "Bee Cave",
-  "Dripping Springs",
-  "Hutto",
-  "Taylor",
-  "Zilker",
-  "South Congress",
-  "South Lamar",
-  "Hyde Park",
-  "Brentwood",
-  "Crestview",
-  "Oak Hill",
-  "Circle C",
-  "Montopolis",
-  "Windsor Park",
-  "North Lamar",
-  "Rosedale",
-  "Allandale",
-  "Austin",
-];
+const PROPERTY_SEARCH_AREAS = CENTRAL_TEXAS_SEARCH_AREAS;
 
 export type TheoPropertySearchIntent = {
   query: string;

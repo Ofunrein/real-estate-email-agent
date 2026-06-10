@@ -7,6 +7,11 @@ import {
   type SheetRow,
 } from "@/lib/sheetSchema";
 import { mergeNonEmpty, normalizeEmail, normalizeName, normalizePhone } from "@/lib/leadIdentity";
+import {
+  AUSTIN_NEIGHBORHOODS,
+  CENTRAL_TEXAS_ALIASES,
+  CENTRAL_TEXAS_CITIES,
+} from "@/lib/serviceAreas";
 
 let pool: Pool | null = null;
 
@@ -22,68 +27,8 @@ export type PropertySearchCriteria = {
   excludeAddresses?: string[];
 };
 
-const GREATER_AUSTIN_CITIES = [
-  "austin",
-  "round rock",
-  "pflugerville",
-  "cedar park",
-  "georgetown",
-  "leander",
-  "buda",
-  "kyle",
-  "manchaca",
-  "lakeway",
-  "bee cave",
-  "dripping springs",
-  "hutto",
-  "taylor",
-  "west lake hills",
-  "rollingwood",
-];
-
-const AUSTIN_NEIGHBORHOODS = [
-  "south austin",
-  "south congress",
-  "south lamar",
-  "southwest austin",
-  "southeast austin",
-  "south slaughter",
-  "downtown",
-  "downtown austin",
-  "east austin",
-  "north austin",
-  "northwest austin",
-  "northeast austin",
-  "west austin",
-  "zilker",
-  "hyde park",
-  "brentwood",
-  "crestview",
-  "oak hill",
-  "circle c",
-  "circle c ranch",
-  "montopolis",
-  "windsor park",
-  "north lamar",
-  "rosedale",
-  "allandale",
-  "west campus",
-  "cat mountain",
-  "copperfield",
-  "anderson mill",
-  "steiner ranch",
-];
-
-const AREA_ALIASES: Record<string, string[]> = {
-  "greater austin": [...GREATER_AUSTIN_CITIES, ...AUSTIN_NEIGHBORHOODS],
-  "austin metro": [...GREATER_AUSTIN_CITIES, ...AUSTIN_NEIGHBORHOODS],
-  "austin area": [...GREATER_AUSTIN_CITIES, ...AUSTIN_NEIGHBORHOODS],
-  "central texas": [...GREATER_AUSTIN_CITIES, ...AUSTIN_NEIGHBORHOODS],
-  "flugerville": ["pflugerville"],
-  "pflugerville": ["pflugerville"],
-  "south austin": ["south austin", "south congress", "south lamar", "southwest austin", "southeast austin", "south slaughter", "78704", "78745", "78748", "78749", "78744"],
-  "north austin": ["north austin", "north lamar", "northwest austin", "northeast austin", "copperfield", "anderson mill", "78727", "78729", "78750", "78753", "78758", "78759"],
-};
+const GREATER_AUSTIN_CITIES = CENTRAL_TEXAS_CITIES;
+const AREA_ALIASES: Record<string, string[]> = CENTRAL_TEXAS_ALIASES;
 
 export function databaseEnabled(): boolean {
   return Boolean(process.env.DATABASE_URL);
@@ -171,6 +116,36 @@ export async function readEventsForThreadFromDatabase(threadRef: string, limit =
       order by id desc
       limit $3`,
     [clientId(), threadRef, limit],
+  );
+  return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
+// Cross-channel history for one lead, matched by phone and/or email (not thread).
+// Used by identity resolution so a caller's prior email/SMS/voice events surface.
+export async function readEventsForLeadFromDatabase(
+  lead: { phone?: string; email?: string },
+  limit = 20,
+): Promise<SheetRow[]> {
+  const phone = normalizePhone(lead.phone);
+  const email = normalizeEmail(lead.email);
+  if (!phone && !email) return [];
+  const result = await getPool().query(
+    `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
+       from conversation_events
+      where client_id = $1
+        and (
+          ($2 <> '' and (
+            regexp_replace(phone, '\\D', '', 'g') = $2
+            or (
+              length(regexp_replace(phone, '\\D', '', 'g')) = 10
+              and concat('1', regexp_replace(phone, '\\D', '', 'g')) = $2
+            )
+          ))
+          or ($3 <> '' and lower(email) = $3)
+        )
+      order by id desc
+      limit $4`,
+    [clientId(), phone, email, limit],
   );
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }
@@ -481,8 +456,120 @@ export async function appendConversationEventToDatabase(event: Partial<SheetRow>
   return cleaned;
 }
 
-export async function loadAgentInboxDataFromDatabase() {
-  const [leads, events, properties] = await Promise.all([
+export type VoiceCallRecord = {
+  call_id: string;
+  thread_ref?: string;
+  direction?: string;
+  email?: string;
+  phone?: string;
+  full_name?: string;
+  lead_role?: string;
+  agent_name?: string;
+  started_at?: string;
+  ended_at?: string;
+  duration_sec?: number;
+  disposition?: string;
+  intents?: string[];
+  actions?: unknown[];
+  summary?: string;
+  transcript?: string;
+  recording_url?: string;
+  ended_reason?: string;
+  human_owner?: string;
+};
+
+// One row per call. Upsert keyed by (client_id, call_id) so a status-update
+// followed by an end-of-call-report merge into the same row. Non-empty text
+// fields win on conflict; numeric/array/json fields take the latest value.
+export async function upsertVoiceCallToDatabase(call: VoiceCallRecord): Promise<void> {
+  if (!call.call_id) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into voice_calls (
+        client_id, call_id, thread_ref, direction, email, phone, full_name, lead_role,
+        agent_name, started_at, ended_at, duration_sec, disposition, intents, actions,
+        summary, transcript, recording_url, ended_reason, human_owner
+      ) values (
+        $1, $2, $3, $4, $5, $6, $7, $8,
+        $9, $10, $11, $12, $13, $14, $15::jsonb,
+        $16, $17, $18, $19, $20
+      )
+      on conflict (client_id, call_id) do update set
+        thread_ref = coalesce(nullif(excluded.thread_ref, ''), voice_calls.thread_ref),
+        direction = coalesce(nullif(excluded.direction, ''), voice_calls.direction),
+        email = coalesce(nullif(excluded.email, ''), voice_calls.email),
+        phone = coalesce(nullif(excluded.phone, ''), voice_calls.phone),
+        full_name = coalesce(nullif(excluded.full_name, ''), voice_calls.full_name),
+        lead_role = coalesce(nullif(excluded.lead_role, ''), voice_calls.lead_role),
+        agent_name = coalesce(nullif(excluded.agent_name, ''), voice_calls.agent_name),
+        started_at = coalesce(nullif(excluded.started_at, ''), voice_calls.started_at),
+        ended_at = coalesce(nullif(excluded.ended_at, ''), voice_calls.ended_at),
+        duration_sec = greatest(excluded.duration_sec, voice_calls.duration_sec),
+        disposition = coalesce(nullif(excluded.disposition, ''), voice_calls.disposition),
+        intents = case when array_length(excluded.intents, 1) is null then voice_calls.intents else excluded.intents end,
+        actions = case when excluded.actions = '[]'::jsonb then voice_calls.actions else excluded.actions end,
+        summary = coalesce(nullif(excluded.summary, ''), voice_calls.summary),
+        transcript = coalesce(nullif(excluded.transcript, ''), voice_calls.transcript),
+        recording_url = coalesce(nullif(excluded.recording_url, ''), voice_calls.recording_url),
+        ended_reason = coalesce(nullif(excluded.ended_reason, ''), voice_calls.ended_reason),
+        human_owner = coalesce(nullif(excluded.human_owner, ''), voice_calls.human_owner)`,
+    [
+      clientId(),
+      call.call_id,
+      call.thread_ref || "",
+      call.direction || "inbound",
+      call.email || "",
+      call.phone || "",
+      call.full_name || "",
+      call.lead_role || "",
+      call.agent_name || "Aria",
+      call.started_at || "",
+      call.ended_at || "",
+      Math.max(0, Math.round(Number(call.duration_sec || 0))),
+      call.disposition || "",
+      call.intents && call.intents.length ? call.intents : [],
+      JSON.stringify(call.actions || []),
+      call.summary || "",
+      call.transcript || "",
+      call.recording_url || "",
+      call.ended_reason || "",
+      call.human_owner || "",
+    ],
+  );
+}
+
+export type StyleExample = {
+  category: string;
+  tone_tags: string[];
+  redacted_excerpt: string;
+};
+
+// Approved few-shot style examples for the client, newest first. Optional
+// category filter (e.g. "property_reply"). Empty when none approved.
+export async function readStyleExamplesFromDatabase(category = "", limit = 3): Promise<StyleExample[]> {
+  const params: unknown[] = [clientId()];
+  let where = "client_id = $1 and approved = true";
+  if (category) {
+    params.push(category);
+    where += ` and category = $${params.length}`;
+  }
+  params.push(Math.max(1, limit));
+  const result = await getPool().query(
+    `select category, tone_tags, redacted_excerpt
+       from email_style_examples
+      where ${where}
+      order by created_at desc
+      limit $${params.length}`,
+    params,
+  );
+  return result.rows.map((row) => ({
+    category: String(row.category || ""),
+    tone_tags: Array.isArray(row.tone_tags) ? row.tone_tags.map(String) : [],
+    redacted_excerpt: String(row.redacted_excerpt || ""),
+  }));
+}
+
+export async function loadAgentInboxDataFromDatabase() {  const [leads, events, properties] = await Promise.all([
     readLeadsFromDatabase(),
     readEventsFromDatabase(),
     readPropertiesFromDatabase(),

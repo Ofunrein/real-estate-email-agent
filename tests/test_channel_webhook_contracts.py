@@ -15,6 +15,73 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('label: "Website", agent: "Olivia", channel: "website_chat"', dashboard)
         self.assertNotIn('agent: "Nova"', dashboard)
 
+    def test_dashboard_auto_refreshes_and_shows_event_times(self):
+        dashboard = read("components/AgentInboxClient.tsx")
+        page = read("app/page.tsx")
+        self.assertIn("DASHBOARD_REFRESH_MS = 5000", dashboard)
+        self.assertIn("initialRefreshedAt={new Date().toISOString()}", page)
+        self.assertIn("initialRefreshedAt?: string", dashboard)
+        self.assertIn("fetch(`/api/data?ts=${Date.now()}`", dashboard)
+        self.assertIn('cache: "no-store"', dashboard)
+        self.assertIn("window.setInterval(refreshData, DASHBOARD_REFRESH_MS)", dashboard)
+        self.assertIn("formatRefreshTime", dashboard)
+        self.assertIn("<time>{formatEventTime(event.event_at)}</time>", dashboard)
+        self.assertIn("Updated {formatRefreshTime(lastRefreshedAt)}", dashboard)
+        self.assertIn("CACHE_TTL_MS = 5_000", read("lib/googleSheets.ts"))
+
+    def test_property_dashboard_has_sorting_and_compact_subtitles(self):
+        dashboard = read("components/AgentInboxClient.tsx")
+        css = read("app/globals.css")
+        self.assertIn('type PropertySortKey = "source_order" | "address" | "price" | "beds" | "baths" | "sqft" | "city" | "neighborhood"', dashboard)
+        self.assertIn("sortProperties(dashboardData.properties, propertySort)", dashboard)
+        self.assertIn("filterProperties(propertyBaseRows, propertySearch)", dashboard)
+        self.assertIn("function updatePropertySort", dashboard)
+        self.assertIn("function filterProperties", dashboard)
+        self.assertIn("function openPropertiesReview", dashboard)
+        self.assertIn("propertySearch", dashboard)
+        self.assertIn("showPropertyReviewOnly", dashboard)
+        self.assertIn("reviewProperties", dashboard)
+        self.assertIn("visibleProperties", dashboard)
+        self.assertIn("Search properties", dashboard)
+        self.assertIn("Search address, city, zip, price, beds, features", dashboard)
+        self.assertIn("Clear search", dashboard)
+        self.assertIn("openPropertiesReview", dashboard)
+        self.assertIn("review rows", dashboard)
+        self.assertIn("Show all", dashboard)
+        self.assertIn("propertySubtitle(property)", dashboard)
+        self.assertIn('className="property-subtitle"', dashboard)
+        self.assertIn('className={sort.key === header.key ? "sort-header active" : "sort-header"}', dashboard)
+        self.assertIn(".metric-button", css)
+        self.assertIn(".filter-clear", css)
+        self.assertIn(".sort-header", css)
+        self.assertIn(".property-toolbar", css)
+        self.assertIn(".property-search", css)
+        self.assertIn(".property-toolbar-meta", css)
+        self.assertIn(".property-address .property-subtitle", css)
+        self.assertIn("-webkit-line-clamp: 2", css)
+
+    def test_channel_threads_use_searchable_selected_inbox(self):
+        dashboard = read("components/AgentInboxClient.tsx")
+        css = read("app/globals.css")
+        self.assertIn("function conversationKey", dashboard)
+        self.assertIn("buildChannelThreads(dashboardData.events, selectedChannel)", dashboard)
+        self.assertIn("Search email conversations by email", dashboard)
+        self.assertIn("by phone number", dashboard)
+        self.assertIn("selectedThreadKey", dashboard)
+        self.assertIn("threadSearch", dashboard)
+        self.assertIn("onOpenEvent={openEventThread}", dashboard)
+        self.assertIn("onSelectThread={setSelectedThreadKey}", dashboard)
+        self.assertIn('className="conversation-search"', dashboard)
+        self.assertIn("conversation-list-item active", dashboard)
+        self.assertIn(".conversation-inbox", css)
+        self.assertIn(".conversation-list-column", css)
+        self.assertIn(".conversation-thread-column", css)
+        self.assertIn(".activity-row", css)
+        self.assertIn(".message.outbound", css)
+        self.assertIn(".message.inbound", css)
+        self.assertIn("box-shadow: inset -3px 0 0 #237d68", css)
+        self.assertIn("box-shadow: inset 3px 0 0 #9aa5a1", css)
+
     def test_channel_ingest_personality_names_are_stable(self):
         ingest = read("lib/channelIngest.ts")
         self.assertIn('agentName: "Theo"', ingest)
@@ -88,15 +155,20 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn(".replace(/\\n{3,}/g, \"\\n\\n\")", theo_agent)
         self.assertIn("LINK_SMS_LIMIT = 1200", theo_agent)
         self.assertIn("wantsPropertyLinks", theo_agent)
+        self.assertIn("FILLOUT_VALUATION_URL", theo_agent)
+        self.assertIn("CALENDLY_URL", theo_agent)
+        self.assertIn("valuationUrl", theo_agent)
+        self.assertIn("isSellerValuationContext", theo_agent)
+        self.assertIn("formatTheoSellerValuationReply", theo_agent)
+        self.assertIn("seller_valuation_link_reply_ready", theo_agent)
+        self.assertIn("For the home you need to sell, start the free valuation here:", theo_agent)
         self.assertIn("formatTheoPropertyLinks", theo_agent)
         self.assertIn("property_links_reply_ready", theo_agent)
         self.assertIn("formatTheoPropertyPhotos", theo_agent)
         self.assertIn("property_photos_reply_ready", theo_agent)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', theo_agent)
+        self.assertIn("CENTRAL_TEXAS_CITIES", theo_agent)
         self.assertIn("SERVICE_AREA_CITIES", theo_agent)
-        self.assertIn('"pflugerville"', theo_agent)
-        self.assertIn('"georgetown"', theo_agent)
-        self.assertIn('"lakeway"', theo_agent)
         self.assertIn("outside our main Austin-area coverage", theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
@@ -116,6 +188,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("use short blocks separated by a blank line", theo_llm)
         self.assertIn("Do not say an agent has to pull matches unless no property rows are provided", theo_llm)
         self.assertIn("cleanSmsReply", theo_llm)
+        self.assertIn("sentenceEnd", theo_llm)
         self.assertIn("Do not use human_required only because prior messages had service friction", theo_llm)
         for property_field in [
             "description",
@@ -184,10 +257,52 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("findPropertySearchArea", theo_data)
         self.assertIn("something close", theo_data)
         self.assertIn("layout", theo_data)
-        self.assertIn('"South Austin"', theo_data)
-        self.assertIn('"Greater Austin"', theo_data)
-        self.assertIn('"Flugerville"', theo_data)
+        self.assertIn("CENTRAL_TEXAS_SEARCH_AREAS", theo_data)
         self.assertIn("extractTheoListedPropertyAddresses", theo_data)
+
+    def test_central_texas_service_area_is_shared(self):
+        service_areas = read("lib/serviceAreas.ts")
+        database = read("lib/database.ts")
+        theo_agent = read("lib/theoAgent.ts")
+        theo_data = read("lib/theoData.ts")
+        agency = read("lib/agencyKnowledge.ts")
+        for city in [
+            '"round rock"',
+            '"pflugerville"',
+            '"georgetown"',
+            '"san marcos"',
+            '"new braunfels"',
+            '"bastrop"',
+            '"manor"',
+            '"elgin"',
+            '"liberty hill"',
+            '"dripping springs"',
+            '"wimberley"',
+            '"salado"',
+            '"belton"',
+            '"temple"',
+            '"killeen"',
+            '"waco"',
+        ]:
+            self.assertIn(city, service_areas)
+        for neighborhood in [
+            '"south austin"',
+            '"south congress"',
+            '"bouldin creek"',
+            '"travis heights"',
+            '"hyde park"',
+            '"mueller"',
+            '"tarrytown"',
+            '"the domain"',
+            '"four points"',
+            '"shady hollow"',
+        ]:
+            self.assertIn(neighborhood, service_areas)
+        self.assertIn("CENTRAL_TEXAS_CITIES", database)
+        self.assertIn("CENTRAL_TEXAS_ALIASES", database)
+        self.assertIn("CENTRAL_TEXAS_CITIES", theo_agent)
+        self.assertIn("CENTRAL_TEXAS_SEARCH_AREAS", theo_data)
+        self.assertIn("centralTexasServiceAreaText", agency)
 
     def test_theo_claude_calls_report_costs(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -222,18 +337,24 @@ class ChannelWebhookContractTests(unittest.TestCase):
     def test_live_property_lookup_can_cache_to_database_and_sheets(self):
         database = read("lib/database.ts")
         sheets = read("lib/googleSheets.ts")
+        sync_script = read("scripts/sync-sheets-to-db.mjs")
         self.assertIn("upsertPropertyToDatabase", database)
         self.assertIn("propertyAddressStem", database)
         self.assertIn("regexp_replace(address", database)
         self.assertIn("PropertySearchCriteria", database)
         self.assertIn("GREATER_AUSTIN_CITIES", database)
+        self.assertIn("CENTRAL_TEXAS_CITIES", database)
         self.assertIn("AREA_ALIASES", database)
+        self.assertIn("CENTRAL_TEXAS_ALIASES", database)
         self.assertIn("scorePropertyCandidate", database)
         self.assertIn("source = 'sheets'", database)
         self.assertIn('upsertPropertyToDatabase(property, "live_lookup")', read("app/api/webhooks/theo-sms/route.ts"))
         self.assertIn("appendPropertyToSheets", sheets)
         self.assertIn("PROPERTIES_HEADERS.map", sheets)
         self.assertIn("INSERT_ROWS", sheets)
+        self.assertNotIn("delete from conversation_events", sync_script.lower())
+        self.assertIn("select id", sync_script)
+        self.assertIn("duplicate.rowCount", sync_script)
 
     def test_website_form_sms_requires_opt_in(self):
         website_route = read("app/api/webhooks/olivia-website/route.ts")

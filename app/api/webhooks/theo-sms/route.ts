@@ -7,6 +7,7 @@ import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
+import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
@@ -319,6 +320,7 @@ export async function POST(request: NextRequest) {
       propertyInterest,
       source: "sms",
       dataContext: enriched.context,
+      styleContext: await fetchStyleContext(),
     });
     logTheoMetrics(reply.metrics);
     const aiCost = reply.metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
