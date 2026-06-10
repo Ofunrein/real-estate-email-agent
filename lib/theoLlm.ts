@@ -16,7 +16,12 @@ export type TheoLlmContext = {
   source?: "sms" | "form";
   recentEvents?: SheetRow[];
   dataContext?: string;
+  styleContext?: string;
 };
+
+function styleBlock(context: TheoLlmContext): string {
+  return context.styleContext ? `\n\n${context.styleContext}` : "";
+}
 
 function anthropicKey(): string {
   return process.env.ANTHROPIC_API_KEY || "";
@@ -52,7 +57,19 @@ function compact(value?: string, limit = 260): string {
 
 function truncateSms(value: string): string {
   const text = cleanSmsReply(value);
-  return text.length <= 320 ? text : `${text.slice(0, 317).trimEnd()}...`;
+  if (text.length <= 320) return text;
+  const slice = text.slice(0, 317).trimEnd();
+  const sentenceEnd = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("\n\n"),
+  );
+  if (sentenceEnd > 176) {
+    const punctuationEnd = sentenceEnd + (slice[sentenceEnd] === "\n" ? 0 : 1);
+    return slice.slice(0, punctuationEnd).trimEnd();
+  }
+  return `${slice}...`;
 }
 
 function field(label: string, value?: string, limit = 260): string {
@@ -244,7 +261,7 @@ Rules:
 - Use only the property facts provided. Never invent listing facts, status, pricing, availability, schools, crime, or neighborhood claims.
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
-- Treat the greater Austin / Central Texas metro as in-service when agency knowledge says it is covered. Round Rock, Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, Lakeway, Bee Cave, and Austin neighborhoods are not outside-area handoffs.
+- Treat the greater Austin / Central Texas metro as in-service when agency knowledge says it is covered. Austin neighborhoods, Round Rock, Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, San Marcos, New Braunfels, Bastrop, Manor, Elgin, Hutto, Taylor, Liberty Hill, Dripping Springs, Wimberley, Lakeway, Bee Cave, Marble Falls, Salado, Belton, Temple, Killeen, Waco, and nearby Central Texas towns are not outside-area handoffs.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
 - If the lead asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
 - If a human should still review pricing, valuation, negotiation, timing, lending, or other judgment work, do both: provide the safe property facts/options you have, then separately mention that a person can handle the judgment-sensitive part.
@@ -257,7 +274,7 @@ Rules:
 - If the classification says needs_human, still answer simple safe facts from the provided property rows when useful, such as price, beds, baths, sqft, status, address, features, photo/link availability, or listing agent fields.
 - If the classification says needs_human, do not answer the sensitive part: Fair Housing, lending qualification, legal/contract, negotiation, pricing judgment, privacy, broker judgment, or angry complaint resolution. Answer the safe factual part first, then say a real person will follow up on the part that needs human review.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
-- Do not mention AI, model names, prompts, logs, or internal systems.`;
+- Do not mention AI, model names, prompts, logs, or internal systems.${styleBlock(context)}`;
 
   const user = `Latest lead SMS: ${context.message}
 Source: ${context.source || "sms"}

@@ -177,6 +177,8 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
+The dashboard polls `/api/data` every 5 seconds. Theo/Olivia webhook events usually appear on the next poll because they write to Neon during the inbound request. Iris email events appear after the Gmail poller records them; by default that means up to `POLL_INTERVAL_SECONDS` plus the next 5-second dashboard refresh. In Google Sheets-only mode, the dashboard cache is also 5 seconds.
+
 For hosted/multi-client deployment, run the Postgres schema and sync Sheets into the database:
 
 ```bash
@@ -185,6 +187,8 @@ for migration in db/migrations/*.sql; do
 done
 npm run sync:sheets
 ```
+
+Current sync contract: Google Sheets remains the editable source for manual property/config edits and `npm run sync:sheets` upserts those rows into Neon. Live Theo property lookups write to Neon and append missing properties back to the Sheet when possible. General Neon-to-Sheets editing is not automatic yet because the Sheet has no per-row `updated_at` or conflict marker; add that before enabling broad two-way overwrites.
 
 See [docs/hosted-client-onboarding.md](/Users/martinofunrein/Downloads/real-estate-email-agent/docs/hosted-client-onboarding.md).
 

@@ -6,6 +6,10 @@ import type { AgentInboxData, Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 type View = "overview" | "email" | "sms" | "whatsapp" | "voice" | "website_chat" | "properties";
+type PropertySortKey = "source_order" | "address" | "price" | "beds" | "baths" | "sqft" | "city" | "neighborhood";
+type PropertySort = { key: PropertySortKey; direction: "asc" | "desc" };
+
+const DASHBOARD_REFRESH_MS = 5000;
 
 const channelViews: { key: View; label: string; agent: string; channel?: Channel }[] = [
   { key: "email", label: "Email", agent: "Iris", channel: "email" },
@@ -22,12 +26,24 @@ function formatNumber(value: number | string) {
   return value;
 }
 
-function metric(label: string, value: number | string, note = "") {
-  return (
-    <div className="metric">
+function metric(label: string, value: number | string, note = "", onClick?: () => void) {
+  const content = (
+    <>
       <span className="metric-label">{label}</span>
       <strong>{formatNumber(value)}</strong>
       {note ? <small>{note}</small> : null}
+    </>
+  );
+  if (onClick) {
+    return (
+      <button className="metric metric-button" onClick={onClick} type="button">
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className="metric">
+      {content}
     </div>
   );
 }
@@ -107,6 +123,11 @@ function latestEvent(events: SheetRow[]) {
   return events[events.length - 1] || {};
 }
 
+function eventTimeValue(event: SheetRow) {
+  const parsed = new Date(event.event_at || "");
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
 function formatEventTime(value?: string) {
   if (!value) return "No timestamp";
   const parsed = new Date(value);
@@ -116,6 +137,17 @@ function formatEventTime(value?: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+  });
+}
+
+function formatRefreshTime(value?: string) {
+  if (!value) return "pending";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
   });
 }
 
@@ -148,6 +180,76 @@ function humanReviewThreads(threads: [string, SheetRow[]][]) {
   return threads.filter(([, events]) => threadNeedsHuman(events));
 }
 
+function conversationKey(event: SheetRow, channel?: Channel | string) {
+  const normalizedChannel = channel || eventChannel(event);
+  if (["sms", "whatsapp", "voice"].includes(normalizedChannel)) {
+    return event.phone || event.thread_ref || event.email || "unknown";
+  }
+  if (normalizedChannel === "email") {
+    return event.email || event.thread_ref || event.phone || "unknown";
+  }
+  return event.email || event.phone || event.thread_ref || event.full_name || "unknown";
+}
+
+function buildChannelThreads(events: SheetRow[], channel: Channel): [string, SheetRow[]][] {
+  const groups = events
+    .filter((event) => eventChannel(event) === channel)
+    .reduce<Record<string, SheetRow[]>>((acc, event) => {
+      const key = conversationKey(event, channel);
+      acc[key] ||= [];
+      acc[key].push(event);
+      return acc;
+    }, {});
+  return sortThreadEntries(Object.entries(groups));
+}
+
+function sortThreadEntries(entries: [string, SheetRow[]][]) {
+  return [...entries].sort((a, b) => eventTimeValue(latestEvent(b[1])) - eventTimeValue(latestEvent(a[1])));
+}
+
+function threadIdentity(threadRef: string, events: SheetRow[], channel?: Channel) {
+  const latest = latestEvent(events);
+  if (channel === "email") return latest.email || threadRef;
+  if (["sms", "whatsapp", "voice"].includes(channel || "")) return latest.phone || threadRef;
+  return latest.email || latest.phone || latest.full_name || threadRef;
+}
+
+function threadSubtitle(threadRef: string, events: SheetRow[], channel?: Channel) {
+  const latest = latestEvent(events);
+  if (channel === "email") return latest.thread_ref || latest.source || threadRef;
+  if (["sms", "whatsapp", "voice"].includes(channel || "")) return latest.thread_ref || threadRef;
+  return latest.source || latest.thread_ref || "";
+}
+
+function threadSearchText(threadRef: string, events: SheetRow[], channel?: Channel) {
+  return [
+    threadRef,
+    threadIdentity(threadRef, events, channel),
+    threadSubtitle(threadRef, events, channel),
+    ...events.flatMap((event) => [
+      event.email,
+      event.phone,
+      event.full_name,
+      event.thread_ref,
+      event.summary,
+      eventText(event),
+    ]),
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function threadSearchPlaceholder(channelLabel: string, channel?: Channel) {
+  if (channel === "sms" || channel === "whatsapp" || channel === "voice") {
+    return `Search ${channelLabel.toLowerCase()} by phone number`;
+  }
+  if (channel === "email") return "Search email conversations by email";
+  return `Search ${channelLabel.toLowerCase()} conversations`;
+}
+
+function messageSpeaker(event: SheetRow) {
+  if (event.direction === "outbound") return event.agent_name || "AI";
+  return event.full_name || event.email || event.phone || "Lead";
+}
+
 function formatPrice(value?: string) {
   if (!value) return "Blank";
   const numeric = Number(value);
@@ -155,8 +257,105 @@ function formatPrice(value?: string) {
   return `$${numeric.toLocaleString()}`;
 }
 
+function formatSqft(value?: string) {
+  if (!value || value === "None") return "";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  return `${numeric.toLocaleString()} sqft`;
+}
+
 function displayValue(value?: string) {
   return value && value !== "None" ? value : "Blank";
+}
+
+function numericSortValue(value?: string) {
+  const numeric = Number(String(value || "").replace(/[$,]/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function propertySortValue(property: SheetRow, index: number, key: PropertySortKey) {
+  if (key === "source_order") return index;
+  if (["price", "beds", "baths", "sqft"].includes(key)) {
+    return numericSortValue(property[key]) ?? Number.NEGATIVE_INFINITY;
+  }
+  return (property[key] || "").toLowerCase();
+}
+
+function sortProperties(properties: SheetRow[], sort: PropertySort) {
+  return properties
+    .map((property, index) => ({ property, index }))
+    .sort((left, right) => {
+      const a = propertySortValue(left.property, left.index, sort.key);
+      const b = propertySortValue(right.property, right.index, sort.key);
+      let comparison = 0;
+      if (typeof a === "number" && typeof b === "number") {
+        comparison = a - b;
+      } else {
+        comparison = String(a).localeCompare(String(b));
+      }
+      if (comparison === 0) {
+        comparison = (left.property.address || "").localeCompare(right.property.address || "");
+      }
+      return sort.direction === "asc" ? comparison : comparison * -1;
+    })
+    .map(({ property }) => property);
+}
+
+function normalizePropertySearch(value: string) {
+  return value.toLowerCase().replace(/[$,]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function propertySearchText(property: SheetRow) {
+  return [
+    property.address,
+    property.city,
+    property.state,
+    property.zip,
+    property.neighborhood,
+    property.property_type,
+    property.features,
+    property.description,
+    property.status || "sheet",
+    property.agent_name,
+    property.agent_email,
+    property.listing_url,
+    property.price,
+    property.price ? formatPrice(property.price) : "",
+    property.beds ? `${property.beds} bed beds bd ${property.beds}bd` : "",
+    property.baths ? `${property.baths} bath baths bth ba ${property.baths}ba` : "",
+    property.sqft ? `${property.sqft} sqft square feet ${property.sqft}sqft` : "",
+    property.year_built,
+  ].filter(Boolean).map(String).join(" ");
+}
+
+function filterProperties(properties: SheetRow[], search: string) {
+  const query = normalizePropertySearch(search);
+  if (!query) return properties;
+  const tokens = query.split(" ").filter(Boolean);
+  return properties.filter((property) => {
+    const haystack = normalizePropertySearch(propertySearchText(property));
+    return tokens.every((token) => haystack.includes(token));
+  });
+}
+
+function propertySubtitle(property: SheetRow) {
+  const area = property.neighborhood || property.city || "";
+  const location = property.city && property.neighborhood && property.city !== property.neighborhood ? property.city : "";
+  return [
+    area,
+    location,
+    property.price ? formatPrice(property.price) : "",
+    property.beds ? `${property.beds} bd` : "",
+    property.baths ? `${property.baths} bth` : "",
+    formatSqft(property.sqft),
+    property.property_type || "",
+    property.status && property.status !== "sheet" ? property.status : "",
+  ].filter((value) => value && value !== "Blank").join(" | ");
+}
+
+function sortLabel(sort: PropertySort) {
+  if (sort.key === "source_order") return "Sheet order";
+  return `${sort.key} ${sort.direction}`;
 }
 
 const corePropertyFields = [
@@ -225,11 +424,15 @@ function PropertyPreviewButton({ property, onOpen }: { property: SheetRow; onOpe
 
 function PropertyTable({
   properties,
+  sort,
+  onSort,
   selectedIndex,
   onSelect,
   onOpenCard,
 }: {
   properties: SheetRow[];
+  sort: PropertySort;
+  onSort: (key: PropertySortKey) => void;
   selectedIndex: number;
   onSelect: (index: number) => void;
   onOpenCard: (index: number) => void;
@@ -238,20 +441,55 @@ function PropertyTable({
     return <div className="empty">No property rows loaded</div>;
   }
 
+  const sortHeaders: { label: string; key: PropertySortKey }[] = [
+    { label: "Address", key: "address" },
+    { label: "Price", key: "price" },
+    { label: "Beds", key: "beds" },
+    { label: "Baths", key: "baths" },
+    { label: "Sqft", key: "sqft" },
+    { label: "City", key: "city" },
+  ];
+
   return (
     <div className="property-table-wrap">
       <table className="property-table">
         <thead>
           <tr>
-            <th>Address</th>
-            <th>Price</th>
-            <th>Beds</th>
-            <th>Baths</th>
+            {sortHeaders.slice(0, 4).map((header) => (
+              <th key={header.key}>
+                <button
+                  className={sort.key === header.key ? "sort-header active" : "sort-header"}
+                  onClick={() => onSort(header.key)}
+                  type="button"
+                >
+                  {header.label}
+                  <span>{sort.key === header.key ? (sort.direction === "asc" ? "Asc" : "Desc") : ""}</span>
+                </button>
+              </th>
+            ))}
             <th>Photo</th>
-            <th>Sqft</th>
+            <th>
+              <button
+                className={sort.key === "sqft" ? "sort-header active" : "sort-header"}
+                onClick={() => onSort("sqft")}
+                type="button"
+              >
+                Sqft
+                <span>{sort.key === "sqft" ? (sort.direction === "asc" ? "Asc" : "Desc") : ""}</span>
+              </button>
+            </th>
             <th>Year</th>
             <th>Status</th>
-            <th>City</th>
+            <th>
+              <button
+                className={sort.key === "city" ? "sort-header active" : "sort-header"}
+                onClick={() => onSort("city")}
+                type="button"
+              >
+                City
+                <span>{sort.key === "city" ? (sort.direction === "asc" ? "Asc" : "Desc") : ""}</span>
+              </button>
+            </th>
             <th>Zip</th>
             <th>Type</th>
             <th>Days</th>
@@ -289,7 +527,7 @@ function PropertyTable({
               >
                 <td className="property-address">
                   <strong>{property.address || "Blank address"}</strong>
-                  <span>{property.neighborhood || property.description || ""}</span>
+                  <span className="property-subtitle">{propertySubtitle(property)}</span>
                 </td>
                 <td>{formatPrice(property.price)}</td>
                 <td>{displayValue(property.beds)}</td>
@@ -476,24 +714,125 @@ function PropertyDetail({ property, onOpenCard }: { property: SheetRow; onOpenCa
   );
 }
 
-function TableRows({ events, emptyLabel = "No conversations yet" }: { events: SheetRow[]; emptyLabel?: string }) {
+function TableRows({
+  events,
+  emptyLabel = "No conversations yet",
+  onOpenEvent,
+}: {
+  events: SheetRow[];
+  emptyLabel?: string;
+  onOpenEvent?: (event: SheetRow) => void;
+}) {
   if (!events.length) {
     return <div className="empty">{emptyLabel}</div>;
   }
   return (
     <div className="row-stack">
-      {events.slice(-12).reverse().map((event, index) => (
-        <div className="table-row" key={`${event.thread_ref}-${event.event_at}-${index}`}>
-          <div className="row-title">{event.email || event.phone || event.thread_ref || "Unknown lead"}</div>
-          <div className="row-body">{event.summary || eventText(event)}</div>
-          <div className="status">{event.status || event.event_type || event.direction}</div>
-        </div>
-      ))}
+      {events.slice(-12).reverse().map((event, index) => {
+        const rowContent = (
+          <>
+            <div className="row-title">{event.email || event.phone || event.thread_ref || "Unknown lead"}</div>
+            <div className="row-body">{event.summary || eventText(event)}</div>
+            <div className="row-meta">
+              <span className="status">{event.status || event.event_type || event.direction}</span>
+              <time>{formatEventTime(event.event_at)}</time>
+            </div>
+          </>
+        );
+        if (onOpenEvent) {
+          return (
+            <button
+              className="table-row activity-row"
+              key={`${event.thread_ref}-${event.event_at}-${index}`}
+              onClick={() => onOpenEvent(event)}
+              type="button"
+            >
+              {rowContent}
+            </button>
+          );
+        }
+        return (
+          <div className="table-row" key={`${event.thread_ref}-${event.event_at}-${index}`}>
+            {rowContent}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function ThreadViewer({ threads, channelLabel }: { threads: [string, SheetRow[]][]; channelLabel: string }) {
+function ConversationThread({
+  threadRef,
+  events,
+  channelLabel,
+  channel,
+}: {
+  threadRef: string;
+  events: SheetRow[];
+  channelLabel: string;
+  channel?: Channel;
+}) {
+  const latest = latestEvent(events);
+  const needsHuman = threadNeedsHuman(events);
+  return (
+    <article className={needsHuman ? "thread selected-thread needs-human" : "thread selected-thread"} key={threadRef}>
+      <div className="thread-head">
+        <div>
+          <strong>{threadIdentity(threadRef, events, channel)}</strong>
+          <div className="brand-subtitle">{threadSubtitle(threadRef, events, channel)}</div>
+        </div>
+        <div className="thread-status-stack">
+          {needsHuman ? <span className="handoff-badge">Needs human</span> : null}
+          <span className="status">{latest.status || latest.event_type || "active"}</span>
+        </div>
+      </div>
+      {needsHuman ? (
+        <div className="handoff-note">
+          <strong>Human review reason</strong>
+          <span>{threadHandoffReason(events)}</span>
+        </div>
+      ) : null}
+      <div className="thread-messages" aria-label={`${channelLabel} messages for ${threadIdentity(threadRef, events, channel)}`}>
+        {events.map((event, index) => (
+          <div
+            className={`message ${event.direction === "outbound" ? "outbound" : "inbound"}`}
+            key={`${event.event_at}-${index}`}
+          >
+            <div className="message-meta">
+              <span>{messageSpeaker(event)} {event.direction === "outbound" ? "sent" : "received"}</span>
+              <span>{formatEventTime(event.event_at)}</span>
+            </div>
+            <MessageContent event={event} />
+            {event.handoff_reason ? (
+              <div className="message-handoff">
+                <strong>Flag</strong>
+                <span>{event.handoff_reason}</span>
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function ThreadViewer({
+  threads,
+  channelLabel,
+  channel,
+  search,
+  selectedThreadKey,
+  onSearchChange,
+  onSelectThread,
+}: {
+  threads: [string, SheetRow[]][];
+  channelLabel: string;
+  channel?: Channel;
+  search: string;
+  selectedThreadKey: string;
+  onSearchChange: (value: string) => void;
+  onSelectThread: (threadRef: string) => void;
+}) {
   if (!threads.length) {
     return (
       <div className="empty-state">
@@ -503,50 +842,74 @@ function ThreadViewer({ threads, channelLabel }: { threads: [string, SheetRow[]]
       </div>
     );
   }
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleThreads = threads.filter(([threadRef, events]) => {
+    if (!normalizedSearch) return true;
+    return threadSearchText(threadRef, events, channel).includes(normalizedSearch);
+  });
+  const activeThread = visibleThreads.find(([threadRef]) => threadRef === selectedThreadKey) || visibleThreads[0];
+
   return (
-    <div className="thread-list">
-      {threads.map(([threadRef, events]) => {
-        const latest = latestEvent(events);
-        const needsHuman = threadNeedsHuman(events);
-        return (
-          <article className={needsHuman ? "thread needs-human" : "thread"} key={threadRef}>
-            <div className="thread-head">
-              <div>
-                <strong>{latest.email || latest.phone || threadRef}</strong>
-                <div className="brand-subtitle">{threadRef}</div>
-              </div>
-              <div className="thread-status-stack">
-                {needsHuman ? <span className="handoff-badge">Needs human</span> : null}
-                <span className="status">{latest.status || latest.event_type || "active"}</span>
-              </div>
-            </div>
-            {needsHuman ? (
-              <div className="handoff-note">
-                <strong>Human review reason</strong>
-                <span>{threadHandoffReason(events)}</span>
-              </div>
-            ) : null}
-            {events.map((event, index) => (
-              <div
-                className={`message ${event.direction === "outbound" ? "outbound" : "inbound"}`}
-                key={`${event.event_at}-${index}`}
+    <div className="conversation-inbox">
+      <aside className="conversation-list-column" aria-label={`${channelLabel} conversations`}>
+        <div className="conversation-list-header">
+          <strong>Conversations</strong>
+          <span>{visibleThreads.length} shown</span>
+        </div>
+        <input
+          aria-label={`Search ${channelLabel} conversations`}
+          className="conversation-search"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder={threadSearchPlaceholder(channelLabel, channel)}
+          type="search"
+          value={search}
+        />
+        <div className="conversation-list">
+          {visibleThreads.length ? visibleThreads.map(([threadRef, events]) => {
+            const latest = latestEvent(events);
+            const active = activeThread?.[0] === threadRef;
+            const needsHuman = threadNeedsHuman(events);
+            return (
+              <button
+                className={active ? "conversation-list-item active" : "conversation-list-item"}
+                key={threadRef}
+                onClick={() => onSelectThread(threadRef)}
+                type="button"
               >
-                <div className="message-meta">
-                  <span>{event.direction || "event"} {event.agent_name ? `via ${event.agent_name}` : ""}</span>
-                  <span>{event.event_at || ""}</span>
-                </div>
-                <MessageContent event={event} />
-                {event.handoff_reason ? (
-                  <div className="message-handoff">
-                    <strong>Flag</strong>
-                    <span>{event.handoff_reason}</span>
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </article>
-        );
-      })}
+                <span className="conversation-row-top">
+                  <strong>{threadIdentity(threadRef, events, channel)}</strong>
+                  <time>{formatEventTime(latest.event_at)}</time>
+                </span>
+                <span className="conversation-preview">{latest.summary || eventText(latest)}</span>
+                <span className="conversation-row-bottom">
+                  <em>{events.length} messages</em>
+                  {needsHuman ? <span className="handoff-badge compact">Needs human</span> : null}
+                </span>
+              </button>
+            );
+          }) : (
+            <div className="conversation-empty">
+              No matching {channelLabel.toLowerCase()} conversations.
+            </div>
+          )}
+        </div>
+      </aside>
+      <section className="conversation-thread-column">
+        {activeThread ? (
+          <ConversationThread
+            channel={channel}
+            channelLabel={channelLabel}
+            events={activeThread[1]}
+            threadRef={activeThread[0]}
+          />
+        ) : (
+          <div className="empty-state thread-viewer-empty">
+            <div className="empty-icon">0</div>
+            <strong>No conversation selected</strong>
+            <span>Select a conversation from the list.</span>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -690,35 +1053,143 @@ function viewTitle(view: View) {
 
 export function AgentInboxClient({
   data,
+  initialRefreshedAt = "",
   loadError = "",
   sourceLabel = "Google Sheets",
 }: {
   data: AgentInboxData;
+  initialRefreshedAt?: string;
   loadError?: string;
   sourceLabel?: string;
 }) {
+  const [dashboardData, setDashboardData] = useState<AgentInboxData>(data);
+  const [refreshError, setRefreshError] = useState("");
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(initialRefreshedAt);
   const [view, setView] = useState<View>("overview");
   const [selectedPropertyIndex, setSelectedPropertyIndex] = useState(0);
   const [mobileCardIndex, setMobileCardIndex] = useState<number | null>(null);
-  const threadEntries = useMemo(() => Object.entries(data.threads), [data.threads]);
+  const [propertySort, setPropertySort] = useState<PropertySort>({ key: "source_order", direction: "asc" });
+  const [showPropertyReviewOnly, setShowPropertyReviewOnly] = useState(false);
+  const [propertySearch, setPropertySearch] = useState("");
+  const [selectedThreadKey, setSelectedThreadKey] = useState("");
+  const [threadSearch, setThreadSearch] = useState("");
+  const effectiveLoadError = loadError || refreshError;
+  const threadEntries = useMemo(() => Object.entries(dashboardData.threads), [dashboardData.threads]);
   const selectedChannel = channelViews.find((channel) => channel.key === view)?.channel;
   const selectedChannelLabel = channelViews.find((channel) => channel.channel === selectedChannel)?.label || "Channel";
-  const channelThreads = selectedChannel
-    ? threadEntries.filter(([, events]) => events.some((event) => eventChannel(event) === selectedChannel))
-    : [];
+  const channelThreads = useMemo(
+    () => selectedChannel ? buildChannelThreads(dashboardData.events, selectedChannel) : [],
+    [dashboardData.events, selectedChannel],
+  );
   const selectedHumanThreads = selectedChannel ? humanReviewThreads(channelThreads) : humanReviewThreads(threadEntries);
   const currentEvents = selectedChannel
-    ? data.events.filter((event) => eventChannel(event) === selectedChannel)
-    : data.events;
-  const propertyHealthScore = data.propertyHealth.total
-    ? Math.max(0, Math.round(((data.propertyHealth.total - data.propertyHealth.missing_core) / data.propertyHealth.total) * 100))
+    ? dashboardData.events.filter((event) => eventChannel(event) === selectedChannel)
+    : dashboardData.events;
+  const propertyHealthScore = dashboardData.propertyHealth.total
+    ? Math.max(0, Math.round(((dashboardData.propertyHealth.total - dashboardData.propertyHealth.missing_core) / dashboardData.propertyHealth.total) * 100))
     : 0;
   const activeThreads = threadEntries.length;
   const latestCurrentEvent = latestEvent(currentEvents);
-  const dataStatus = loadError ? "Limited" : "Live";
-  const safeSelectedPropertyIndex = Math.min(selectedPropertyIndex, Math.max(data.properties.length - 1, 0));
-  const selectedProperty = data.properties[safeSelectedPropertyIndex] || {};
-  const mobileCardProperty = mobileCardIndex == null ? null : data.properties[mobileCardIndex] || null;
+  const dataStatus = effectiveLoadError ? "Limited" : "Live";
+  const sortedProperties = useMemo(
+    () => sortProperties(dashboardData.properties, propertySort),
+    [dashboardData.properties, propertySort],
+  );
+  const reviewProperties = useMemo(
+    () => sortedProperties.filter((property) => missingPropertyFields(property).length),
+    [sortedProperties],
+  );
+  const propertyBaseRows = showPropertyReviewOnly && reviewProperties.length ? reviewProperties : sortedProperties;
+  const visibleProperties = useMemo(
+    () => filterProperties(propertyBaseRows, propertySearch),
+    [propertyBaseRows, propertySearch],
+  );
+  const safeSelectedPropertyIndex = Math.min(selectedPropertyIndex, Math.max(visibleProperties.length - 1, 0));
+  const selectedProperty = visibleProperties[safeSelectedPropertyIndex] || {};
+  const mobileCardProperty = mobileCardIndex == null ? null : visibleProperties[mobileCardIndex] || null;
+
+  useEffect(() => {
+    setDashboardData(data);
+    setLastRefreshedAt(new Date().toISOString());
+  }, [data]);
+
+  useEffect(() => {
+    setThreadSearch("");
+  }, [selectedChannel]);
+
+  useEffect(() => {
+    setSelectedPropertyIndex(0);
+    setMobileCardIndex(null);
+  }, [propertySearch, showPropertyReviewOnly]);
+
+  useEffect(() => {
+    if (!selectedChannel || !channelThreads.length) {
+      return;
+    }
+    if (!channelThreads.some(([threadRef]) => threadRef === selectedThreadKey)) {
+      setSelectedThreadKey(channelThreads[0][0]);
+    }
+  }, [channelThreads, selectedChannel, selectedThreadKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshData() {
+      try {
+        const response = await fetch(`/api/data?ts=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Refresh failed with ${response.status}`);
+        }
+        const nextData = await response.json() as AgentInboxData;
+        if (!cancelled) {
+          setDashboardData(nextData);
+          setRefreshError("");
+          setLastRefreshedAt(new Date().toISOString());
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRefreshError(error instanceof Error ? error.message : "Refresh failed");
+        }
+      }
+    }
+
+    refreshData();
+    const interval = window.setInterval(refreshData, DASHBOARD_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  function updatePropertySort(key: PropertySortKey) {
+    setPropertySort((current) => ({
+      key,
+      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
+    }));
+    setSelectedPropertyIndex(0);
+    setMobileCardIndex(null);
+  }
+
+  function openPropertiesReview() {
+    const hasReviewRows = dashboardData.properties.some((property) => missingPropertyFields(property).length);
+    setView("properties");
+    setPropertySort({ key: "source_order", direction: "asc" });
+    setShowPropertyReviewOnly(hasReviewRows);
+    setPropertySearch("");
+    setSelectedPropertyIndex(0);
+    setMobileCardIndex(null);
+  }
+
+  function openEventThread(event: SheetRow) {
+    const channel = eventChannel(event) as Channel;
+    const target = channelViews.find((item) => item.channel === channel);
+    if (!target) {
+      return;
+    }
+    setThreadSearch("");
+    setSelectedThreadKey(conversationKey(event, channel));
+    setView(target.key);
+  }
 
   useEffect(() => {
     if (mobileCardIndex == null) {
@@ -757,11 +1228,17 @@ export function AgentInboxClient({
           <p className="side-label">Workspace</p>
           <button className={`nav-button ${view === "overview" ? "active" : ""}`} onClick={() => setView("overview")}>
             <span><i />Overview</span>
-            <span className="nav-count">{data.metrics.event_count}</span>
+            <span className="nav-count">{dashboardData.metrics.event_count}</span>
           </button>
-          <button className={`nav-button ${view === "properties" ? "active" : ""}`} onClick={() => setView("properties")}>
+          <button
+            className={`nav-button ${view === "properties" ? "active" : ""}`}
+            onClick={() => {
+              setView("properties");
+              setShowPropertyReviewOnly(false);
+            }}
+          >
             <span><i />Properties</span>
-            <span className="nav-count">{data.propertyHealth.total}</span>
+            <span className="nav-count">{dashboardData.propertyHealth.total}</span>
           </button>
         </div>
 
@@ -774,7 +1251,7 @@ export function AgentInboxClient({
               onClick={() => setView(item.key)}
             >
               <span><i />{item.label}</span>
-              <span className="nav-count">{data.metrics.channels[item.channel || "unknown"] || 0}</span>
+              <span className="nav-count">{dashboardData.metrics.channels[item.channel || "unknown"] || 0}</span>
             </button>
           ))}
         </div>
@@ -794,32 +1271,36 @@ export function AgentInboxClient({
           </div>
           <div className="top-actions">
             <div className="sync-status">{sourceLabel} {dataStatus.toLowerCase()}</div>
-            <div className="sync-status secondary">Read only</div>
+            <div className="sync-status secondary">Auto refresh {DASHBOARD_REFRESH_MS / 1000}s</div>
+            <div className={refreshError ? "sync-status warning" : "sync-status secondary"}>
+              Updated {formatRefreshTime(lastRefreshedAt)}
+            </div>
+            {view === "properties" ? <div className="sync-status">Sort {sortLabel(propertySort)}</div> : null}
           </div>
         </div>
 
-        {loadError ? (
+        {effectiveLoadError ? (
           <section className="panel notice-panel">
             <div className="table-row">
               <div className="row-title">Data temporarily unavailable</div>
-              <div className="row-body">{loadError}</div>
+              <div className="row-body">{effectiveLoadError}</div>
               <div className="status">retry shortly</div>
             </div>
           </section>
         ) : null}
 
         <section className="metrics-grid" aria-label="Agent metrics">
-          {metric("Leads", data.metrics.lead_count, "shared memory")}
+          {metric("Leads", dashboardData.metrics.lead_count, "shared memory")}
           {metric("Threads", activeThreads, "cross-channel")}
-          {metric("Inbound", data.metrics.inbound_messages, "lead messages")}
-          {metric("AI replies", data.metrics.outbound_replies, "sent events")}
-          {metric("Handoffs", data.metrics.needs_human, "needs human")}
-          {metric("Properties", data.propertyHealth.total, `${data.propertyHealth.missing_core} need review`)}
+          {metric("Inbound", dashboardData.metrics.inbound_messages, "lead messages")}
+          {metric("AI replies", dashboardData.metrics.outbound_replies, "sent events")}
+          {metric("Handoffs", dashboardData.metrics.needs_human, "needs human")}
+          {metric("Properties", dashboardData.propertyHealth.total, `${dashboardData.propertyHealth.missing_core} need review`, openPropertiesReview)}
         </section>
 
         <section className="channel-strip" aria-label="Channel status">
           {channelViews.map((item) => {
-            const count = data.metrics.channels[item.channel || "unknown"] || 0;
+            const count = dashboardData.metrics.channels[item.channel || "unknown"] || 0;
             return (
               <button
                 className={`channel-tile ${view === item.key ? "active" : ""}`}
@@ -848,23 +1329,59 @@ export function AgentInboxClient({
               <div className="health-grid">
                 <div>
                   <span>Missing core</span>
-                  <strong>{data.propertyHealth.missing_core}</strong>
+                  <strong>{dashboardData.propertyHealth.missing_core}</strong>
                 </div>
                 <div>
                   <span>Duplicate groups</span>
-                  <strong>{data.propertyHealth.duplicate_groups}</strong>
+                  <strong>{dashboardData.propertyHealth.duplicate_groups}</strong>
                 </div>
               </div>
             </section>
             <section className="panel property-panel">
               <div className="panel-header">
                 <h2 className="panel-title">Property Sheet</h2>
-                <span className="status">{data.propertyHealth.total} rows</span>
+                <div className="panel-actions">
+                  <span className="status">
+                    {showPropertyReviewOnly && reviewProperties.length && !propertySearch
+                      ? `${reviewProperties.length} review rows`
+                      : propertySearch || showPropertyReviewOnly
+                        ? `${visibleProperties.length} shown`
+                        : `${dashboardData.propertyHealth.total} rows`}
+                  </span>
+                  {showPropertyReviewOnly && reviewProperties.length ? (
+                    <button className="filter-clear" onClick={() => setShowPropertyReviewOnly(false)} type="button">
+                      Show all
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="property-toolbar">
+                <label className="property-search">
+                  <span>Search properties</span>
+                  <input
+                    aria-label="Search properties"
+                    onChange={(event) => setPropertySearch(event.target.value)}
+                    placeholder="Search address, city, zip, price, beds, features..."
+                    type="search"
+                    value={propertySearch}
+                  />
+                </label>
+                <div className="property-toolbar-meta" aria-label="Property table controls">
+                  <span>{visibleProperties.length} shown</span>
+                  <span>Sort: {sortLabel(propertySort)}</span>
+                  {propertySearch ? (
+                    <button className="filter-clear" onClick={() => setPropertySearch("")} type="button">
+                      Clear search
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <PropertyTable
                 onOpenCard={setMobileCardIndex}
                 onSelect={setSelectedPropertyIndex}
-                properties={data.properties}
+                onSort={updatePropertySort}
+                properties={visibleProperties}
+                sort={propertySort}
                 selectedIndex={safeSelectedPropertyIndex}
               />
             </section>
@@ -889,16 +1406,24 @@ export function AgentInboxClient({
                 </div>
               ) : null}
               {selectedChannel ? (
-                <ThreadViewer threads={channelThreads} channelLabel={selectedChannelLabel} />
+                <ThreadViewer
+                  channel={selectedChannel}
+                  channelLabel={selectedChannelLabel}
+                  onSearchChange={setThreadSearch}
+                  onSelectThread={setSelectedThreadKey}
+                  search={threadSearch}
+                  selectedThreadKey={selectedThreadKey}
+                  threads={channelThreads}
+                />
               ) : (
-                <TableRows events={currentEvents} />
+                <TableRows events={currentEvents} onOpenEvent={openEventThread} />
               )}
             </section>
             <ContextRail
               activeThreads={selectedChannel ? channelThreads.length : activeThreads}
               currentEvents={currentEvents}
               latest={latestCurrentEvent}
-              propertiesNeedingReview={data.propertyHealth.missing_core}
+              propertiesNeedingReview={dashboardData.propertyHealth.missing_core}
               propertyHealthScore={propertyHealthScore}
               selectedChannel={selectedChannel}
               selectedChannelLabel={selectedChannelLabel}

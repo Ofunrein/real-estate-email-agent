@@ -9,9 +9,21 @@ export default async function Home() {
   try {
     const { leads, events, properties } = await loadAgentInboxData();
     const sourceLabel = databaseEnabled() ? "Database" : "Google Sheets";
-    return <AgentInboxClient data={composeInboxData(leads, events, properties)} sourceLabel={sourceLabel} />;
+    return (
+      <AgentInboxClient
+        data={composeInboxData(leads, events, properties)}
+        initialRefreshedAt={new Date().toISOString()}
+        sourceLabel={sourceLabel}
+      />
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load Google Sheets data.";
-    return <AgentInboxClient data={composeInboxData([], [], [])} loadError={message} />;
+    return (
+      <AgentInboxClient
+        data={composeInboxData([], [], [])}
+        initialRefreshedAt={new Date().toISOString()}
+        loadError={message}
+      />
+    );
   }
 }
