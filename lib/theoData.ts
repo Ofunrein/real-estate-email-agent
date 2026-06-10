@@ -80,6 +80,16 @@ function truthy(value?: string): boolean {
   return Boolean(clean(value));
 }
 
+function parseAddressParts(address: string): Partial<SheetRow> {
+  const match = clean(address).match(/^(.*?)(?:,\s*([^,]+))?(?:,\s*(TX|Texas))?(?:\s+(\d{5}))?$/i);
+  return {
+    address: clean(address),
+    city: clean(match?.[2] || ""),
+    state: clean(match?.[3] || "").replace(/^Texas$/i, "TX"),
+    zip: clean(match?.[4] || ""),
+  };
+}
+
 function timeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), ms).unref?.();
@@ -197,6 +207,21 @@ function needsPropertyEnrichment(property: SheetRow): boolean {
   return !property.photo_url || !property.sqft || !property.year_built || !property.zip || !property.description;
 }
 
+function googleStreetViewProperty(address: string): { property: Partial<SheetRow>; context: string } {
+  const key = process.env.GOOGLE_MAPS_API_KEY || "";
+  if (!key || !address) return { property: {}, context: "" };
+  const photoUrl = `https://maps.googleapis.com/maps/api/streetview?location=${encodeURIComponent(address)}&size=640x480&key=${encodeURIComponent(key)}`;
+  const property = {
+    ...parseAddressParts(address),
+    photo_url: photoUrl,
+    status: "lookup photo",
+  };
+  return {
+    property,
+    context: `Google Street View fallback prepared for ${address}.`,
+  };
+}
+
 async function fetchRentCast(address: string): Promise<{ property: Partial<SheetRow>; context: string }> {
   const key = process.env.RENTCAST_API_KEY || "";
   if (!key || !address) return { property: {}, context: "" };
@@ -229,7 +254,7 @@ function apifyToken(): string {
   return process.env.APIFY_TOKEN || "";
 }
 
-async function runApifyActor(actorId: string, payload: Record<string, unknown>, timeoutSeconds = Number(process.env.THEO_APIFY_TIMEOUT_SECONDS || "8")): Promise<Record<string, unknown>> {
+async function runApifyActor(actorId: string, payload: Record<string, unknown>, timeoutSeconds = Number(process.env.THEO_APIFY_TIMEOUT_SECONDS || "12")): Promise<Record<string, unknown>> {
   const token = apifyToken();
   if (!token) return {};
   const actorTimeout = Math.max(3, Number(timeoutSeconds || 8));
@@ -352,7 +377,7 @@ export async function enrichTheoData(input: {
   propertyInterest?: string;
 }): Promise<TheoEnrichedData> {
   const started = nowMs();
-  const budgetMs = Math.max(1000, Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "6500"));
+  const budgetMs = Math.max(1000, Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "14000"));
   return Promise.race([
     runTheoDataEnrichment(input),
     new Promise<TheoEnrichedData>((resolve) => {
@@ -400,12 +425,15 @@ async function runTheoDataEnrichment(input: {
     if (apify.status === "fulfilled") metrics.push(apify.value.metric);
     if (rentcast.status === "fulfilled") metrics.push(rentcast.value.metric);
     const merged = mergeProperty(mergeProperty(first, rentcastData.property), apifyData.property);
-    if (Object.keys(merged).length) {
-      if (properties.length) properties[0] = merged;
-      else properties.push(merged);
+    const streetViewData = !truthy(merged.photo_url) ? googleStreetViewProperty(address) : emptyEnrichment;
+    const mergedWithFallback = mergeProperty(merged, streetViewData.property);
+    if (Object.keys(mergedWithFallback).length) {
+      if (properties.length) properties[0] = mergedWithFallback;
+      else properties.push(mergedWithFallback);
     }
     if (apifyData.context) context.push(apifyData.context);
     if (rentcastData.context) context.push(rentcastData.context);
+    if (streetViewData.context) context.push(streetViewData.context);
   }
 
   const enrichedFirst = properties[0] || first;
