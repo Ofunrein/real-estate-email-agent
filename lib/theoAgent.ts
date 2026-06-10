@@ -135,6 +135,11 @@ function asksForAlternativeProperties(message: string): boolean {
     && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(message);
 }
 
+function asksForPropertyOptions(message: string): boolean {
+  return asksForAlternativeProperties(message)
+    || /\b(something close|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|sticking to \d+\s*(?:bed|bd|bedroom)|find .{0,30}\d+\s*(?:bed|bd|bedroom)|want .{0,30}\d+\s*(?:bed|bd|bedroom))\b/i.test(message);
+}
+
 function latestMessageHasSensitiveTopic(message: string): boolean {
   return SENSITIVE_PATTERNS.some(({ pattern }) => pattern.test(message));
 }
@@ -163,6 +168,16 @@ function formatFacts(property: SheetRow): string {
   return [
     formatPrice(property.price),
     property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
+    property.neighborhood || property.city,
+  ].filter(Boolean).join(", ");
+}
+
+function formatOptionFacts(property: SheetRow): string {
+  const sqft = Number(cleanText(property.sqft).replace(/[^\d.]/g, ""));
+  return [
+    formatPrice(property.price),
+    property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
+    Number.isFinite(sqft) && sqft > 0 ? `${sqft.toLocaleString("en-US", { maximumFractionDigits: 0 })} sqft` : "",
     property.neighborhood || property.city,
   ].filter(Boolean).join(", ");
 }
@@ -196,6 +211,29 @@ function formatTheoPropertyPhotos(properties: SheetRow[] = []): string {
     ? "This looks outside our main Austin-area coverage, but I found the listing media."
     : "";
   return [serviceNote, intro, lines.join("\n\n")].filter(Boolean).join("\n\n");
+}
+
+function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification): string {
+  const usable = properties.filter((property) => cleanText(property.address));
+  if (!usable.length) return "";
+  const lines = usable.slice(0, 3).flatMap((property, index) => [
+    `${index + 1}. ${cleanText(property.address)}${formatOptionFacts(property) ? ` - ${formatOptionFacts(property)}` : ""}`,
+    property.listing_url ? cleanText(property.listing_url) : "",
+  ].filter(Boolean));
+  const needsHuman = classification.status === "needs_human" || Boolean(classification.handoffReason);
+  const hasSellBeforeBuy = (classification.opportunityTags || []).includes("sell_before_buy") || classification.leadRole === "seller";
+  const intro = needsHuman
+    ? "I can do both — here are matches I found, and a person can review the part that needs judgment:"
+    : "Got it — here are matches I found:";
+  const humanNote = !needsHuman && hasSellBeforeBuy
+    ? "Also, since selling/buying timing matters, a person should help with the valuation and transition plan."
+    : "";
+  return [
+    intro,
+    lines.join("\n\n"),
+    humanNote,
+    "Which one should I focus on first?",
+  ].filter(Boolean).join("\n\n");
 }
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
@@ -235,7 +273,7 @@ export function classifyTheoMessage(message: string): TheoClassification {
   if (/\b(rent|rental|lease|tenant)\b/i.test(text)) {
     return { intent: "renter_lead", leadRole: "renter", handoffReason: "", status: "ready_to_reply" };
   }
-  if (/\b(buy|buyer|looking for|interested|available|details|price|bed|bath|sqft|address|similar|neighboring|nearby|same spec|options?)\b/i.test(text)) {
+  if (/\b(buy|buyer|looking for|interested|available|details|price|bed|bath|sqft|address|similar|neighboring|nearby|same spec|options?|layout|something close)\b/i.test(text)) {
     return { intent: "property_details", leadRole: "buyer", handoffReason: "", status: "ready_to_reply" };
   }
   return { intent: "buyer_lead", leadRole: "unknown", handoffReason: "", status: "ready_to_reply" };
@@ -264,7 +302,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       };
     }
   }
-  if (asksForAlternativeProperties(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
+  if (asksForPropertyOptions(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
     classification = {
       ...classification,
       intent: "property_details",
@@ -285,6 +323,23 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       aiAction: "auto_reply_blocked",
       handoffReason: classification.handoffReason || "Theo should not auto-reply to this SMS",
       status: classification.status,
+      metrics,
+    };
+  }
+
+  const optionsReply = asksForPropertyOptions(context.message)
+    && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
+    ? formatTheoPropertyOptions(context.properties, classification)
+    : "";
+  if (optionsReply) {
+    return {
+      classification,
+      reply: truncateSms(optionsReply, LINK_SMS_LIMIT),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: classification.status === "needs_human" ? "property_options_handoff_reply_ready" : "property_options_reply_ready",
+      handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
+      status: classification.status === "needs_human" ? "needs_human" : "ready_to_reply",
       metrics,
     };
   }
