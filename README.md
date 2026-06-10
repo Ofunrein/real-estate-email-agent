@@ -133,8 +133,9 @@ TWILIO_MESSAGING_SERVICE_SID=    # Prefer for RCS-capable Messaging Service send
 ENABLE_SMS_IMAGES=false          # Optional MMS property photos
 SMS_IMAGE_MODE=on_request        # off | on_request | property_reply
 SMS_MAX_IMAGES=3                 # Max one photo per requested property, capped at 3
-THEO_ENRICHMENT_TIMEOUT_MS=6500  # Live data budget so SMS photo/detail lookups can return before reply
-THEO_APIFY_TIMEOUT_SECONDS=8     # Keeps live SMS enrichment inside Twilio's webhook window
+THEO_ENRICHMENT_TIMEOUT_MS=14000 # Live data budget so SMS photo/detail lookups can return before reply
+THEO_APIFY_TIMEOUT_SECONDS=12    # Keeps live SMS enrichment inside Twilio's webhook window
+GOOGLE_MAPS_API_KEY=             # Optional Street View fallback when Zillow photos are unavailable
 ```
 
 **Agent routing:** Add `Agent Name` and `Agent Email` columns to your sheet. Inquiries about a specific listing are CC'd to that agent automatically.
@@ -209,7 +210,7 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 - Theo sends through `TWILIO_MESSAGING_SERVICE_SID` when set. Use this for RCS-capable Twilio Messaging Services; Twilio can fall back to SMS/MMS when the recipient is not RCS-capable. Keep `TWILIO_FROM` configured as the direct-number fallback.
 - Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
 - Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
-- Theo can send MMS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has public HTTPS `photo_url` values. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. If live lookup finds a missing or outside-area property, Theo caches it to Neon and appends it to the `properties` Sheet when possible. `property_reply` can attach images on normal property replies. Sensitive/handoff replies never attach images.
+- Theo can send MMS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has public HTTPS `photo_url` values. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. If live lookup finds a missing or outside-area property, Theo caches it to Neon and appends it to the `properties` Sheet when possible. If Zillow media is missing and `GOOGLE_MAPS_API_KEY` is set, Theo can use a Street View fallback for the requested address. `property_reply` can attach images on normal property replies. Sensitive/handoff replies never attach images.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 
@@ -238,7 +239,7 @@ Theo does not intentionally wait before replying. Inbound SMS is handled as soon
 [Theo SMS] webhook complete { totalMs: 3840, sessionCost: '$0.00495' }
 ```
 
-For live SMS, keep enrichment fast enough for Twilio but long enough for property media. `THEO_ENRICHMENT_TIMEOUT_MS` defaults to 6500ms for the whole live enrichment step, and `THEO_APIFY_TIMEOUT_SECONDS` defaults to 8 seconds per Apify actor call. Longer data repair should run through sheet/property hygiene jobs, not the live SMS response path.
+For live SMS, keep enrichment fast enough for Twilio but long enough for property media. `THEO_ENRICHMENT_TIMEOUT_MS` defaults to 14000ms for the whole live enrichment step, and `THEO_APIFY_TIMEOUT_SECONDS` defaults to 12 seconds per Apify actor call. Longer data repair should run through sheet/property hygiene jobs, not the live SMS response path.
 
 Property hygiene checks:
 
