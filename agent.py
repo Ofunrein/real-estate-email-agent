@@ -85,6 +85,10 @@ AGENT_PHONE = os.getenv("AGENT_PHONE", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))
 ENABLE_SIMILAR_HOMES = os.getenv("ENABLE_SIMILAR_HOMES", "false").strip().lower() in {"1", "true", "yes", "on"}
 ENABLE_EMAIL_AGENT = os.getenv("ENABLE_EMAIL_AGENT", "true").strip().lower() in {"1", "true", "yes", "on"}
+ENABLE_STYLE_TRAINING = os.getenv("ENABLE_STYLE_TRAINING", "false").strip().lower() in {"1", "true", "yes", "on"}
+STYLE_TRAINING_EXAMPLES_LIMIT = max(0, min(10, int(os.getenv("STYLE_TRAINING_EXAMPLES_LIMIT", "3"))))
+CLIENT_ID = os.getenv("CLIENT_ID", "default")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 SIMILAR_HOMES_MAX = max(0, min(6, int(os.getenv("SIMILAR_HOMES_MAX", "3"))))
 SIMILAR_HOMES_PRICE_VARIANCE = max(0.05, min(1.0, float(os.getenv("SIMILAR_HOMES_PRICE_VARIANCE", "0.25"))))
 STATE_FILE = "state.json"
@@ -1536,6 +1540,56 @@ def _log_cost(service: str, amount: float, detail: str = ""):
              amount, service, f" ({detail})" if detail else "", _session_cost["total"])
 
 
+_STYLE_TRAINING_CACHE: dict[str, str] = {}
+
+
+def _style_suffix() -> str:
+    """Optional few-shot brand-voice block from email_style_examples.
+
+    Fully opt-in and fail-safe: returns "" unless ENABLE_STYLE_TRAINING is on,
+    DATABASE_URL is set, psycopg is importable, and approved examples exist.
+    Any failure degrades to "" so Iris behaves exactly as before.
+    """
+    if not ENABLE_STYLE_TRAINING or not DATABASE_URL or STYLE_TRAINING_EXAMPLES_LIMIT <= 0:
+        return ""
+    if "block" in _STYLE_TRAINING_CACHE:
+        return _STYLE_TRAINING_CACHE["block"]
+
+    block = ""
+    try:
+        import psycopg2  # type: ignore
+        conn = psycopg2.connect(DATABASE_URL)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "select redacted_excerpt from email_style_examples "
+                    "where client_id = %s and approved = true "
+                    "order by created_at desc limit %s",
+                    (CLIENT_ID, STYLE_TRAINING_EXAMPLES_LIMIT),
+                )
+                excerpts = [str(row[0]).strip() for row in cur.fetchall() if row and row[0]]
+        finally:
+            conn.close()
+        if excerpts:
+            examples = "\n\n".join(f"Example {i + 1}:\n{text}" for i, text in enumerate(excerpts))
+            block = (
+                "\n\nMatch the tone, phrasing, and structure of these approved past "
+                "messages from this team. Do not copy their facts — only their voice:\n\n"
+                f"{examples}"
+            )
+    except Exception as exc:  # ImportError, connection, query — all non-fatal
+        log.warning("Style training disabled (fell back to default): %s", exc)
+        block = ""
+
+    _STYLE_TRAINING_CACHE["block"] = block
+    return block
+
+
+def _with_style(system: str) -> str:
+    """Append the brand-voice few-shot block to a system prompt when enabled."""
+    return system + _style_suffix()
+
+
 def _claude(model: str, system: str, user: str, max_tokens: int = 512) -> str:
     """Single helper for all Claude calls."""
     # Guard: API rejects empty content blocks
@@ -2024,7 +2078,7 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
     if neighborhood and neighborhood.get("median_income"):
         property_summary += f"\n\nNeighborhood median income: {neighborhood['median_income']}"
 
-    ai_body = _claude(CLAUDE_RESPOND, PROPERTY_REPLY_PROMPT, property_summary)
+    ai_body = _claude(CLAUDE_RESPOND, _with_style(PROPERTY_REPLY_PROMPT), property_summary)
     ai_body = re.sub(r'(?<!href=")(?<!src=")(https?://[^\s<>"]+)', r'<a href="\1">\1</a>', ai_body)
     ai_body = re.sub(r"<p(?![^>]*style=)", '<p style="margin:0 0 14px;line-height:1.55"', ai_body)
 
@@ -2172,13 +2226,13 @@ def generate_lead_reply(lead_type: str, existing: dict,
     missing = [k for k, v in existing.items() if not v]
     text = _claude(
         CLAUDE_RESPOND,
-        LEAD_QUALIFY_PROMPT.format(
+        _with_style(LEAD_QUALIFY_PROMPT.format(
             lead_type=lead_type,
             missing_fields=", ".join(missing[:2]),
             tone_state=memory.get("tone_state") or classification.get("tone_state") or "neutral",
             opportunity_tags=", ".join(memory.get("opportunity_tags", []) or classification.get("opportunity_tags", []) or ["none"]),
             next_question=next_question or "none",
-        ),
+        )),
         "Write the reply."
     )
     text = re.sub(r'\n*Best regards[\s\S]*$', '', text, flags=re.IGNORECASE).strip()

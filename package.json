@@ -9,9 +9,14 @@
     "start": "next start",
     "lint": "next lint",
     "theo:test": "node scripts/test-theo-sms.mjs",
+    "aria:provision": "node --import tsx scripts/aria-provision.mjs",
+    "aria:test": "node --import tsx scripts/test-aria-voice.mjs",
+    "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
     "sync:ghl": "node scripts/sync-events-to-ghl.mjs",
-    "setup:neon": "bash scripts/setup-neon.sh"
+    "setup:neon": "bash scripts/setup-neon.sh",
+    "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
+    "test:py": "pytest tests/"
   },
   "dependencies": {
     "googleapis": "^144.0.0",
@@ -25,6 +30,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }
