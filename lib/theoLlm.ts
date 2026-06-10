@@ -188,7 +188,7 @@ Opportunity tags: valuation_interest, mortgage_interest, renter_purchase_potenti
 Compliance flags: fair_housing, mortgage_license, legal, contract_terms, angry_or_complaint, privacy, broker_approval.
 
 Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.
-If the latest SMS asks for other homes, options, alternatives, similar properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.`;
+If the latest SMS asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, comparable properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.`;
   const user = `Latest lead SMS: ${context.message}
 
 Lead memory: ${leadSummary(context.lead)}
@@ -244,8 +244,9 @@ Rules:
 - Use only the property facts provided. Never invent listing facts, status, pricing, availability, schools, crime, or neighborhood claims.
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
+- Treat the greater Austin / Central Texas metro as in-service when agency knowledge says it is covered. Round Rock, Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, Lakeway, Bee Cave, and Austin neighborhoods are not outside-area handoffs.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
-- If the lead asks for other homes, options, alternatives, similar properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
+- If the lead asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
 - When listing multiple properties, put a blank line before each numbered listing. Format like:
   1. Address - $price, beds/baths, area
 

@@ -6,8 +6,13 @@ Hours: Mon-Fri 8am-7pm, Sat 9am-5pm, Sun 11am-4pm
 Phone: (512) 555-0192
 Email: info@austinrealty.com
 
-Service area: Austin, Round Rock, Cedar Park, Georgetown, Pflugerville, Buda,
-Kyle, Lakeway, and the surrounding Hill Country.
+Service area: the greater Austin / Central Texas metro, including Austin,
+South Austin, North Austin, East Austin, West Austin, Round Rock,
+Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, Manchaca, Lakeway,
+Bee Cave, Dripping Springs, Hutto, Taylor, West Lake Hills, Rollingwood, and
+surrounding Hill Country communities. Do not describe Round Rock,
+Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, Lakeway, or Bee Cave
+as outside the service area.
 
 Buying: Buyer representation may be covered by the seller-side commission.
 Pre-approval is recommended before touring. Typical closing timelines are
