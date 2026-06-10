@@ -62,6 +62,18 @@ const SPAM_PATTERNS = [
   /\b(crypto|forex|seo services|guest post|casino|loan offer)\b/i,
 ];
 
+const SERVICE_AREA_CITIES = new Set([
+  "austin",
+  "round rock",
+  "cedar park",
+  "georgetown",
+  "pflugerville",
+  "leander",
+  "buda",
+  "kyle",
+  "manchaca",
+]);
+
 function cleanText(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
@@ -148,6 +160,13 @@ function formatFacts(property: SheetRow): string {
   ].filter(Boolean).join(", ");
 }
 
+function outsideServiceArea(properties: SheetRow[] = []): boolean {
+  return properties.some((property) => {
+    const city = cleanText(property.city).toLowerCase();
+    return city && !SERVICE_AREA_CITIES.has(city);
+  });
+}
+
 function formatTheoPropertyLinks(properties: SheetRow[] = []): string {
   const linked = properties.filter((property) => cleanText(property.listing_url));
   if (!linked.length) return "";
@@ -166,7 +185,10 @@ function formatTheoPropertyPhotos(properties: SheetRow[] = []): string {
     property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
   ].filter(Boolean));
   const intro = photographed.length === 1 ? "Sending the property photo for:" : "Sending the property photos for:";
-  return `${intro}\n\n${lines.join("\n\n")}`;
+  const serviceNote = outsideServiceArea(photographed)
+    ? "This looks outside our main Austin-area coverage, but I found the listing media."
+    : "";
+  return [serviceNote, intro, lines.join("\n\n")].filter(Boolean).join("\n\n");
 }
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {

@@ -352,7 +352,7 @@ export async function enrichTheoData(input: {
   propertyInterest?: string;
 }): Promise<TheoEnrichedData> {
   const started = nowMs();
-  const budgetMs = Math.max(1000, Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "2500"));
+  const budgetMs = Math.max(1000, Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "6500"));
   return Promise.race([
     runTheoDataEnrichment(input),
     new Promise<TheoEnrichedData>((resolve) => {
