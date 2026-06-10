@@ -4,7 +4,7 @@ import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type 
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
-import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchQuery } from "@/lib/theoData";
+import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
@@ -51,7 +51,11 @@ function logTheoMetrics(metrics: TheoMetric[]) {
 }
 
 function referencesPriorProperties(message = ""): boolean {
-  return /\b(those|that|these|them|links?|urls?|photos?|pictures?)\b/i.test(message);
+  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(message);
+}
+
+function wantsRelatedProperties(message = ""): boolean {
+  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(message);
 }
 
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
@@ -213,11 +217,14 @@ export async function POST(request: NextRequest) {
 
     const lookupStarted = nowMs();
     const lead = await findLeadInDatabase({ phone: payload.From || "", full_name: payload.ProfileName || "" });
+    const propertySearch = extractTheoPropertySearchIntent(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
     const propertyQuery = extractTheoPropertySearchQuery(payload.Body || "", lead?.property_interest || "", result.lead.property_interest || "");
     logTheo("lead lookup complete", {
       leadPhone: payload.From,
       found: Boolean(lead),
       propertyQuery,
+      propertySearchMode: propertySearch.mode,
+      propertySearchArea: propertySearch.area || "",
       elapsedMs: elapsedMs(lookupStarted),
       totalMs: elapsedMs(requestStarted),
     });
@@ -231,12 +238,23 @@ export async function POST(request: NextRequest) {
       ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
       : [];
     const exactAddresses = requestedAddresses.length ? requestedAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
-    const properties = exactAddresses.length
+    const relatedRequest = wantsRelatedProperties(payload.Body || "") || propertySearch.mode !== "general";
+    const referenceProperties = relatedRequest && !requestedAddresses.length && exactAddresses.length
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
-      : await findCandidatePropertiesFromDatabase(propertyQuery, 5);
+      : [];
+    const properties = requestedAddresses.length || (!relatedRequest && exactAddresses.length)
+      ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
+      : await findCandidatePropertiesFromDatabase({
+        ...propertySearch,
+        query: propertyQuery,
+        reference: referenceProperties[0],
+        excludeAddresses: referenceProperties.map((property) => property.address).filter(Boolean),
+      }, 5);
     logTheo("context read complete", {
       leadPhone: payload.From,
       propertyRows: properties.length,
+      referencePropertyRows: referenceProperties.length,
+      relatedRequest,
       requestedAddressRows: requestedAddresses.length,
       referencedInboundAddressRows: referencedInboundAddresses.length,
       priorAddressRows: priorAddresses.length,

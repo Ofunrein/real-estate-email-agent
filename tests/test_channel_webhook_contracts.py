@@ -50,6 +50,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("reply.mediaUrls", sms_route)
         self.assertIn("smsMessageWithMediaLog", sms_route)
         self.assertIn("extractTheoPropertySearchQuery", sms_route)
+        self.assertIn("extractTheoPropertySearchIntent", sms_route)
+        self.assertIn("wantsRelatedProperties", sms_route)
+        self.assertIn("referencePropertyRows", sms_route)
+        self.assertIn("relatedRequest", sms_route)
         self.assertIn("mediaCount", sms_route)
 
     def test_whatsapp_route_still_logs_only(self):
@@ -84,6 +88,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("property_photos_reply_ready", theo_agent)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', theo_agent)
         self.assertIn("SERVICE_AREA_CITIES", theo_agent)
+        self.assertIn('"pflugerville"', theo_agent)
+        self.assertIn('"georgetown"', theo_agent)
+        self.assertIn('"lakeway"', theo_agent)
         self.assertIn("outside our main Austin-area coverage", theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
@@ -94,6 +101,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("still answer simple safe facts", theo_llm)
         self.assertIn("Answer the safe factual part first", theo_llm)
         self.assertIn("list up to the requested number", theo_llm)
+        self.assertIn("neighboring homes", theo_llm)
+        self.assertIn("same-spec properties", theo_llm)
+        self.assertIn("greater Austin / Central Texas metro", theo_llm)
         self.assertIn("put a blank line before each numbered listing", theo_llm)
         self.assertIn("Do not say links are not loaded when listing_url is present", theo_llm)
         self.assertIn("cleanSmsReply", theo_llm)
@@ -160,6 +170,11 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("extractTheoAddress", theo_data)
         self.assertIn("extractTheoAddresses", theo_data)
         self.assertIn("extractTheoPropertySearchQuery", theo_data)
+        self.assertIn("extractTheoPropertySearchIntent", theo_data)
+        self.assertIn("TheoPropertySearchIntent", theo_data)
+        self.assertIn('"South Austin"', theo_data)
+        self.assertIn('"Greater Austin"', theo_data)
+        self.assertIn('"Flugerville"', theo_data)
         self.assertIn("extractTheoListedPropertyAddresses", theo_data)
 
     def test_theo_claude_calls_report_costs(self):
@@ -198,6 +213,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("upsertPropertyToDatabase", database)
         self.assertIn("propertyAddressStem", database)
         self.assertIn("regexp_replace(address", database)
+        self.assertIn("PropertySearchCriteria", database)
+        self.assertIn("GREATER_AUSTIN_CITIES", database)
+        self.assertIn("AREA_ALIASES", database)
+        self.assertIn("scorePropertyCandidate", database)
         self.assertIn("source = 'sheets'", database)
         self.assertIn('upsertPropertyToDatabase(property, "live_lookup")', read("app/api/webhooks/theo-sms/route.ts"))
         self.assertIn("appendPropertyToSheets", sheets)
