@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
@@ -51,6 +52,43 @@ function logTheoMetrics(metrics: TheoMetric[]) {
 
 function referencesPriorProperties(message = ""): boolean {
   return /\b(those|that|these|them|links?|urls?|photos?|pictures?)\b/i.test(message);
+}
+
+function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
+  const seen = new Set<string>();
+  const addresses: string[] = [];
+  for (const event of [...events].reverse()) {
+    if (event.direction !== "inbound") continue;
+    for (const address of extractTheoListedPropertyAddresses(event.message_text || "")) {
+      const key = address.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      addresses.push(address);
+    }
+    if (addresses.length) break;
+  }
+  return addresses;
+}
+
+async function cacheTheoProperties(properties: Record<string, string>[]): Promise<{ database: number; sheets: number; errors: string[] }> {
+  let database = 0;
+  let sheets = 0;
+  const errors: string[] = [];
+  for (const property of properties) {
+    if (!property.address) continue;
+    try {
+      const saved = await upsertPropertyToDatabase(property, "live_lookup");
+      if (saved) database += 1;
+    } catch (error) {
+      errors.push(`database:${error instanceof Error ? error.message : "failed"}`);
+    }
+    try {
+      if (await appendPropertyToSheets(property)) sheets += 1;
+    } catch (error) {
+      errors.push(`sheets:${error instanceof Error ? error.message : "failed"}`);
+    }
+  }
+  return { database, sheets, errors };
 }
 
 async function recordTheoOutbound(input: TheoOutboundInput) {
@@ -186,10 +224,13 @@ export async function POST(request: NextRequest) {
     const contextReadStarted = nowMs();
     const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
     const requestedAddresses = extractTheoListedPropertyAddresses(payload.Body || "");
-    const priorAddresses = !requestedAddresses.length && referencesPriorProperties(payload.Body || "")
+    const referencedInboundAddresses = !requestedAddresses.length && referencesPriorProperties(payload.Body || "")
+      ? recentInboundAddresses(recentEvents)
+      : [];
+    const priorAddresses = !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(payload.Body || "")
       ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
       : [];
-    const exactAddresses = requestedAddresses.length ? requestedAddresses : priorAddresses;
+    const exactAddresses = requestedAddresses.length ? requestedAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
     const properties = exactAddresses.length
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : await findCandidatePropertiesFromDatabase(propertyQuery, 5);
@@ -197,17 +238,19 @@ export async function POST(request: NextRequest) {
       leadPhone: payload.From,
       propertyRows: properties.length,
       requestedAddressRows: requestedAddresses.length,
+      referencedInboundAddressRows: referencedInboundAddresses.length,
       priorAddressRows: priorAddresses.length,
       threadEvents: recentEvents.length,
       elapsedMs: elapsedMs(contextReadStarted),
       totalMs: elapsedMs(requestStarted),
     });
+    const propertyInterest = exactAddresses[0] || propertyQuery || lead?.property_interest || result.lead.property_interest || "";
     const enrichmentStarted = nowMs();
     const enriched = await enrichTheoData({
       message: payload.Body || "",
       lead: lead || result.lead,
       properties,
-      propertyInterest: lead?.property_interest || result.lead.property_interest || "",
+      propertyInterest,
     });
     logTheoMetrics(enriched.metrics);
     logTheo("data enrichment complete", {
@@ -219,13 +262,24 @@ export async function POST(request: NextRequest) {
       cost: formatUsd(enriched.costUsd),
       totalMs: elapsedMs(requestStarted),
     });
+    const cacheStarted = nowMs();
+    const cacheResult = await cacheTheoProperties(enriched.properties);
+    logTheo("property cache processed", {
+      leadPhone: payload.From,
+      databaseRows: cacheResult.database,
+      sheetRows: cacheResult.sheets,
+      errorCount: cacheResult.errors.length,
+      errors: cacheResult.errors.slice(0, 2),
+      elapsedMs: elapsedMs(cacheStarted),
+      totalMs: elapsedMs(requestStarted),
+    });
     const aiStarted = nowMs();
     const reply = await generateTheoReply({
       message: payload.Body || "",
       lead: lead || result.lead,
       properties: enriched.properties,
       recentEvents,
-      propertyInterest: lead?.property_interest || result.lead.property_interest || "",
+      propertyInterest,
       source: "sms",
       dataContext: enriched.context,
     });
