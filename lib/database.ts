@@ -155,19 +155,47 @@ export async function findCandidatePropertiesFromDatabase(query = "", limit = 5)
   return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
 }
 
+function propertyAddressStem(address: string): string {
+  const normalized = address
+    .trim()
+    .toLowerCase()
+    .replace(/\btexas\b/g, "tx")
+    .replace(/[^a-z0-9#]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = normalized.match(/^(\d+\s+.*?\b(?:st|street|dr|drive|rd|road|ave|avenue|blvd|boulevard|ln|lane|way|ct|court|cir|circle|trl|trail|path|cv|cove)\b)/);
+  return match?.[1] || normalized;
+}
+
 export async function findPropertiesByAddressesFromDatabase(addresses: string[], limit = 5): Promise<SheetRow[]> {
   const cleaned = addresses.map((address) => address.trim().toLowerCase()).filter(Boolean);
   if (!cleaned.length) return [];
-  const result = await getPool().query(
-    `select ${PROPERTIES_HEADERS.join(", ")}
-       from properties
-      where client_id = $1
-        and lower(address) = any($2::text[])
-      order by array_position($2::text[], lower(address)), updated_at desc
-      limit $3`,
-    [clientId(), cleaned, limit],
-  );
-  return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
+  const rows: SheetRow[] = [];
+  const seen = new Set<string>();
+  for (const address of cleaned) {
+    if (rows.length >= limit) break;
+    const stem = propertyAddressStem(address);
+    const result = await getPool().query(
+      `select ${PROPERTIES_HEADERS.join(", ")}
+         from properties
+        where client_id = $1
+          and (
+            lower(address) = $2
+            or lower(regexp_replace(address, '[^a-zA-Z0-9#]+', ' ', 'g')) like $3
+          )
+        order by case when lower(address) = $2 then 0 else 1 end, updated_at desc
+        limit $4`,
+      [clientId(), address, `${stem}%`, Math.max(1, limit - rows.length)],
+    );
+    for (const row of result.rows) {
+      const mapped = rowToStrings(PROPERTIES_HEADERS, row);
+      const key = mapped.address.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push(mapped);
+    }
+  }
+  return rows;
 }
 
 export async function upsertPropertyToDatabase(incoming: Partial<SheetRow>, source = "live_lookup"): Promise<SheetRow | null> {
