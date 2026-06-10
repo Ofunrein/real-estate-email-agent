@@ -170,6 +170,25 @@ export async function findPropertiesByAddressesFromDatabase(addresses: string[],
   return result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
 }
 
+export async function upsertPropertyToDatabase(incoming: Partial<SheetRow>, source = "live_lookup"): Promise<SheetRow | null> {
+  const cleaned = cleanRow(PROPERTIES_HEADERS, incoming);
+  if (!cleaned.address.trim()) return null;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into properties (client_id, ${PROPERTIES_HEADERS.join(", ")}, source)
+     values ($1, ${PROPERTIES_HEADERS.map((_, index) => `$${index + 2}`).join(", ")}, $${PROPERTIES_HEADERS.length + 2})
+     on conflict (client_id, address) do update set
+       ${PROPERTIES_HEADERS.filter((header) => header !== "address").map((header) => `${header} = coalesce(nullif(excluded.${header}, ''), properties.${header})`).join(", ")},
+       source = case
+         when properties.source = 'sheets' then properties.source
+         else excluded.source
+       end,
+       updated_at = now()`,
+    [clientId(), ...PROPERTIES_HEADERS.map((header) => cleaned[header]), source],
+  );
+  return cleaned;
+}
+
 export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): Promise<SheetRow> {
   await ensureClientInDatabase();
   const cleaned = cleanRow(LEAD_MEMORY_HEADERS, incoming);

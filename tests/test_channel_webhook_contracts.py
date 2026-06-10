@@ -34,7 +34,12 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("findPropertiesByAddressesFromDatabase", sms_route)
         self.assertIn("extractTheoListedPropertyAddresses", sms_route)
         self.assertIn("referencesPriorProperties", sms_route)
+        self.assertIn("recentInboundAddresses", sms_route)
         self.assertIn("requestedAddressRows", sms_route)
+        self.assertIn("referencedInboundAddressRows", sms_route)
+        self.assertIn("upsertPropertyToDatabase", sms_route)
+        self.assertIn("appendPropertyToSheets", sms_route)
+        self.assertIn("property cache processed", sms_route)
         self.assertIn('"reply_sent"', sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
         self.assertIn("[Theo SMS]", sms_route)
@@ -78,6 +83,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("formatTheoPropertyPhotos", theo_agent)
         self.assertIn("property_photos_reply_ready", theo_agent)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', theo_agent)
+        self.assertIn("SERVICE_AREA_CITIES", theo_agent)
+        self.assertIn("outside our main Austin-area coverage", theo_agent)
 
     def test_theo_llm_gets_iris_level_context(self):
         theo_llm = read("lib/theoLlm.ts")
@@ -139,6 +146,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("fetchCensusZip", theo_data)
         self.assertIn("fetchSoldComps", theo_data)
         self.assertIn("THEO_ENRICHMENT_TIMEOUT_MS", theo_data)
+        self.assertIn('Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "6500")', theo_data)
         self.assertIn("THEO_APIFY_TIMEOUT_SECONDS", theo_data)
         self.assertIn("theo_enrichment_budget", theo_data)
         self.assertIn("metrics", theo_data)
@@ -176,6 +184,16 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
         self.assertNotIn("AC4758", twilio_sender)
         self.assertNotIn("c0e300", twilio_sender)
+
+    def test_live_property_lookup_can_cache_to_database_and_sheets(self):
+        database = read("lib/database.ts")
+        sheets = read("lib/googleSheets.ts")
+        self.assertIn("upsertPropertyToDatabase", database)
+        self.assertIn("source = 'sheets'", database)
+        self.assertIn('upsertPropertyToDatabase(property, "live_lookup")', read("app/api/webhooks/theo-sms/route.ts"))
+        self.assertIn("appendPropertyToSheets", sheets)
+        self.assertIn("PROPERTIES_HEADERS.map", sheets)
+        self.assertIn("INSERT_ROWS", sheets)
 
     def test_website_form_sms_requires_opt_in(self):
         website_route = read("app/api/webhooks/olivia-website/route.ts")

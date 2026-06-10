@@ -6,6 +6,7 @@ import type { sheets_v4 } from "googleapis";
 import {
   CONVERSATION_EVENTS_TAB,
   LEAD_MEMORY_TAB,
+  PROPERTIES_HEADERS,
   PROPERTIES_TAB,
   type SheetRow,
 } from "@/lib/sheetSchema";
@@ -119,4 +120,24 @@ export async function loadAgentInboxDataFromSheets() {
   };
   inboxCache = { loadedAt: Date.now(), data };
   return data;
+}
+
+export async function appendPropertyToSheets(row: Partial<SheetRow>): Promise<boolean> {
+  const address = String(row.address || "").trim();
+  if (!address) return false;
+  const existing = await readSheet(PROPERTIES_TAB);
+  const exists = existing.some((property) => (property.address || "").trim().toLowerCase() === address.toLowerCase());
+  if (exists) return false;
+  const sheets = await sheetsClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: spreadsheetId(),
+    range: `${PROPERTIES_TAB}!A:ZZ`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [PROPERTIES_HEADERS.map((header) => row[header] || "")],
+    },
+  });
+  inboxCache = null;
+  return true;
 }
