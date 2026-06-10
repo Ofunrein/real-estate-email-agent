@@ -72,6 +72,13 @@ const SERVICE_AREA_CITIES = new Set([
   "buda",
   "kyle",
   "manchaca",
+  "lakeway",
+  "bee cave",
+  "dripping springs",
+  "hutto",
+  "taylor",
+  "west lake hills",
+  "rollingwood",
 ]);
 
 function cleanText(value?: string): string {
@@ -124,8 +131,8 @@ function asksForSafePropertyFact(message: string): boolean {
 }
 
 function asksForAlternativeProperties(message: string): boolean {
-  return /\b(other|another|similar|alternative|options?|properties|homes?|listings?)\b/i.test(message)
-    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?)\b/i.test(message);
+  return /\b(other|another|similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternative|options?|properties|homes?|listings?)\b/i.test(message)
+    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(message);
 }
 
 function latestMessageHasSensitiveTopic(message: string): boolean {
@@ -228,7 +235,7 @@ export function classifyTheoMessage(message: string): TheoClassification {
   if (/\b(rent|rental|lease|tenant)\b/i.test(text)) {
     return { intent: "renter_lead", leadRole: "renter", handoffReason: "", status: "ready_to_reply" };
   }
-  if (/\b(buy|buyer|looking for|interested|available|details|price|bed|bath|sqft|address)\b/i.test(text)) {
+  if (/\b(buy|buyer|looking for|interested|available|details|price|bed|bath|sqft|address|similar|neighboring|nearby|same spec|options?)\b/i.test(text)) {
     return { intent: "property_details", leadRole: "buyer", handoffReason: "", status: "ready_to_reply" };
   }
   return { intent: "buyer_lead", leadRole: "unknown", handoffReason: "", status: "ready_to_reply" };

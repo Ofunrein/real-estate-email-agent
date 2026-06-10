@@ -54,23 +54,57 @@ const STREET_TERMS = [
 
 const PROPERTY_SEARCH_AREAS = [
   "Austin",
+  "Greater Austin",
+  "Austin Metro",
+  "Austin Area",
+  "Central Texas",
   "Round Rock",
   "Cedar Park",
   "Georgetown",
   "Pflugerville",
+  "Flugerville",
   "Leander",
   "Buda",
   "Kyle",
   "Manchaca",
+  "Lakeway",
+  "Bee Cave",
+  "Dripping Springs",
+  "Hutto",
+  "Taylor",
   "Zilker",
   "Downtown Austin",
+  "South Austin",
   "South Congress",
   "South Lamar",
+  "Southwest Austin",
+  "Southeast Austin",
+  "North Austin",
+  "Northwest Austin",
+  "Northeast Austin",
+  "West Austin",
   "Hyde Park",
   "Brentwood",
   "Crestview",
   "East Austin",
+  "Oak Hill",
+  "Circle C",
+  "Montopolis",
+  "Windsor Park",
+  "North Lamar",
+  "Rosedale",
+  "Allandale",
 ];
+
+export type TheoPropertySearchIntent = {
+  query: string;
+  area?: string;
+  beds?: number;
+  baths?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  mode: "general" | "similar" | "neighboring";
+};
 
 function clean(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
@@ -180,6 +214,58 @@ export function extractTheoPropertySearchQuery(...values: string[]): string {
   const lower = text.toLowerCase();
   const area = PROPERTY_SEARCH_AREAS.find((candidate) => new RegExp(`\\b${candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").toLowerCase()}\\b`, "i").test(lower));
   return area || clean(values.find((value) => truthy(value)) || "");
+}
+
+function parsePriceTerm(text: string, direction: "min" | "max"): number | undefined {
+  const pattern = direction === "max"
+    ? /\b(?:under|below|less than|max|maximum|up to)\s+\$?\s*(\d+(?:\.\d+)?)\s*(m|million|k|thousand)?\b/i
+    : /\b(?:over|above|more than|min|minimum|at least)\s+\$?\s*(\d+(?:\.\d+)?)\s*(m|million|k|thousand)?\b/i;
+  const match = text.match(pattern);
+  if (!match) return undefined;
+  let amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return undefined;
+  const suffix = match[2] || "";
+  if (/^m|million/i.test(suffix)) amount *= 1_000_000;
+  if (/^k|thousand/i.test(suffix)) amount *= 1_000;
+  return amount;
+}
+
+function parseCountTerm(text: string, kind: "bed" | "bath"): number | undefined {
+  const pattern = kind === "bed"
+    ? /\b(\d+(?:\.\d+)?)\s*(?:bed|beds|bd|br|bedroom|bedrooms)\b/i
+    : /\b(\d+(?:\.\d+)?)\s*(?:bath|baths|ba|bathroom|bathrooms)\b/i;
+  const match = text.match(pattern);
+  const amount = match ? Number(match[1]) : NaN;
+  return Number.isFinite(amount) ? amount : undefined;
+}
+
+function normalizeAreaName(area?: string): string {
+  if (!area) return "";
+  if (/^flugerville$/i.test(area)) return "Pflugerville";
+  if (/^(greater austin|austin metro|austin area|central texas)$/i.test(area)) return "Greater Austin";
+  return area;
+}
+
+function propertySearchMode(text: string): TheoPropertySearchIntent["mode"] {
+  if (/\b(neighboring|neighbor|nearby|next to|around it|around that|close to it|close by)\b/i.test(text)) return "neighboring";
+  if (/\b(similar|same spec|same specs|same size|same price|comparable|alternatives?|other options?)\b/i.test(text)) return "similar";
+  return "general";
+}
+
+export function extractTheoPropertySearchIntent(...values: string[]): TheoPropertySearchIntent {
+  const text = values.map(clean).filter(Boolean).join(" ");
+  const query = extractTheoPropertySearchQuery(...values);
+  const lower = text.toLowerCase();
+  const area = PROPERTY_SEARCH_AREAS.find((candidate) => new RegExp(`\\b${candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").toLowerCase()}\\b`, "i").test(lower));
+  return {
+    query,
+    area: normalizeAreaName(area),
+    beds: parseCountTerm(text, "bed"),
+    baths: parseCountTerm(text, "bath"),
+    minPrice: parsePriceTerm(text, "min"),
+    maxPrice: parsePriceTerm(text, "max"),
+    mode: propertySearchMode(text),
+  };
 }
 
 export function extractTheoListedPropertyAddresses(...values: string[]): string[] {
