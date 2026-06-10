@@ -1,4 +1,5 @@
 import type { SheetRow } from "@/lib/sheetSchema";
+import { CENTRAL_TEXAS_CITIES } from "@/lib/serviceAreas";
 import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
 import type { TheoMetric } from "@/lib/theoTelemetry";
 
@@ -34,6 +35,7 @@ export type TheoReplyContext = {
   source?: "sms" | "form";
   recentEvents?: SheetRow[];
   dataContext?: string;
+  styleContext?: string;
 };
 
 export type TheoReplyResult = {
@@ -62,24 +64,7 @@ const SPAM_PATTERNS = [
   /\b(crypto|forex|seo services|guest post|casino|loan offer)\b/i,
 ];
 
-const SERVICE_AREA_CITIES = new Set([
-  "austin",
-  "round rock",
-  "cedar park",
-  "georgetown",
-  "pflugerville",
-  "leander",
-  "buda",
-  "kyle",
-  "manchaca",
-  "lakeway",
-  "bee cave",
-  "dripping springs",
-  "hutto",
-  "taylor",
-  "west lake hills",
-  "rollingwood",
-]);
+const SERVICE_AREA_CITIES = new Set(CENTRAL_TEXAS_CITIES);
 
 function cleanText(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
@@ -103,7 +88,18 @@ function normalize(value?: string): string {
 function truncateSms(value: string, limit = SMS_LIMIT): string {
   const clean = cleanSmsReply(value);
   if (clean.length <= limit) return clean;
-  return `${clean.slice(0, limit - 1).trimEnd()}...`;
+  const slice = clean.slice(0, limit - 1).trimEnd();
+  const sentenceEnd = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("\n\n"),
+  );
+  if (sentenceEnd > Math.floor(limit * 0.55)) {
+    const punctuationEnd = sentenceEnd + (slice[sentenceEnd] === "\n" ? 0 : 1);
+    return slice.slice(0, punctuationEnd).trimEnd();
+  }
+  return `${slice}...`;
 }
 
 function envFlag(value?: string): boolean {
@@ -124,6 +120,19 @@ function wantsPropertyImage(message: string): boolean {
 
 function wantsPropertyLinks(message: string): boolean {
   return /\b(link|links|url|urls|website|listing page|zillow)\b/i.test(message);
+}
+
+function valuationUrl(): string {
+  return cleanText(process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL);
+}
+
+function isSellerValuationContext(message: string, classification: TheoClassification): boolean {
+  const tags = classification.opportunityTags || [];
+  return classification.intent === "seller_lead"
+    || classification.leadRole === "seller"
+    || tags.includes("valuation_interest")
+    || tags.includes("sell_before_buy")
+    || /\b(sell first|need to sell|sell my|selling my|current home|home value|valuation|what.*worth|how much.*worth)\b/i.test(message);
 }
 
 function asksForSafePropertyFact(message: string): boolean {
@@ -180,6 +189,27 @@ function formatOptionFacts(property: SheetRow): string {
     Number.isFinite(sqft) && sqft > 0 ? `${sqft.toLocaleString("en-US", { maximumFractionDigits: 0 })} sqft` : "",
     property.neighborhood || property.city,
   ].filter(Boolean).join(", ");
+}
+
+function formatSqft(value?: string): string {
+  const sqft = Number(cleanText(value).replace(/[^\d.]/g, ""));
+  return Number.isFinite(sqft) && sqft > 0 ? `${sqft.toLocaleString("en-US", { maximumFractionDigits: 0 })} sqft` : "";
+}
+
+function formatTheoSellerValuationReply(properties: SheetRow[] = []): string {
+  const url = valuationUrl();
+  if (!url) return "";
+  const property = properties.find((row) => cleanText(row.address));
+  const facts = property ? [formatFacts(property), formatSqft(property.sqft)].filter(Boolean).join(", ") : "";
+  const propertyLine = property
+    ? `${cleanText(property.address)}${facts ? ` is ${facts}` : ""}.`
+    : "";
+  return [
+    propertyLine,
+    "For the home you need to sell, start the free valuation here:",
+    url,
+    "After that, a person can help line up the sell-first timing.",
+  ].filter(Boolean).join("\n\n");
 }
 
 function outsideServiceArea(properties: SheetRow[] = []): boolean {
@@ -375,6 +405,22 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         mediaUrls,
         shouldSend: true,
         aiAction: "property_photos_reply_ready",
+        handoffReason: "",
+        status: "ready_to_reply",
+        metrics,
+      };
+    }
+  }
+
+  if (isSellerValuationContext(context.message, classification)) {
+    const valuationReply = formatTheoSellerValuationReply(context.properties);
+    if (valuationReply) {
+      return {
+        classification,
+        reply: truncateSms(valuationReply, LINK_SMS_LIMIT),
+        mediaUrls: [],
+        shouldSend: true,
+        aiAction: "seller_valuation_link_reply_ready",
         handoffReason: "",
         status: "ready_to_reply",
         metrics,

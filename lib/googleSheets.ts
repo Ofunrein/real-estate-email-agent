@@ -24,7 +24,7 @@ type OAuthCredentials = {
   };
 };
 
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 5_000;
 let inboxCache: { loadedAt: number; data: { leads: SheetRow[]; events: SheetRow[]; properties: SheetRow[] } } | null = null;
 
 function readJson<T>(filePath: string): T {

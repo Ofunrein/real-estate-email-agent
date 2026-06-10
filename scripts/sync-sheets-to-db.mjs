@@ -131,9 +131,26 @@ async function appendEvents(pool, clientId, rows) {
   if (!rows.length) {
     return;
   }
-  await pool.query("delete from conversation_events where client_id = $1", [clientId]);
   for (const row of rows) {
     const values = CONVERSATION_EVENTS_HEADERS.map((header) => row[header] || "");
+    const duplicate = await pool.query(
+      `select id
+         from conversation_events
+        where client_id = $1
+          and event_at = $2
+          and channel = $3
+          and direction = $4
+          and coalesce(email, '') = $5
+          and coalesce(phone, '') = $6
+          and coalesce(thread_ref, '') = $7
+          and coalesce(event_type, '') = $8
+          and coalesce(message_text, '') = $9
+        limit 1`,
+      [clientId, values[0], values[1], values[2], values[3], values[4], values[7], values[10], values[11]],
+    );
+    if (duplicate.rowCount) {
+      continue;
+    }
     await pool.query(
       `insert into conversation_events (client_id, ${CONVERSATION_EVENTS_HEADERS.join(", ")})
        values ($1, ${CONVERSATION_EVENTS_HEADERS.map((_, index) => `$${index + 2}`).join(", ")})`,
