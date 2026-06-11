@@ -107,6 +107,37 @@ export async function readEventsFromDatabase(): Promise<SheetRow[]> {
   return result.rows.map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }
 
+const VOICE_CALL_HEADERS = [
+  "call_id",
+  "thread_ref",
+  "direction",
+  "email",
+  "phone",
+  "full_name",
+  "lead_role",
+  "agent_name",
+  "started_at",
+  "ended_at",
+  "duration_sec",
+  "disposition",
+  "summary",
+  "transcript",
+  "recording_url",
+  "ended_reason",
+  "human_owner",
+] as const;
+
+export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
+  const result = await getPool().query(
+    `select ${VOICE_CALL_HEADERS.join(", ")}
+       from voice_calls
+      where client_id = $1
+      order by created_at asc`,
+    [clientId()],
+  );
+  return result.rows.map((row) => rowToStrings(VOICE_CALL_HEADERS, row));
+}
+
 export async function readEventsForThreadFromDatabase(threadRef: string, limit = 12): Promise<SheetRow[]> {
   const result = await getPool().query(
     `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
@@ -118,6 +149,31 @@ export async function readEventsForThreadFromDatabase(threadRef: string, limit =
     [clientId(), threadRef, limit],
   );
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
+export async function hasNewerInboundForThreadInDatabase(threadRef: string, eventAt: string): Promise<boolean> {
+  const result = await getPool().query(
+    `with current_event as (
+       select created_at
+         from conversation_events
+        where client_id = $1
+          and thread_ref = $2
+          and event_at = $3
+          and direction = 'inbound'
+        order by id desc
+        limit 1
+     )
+     select exists (
+       select 1
+         from conversation_events ce, current_event
+        where ce.client_id = $1
+          and ce.thread_ref = $2
+          and ce.direction = 'inbound'
+          and ce.created_at > current_event.created_at
+     ) as has_newer`,
+    [clientId(), threadRef, eventAt],
+  );
+  return Boolean(result.rows[0]?.has_newer);
 }
 
 // Cross-channel history for one lead, matched by phone and/or email (not thread).
@@ -569,10 +625,11 @@ export async function readStyleExamplesFromDatabase(category = "", limit = 3): P
   }));
 }
 
-export async function loadAgentInboxDataFromDatabase() {  const [leads, events, properties] = await Promise.all([
+export async function loadAgentInboxDataFromDatabase() {  const [leads, events, properties, voiceCalls] = await Promise.all([
     readLeadsFromDatabase(),
     readEventsFromDatabase(),
     readPropertiesFromDatabase(),
+    readVoiceCallsFromDatabase(),
   ]);
-  return { leads, events, properties };
+  return { leads, events, properties, voiceCalls };
 }

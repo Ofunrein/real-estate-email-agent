@@ -11,12 +11,12 @@ type PropertySort = { key: PropertySortKey; direction: "asc" | "desc" };
 
 const DASHBOARD_REFRESH_MS = 5000;
 
-const channelViews: { key: View; label: string; agent: string; channel?: Channel }[] = [
-  { key: "email", label: "Email", agent: "Iris", channel: "email" },
-  { key: "sms", label: "SMS", agent: "Theo", channel: "sms" },
-  { key: "whatsapp", label: "WhatsApp", agent: "Theo", channel: "whatsapp" },
-  { key: "voice", label: "Voice", agent: "Aria", channel: "voice" },
-  { key: "website_chat", label: "Website", agent: "Olivia", channel: "website_chat" },
+const channelViews: { key: View; label: string; agent: string; avatar: string; channel?: Channel }[] = [
+  { key: "email", label: "Email", agent: "Iris", avatar: "/images/agents/iris.png", channel: "email" },
+  { key: "sms", label: "SMS", agent: "Theo", avatar: "/images/agents/theo.png", channel: "sms" },
+  { key: "whatsapp", label: "WhatsApp", agent: "Theo", avatar: "/images/agents/theo.png", channel: "whatsapp" },
+  { key: "voice", label: "Voice", agent: "Aria", avatar: "/images/agents/aria.png", channel: "voice" },
+  { key: "website_chat", label: "Website", agent: "Olivia", avatar: "/images/agents/olivia.png", channel: "website_chat" },
 ];
 
 function formatNumber(value: number | string) {
@@ -73,14 +73,30 @@ function extractUrls(value: string) {
   return Array.from(new Set(value.match(/https?:\/\/[^\s<>"')]+/gi) || []));
 }
 
+function unwrapMediaProxyUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.pathname === "/api/media/proxy") {
+      return url.searchParams.get("url") || value;
+    }
+  } catch {
+    return value;
+  }
+  return value;
+}
+
 function isDisplayableImageUrl(value: string) {
-  const lower = value.toLowerCase();
+  const lower = unwrapMediaProxyUrl(value).toLowerCase();
   return (
     /\.(png|jpe?g|gif|webp)(?:[?#].*)?$/.test(lower) ||
     lower.includes("photos.zillowstatic.com/") ||
     lower.includes("maps.googleapis.com/maps/api/streetview") ||
     lower.includes("maps.googleapis.com/maps/api/staticmap")
   );
+}
+
+function imagePreviewUrl(value: string) {
+  return unwrapMediaProxyUrl(value);
 }
 
 function MessageContent({ event }: { event: SheetRow }) {
@@ -105,8 +121,15 @@ function MessageContent({ event }: { event: SheetRow }) {
       {imageUrls.length ? (
         <div className="message-images" aria-label="Images mentioned in message">
           {imageUrls.map((url) => (
-            <a className="message-image-link" href={url} key={url} rel="noreferrer" target="_blank">
-              <img alt="Message attachment preview" loading="lazy" src={url} />
+            <a className="message-image-link" href={unwrapMediaProxyUrl(url)} key={url} rel="noreferrer" target="_blank">
+              <img
+                alt="Message attachment preview"
+                loading="lazy"
+                onError={(event) => {
+                  event.currentTarget.closest(".message-image-link")?.classList.add("image-load-failed");
+                }}
+                src={imagePreviewUrl(url)}
+              />
             </a>
           ))}
         </div>
@@ -243,6 +266,104 @@ function threadSearchPlaceholder(channelLabel: string, channel?: Channel) {
   }
   if (channel === "email") return "Search email conversations by email";
   return `Search ${channelLabel.toLowerCase()} conversations`;
+}
+
+function voiceCallKey(call: SheetRow) {
+  return call.phone || call.thread_ref || call.call_id || "voice:unknown";
+}
+
+function buildVoiceCallThreads(calls: SheetRow[]): [string, SheetRow[]][] {
+  const groups = calls.reduce<Record<string, SheetRow[]>>((acc, call) => {
+    const key = voiceCallKey(call);
+    acc[key] ||= [];
+    acc[key].push(call);
+    return acc;
+  }, {});
+  return [...Object.entries(groups)].sort((a, b) => {
+    const latestA = latestVoiceCall(a[1]);
+    const latestB = latestVoiceCall(b[1]);
+    return voiceCallTimeValue(latestB) - voiceCallTimeValue(latestA);
+  });
+}
+
+function latestVoiceCall(calls: SheetRow[]) {
+  return calls[calls.length - 1] || {};
+}
+
+function voiceCallTimeValue(call: SheetRow) {
+  const parsed = new Date(call.ended_at || call.started_at || "");
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function voiceThreadIdentity(threadRef: string, calls: SheetRow[]) {
+  const latest = latestVoiceCall(calls);
+  return latest.phone || latest.full_name || threadRef;
+}
+
+function voiceThreadSubtitle(threadRef: string, calls: SheetRow[]) {
+  const latest = latestVoiceCall(calls);
+  const count = calls.length === 1 ? "1 call" : `${calls.length} calls`;
+  return [count, latest.ended_reason || latest.disposition || latest.thread_ref || threadRef].filter(Boolean).join(" · ");
+}
+
+function voiceThreadSearchText(threadRef: string, calls: SheetRow[]) {
+  return [
+    threadRef,
+    voiceThreadIdentity(threadRef, calls),
+    voiceThreadSubtitle(threadRef, calls),
+    ...calls.flatMap((call) => [
+      call.phone,
+      call.full_name,
+      call.summary,
+      call.transcript,
+      call.recording_url,
+    ]),
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function parseVoiceTranscript(transcript = "") {
+  const turns: { speaker: string; direction: "inbound" | "outbound"; text: string }[] = [];
+  for (const rawLine of transcript.split(/\n+/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const match = /^(AI|Assistant|Aria|User|Caller|Lead|Customer):\s*(.*)$/i.exec(line);
+    if (match) {
+      const label = match[1].toLowerCase();
+      turns.push({
+        speaker: ["ai", "assistant", "aria"].includes(label) ? "Aria" : "Lead",
+        direction: ["ai", "assistant", "aria"].includes(label) ? "outbound" : "inbound",
+        text: match[2].trim(),
+      });
+      continue;
+    }
+    const last = turns[turns.length - 1];
+    if (last) {
+      last.text = `${last.text} ${line}`.trim();
+    } else {
+      turns.push({ speaker: "Call", direction: "inbound", text: line });
+    }
+  }
+  return turns;
+}
+
+function recordingAudioUrl(value?: string) {
+  const url = (value || "").trim();
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname === "/api/media/audio") return url;
+    return `/api/media/audio?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
+  }
+}
+
+function formatCallDuration(value?: string) {
+  const seconds = Math.max(0, Math.round(Number(value || 0)));
+  if (!seconds) return "";
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes ? `${minutes}m ${rest}s` : `${rest}s`;
 }
 
 function messageSpeaker(event: SheetRow) {
@@ -914,6 +1035,158 @@ function ThreadViewer({
   );
 }
 
+function VoiceCallCard({ call }: { call: SheetRow }) {
+  const turns = parseVoiceTranscript(call.transcript || "");
+  const audioUrl = recordingAudioUrl(call.recording_url);
+  return (
+    <section className="voice-call-card">
+      <div className="voice-call-card-head">
+        <div>
+          <strong>{formatEventTime(call.ended_at || call.started_at)}</strong>
+          <span>{[formatCallDuration(call.duration_sec), call.ended_reason || call.disposition].filter(Boolean).join(" · ")}</span>
+        </div>
+        <span className="status">{call.agent_name || "Aria"}</span>
+      </div>
+      <div className="thread-messages voice-transcript" aria-label="Voice call transcript">
+        {turns.length ? turns.map((turn, index) => (
+          <div className={`message ${turn.direction === "outbound" ? "outbound" : "inbound"}`} key={`${call.call_id}-${index}`}>
+            <div className="message-meta">
+              <span>{turn.speaker}</span>
+            </div>
+            <div className="message-content">
+              <div className="message-text voice-message-text">{turn.text || "No transcript text recorded for this turn."}</div>
+            </div>
+          </div>
+        )) : (
+          <div className="empty-state voice-empty">
+            <strong>No transcript text recorded</strong>
+            <span>The call report is still available below.</span>
+          </div>
+        )}
+      </div>
+      <div className="voice-call-report">
+        <strong>Call report</strong>
+        <p>{call.summary || "No call summary recorded yet."}</p>
+        {call.transcript ? (
+          <details className="voice-raw-transcript">
+            <summary>Raw transcript</summary>
+            <pre>{call.transcript}</pre>
+          </details>
+        ) : null}
+        {call.recording_url ? (
+          <div className="voice-recording">
+            <span>Recording</span>
+            <audio controls preload="metadata" src={audioUrl}>
+              <a href={call.recording_url} rel="noreferrer" target="_blank">Open recording</a>
+            </audio>
+            <a href={call.recording_url} rel="noreferrer" target="_blank">Open recording</a>
+          </div>
+        ) : (
+          <span className="brand-subtitle">No recording URL loaded for this call.</span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function VoiceThreadViewer({
+  threads,
+  search,
+  selectedThreadKey,
+  onSearchChange,
+  onSelectThread,
+}: {
+  threads: [string, SheetRow[]][];
+  search: string;
+  selectedThreadKey: string;
+  onSearchChange: (value: string) => void;
+  onSelectThread: (threadRef: string) => void;
+}) {
+  if (!threads.length) {
+    return (
+      <div className="empty-state">
+        <div className="empty-icon">0</div>
+        <strong>No voice conversations yet</strong>
+        <span>Completed Vapi call transcripts and recordings will appear here.</span>
+      </div>
+    );
+  }
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleThreads = threads.filter(([threadRef, calls]) => {
+    if (!normalizedSearch) return true;
+    return voiceThreadSearchText(threadRef, calls).includes(normalizedSearch);
+  });
+  const activeThread = visibleThreads.find(([threadRef]) => threadRef === selectedThreadKey) || visibleThreads[0];
+
+  return (
+    <div className="conversation-inbox">
+      <aside className="conversation-list-column" aria-label="Voice conversations">
+        <div className="conversation-list-header">
+          <strong>Conversations</strong>
+          <span>{visibleThreads.length} shown</span>
+        </div>
+        <input
+          aria-label="Search voice conversations"
+          className="conversation-search"
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search voice by phone number"
+          type="search"
+          value={search}
+        />
+        <div className="conversation-list">
+          {visibleThreads.length ? visibleThreads.map(([threadRef, calls]) => {
+            const latest = latestVoiceCall(calls);
+            const active = activeThread?.[0] === threadRef;
+            return (
+              <button
+                className={active ? "conversation-list-item active" : "conversation-list-item"}
+                key={threadRef}
+                onClick={() => onSelectThread(threadRef)}
+                type="button"
+              >
+                <span className="conversation-row-top">
+                  <strong>{voiceThreadIdentity(threadRef, calls)}</strong>
+                  <time>{formatEventTime(latest.ended_at || latest.started_at)}</time>
+                </span>
+                <span className="conversation-preview">{latest.summary || "Voice call transcript"}</span>
+                <span className="conversation-row-bottom">
+                  <em>{calls.length} call{calls.length === 1 ? "" : "s"}</em>
+                  {latest.recording_url ? <span className="status mini-status">Recording</span> : null}
+                </span>
+              </button>
+            );
+          }) : (
+            <div className="conversation-empty">No matching voice conversations.</div>
+          )}
+        </div>
+      </aside>
+      <section className="conversation-thread-column">
+        {activeThread ? (
+          <article className="thread selected-thread voice-thread" key={activeThread[0]}>
+            <div className="thread-head">
+              <div>
+                <strong>{voiceThreadIdentity(activeThread[0], activeThread[1])}</strong>
+                <div className="brand-subtitle">{voiceThreadSubtitle(activeThread[0], activeThread[1])}</div>
+              </div>
+              <span className="status">call transcript</span>
+            </div>
+            <div className="voice-call-stack">
+              {activeThread[1].map((call) => <VoiceCallCard call={call} key={call.call_id || call.thread_ref || call.started_at} />)}
+            </div>
+          </article>
+        ) : (
+          <div className="empty-state thread-viewer-empty">
+            <div className="empty-icon">0</div>
+            <strong>No voice conversation selected</strong>
+            <span>Select a caller from the list.</span>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function LeadDetail({ leads }: { leads: SheetRow[] }) {
   const active = leads[leads.length - 1] || {};
   const fields = [
@@ -1081,7 +1354,12 @@ export function AgentInboxClient({
     () => selectedChannel ? buildChannelThreads(dashboardData.events, selectedChannel) : [],
     [dashboardData.events, selectedChannel],
   );
-  const selectedHumanThreads = selectedChannel ? humanReviewThreads(channelThreads) : humanReviewThreads(threadEntries);
+  const voiceCallThreads = useMemo(
+    () => buildVoiceCallThreads(dashboardData.voiceCalls || []),
+    [dashboardData.voiceCalls],
+  );
+  const visibleChannelThreads = selectedChannel === "voice" ? voiceCallThreads : channelThreads;
+  const selectedHumanThreads = selectedChannel ? humanReviewThreads(selectedChannel === "voice" ? [] : channelThreads) : humanReviewThreads(threadEntries);
   const currentEvents = selectedChannel
     ? dashboardData.events.filter((event) => eventChannel(event) === selectedChannel)
     : dashboardData.events;
@@ -1123,13 +1401,13 @@ export function AgentInboxClient({
   }, [propertySearch, showPropertyReviewOnly]);
 
   useEffect(() => {
-    if (!selectedChannel || !channelThreads.length) {
+    if (!selectedChannel || !visibleChannelThreads.length) {
       return;
     }
-    if (!channelThreads.some(([threadRef]) => threadRef === selectedThreadKey)) {
-      setSelectedThreadKey(channelThreads[0][0]);
+    if (!visibleChannelThreads.some(([threadRef]) => threadRef === selectedThreadKey)) {
+      setSelectedThreadKey(visibleChannelThreads[0][0]);
     }
-  }, [channelThreads, selectedChannel, selectedThreadKey]);
+  }, [visibleChannelThreads, selectedChannel, selectedThreadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1307,7 +1585,10 @@ export function AgentInboxClient({
                 key={item.key}
                 onClick={() => setView(item.key)}
               >
-                <span className="channel-agent">{item.agent}</span>
+                <span className="channel-tile-head">
+                  <img alt="" className="channel-avatar" src={item.avatar} />
+                  <span className="channel-agent">{item.agent}</span>
+                </span>
                 <strong>{item.label}</strong>
                 <small>{count ? `${count} events` : "waiting for webhook"}</small>
               </button>
@@ -1397,7 +1678,7 @@ export function AgentInboxClient({
                   </h2>
                   <p className="panel-kicker">{selectedChannel ? "Read the exact conversation as the AI handled it." : "Latest cross-channel activity from the shared event log."}</p>
                 </div>
-                <span className="status">{currentEvents.length} events</span>
+                <span className="status">{selectedChannel === "voice" ? `${dashboardData.voiceCalls?.length || 0} calls` : `${currentEvents.length} events`}</span>
               </div>
               {selectedHumanThreads.length ? (
                 <div className="handoff-summary">
@@ -1405,7 +1686,15 @@ export function AgentInboxClient({
                   <span>Open the flagged thread before the AI continues beyond the handoff message.</span>
                 </div>
               ) : null}
-              {selectedChannel ? (
+              {selectedChannel === "voice" ? (
+                <VoiceThreadViewer
+                  onSearchChange={setThreadSearch}
+                  onSelectThread={setSelectedThreadKey}
+                  search={threadSearch}
+                  selectedThreadKey={selectedThreadKey}
+                  threads={voiceCallThreads}
+                />
+              ) : selectedChannel ? (
                 <ThreadViewer
                   channel={selectedChannel}
                   channelLabel={selectedChannelLabel}
@@ -1420,7 +1709,7 @@ export function AgentInboxClient({
               )}
             </section>
             <ContextRail
-              activeThreads={selectedChannel ? channelThreads.length : activeThreads}
+              activeThreads={selectedChannel === "voice" ? voiceCallThreads.length : selectedChannel ? channelThreads.length : activeThreads}
               currentEvents={currentEvents}
               latest={latestCurrentEvent}
               propertiesNeedingReview={dashboardData.propertyHealth.missing_core}

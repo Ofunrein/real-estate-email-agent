@@ -72,8 +72,27 @@ test("nextTouch: voice only after a soft touch, in window, with consent", () => 
   const events = [outbound("sms", NOON_CT - 3 * 86400000)];
   const d = nextTouch({ lead: lead({ call_consent: "yes", preferred_channel: "voice" }), events, config, nowMs: NOON_CT, timezone: TZ });
   assert.equal(d.action, "send");
-  // sms/email come first in rotation; ensure voice is at least eligible by checking consent gating elsewhere
-  assert.ok(["sms", "email", "voice"].includes(d.channel!));
+  assert.equal(d.channel, "voice");
+});
+
+test("nextTouch: first touch still starts soft even when voice is preferred", () => {
+  const d = nextTouch({ lead: lead({ call_consent: "yes", preferred_channel: "voice" }), events: [], config, nowMs: NOON_CT, timezone: TZ });
+  assert.equal(d.action, "send");
+  assert.equal(d.reason, "speed_to_lead");
+  assert.equal(d.channel, "sms");
+});
+
+test("nextTouch: priority leads can move to voice after a soft touch", () => {
+  const events = [outbound("email", NOON_CT - 3 * 86400000)];
+  const d = nextTouch({
+    lead: lead({ call_consent: "yes", next_action: "priority_alert" }),
+    events,
+    config,
+    nowMs: NOON_CT,
+    timezone: TZ,
+  });
+  assert.equal(d.action, "send");
+  assert.equal(d.channel, "voice");
 });
 
 test("nextTouch: voice skipped outside call window", () => {

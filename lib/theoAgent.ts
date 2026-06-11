@@ -135,6 +135,10 @@ function isSellerValuationContext(message: string, classification: TheoClassific
     || /\b(sell first|need to sell|sell my|selling my|current home|home value|valuation|what.*worth|how much.*worth)\b/i.test(message);
 }
 
+function latestMessageAsksForSellerValuation(message: string): boolean {
+  return /\b(sell first|need to sell|sell my|selling my|list my|listing my|current home|home value|valuation|what.*worth|how much.*worth|schedule the evaluation|schedule .*valuation|book .*valuation)\b/i.test(message);
+}
+
 function asksForSafePropertyFact(message: string): boolean {
   return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
 }
@@ -161,8 +165,9 @@ function canShareSafeFactsDuringHandoff(classification: TheoClassification): boo
 function usablePhotoUrl(value?: string): string {
   const url = cleanText(value);
   if (!/^https:\/\//i.test(url)) return "";
-  if (/\.(jpe?g|png|gif)(\?|$)/i.test(url)) return url;
-  if (/zillowstatic\.com|maps\.googleapis\.com|googleusercontent\.com/i.test(url)) return url;
+  if (/maps\.googleapis\.com/i.test(url)) return "";
+  if (/\.(jpe?g|png|gif|webp)(\?|$)/i.test(url)) return url;
+  if (/googleusercontent\.com/i.test(url)) return url;
   return "";
 }
 
@@ -241,6 +246,16 @@ function formatTheoPropertyPhotos(properties: SheetRow[] = []): string {
     ? "This looks outside our main Austin-area coverage, but I found the listing media."
     : "";
   return [serviceNote, intro, lines.join("\n\n")].filter(Boolean).join("\n\n");
+}
+
+function formatTheoPhotoLinkFallback(properties: SheetRow[] = []): string {
+  const linked = properties.filter((property) => cleanText(property.listing_url));
+  if (!linked.length) return "";
+  const lines = linked.slice(0, 3).flatMap((property, index) => [
+    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
+    cleanText(property.listing_url),
+  ]);
+  return `I found the listing, but the direct image source is not sendable by SMS. The photo gallery is here:\n\n${lines.join("\n\n")}`;
 }
 
 function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification): string {
@@ -374,6 +389,36 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     };
   }
 
+  if (wantsPropertyImage(context.message) && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))) {
+    const mediaUrls = selectTheoMediaUrls(context, classification);
+    const photoReply = formatTheoPropertyPhotos(context.properties);
+    if (mediaUrls.length && photoReply) {
+      return {
+        classification,
+        reply: truncateSms(photoReply, LINK_SMS_LIMIT),
+        mediaUrls,
+        shouldSend: true,
+        aiAction: classification.status === "needs_human" ? "property_photos_handoff_reply_ready" : "property_photos_reply_ready",
+        handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
+        status: classification.status === "needs_human" ? "needs_human" : "ready_to_reply",
+        metrics,
+      };
+    }
+    const fallbackReply = formatTheoPhotoLinkFallback(context.properties);
+    if (fallbackReply) {
+      return {
+        classification,
+        reply: truncateSms(fallbackReply, LINK_SMS_LIMIT),
+        mediaUrls: [],
+        shouldSend: true,
+        aiAction: classification.status === "needs_human" ? "property_photo_link_handoff_fallback_ready" : "property_photo_link_fallback_ready",
+        handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
+        status: classification.status === "needs_human" ? "needs_human" : "ready_to_reply",
+        metrics,
+      };
+    }
+  }
+
   if (classification.intent === "human_required") {
     let handoffReply = "I'm going to have a real person follow up on that so we handle it correctly.";
     try {
@@ -395,24 +440,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     };
   }
 
-  if (wantsPropertyImage(context.message)) {
-    const mediaUrls = selectTheoMediaUrls(context, classification);
-    const photoReply = formatTheoPropertyPhotos(context.properties);
-    if (mediaUrls.length && photoReply) {
-      return {
-        classification,
-        reply: truncateSms(photoReply, LINK_SMS_LIMIT),
-        mediaUrls,
-        shouldSend: true,
-        aiAction: "property_photos_reply_ready",
-        handoffReason: "",
-        status: "ready_to_reply",
-        metrics,
-      };
-    }
-  }
-
-  if (isSellerValuationContext(context.message, classification)) {
+  if (latestMessageAsksForSellerValuation(context.message) && isSellerValuationContext(context.message, classification)) {
     const valuationReply = formatTheoSellerValuationReply(context.properties);
     if (valuationReply) {
       return {

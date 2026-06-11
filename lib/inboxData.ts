@@ -5,6 +5,7 @@ export type Channel = "email" | "sms" | "whatsapp" | "voice" | "website_chat" | 
 export type AgentInboxData = {
   leads: SheetRow[];
   events: SheetRow[];
+  voiceCalls: SheetRow[];
   properties: SheetRow[];
   metrics: ReturnType<typeof buildMetrics>;
   threads: Record<string, SheetRow[]>;
@@ -68,15 +69,34 @@ export function buildPropertyHealth(properties: SheetRow[]) {
   };
 }
 
-export function composeInboxData(leads: SheetRow[], events: SheetRow[], properties: SheetRow[]): AgentInboxData {
-  const metrics = buildMetrics(leads, events);
+function isReservedTestPhone(value?: string) {
+  const digits = (value || "").replace(/\D/g, "");
+  return digits.startsWith("1555123") || digits === "15555550123";
+}
+
+function isReservedTestRow(row: SheetRow) {
+  return isReservedTestPhone(row.phone) || isReservedTestPhone(row.thread_ref);
+}
+
+function isInternalVoiceEvent(row: SheetRow) {
+  return channelFor(row) === "voice";
+}
+
+export function composeInboxData(leads: SheetRow[], events: SheetRow[], properties: SheetRow[], voiceCalls: SheetRow[] = []): AgentInboxData {
+  const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead));
+  const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event));
+  const metrics = buildMetrics(visibleLeads, visibleEvents);
+  if (voiceCalls.length) {
+    metrics.channels.voice = voiceCalls.length;
+  }
   metrics.property_count = properties.length;
   return {
-    leads,
-    events,
+    leads: visibleLeads,
+    events: visibleEvents,
+    voiceCalls,
     properties,
     metrics,
-    threads: groupEventsByThread(events),
+    threads: groupEventsByThread(visibleEvents),
     propertyHealth: buildPropertyHealth(properties),
   };
 }

@@ -47,6 +47,24 @@ export function smsControlAction(message: string): "stop" | "start" | "help" | "
   return "";
 }
 
+export function normalizeTwilioContactAddress(value: string): string {
+  return value.replace(/^(?:rcs|sms|whatsapp):/i, "").trim();
+}
+
+export function inferPreferredChannelFromText(message = "", fallback: Channel | "email" | "voice" | "sms" = "sms"): "email" | "sms" | "voice" | "whatsapp" | "website_chat" {
+  if (/\b(email|e-mail).{0,24}\b(best|better|preferred|works|send|reply|details|me)\b|\b(best|better|preferred|works|send).{0,24}\b(email|e-mail)\b/i.test(message)) {
+    return "email";
+  }
+  if (/\b(text|sms).{0,24}\b(best|better|preferred|works|send|reply|details|me|options?)\b|\b(best|better|preferred|works|send).{0,24}\b(text|sms)\b/i.test(message)) {
+    return "sms";
+  }
+  if (/\b(call|phone).{0,24}\b(best|better|preferred|works|me|back)|\b(best|better|preferred|works).{0,24}\b(call|phone)\b/i.test(message)) {
+    return "voice";
+  }
+  if (/\bwhatsapp\b/i.test(message)) return "whatsapp";
+  return fallback as "email" | "sms" | "voice" | "whatsapp" | "website_chat";
+}
+
 export function requireDatabaseForChannelWrites(): void {
   if (!databaseEnabled()) {
     throw new Error("DATABASE_URL is required for hosted channel webhooks");
@@ -116,9 +134,10 @@ export function twilioWhatsAppIngestInput(payload: Record<string, string>): Chan
 function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" | "whatsapp"): ChannelIngestInput {
   const body = payload.Body || "";
   const action = smsControlAction(body);
-  const from = payload.From || "";
+  const from = normalizeTwilioContactAddress(payload.From || "");
   const threadRef = from ? `${channel}:${from}` : payload.MessageSid || `${channel}:unknown`;
   const channelLabel = channel === "whatsapp" ? "WhatsApp" : "SMS";
+  const preferredChannel = inferPreferredChannelFromText(body, channel);
   const base: ChannelIngestInput = {
     channel,
     agentName: "Theo",
@@ -129,7 +148,7 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
     threadRef,
     eventType: action ? `${channel}_${action}` : `${channel}_inbound`,
     messageText: body,
-    preferredChannel: channel,
+    preferredChannel,
     status: action ? "processed" : "received",
   };
 
@@ -175,26 +194,36 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
 }
 
 export function vapiVoiceIngestInput(payload: Record<string, unknown>): ChannelIngestInput {
-  const call = (payload.call || {}) as Record<string, unknown>;
-  const customer = (call.customer || payload.customer || {}) as Record<string, unknown>;
-  const phone = String(customer.number || payload.phone || payload.from || "");
-  const transcript = String(payload.transcript || payload.summary || payload.message || "");
-  const recordingUrl = String(payload.recordingUrl || call.recordingUrl || "");
-  const callId = String(call.id || payload.callId || payload.id || phone || "unknown");
+  const message = (payload.message && typeof payload.message === "object" ? payload.message : {}) as Record<string, unknown>;
+  const source = Object.keys(message).length ? message : payload;
+  const artifact = (source.artifact && typeof source.artifact === "object" ? source.artifact : {}) as Record<string, unknown>;
+  const call = ((source.call || payload.call) && typeof (source.call || payload.call) === "object"
+    ? (source.call || payload.call)
+    : {}) as Record<string, unknown>;
+  const customer = ((call.customer || source.customer || payload.customer) && typeof (call.customer || source.customer || payload.customer) === "object"
+    ? (call.customer || source.customer || payload.customer)
+    : {}) as Record<string, unknown>;
+  const phone = String(customer.number || source.phoneNumber || payload.phone || payload.from || "");
+  const transcriptValue = source.transcript || artifact.transcript || source.summary || artifact.summary || "";
+  const transcript = typeof transcriptValue === "string" ? transcriptValue : JSON.stringify(transcriptValue);
+  const summaryValue = source.summary || artifact.summary || transcript || "Voice call event received.";
+  const summary = typeof summaryValue === "string" ? summaryValue : JSON.stringify(summaryValue);
+  const recordingUrl = String(source.recordingUrl || artifact.recordingUrl || call.recordingUrl || "");
+  const callId = String(call.id || source.callId || payload.callId || payload.id || phone || "unknown");
 
   return {
     channel: "voice",
     agentName: "Aria",
     phone,
     source: "vapi",
-    sourceDetail: String(payload.type || payload.status || ""),
+    sourceDetail: String(source.type || payload.type || payload.status || ""),
     threadRef: `voice:${callId}`,
     eventType: "voice_call",
     messageText: transcript,
-    summary: String(payload.summary || transcript || "Voice call event received."),
+    summary,
     recordingUrl,
-    preferredChannel: "voice",
-    callConsent: payload.callRecordingConsent === false ? "no" : "",
+    preferredChannel: inferPreferredChannelFromText(transcript, "voice"),
+    callConsent: source.callRecordingConsent === false ? "no" : "",
     aiAction: "call_logged",
     nextAction: "review_call_summary",
     status: "received",
@@ -208,6 +237,7 @@ export function oliviaWebsiteIngestInput(payload: Record<string, unknown>): Chan
   const message = String(payload.message || payload.message_text || payload.question || "");
   const sessionId = String(payload.session_id || payload.sessionId || email || phone || "unknown");
   const propertyInterest = String(payload.property_interest || payload.propertyInterest || payload.address || "");
+  const preferredChannel = inferPreferredChannelFromText(message, "website_chat");
 
   return {
     channel: "website_chat",
@@ -222,7 +252,7 @@ export function oliviaWebsiteIngestInput(payload: Record<string, unknown>): Chan
     messageText: message,
     summary: message ? `Website chat: ${message}` : "Website chat event received.",
     propertyInterest,
-    preferredChannel: "website_chat",
+    preferredChannel,
     intent: String(payload.intent || "website_chat"),
     leadRole: String(payload.lead_role || payload.leadRole || ""),
     aiAction: "chat_logged",

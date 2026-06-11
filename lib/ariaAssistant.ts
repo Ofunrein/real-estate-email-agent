@@ -11,11 +11,13 @@
 // buildAriaAssistant() is pure (no IO) so it is unit-testable.
 
 import type { ClientConfig } from "@/lib/clientConfig";
+import { centralTexasServiceAreaText } from "@/lib/serviceAreas";
 
 export type AriaAssistantOptions = {
   publicUrl: string; // e.g. https://app.example.com
   secret?: string; // CHANNEL_WEBHOOK_SECRET
   respondModel?: string;
+  respondProvider?: string;
   styleContext?: string; // optional few-shot brand-voice block
 };
 
@@ -40,17 +42,34 @@ function systemPrompt(config: ClientConfig): string {
 Brand voice: ${config.brandVoice}
 Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems.
 
+${centralTexasServiceAreaText()}
+
 Call flow:
 - At the very start of the call, call getCallerContext once to load any prior history, then greet accordingly. If they are a returning caller, acknowledge it briefly.
+- Run the call like a good ISA with mile markers, not a rigid script: identify what brought them in, preferred follow-up channel, timeline, area, price range, bedroom/bathroom fit, and whether they need to sell before buying.
+- Keep the voice cadence light: quick acknowledgment, answer the immediate request, then one useful question. Avoid long monologues.
 - When the caller asks about a specific address, say "Let me pull that up" out loud first, then call lookupProperty and relay only the facts it returns. Never invent price, beds, baths, status, schools, crime, or neighborhood claims.
+- If speech-to-text seems to mishear an address, use the caller's loaded prior property interest from getCallerContext as the correction candidate. Example: if the caller says "Fairwood Avenue" but context says "4309 Fairway Path", ask or use the confirmed context instead of guessing.
+- If lookupProperty says it has no confirmed match, asks the caller to confirm an address, or only says it is still checking, do not provide listing facts. Ask the exact confirmation question or offer to search similar homes.
+- Do not call lookupProperty repeatedly for the same failed address unless the caller corrects the address or gives a different property.
 - When the caller describes what they want instead of one address (an area, bedroom count, or budget), say "Let me check what we have" out loud first, then call searchProperties and read back the top matches.
-- When you learn who they are and what they want (buyer/seller/renter/investor, budget, area, timeline), call qualifyLead to capture it. Ask at most one question at a time.
+- Do not say you cannot access listings until after lookupProperty or searchProperties returns no usable result. If a tool returns options, use them.
+- When you learn who they are and what they want (buyer/seller/renter/investor, budget, area, timeline, beds/baths, preferred channel, sell-before-buy), call qualifyLead to capture it. Ask at most one question at a time.
 - To book, cancel, or move a tour, call scheduleShowing. Confirm the date and time back to the caller before booking. Only schedule for the person on this call.
 - When wrapping up a useful call, call syncToCrm with a one-line summary.
-- If the caller asks for a human, or raises anything sensitive (fair housing, lending/mortgage qualification, legal/contract, negotiation, pricing judgment, or a complaint), use transferToHuman to connect them. Provide safe factual info first if you have it.
+- If the caller asks for a human, or raises anything sensitive (fair housing, lending/mortgage qualification, legal/contract, negotiation, pricing judgment, or a complaint), use transferToHuman to connect them. Provide safe factual info first if you have it. Human-assisted does not mean stopping useful property help; it means backup on judgment-sensitive parts.
+- If the caller is qualified but not ready, close with the next clear step and save it to CRM. The outbound cadence can keep working the lead later; do not promise unconfigured manual callbacks.
 - When the conversation is complete, thank them and use endCall.
 
 Keep replies short and human. One question at a time.`;
+}
+
+function modelProviderFor(model: string, explicit?: string): string {
+  if (explicit) return explicit;
+  const normalized = model.toLowerCase();
+  if (normalized.startsWith("gpt-") || normalized.startsWith("o")) return "openai";
+  if (normalized.includes("claude")) return "anthropic";
+  return "openai";
 }
 
 export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOptions): Record<string, unknown> {
@@ -90,6 +109,9 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
         budget: { type: "string" },
         timeline: { type: "string" },
         area: { type: "string" },
+        bedrooms: { type: "string", description: "Bedroom preference, e.g. 3 bed." },
+        bathrooms: { type: "string", description: "Bathroom preference, e.g. 2.5 bath." },
+        preferred_channel: { type: "string", enum: ["voice", "sms", "email"], description: "How the caller prefers follow-up." },
         property: { type: "string", description: "Address or listing they're interested in." },
         call_consent: { type: "string", description: "yes/no — may we call them back." },
         sms_consent: { type: "string", description: "yes/no — may we text them." },
@@ -132,8 +154,8 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
     name: `${voiceName} — ${config.clientName}`,
     firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
     model: {
-      provider: "anthropic",
-      model: opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-5-mini",
+      provider: modelProviderFor(opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini", opts.respondProvider || process.env.ARIA_MODEL_PROVIDER),
+      model: opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini",
       messages: [{ role: "system", content: system }],
       tools,
     },
@@ -141,7 +163,10 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
   };
 
   if (config.voiceId) {
-    assistant.voice = { provider: "11labs", voiceId: config.voiceId };
+    assistant.voice = {
+      provider: process.env.ARIA_VOICE_PROVIDER || "11labs",
+      voiceId: config.voiceId,
+    };
   }
 
   return assistant;

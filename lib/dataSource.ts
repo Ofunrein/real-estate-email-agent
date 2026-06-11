@@ -11,7 +11,8 @@ export async function loadAgentInboxData() {
   if (databaseEnabled()) {
     return loadAgentInboxDataFromDatabase();
   }
-  return loadAgentInboxDataFromSheets();
+  const data = await loadAgentInboxDataFromSheets();
+  return { ...data, voiceCalls: [] };
 }
 
 export async function readLeads(): Promise<SheetRow[]> {

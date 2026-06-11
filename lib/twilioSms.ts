@@ -16,17 +16,47 @@ export function smsAgentEnabled(): boolean {
 
 function missingConfig(): string {
   const missing = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"].filter((key) => !process.env[key]);
-  if (!process.env.TWILIO_MESSAGING_SERVICE_SID && !process.env.TWILIO_FROM) {
-    missing.push("TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM");
-  }
   return missing.join(", ");
+}
+
+function isRcsAddress(value: string): boolean {
+  return /^rcs:/i.test(value.trim());
+}
+
+function recipientDigits(value: string): string {
+  return value.replace(/^rcs:/i, "").replace(/\D/g, "");
+}
+
+export function isUnsafeSmsRecipient(value: string): boolean {
+  const digits = recipientDigits(value);
+  if (!digits) return true;
+  if (digits.length < 8 || digits.length > 15) return true;
+  if (/^0+$/.test(digits)) return true;
+  // NANP 555 numbers are reserved or test-like. Never let smoke tests hit Twilio.
+  if (digits.length === 11 && digits.startsWith("1") && digits.slice(4, 7) === "555") return true;
+  if (digits.length === 10 && digits.slice(3, 6) === "555") return true;
+  if (digits.startsWith("1555")) return true;
+  return false;
 }
 
 function cleanMediaUrls(mediaUrls: string[] = []): string[] {
   return mediaUrls
     .map((url) => url.trim())
     .filter((url) => /^https:\/\//i.test(url))
+    .map((url) => mediaProxyUrl(url))
     .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
+}
+
+function mediaProxyUrl(url: string): string {
+  const base = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  if (!base) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === new URL(base).hostname) return url;
+    return `${base}/api/media/proxy?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
+  }
 }
 
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
@@ -48,23 +78,43 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
   }
 
   const recipient = to.trim();
+  const recipientForSend = recipient.replace(/^rcs:/i, "");
   const message = body.trim();
   if (!recipient || !message) {
     return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or body", mediaCount: cleanUrls.length };
+  }
+  if (isUnsafeSmsRecipient(recipient)) {
+    return {
+      sent: false,
+      skipped: true,
+      sid: "",
+      error: `Blocked unsafe SMS recipient: ${recipient}`,
+      mediaCount: cleanUrls.length,
+    };
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
   const authToken = process.env.TWILIO_AUTH_TOKEN || "";
   const messagingServiceSid = (process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
+  const fromNumber = (process.env.TWILIO_FROM || "").trim();
   const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
   const form = new URLSearchParams({
-    To: recipient,
+    To: recipientForSend,
     Body: message,
   });
   if (messagingServiceSid) {
     form.set("MessagingServiceSid", messagingServiceSid);
   } else {
-    form.set("From", process.env.TWILIO_FROM || "");
+    if (!fromNumber) {
+      return {
+        sent: false,
+        skipped: true,
+        sid: "",
+        error: isRcsAddress(recipient) ? "TWILIO_MESSAGING_SERVICE_SID is required for RCS replies" : "TWILIO_FROM is required for SMS replies",
+        mediaCount: cleanUrls.length,
+      };
+    }
+    form.set("From", fromNumber);
   }
   for (const mediaUrl of cleanUrls) {
     form.append("MediaUrl", mediaUrl);

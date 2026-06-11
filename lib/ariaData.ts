@@ -61,6 +61,54 @@ function clean(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
+function unique(values: string[]): string[] {
+  return [...new Set(values.map(clean).filter(Boolean))];
+}
+
+function streetNumber(value?: string): string {
+  return clean(value).match(/\b\d{1,6}\b/)?.[0] || "";
+}
+
+function sameStreetNumber(a?: string, b?: string): boolean {
+  const left = streetNumber(a);
+  const right = streetNumber(b);
+  return Boolean(left && right && left === right);
+}
+
+function usefulNumericFact(value?: string): boolean {
+  const numeric = clean(value).replace(/[^\d.]/g, "");
+  return Boolean(numeric && Number(numeric) > 0);
+}
+
+// Guard against caching, texting, or speaking junk from failed scrapes, STT
+// mangles, or prompt fragments accidentally stored as a property address.
+function isUsableProperty(property: Partial<SheetRow>): property is SheetRow {
+  const addr = clean(property.address);
+  if (!addr || addr.length > 140) return false;
+  if (!streetNumber(addr)) return false;
+  if (/caller|asked|wants|more details|this property|undefined|null|message|prompt/i.test(addr)) return false;
+  return Boolean(
+    usefulNumericFact(property.price) ||
+    usefulNumericFact(property.beds) ||
+    usefulNumericFact(property.baths) ||
+    usefulNumericFact(property.sqft),
+  );
+}
+
+function addressCandidates(input: { address: string; message?: string; lead?: Partial<SheetRow> }): { candidates: string[]; correction: string } {
+  const address = clean(input.address);
+  const leadInterest = clean(input.lead?.property_interest);
+  const messageAddress = clean(input.message);
+  const correction = leadInterest && sameStreetNumber(address || messageAddress, leadInterest) ? leadInterest : "";
+  const values = [
+    address,
+    correction,
+    stripStreetSuffix(address),
+    correction ? stripStreetSuffix(correction) : "",
+  ];
+  return { candidates: unique(values), correction };
+}
+
 function formatPrice(value?: string): string {
   const numeric = clean(value).replace(/[^\d.]/g, "");
   if (!numeric) return "";
@@ -130,16 +178,17 @@ export async function lookupPropertyForVoice(
     return { properties: [], spoken: "What's the address you're asking about?", timedOut: false, fromCache: false };
   }
 
-  // Try exact address first, then suffix-stripped fallback (handles STT suffix mishearing)
-  let cached = await deps.findByAddresses([address], 1);
-  if (!cached.length) {
-    const stripped = stripStreetSuffix(address);
-    if (stripped !== address) {
-      cached = await deps.findByAddresses([stripped], 1);
+  const { candidates, correction } = addressCandidates(input);
+  let cached: SheetRow[] = [];
+  for (const candidate of candidates) {
+    const matches = (await deps.findByAddresses([candidate], 3)).filter(isUsableProperty);
+    if (matches.length) {
+      cached = matches.slice(0, 1);
+      break;
     }
   }
 
-  const enrichAddress = cached[0]?.address || address;
+  const enrichAddress = cached[0]?.address || correction || address;
   const enrichPromise = deps
     .enrich({
       message: input.message || address,
@@ -148,18 +197,11 @@ export async function lookupPropertyForVoice(
       propertyInterest: enrichAddress,
     })
     .then(async (result) => {
-      const property = result.properties[0];
+      const properties = result.properties.filter(isUsableProperty);
+      const property = properties[0];
       if (property) await deps.cacheProperty(property, "aria_voice_lookup").catch(() => null);
-      return result;
+      return { ...result, properties };
     });
-
-// Guard against caching/texting junk from failed scrapes or STT-mangled addresses.
-function isUsableProperty(property: Partial<SheetRow>): boolean {
-  const addr = clean(property.address);
-  if (!addr || addr.length > 120) return false;
-  if (/caller|wants|more details|this property|undefined|null/i.test(addr)) return false;
-  return Boolean(clean(property.price) || clean(property.beds) || clean(property.baths) || clean(property.sqft));
-}
 
   const raced = await Promise.race([
     enrichPromise.then((result) => ({ kind: "enriched" as const, result })),
@@ -170,7 +212,11 @@ function isUsableProperty(property: Partial<SheetRow>): boolean {
     const property = raced.result.properties[0];
     return {
       properties: raced.result.properties,
-      spoken: property ? speakProperty(property) : `I couldn't pull up ${address} just now.`,
+      spoken: property
+        ? speakProperty(property)
+        : correction && correction !== address
+          ? `I heard ${address}, but your recent property is ${correction}. Did you mean ${correction}?`
+          : `I don't have a confirmed match for ${address} yet. Can you confirm the full street address and city?`,
       timedOut: false,
       fromCache: false,
     };
@@ -198,7 +244,9 @@ function isUsableProperty(property: Partial<SheetRow>): boolean {
   }
   return {
     properties: [],
-    spoken: `Let me pull up ${address} — I'll text you the full details right after this call.`,
+    spoken: correction && correction !== address
+      ? `I heard ${address}, but your recent property is ${correction}. Did you mean ${correction}?`
+      : `I'm checking ${address}, but I don't have a confirmed match yet. Can you confirm the full street address and city?`,
     timedOut: true,
     fromCache: false,
   };
@@ -214,7 +262,7 @@ function speakSearchOption(property: SheetRow, index: number): string {
 }
 
 export function speakSearchResults(properties: SheetRow[]): string {
-  const usable = properties.filter((property) => clean(property.address)).slice(0, 3);
+  const usable = properties.filter(isUsableProperty).slice(0, 3);
   if (!usable.length) {
     return "I don't see matching listings in our system right now. I can have someone pull fresh options and follow up — want me to do that?";
   }
@@ -225,21 +273,54 @@ export function speakSearchResults(properties: SheetRow[]): string {
 
 export type AriaSearchDeps = {
   findCandidates: (criteria: PropertySearchCriteria, limit?: number) => Promise<SheetRow[]>;
+  enrich: (input: {
+    message: string;
+    lead?: Partial<SheetRow>;
+    properties?: SheetRow[];
+    propertyInterest?: string;
+  }) => Promise<{ properties: SheetRow[]; context: string }>;
+  cacheProperty: (property: Partial<SheetRow>, source?: string) => Promise<SheetRow | null>;
+  sendSms: (to: string, body: string, mediaUrls?: string[]) => Promise<unknown>;
+  budgetMs: number;
 };
 
 const defaultSearchDeps: AriaSearchDeps = {
   findCandidates: findCandidatePropertiesFromDatabase,
+  enrich: enrichTheoData,
+  cacheProperty: upsertPropertyToDatabase,
+  sendSms: sendTheoSms,
+  budgetMs: defaultBudgetMs(),
 };
 
 export type VoiceSearchResult = {
   properties: SheetRow[];
   spoken: string;
+  timedOut: boolean;
+  fromCache: boolean;
 };
 
-// Property search tuned for voice: query the cache (instant) and speak the top
-// matches. Cold/live area scraping is intentionally out of the live-call path.
+function searchSmsBody(properties: SheetRow[], criteria: string): string {
+  const lines = properties
+    .filter((property) => clean(property.address))
+    .slice(0, 3)
+    .map((property, index) => {
+      const facts = [
+        formatPrice(property.price),
+        property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
+        formatSqft(property.sqft),
+        clean(property.neighborhood) || clean(property.city),
+      ].filter(Boolean).join(" • ");
+      const link = clean(property.listing_url);
+      return [`${index + 1}. ${clean(property.address)}`, facts, link].filter(Boolean).join("\n");
+    });
+  return [`Fresh options for ${criteria || "your search"}:`, ...lines].filter(Boolean).join("\n\n");
+}
+
+// Property search tuned for voice: return cached matches quickly, but start a
+// fresh enrichment search too. If enrichment wins the short budget, speak it.
+// If not, speak cache and text fresh options after the call when available.
 export async function searchPropertiesForVoice(
-  input: { query?: string; area?: string; beds?: number; baths?: number; minPrice?: number; maxPrice?: number },
+  input: { query?: string; area?: string; beds?: number; baths?: number; minPrice?: number; maxPrice?: number; phone?: string; lead?: Partial<SheetRow> },
   deps: AriaSearchDeps = defaultSearchDeps,
 ): Promise<VoiceSearchResult> {
   const criteria: PropertySearchCriteria = {
@@ -251,6 +332,58 @@ export async function searchPropertiesForVoice(
     maxPrice: input.maxPrice,
     mode: "general",
   };
-  const properties = await deps.findCandidates(criteria, 3);
-  return { properties, spoken: speakSearchResults(properties) };
+  const criteriaText = [
+    clean(input.query),
+    clean(input.area),
+    input.beds ? `${input.beds} bed` : "",
+    input.baths ? `${input.baths} bath` : "",
+    input.maxPrice ? `under ${formatPrice(String(input.maxPrice))}` : "",
+  ].filter(Boolean).join(", ");
+
+  const cached = (await deps.findCandidates(criteria, 3)).filter(isUsableProperty);
+  const enrichPromise = deps.enrich({
+    message: criteriaText || "Find matching homes",
+    lead: input.lead,
+    properties: cached,
+    propertyInterest: criteriaText,
+  }).then(async (result) => {
+    const properties = result.properties.filter(isUsableProperty).slice(0, 3);
+    await Promise.all(properties.map((property) => deps.cacheProperty(property, "aria_voice_search").catch(() => null)));
+    return { ...result, properties };
+  });
+
+  const raced = await Promise.race([
+    enrichPromise.then((result) => ({ kind: "enriched" as const, result })),
+    delay(deps.budgetMs).then(() => ({ kind: "timeout" as const })),
+  ]);
+
+  if (raced.kind === "enriched" && raced.result.properties.length) {
+    return { properties: raced.result.properties, spoken: speakSearchResults(raced.result.properties), timedOut: false, fromCache: false };
+  }
+
+  if (input.phone) {
+    void enrichPromise
+      .then((result) => {
+        const usable = result.properties.filter(isUsableProperty);
+        if (usable.length) return deps.sendSms(input.phone as string, searchSmsBody(usable, criteriaText));
+        return undefined;
+      })
+      .catch(() => undefined);
+  }
+
+  if (cached.length) {
+    return {
+      properties: cached,
+      spoken: `${speakSearchResults(cached)} I'm also checking fresh options and can text them to you.`,
+      timedOut: raced.kind === "timeout",
+      fromCache: true,
+    };
+  }
+
+  return {
+    properties: [],
+    spoken: "I don't see matching listings in our saved data yet. I'm checking fresh options and can text them to you when they come in.",
+    timedOut: true,
+    fromCache: false,
+  };
 }

@@ -135,6 +135,7 @@ SMS_IMAGE_MODE=on_request        # off | on_request | property_reply
 SMS_MAX_IMAGES=3                 # Max one photo per requested property, capped at 3
 THEO_ENRICHMENT_TIMEOUT_MS=14000 # Live data budget so SMS photo/detail lookups can return before reply
 THEO_APIFY_TIMEOUT_SECONDS=12    # Keeps live SMS enrichment inside Twilio's webhook window
+THEO_REPLY_DEBOUNCE_MS=2500      # Wait briefly to combine rapid-fire texts into one reply
 GOOGLE_MAPS_API_KEY=             # Optional Street View fallback when Zillow photos are unavailable
 ```
 
@@ -211,10 +212,10 @@ Hosted channel webhooks write to Neon and then appear in the dashboard:
 Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. V1 behavior:
 
 - Theo SMS logs inbound messages, updates shared memory, generates one safe reply, sends through Twilio only when `ENABLE_SMS_AGENT=true`, then logs the outbound reply.
-- Theo sends through `TWILIO_MESSAGING_SERVICE_SID` when set. Use this for RCS-capable Twilio Messaging Services; Twilio can fall back to SMS/MMS when the recipient is not RCS-capable. Keep `TWILIO_FROM` configured as the direct-number fallback.
+- Theo preserves the inbound thread type. If Twilio posts `From=rcs:+...`, Theo replies through `TWILIO_MESSAGING_SERVICE_SID`; if Twilio posts `From=+...`, Theo replies from `TWILIO_FROM` so normal SMS stays in the phone-number thread.
 - Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
 - Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
-- Theo can send MMS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has public HTTPS `photo_url` values. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. If live lookup finds a missing or outside-area property, Theo caches it to Neon and appends it to the `properties` Sheet when possible. If Zillow media is missing and `GOOGLE_MAPS_API_KEY` is set, Theo can use a Street View fallback for the requested address. `property_reply` can attach images on normal property replies. Sensitive/handoff replies never attach images.
+- Theo can send MMS/RCS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has a real public HTTPS image URL. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. Sendable media is proxied through `/api/media/proxy` so Twilio can fetch it reliably. Google Street View fallback URLs are not treated as sendable photos because they can return Google error images; when no real photo is available, Theo sends the listing/photo-gallery link instead. Sensitive/handoff replies never attach images.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
 
@@ -232,11 +233,22 @@ npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
 
 Watch the `npm run dev` terminal for `[Theo SMS]` lines. This simulates an inbound Twilio SMS locally, can send a real reply when `ENABLE_SMS_AGENT=true`, and records the same Neon conversation events the dashboard reads.
 
-Theo does not intentionally wait before replying. Inbound SMS is handled as soon as Twilio posts to `/api/webhooks/theo-sms`; response time is the sum of database writes, context reads, live enrichment, Claude classification/reply, Twilio send, and outbound logging. The terminal logs show each phase:
+Do not use reserved `+1555...` numbers for live Twilio smoke tests. Theo blocks reserved/test-like NANP recipients before sending and skips reserved inbound payloads before writing to Neon, so bad local tests cannot create invalid-number sends or dashboard noise. Use `ENABLE_SMS_AGENT=false` for dry runs, or test against a real opted-in device.
+
+For live SMS/RCS testing, expose the Next.js app with a public URL, set `PUBLIC_BASE_URL`, then point the Twilio Messaging Service inbound webhook at Theo:
+
+```bash
+npm run theo:twilio:configure
+```
+
+That command sets the Messaging Service inbound URL to `${PUBLIC_BASE_URL}/api/webhooks/theo-sms`, disables deferring RCS inbound messages to individual number webhooks, and also points the direct `TWILIO_FROM` SMS webhook at Theo. It preserves the phone number's voice webhook, so Vapi calls can keep working while SMS/RCS land in the same Theo route. Quick tunnel URLs are only for local testing; production needs a stable deployed URL.
+
+Theo logs inbound SMS as soon as Twilio posts to `/api/webhooks/theo-sms`, then waits `THEO_REPLY_DEBOUNCE_MS` before replying so rapid-fire texts can collapse into one response. If a newer inbound message arrives in the same thread during that window, the older webhook exits without sending and the newest webhook replies with the combined pending messages. Response time is the sum of debounce delay, database writes, context reads, live enrichment, Claude classification/reply, Twilio send, and outbound logging. The terminal logs show each phase:
 
 ```text
 [Theo SMS] inbound received { parseMs: 4, ... }
 [Theo SMS] inbound logged { elapsedMs: 42, totalMs: 71, ... }
+[Theo SMS] debounce checked { debounceMs: 2500, hasNewerInbound: false, ... }
 [Theo SMS] context read complete { propertyRows: 5, threadEvents: 8, elapsedMs: 54, ... }
 [Theo SMS] metric { service: 'claude', label: 'theo_reply', elapsedMs: 1420, cost: '$0.00411', sessionCost: '$0.00495' }
 [Theo SMS] reply send processed { replyStatus: 'sent', elapsedMs: 311, ... }

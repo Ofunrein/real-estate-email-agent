@@ -17,7 +17,7 @@ function deps(overrides: Partial<AriaToolDeps> = {}): AriaToolDeps {
       needsStitch: true,
     }),
     lookupProperty: async ({ address }) => ({
-      properties: [],
+      properties: [{ address } as never],
       spoken: `${address} is listed at $450,000, 3 bed, 2 bath.`,
       timedOut: false,
       fromCache: false,
@@ -64,6 +64,54 @@ test("lookupProperty: relays spoken result + logs event", async () => {
   assert.equal(out.ingest.aiAction, "property_lookup");
 });
 
+test("lookupProperty: hydrates prior lead memory before lookup", async () => {
+  let receivedLead: unknown = null;
+  const out = await runAriaTool(
+    "lookupProperty",
+    { address: "4309 Fairwood Avenue" },
+    ctx,
+    deps({
+      resolveCaller: async () => ({
+        matched: true,
+        lead: { property_interest: "4309 Fairway Path" } as never,
+        events: [],
+        channelsSeen: ["sms"],
+        lastTouchAt: "2026-06-11T00:00:00Z",
+        needsStitch: false,
+      }),
+      lookupProperty: async ({ lead }) => {
+        receivedLead = lead;
+        return {
+          properties: [],
+          spoken: `Using memory for ${lead?.property_interest}`,
+          timedOut: false,
+          fromCache: false,
+        };
+      },
+    }),
+  );
+  assert.match(out.result, /4309 Fairway Path/);
+  assert.deepEqual(receivedLead, { property_interest: "4309 Fairway Path" });
+});
+
+test("lookupProperty: failed lookup does not overwrite known property interest", async () => {
+  const out = await runAriaTool(
+    "lookupProperty",
+    { address: "4309 Fairwood Avenue" },
+    { ...ctx, lead: { property_interest: "4309 Fairway Path" } as never },
+    deps({
+      lookupProperty: async () => ({
+        properties: [],
+        spoken: "I don't have a confirmed match yet.",
+        timedOut: false,
+        fromCache: false,
+      }),
+    }),
+  );
+  assert.equal(out.ingest.propertyInterest, "4309 Fairway Path");
+  assert.doesNotMatch(out.ingest.propertyInterest || "", /Fairwood/);
+});
+
 test("lookupProperty: timeout sets async-sms action", async () => {
   const out = await runAriaTool("lookupProperty", { address: "9 Oak" }, ctx, deps({
     lookupProperty: async ({ address }) => ({ properties: [], spoken: `pulling up ${address}`, timedOut: true, fromCache: false }),
@@ -85,9 +133,22 @@ test("searchProperties: empty result action", async () => {
   assert.equal(out.ingest.aiAction, "property_search_empty");
 });
 
-test("qualifyLead: captures fields, normalizes consent + intent", async () => {  const out = await runAriaTool(
+test("qualifyLead: captures fields, normalizes consent + intent", async () => {
+  const out = await runAriaTool(
     "qualifyLead",
-    { name: "Sam Lee", email: "SAM@X.com", role: "seller", budget: "$600k", area: "Mueller", timeline: "60 days", call_consent: "sure", sms_consent: "no" },
+    {
+      name: "Sam Lee",
+      email: "SAM@X.com",
+      role: "seller",
+      budget: "$600k",
+      area: "Mueller",
+      timeline: "60 days",
+      bedrooms: "3 bed",
+      bathrooms: "2.5 bath",
+      preferred_channel: "email",
+      call_consent: "sure",
+      sms_consent: "no",
+    },
     ctx,
     deps(),
   );
@@ -96,7 +157,10 @@ test("qualifyLead: captures fields, normalizes consent + intent", async () => { 
   assert.equal(out.ingest.email, "sam@x.com");
   assert.equal(out.ingest.callConsent, "yes");
   assert.equal(out.ingest.smsConsent, "no");
+  assert.equal(out.ingest.preferredChannel, "email");
   assert.equal(out.ingest.aiAction, "lead_qualified");
+  assert.match(out.ingest.summary || "", /beds=3 bed/);
+  assert.match(out.ingest.summary || "", /baths=2.5 bath/);
   assert.match(out.result, /seller/);
 });
 
