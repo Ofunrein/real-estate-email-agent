@@ -100,3 +100,34 @@ def update_row(sheets, spreadsheet_id: str, tab: str, row_number: int, headers: 
         valueInputOption="RAW",
         body={"values": [values_for_headers(headers, row)]},
     ).execute()
+
+
+def batch_update_rows(
+    sheets,
+    spreadsheet_id: str,
+    tab: str,
+    headers: list[str],
+    rows: list[tuple[int, dict]],
+    *,
+    chunk_size: int = 50,
+) -> int:
+    if not rows:
+        return 0
+    updated = 0
+    for start in range(0, len(rows), chunk_size):
+        chunk = rows[start:start + chunk_size]
+        sheets.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={
+                "valueInputOption": "RAW",
+                "data": [
+                    {
+                        "range": f"{tab}!A{row_number}:ZZ{row_number}",
+                        "values": [values_for_headers(headers, row)],
+                    }
+                    for row_number, row in chunk
+                ],
+            },
+        ).execute()
+        updated += len(chunk)
+    return updated
