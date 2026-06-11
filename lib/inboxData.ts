@@ -82,6 +82,86 @@ function isInternalVoiceEvent(row: SheetRow) {
   return channelFor(row) === "voice";
 }
 
+export type VoiceTranscriptTurn = {
+  speaker: string;
+  direction: "inbound" | "outbound";
+  text: string;
+};
+
+const VOICE_SPEAKER_LINE = /^(AI|Assistant|Aria|Bot|User|Caller|Lead|Customer):\s*(.*)$/i;
+const VOICE_SPEAKER_LABEL = /^(AI|Assistant|Aria|Bot|User|Caller|Lead|Customer)$/i;
+
+function voiceSpeakerFromLabel(label: string): Pick<VoiceTranscriptTurn, "speaker" | "direction"> {
+  const normalized = label.toLowerCase();
+  const outbound = ["ai", "assistant", "aria", "bot"].includes(normalized);
+  return {
+    speaker: outbound ? "Aria" : "Lead",
+    direction: outbound ? "outbound" : "inbound",
+  };
+}
+
+function parseVoiceMessagesJson(raw: string): VoiceTranscriptTurn[] | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const turns: VoiceTranscriptTurn[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== "object") continue;
+      const item = entry as Record<string, unknown>;
+      const role = String(item.role || item.speaker || "").toLowerCase();
+      const text = String(item.message ?? item.content ?? item.text ?? "").trim();
+      if (!text) continue;
+      const label = ["assistant", "bot", "ai"].includes(role) ? "AI" : role === "user" ? "User" : role;
+      turns.push({ ...voiceSpeakerFromLabel(label), text });
+    }
+    return turns.length ? turns : null;
+  } catch {
+    return null;
+  }
+}
+
+export function voiceCallTranscriptSource(call: SheetRow): string {
+  const raw = (call.transcript || call.message_text || "").trim();
+  if (!raw || raw === "[object Object]") return "";
+  return raw;
+}
+
+export function parseVoiceTranscript(transcript = ""): VoiceTranscriptTurn[] {
+  const trimmed = transcript.trim();
+  if (!trimmed) return [];
+
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    const jsonTurns = parseVoiceMessagesJson(trimmed);
+    if (jsonTurns?.length) return jsonTurns;
+  }
+
+  const turns: VoiceTranscriptTurn[] = [];
+  for (const rawLine of trimmed.split(/\n+/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const colonMatch = VOICE_SPEAKER_LINE.exec(line);
+    if (colonMatch) {
+      turns.push({ ...voiceSpeakerFromLabel(colonMatch[1]), text: colonMatch[2].trim() });
+      continue;
+    }
+
+    const labelMatch = VOICE_SPEAKER_LABEL.exec(line);
+    if (labelMatch) {
+      turns.push({ ...voiceSpeakerFromLabel(labelMatch[1]), text: "" });
+      continue;
+    }
+
+    const last = turns[turns.length - 1];
+    if (last) {
+      last.text = `${last.text} ${line}`.trim();
+    } else {
+      turns.push({ speaker: "Call", direction: "inbound", text: line });
+    }
+  }
+  return turns;
+}
+
 export function composeInboxData(leads: SheetRow[], events: SheetRow[], properties: SheetRow[], voiceCalls: SheetRow[] = []): AgentInboxData {
   const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead));
   const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event));

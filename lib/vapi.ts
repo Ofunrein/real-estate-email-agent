@@ -105,11 +105,37 @@ export function formatToolResults(results: Array<{ id: string; result: string }>
   return { results: results.map((entry) => ({ toolCallId: entry.id, result: entry.result })) };
 }
 
+function formatTranscriptFromMessages(messages: unknown): string {
+  if (!Array.isArray(messages)) return "";
+  return messages
+    .map((entry) => {
+      const item = asObject(entry);
+      const role = String(item.role || item.speaker || "").toLowerCase();
+      const label = ["assistant", "bot", "ai"].includes(role) ? "AI" : "User";
+      const text = String(item.message ?? item.content ?? item.text ?? "").trim();
+      return text ? `${label}: ${text}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function normalizeTranscriptValue(value: unknown, messages: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== "[object Object]") return trimmed;
+  }
+  const fromMessages = formatTranscriptFromMessages(messages);
+  if (fromMessages) return fromMessages;
+  if (Array.isArray(value)) return formatTranscriptFromMessages(value);
+  return typeof value === "string" ? value : "";
+}
+
 export function parseEndOfCallReport(payload: Record<string, unknown>): VapiEndOfCall {
   const message = asObject(payload.message);
   const call = asObject(message.call || payload.call);
   const customer = asObject(call.customer || message.customer);
   const artifact = asObject(message.artifact);
+  const messages = artifact.messages ?? message.messages;
 
   const startedAt = String(message.startedAt || call.startedAt || "");
   const endedAt = String(message.endedAt || call.endedAt || "");
@@ -121,7 +147,7 @@ export function parseEndOfCallReport(payload: Record<string, unknown>): VapiEndO
   return {
     callId: String(call.id || message.callId || payload.callId || ""),
     phone: String(customer.number || message.phoneNumber || ""),
-    transcript: String(message.transcript || artifact.transcript || ""),
+    transcript: normalizeTranscriptValue(message.transcript ?? artifact.transcript, messages),
     recordingUrl: String(message.recordingUrl || artifact.recordingUrl || call.recordingUrl || ""),
     summary: String(message.summary || artifact.summary || ""),
     startedAt,
