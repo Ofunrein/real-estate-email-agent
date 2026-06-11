@@ -98,30 +98,37 @@ function getCallerContext(ctx: AriaToolContext, identity: CallerIdentity): AriaT
 
   if (!identity.matched || !identity.lead) {
     return {
-      result: "No prior record for this number. Treat as a new caller and offer to help fresh.",
+      result: "New caller. No prior record. Greet naturally and offer to help.",
       ingest: { ...ingest, summary: "Inbound call from an unrecognized number." },
     };
   }
 
   const lead = identity.lead;
   const name = str(lead.full_name);
-  const channels = identity.channelsSeen.join(", ");
   const interest = str(lead.property_interest) || str(lead.area);
-  const parts = [
-    name ? `Returning caller: ${name}.` : "Returning caller.",
-    channels ? `Prior contact via ${channels}.` : "",
-    interest ? `Previously interested in ${interest}.` : "",
-    lead.lead_role ? `Role: ${lead.lead_role}.` : "",
+  const role = str(lead.lead_role);
+  const budget = str(lead.budget);
+
+  // Return structured context for the AI to use naturally — NOT as a greeting instruction.
+  // Only include name if actually known (not blank). AI should use this context silently
+  // and work it into conversation naturally, NOT announce "welcome back" or say they called before.
+  const contextParts = [
+    name ? `Caller name: ${name}.` : "",
+    role ? `Role: ${role}.` : "",
+    interest ? `Property interest: ${interest}.` : "",
+    budget ? `Budget: ${budget}.` : "",
+    identity.channelsSeen.length ? `Prior contact channels: ${identity.channelsSeen.join(", ")}.` : "",
+    identity.lastTouchAt ? `Last contact: ${identity.lastTouchAt.slice(0, 10)}.` : "",
   ].filter(Boolean).join(" ");
 
   return {
-    result: parts,
+    result: contextParts || "Returning caller. No detailed profile. Greet naturally.",
     ingest: {
       ...ingest,
       fullName: name,
       email: str(lead.email),
       propertyInterest: str(lead.property_interest),
-      summary: `Recognized returning caller${name ? ` ${name}` : ""} (${channels || "voice"}).`,
+      summary: `Context loaded for${name ? ` ${name}` : " caller"}.`,
     },
   };
 }

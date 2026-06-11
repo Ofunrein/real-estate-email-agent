@@ -47,7 +47,7 @@ async function run() {
 
   const caller = await runAriaTool("getCallerContext", {}, ctx, fakeDeps);
   console.log("getCallerContext ->", caller.result);
-  assert.match(caller.result, /Returning caller: Sam Buyer/);
+  assert.match(caller.result, /Caller name: Sam Buyer/);
   assert.equal(caller.ingest.aiAction, "caller_matched");
 
   const lookup = await runAriaTool("lookupProperty", { address: "123 Main St" }, ctx, fakeDeps);

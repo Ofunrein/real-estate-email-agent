@@ -44,7 +44,7 @@ test("getCallerContext: returning caller summary + matched action", async () => 
       needsStitch: false,
     }),
   }));
-  assert.match(out.result, /Returning caller: Sam Lee/);
+  assert.match(out.result, /Caller name: Sam Lee/);
   assert.match(out.result, /email, sms/);
   assert.equal(out.ingest.aiAction, "caller_matched");
   assert.equal(out.ingest.fullName, "Sam Lee");

@@ -33,6 +33,18 @@ export type AriaDataDeps = {
   budgetMs: number;
 };
 
+// STT commonly mishears street suffixes (Road/Path/Drive/Way all sound similar).
+// Strip the trailing suffix to get a base that matches any suffix in the DB.
+// e.g. "4309 Fairway Road" → "4309 Fairway" → finds "4309 Fairway Path" ✅
+const STREET_SUFFIX_RE = /\s+\b(st|street|dr|drive|rd|road|ave|avenue|blvd|boulevard|ln|lane|way|ct|court|cir|circle|trl|trail|path|cv|cove|pkwy|parkway|pl|place|ter|terrace|run|loop|bend|ridge|crossing|hollow|glen|grove|hills?|valley|view|crest|canyon|falls|springs|lake|forest|woods|park|bay|pointe?)\b\.?(\s+|,|$)/i;
+
+export function stripStreetSuffix(address: string): string {
+  const normalized = clean(address);
+  // Only strip if the suffix is at the end (after the street name, before city/state)
+  const match = normalized.match(/^(\d+\s+\S+(?:\s+\S+)?)\s+\b(?:st|street|dr|drive|rd|road|ave|avenue|blvd|boulevard|ln|lane|way|ct|court|cir|circle|trl|trail|path|cv|cove|pkwy|parkway|pl|place|ter|terrace|run|loop|bend|ridge|crossing|hollow|glen|grove|hills?|valley|view|crest|canyon|falls|springs|lake|forest|woods|park|bay|pointe?)\b/i);
+  return match?.[1] || normalized;
+}
+
 function defaultBudgetMs(): number {
   return Math.max(500, Number(process.env.ARIA_ENRICHMENT_TIMEOUT_MS || "3500"));
 }
@@ -107,6 +119,8 @@ function delay(ms: number): Promise<"timeout"> {
 }
 
 // Cache-first property lookup tuned for a live phone call.
+// STT-tolerant: if the exact address isn't in cache, tries the suffix-stripped
+// form (e.g. "4309 Fairway Road" → "4309 Fairway") to survive mishearing.
 export async function lookupPropertyForVoice(
   input: { address: string; phone?: string; message?: string; lead?: Partial<SheetRow> },
   deps: AriaDataDeps = defaultDeps,
@@ -116,20 +130,36 @@ export async function lookupPropertyForVoice(
     return { properties: [], spoken: "What's the address you're asking about?", timedOut: false, fromCache: false };
   }
 
-  const cached = await deps.findByAddresses([address], 1);
+  // Try exact address first, then suffix-stripped fallback (handles STT suffix mishearing)
+  let cached = await deps.findByAddresses([address], 1);
+  if (!cached.length) {
+    const stripped = stripStreetSuffix(address);
+    if (stripped !== address) {
+      cached = await deps.findByAddresses([stripped], 1);
+    }
+  }
 
+  const enrichAddress = cached[0]?.address || address;
   const enrichPromise = deps
     .enrich({
       message: input.message || address,
       lead: input.lead,
       properties: cached,
-      propertyInterest: address,
+      propertyInterest: enrichAddress,
     })
     .then(async (result) => {
       const property = result.properties[0];
       if (property) await deps.cacheProperty(property, "aria_voice_lookup").catch(() => null);
       return result;
     });
+
+// Guard against caching/texting junk from failed scrapes or STT-mangled addresses.
+function isUsableProperty(property: Partial<SheetRow>): boolean {
+  const addr = clean(property.address);
+  if (!addr || addr.length > 120) return false;
+  if (/caller|wants|more details|this property|undefined|null/i.test(addr)) return false;
+  return Boolean(clean(property.price) || clean(property.beds) || clean(property.baths) || clean(property.sqft));
+}
 
   const raced = await Promise.race([
     enrichPromise.then((result) => ({ kind: "enriched" as const, result })),
@@ -146,12 +176,12 @@ export async function lookupPropertyForVoice(
     };
   }
 
-  // Budget expired. Let enrichment finish in the background and text the result.
+  // Budget expired. Only text if enrichment returns valid, usable data.
   if (input.phone) {
     void enrichPromise
       .then((result) => {
         const property = result.properties[0];
-        if (property) return deps.sendSms(input.phone as string, propertySmsBody(property));
+        if (property && isUsableProperty(property)) return deps.sendSms(input.phone as string, propertySmsBody(property));
         return undefined;
       })
       .catch(() => undefined);
