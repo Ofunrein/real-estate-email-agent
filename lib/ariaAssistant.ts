@@ -133,7 +133,7 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
     firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
     model: {
       provider: "anthropic",
-      model: opts.respondModel || process.env.ARIA_RESPOND_MODEL || "claude-sonnet-4-6",
+      model: opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-5-mini",
       messages: [{ role: "system", content: system }],
       tools,
     },
