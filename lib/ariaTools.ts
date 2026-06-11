@@ -46,7 +46,7 @@ export type AriaToolContext = {
 export type AriaToolDeps = {
   resolveCaller: (phone: string) => Promise<CallerIdentity>;
   lookupProperty: (input: { address: string; phone?: string; message?: string; lead?: Partial<SheetRow> }) => Promise<VoiceLookupResult>;
-  searchProperties: (input: { query?: string; area?: string; beds?: number; baths?: number; minPrice?: number; maxPrice?: number }) => Promise<VoiceSearchResult>;
+  searchProperties: (input: { query?: string; area?: string; beds?: number; baths?: number; minPrice?: number; maxPrice?: number; phone?: string; lead?: Partial<SheetRow> }) => Promise<VoiceSearchResult>;
   getCrm: () => CrmAdapter | null;
   calendarId: string;
   timezone: string;
@@ -87,6 +87,16 @@ function baseIngest(ctx: AriaToolContext): ChannelIngestInput {
     preferredChannel: "voice",
     status: "received",
   };
+}
+
+async function hydrateContext(ctx: AriaToolContext, deps: AriaToolDeps): Promise<AriaToolContext> {
+  if (ctx.lead || !ctx.phone) return ctx;
+  try {
+    const identity = await deps.resolveCaller(ctx.phone);
+    return identity.lead ? { ...ctx, lead: identity.lead } : ctx;
+  } catch {
+    return ctx;
+  }
 }
 
 function getCallerContext(ctx: AriaToolContext, identity: CallerIdentity): AriaToolOutcome {
@@ -141,13 +151,14 @@ async function lookupProperty(ctx: AriaToolContext, args: Record<string, unknown
     message: str(args.message) || address,
     lead: ctx.lead || undefined,
   });
+  const confirmedInterest = str(lookup.properties[0]?.address) || str(ctx.lead?.property_interest);
   return {
     result: lookup.spoken,
     ingest: {
       ...baseIngest(ctx),
       eventType: "voice_property_lookup",
       messageText: address,
-      propertyInterest: address,
+      propertyInterest: confirmedInterest,
       aiAction: lookup.timedOut ? "property_lookup_async_sms" : "property_lookup",
       summary: lookup.spoken,
     },
@@ -170,6 +181,8 @@ async function searchProperties(ctx: AriaToolContext, args: Record<string, unkno
     baths: num(args.baths),
     minPrice: num(args.minPrice ?? args.min_price),
     maxPrice: num(args.maxPrice ?? args.max_price),
+    phone: ctx.phone,
+    lead: ctx.lead || undefined,
   });
   const criteria = [area || query, args.beds ? `${args.beds}bd` : "", args.maxPrice ? `<=${args.maxPrice}` : ""]
     .filter(Boolean)
@@ -180,7 +193,7 @@ async function searchProperties(ctx: AriaToolContext, args: Record<string, unkno
       ...baseIngest(ctx),
       eventType: "voice_property_search",
       messageText: criteria,
-      aiAction: search.properties.length ? "property_search_results" : "property_search_empty",
+      aiAction: search.timedOut ? "property_search_async_sms" : search.properties.length ? "property_search_results" : "property_search_empty",
       summary: `Voice property search (${criteria || "general"}) → ${search.properties.length} matches.`,
     },
   };
@@ -287,6 +300,9 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
   const budget = str(args.budget);
   const timeline = str(args.timeline);
   const area = str(args.area || args.location);
+  const bedrooms = str(args.bedrooms || args.beds);
+  const bathrooms = str(args.bathrooms || args.baths);
+  const preferredChannel = str(args.preferred_channel || args.preferredChannel);
   const interest = str(args.property || args.property_interest || args.propertyInterest || args.address);
   const callConsent = consent(args.call_consent ?? args.callConsent);
   const smsConsent = consent(args.sms_consent ?? args.smsConsent);
@@ -295,6 +311,8 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
     role ? `a ${role}` : "your details",
     budget ? `budget ${budget}` : "",
     area ? `in ${area}` : "",
+    bedrooms ? bedrooms : "",
+    bathrooms ? bathrooms : "",
     timeline ? `timeline ${timeline}` : "",
   ].filter(Boolean).join(", ");
 
@@ -308,6 +326,7 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
       leadRole: role,
       intent: role ? `${role}_lead` : "",
       propertyInterest: interest,
+      preferredChannel,
       callConsent,
       smsConsent,
       aiAction: "lead_qualified",
@@ -317,7 +336,10 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
         role ? `role=${role}` : "",
         budget ? `budget=${budget}` : "",
         area ? `area=${area}` : "",
+        bedrooms ? `beds=${bedrooms}` : "",
+        bathrooms ? `baths=${bathrooms}` : "",
         timeline ? `timeline=${timeline}` : "",
+        preferredChannel ? `preferred_channel=${preferredChannel}` : "",
         interest ? `interest=${interest}` : "",
       ].filter(Boolean).join(" "),
     },
@@ -336,13 +358,13 @@ export async function runAriaTool(
       return getCallerContext(ctx, identity);
     }
     case "lookupProperty":
-      return lookupProperty(ctx, args, deps);
+      return lookupProperty(await hydrateContext(ctx, deps), args, deps);
     case "searchProperties":
-      return searchProperties(ctx, args, deps);
+      return searchProperties(await hydrateContext(ctx, deps), args, deps);
     case "scheduleShowing":
-      return scheduleShowingTool(ctx, args, deps);
+      return scheduleShowingTool(await hydrateContext(ctx, deps), args, deps);
     case "syncToCrm":
-      return syncToCrm(ctx, args, deps);
+      return syncToCrm(await hydrateContext(ctx, deps), args, deps);
     case "qualifyLead":
       return qualifyLead(ctx, args);
     default:

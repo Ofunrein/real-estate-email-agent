@@ -256,15 +256,34 @@ export function extractTheoListedPropertyAddresses(...values: string[]): string[
 function mergeProperty(base: SheetRow, extra: Partial<SheetRow>): SheetRow {
   const merged = { ...base };
   for (const [key, value] of Object.entries(extra)) {
-    if (!truthy(merged[key]) && value != null && truthy(String(value))) {
-      merged[key] = String(value);
+    if (value == null || !truthy(String(value))) continue;
+    const incoming = String(value);
+    if (!truthy(merged[key]) || shouldReplacePropertyValue(key, merged[key], incoming)) {
+      merged[key] = incoming;
     }
   }
   return merged;
 }
 
 function needsPropertyEnrichment(property: SheetRow): boolean {
-  return !property.photo_url || !property.sqft || !property.year_built || !property.zip || !property.description;
+  return !property.photo_url || isGoogleStreetViewUrl(property.photo_url) || hasGenericNeighborhood(property.neighborhood) || !property.sqft || !property.year_built || !property.zip || !property.description;
+}
+
+function isGoogleStreetViewUrl(value?: string): boolean {
+  return /maps\.googleapis\.com\/maps\/api\/streetview/i.test(clean(value));
+}
+
+function hasGenericNeighborhood(value?: string): boolean {
+  return /^(downtown|unknown|n\/a)$/i.test(clean(value));
+}
+
+function shouldReplacePropertyValue(key: string, current: string | undefined, incoming: string): boolean {
+  if (key === "photo_url" && isGoogleStreetViewUrl(current) && !isGoogleStreetViewUrl(incoming)) return true;
+  if (key === "listing_url" && /zillow\.com/i.test(incoming) && !/zillow\.com/i.test(clean(current))) return true;
+  if (key === "neighborhood" && hasGenericNeighborhood(current) && truthy(incoming)) return true;
+  if (key === "property_type" && /^(home type unknown|unknown|n\/a)$/i.test(clean(current)) && truthy(incoming)) return true;
+  if (["price", "beds", "baths", "sqft", "year_built", "description", "agent_name", "agent_email"].includes(key) && truthy(incoming) && !truthy(current)) return true;
+  return false;
 }
 
 function wantsPropertyImage(message: string): boolean {
@@ -367,36 +386,50 @@ async function runApifyActor(actorId: string, payload: Record<string, unknown>, 
 
 function photoFromApify(item: Record<string, unknown>): string {
   const photos = Array.isArray(item.responsivePhotos) ? item.responsivePhotos as Record<string, unknown>[] : [];
-  const realPhoto = photos.find((photo) => typeof photo.url === "string" && !photo.url.includes("maps.googleapis"))?.url;
-  const streetPhoto = photos.find((photo) => typeof photo.url === "string")?.url;
-  return clean(String(realPhoto || streetPhoto || item.imgSrc || item.hiResImageLink || item.desktopWebHdpImageLink || item.image || item.photo || item.primaryPhoto || ""));
+  const realPhoto = photos.find((photo) => typeof photo.url === "string" && /photos\.zillowstatic\.com/i.test(photo.url))?.url;
+  const primaryImage = [item.imgSrc, item.hiResImageLink, item.desktopWebHdpImageLink, item.image, item.photo, item.primaryPhoto]
+    .map((value) => clean(String(value || "")))
+    .find((url) => /photos\.zillowstatic\.com/i.test(url));
+  return clean(String(realPhoto || primaryImage || ""));
+}
+
+function zillowListingUrl(item: Record<string, unknown>): string {
+  const hdpUrl = clean(String(item.hdpUrl || item.detailUrl || item.url || ""));
+  if (/^https:\/\/(?:www\.)?zillow\.com\//i.test(hdpUrl)) return hdpUrl;
+  if (hdpUrl.startsWith("/")) return `https://www.zillow.com${hdpUrl}`;
+  const zpid = clean(String(item.zpid || ""));
+  return zpid ? `https://www.zillow.com/homedetails/${zpid}_zpid/` : "";
 }
 
 async function fetchApifyZillow(address: string): Promise<{ property: Partial<SheetRow>; context: string }> {
   if (!apifyToken() || !address) return { property: {}, context: "" };
-  let item = await runApifyActor("ENK9p4RZHg0iVso52", { addresses: [address] });
+  let item = await runApifyActor("kawsar~Affordable-Zillow-Details-Scraper", { address: [address], maxItems: 1, requestTimeoutSecs: 25, timeoutSecs: 55 }, 22);
   if (!Object.keys(item).length) {
-    item = await runApifyActor("kawsar~Affordable-Zillow-Details-Scraper", { address: [address], maxItems: 1, requestTimeoutSecs: 25, timeoutSecs: 55 });
+    item = await runApifyActor("ENK9p4RZHg0iVso52", { addresses: [address] });
   }
   if (!Object.keys(item).length) return { property: {}, context: "" };
   const nearby = Array.isArray(item.nearbyNeighborhoods) ? item.nearbyNeighborhoods as Record<string, unknown>[] : [];
+  const zillowAddress = item.address && typeof item.address === "object" ? item.address as Record<string, unknown> : {};
+  const attributionInfo = item.attributionInfo && typeof item.attributionInfo === "object" ? item.attributionInfo as Record<string, unknown> : {};
   const property = {
-    address: String(item.streetAddress || address),
-    city: String(item.city || ""),
-    state: String(item.state || ""),
-    zip: String(item.zipcode || ""),
+    address: String(item.streetAddress || zillowAddress.streetAddress || address),
+    city: String(item.city || zillowAddress.city || ""),
+    state: String(item.state || zillowAddress.state || ""),
+    zip: String(item.zipcode || zillowAddress.zipcode || ""),
     price: String(item.price || ""),
     beds: String(item.bedrooms || ""),
     baths: String(item.bathrooms || ""),
     sqft: String(item.livingArea || item.livingAreaValue || ""),
     year_built: String(item.yearBuilt || ""),
-    neighborhood: String(nearby[0]?.name || ""),
+    neighborhood: String(zillowAddress.neighborhood || zillowAddress.subdivision || nearby[0]?.name || ""),
     property_type: String(item.homeType || "").replace(/_/g, " ").toLowerCase(),
     days_on_market: String(item.daysOnZillow || ""),
     photo_url: photoFromApify(item),
     description: String(item.description || ""),
     status: String(item.homeStatus || "Active").replace(/_/g, " ").toLowerCase(),
-    listing_url: item.hdpUrl ? `https://www.zillow.com${item.hdpUrl}` : "",
+    listing_url: zillowListingUrl(item),
+    agent_name: String(attributionInfo.agentName || attributionInfo.brokerName || ""),
+    agent_phone: String(attributionInfo.agentPhoneNumber || attributionInfo.brokerPhoneNumber || ""),
   };
   return {
     property,
@@ -495,7 +528,7 @@ async function runTheoDataEnrichment(input: {
   const properties = [...(input.properties || [])];
   const first = properties[0] || {};
   const address = clean(first.address || extractTheoAddress(input.propertyInterest || "", input.message, input.lead?.property_interest || ""));
-  const cachedPhotoReady = properties.length > 0 && truthy(first.photo_url) && wantsPropertyImage(input.message);
+  const cachedPhotoReady = properties.length > 0 && truthy(first.photo_url) && !isGoogleStreetViewUrl(first.photo_url) && !hasGenericNeighborhood(first.neighborhood) && wantsPropertyImage(input.message);
   const emptyEnrichment = { property: {}, context: "" };
 
   if (address && !cachedPhotoReady && (!properties.length || needsPropertyEnrichment(first))) {
@@ -522,6 +555,17 @@ async function runTheoDataEnrichment(input: {
   }
 
   const enrichedFirst = properties[0] || first;
+  if (wantsPropertyImage(input.message)) {
+    const costUsd = metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
+    return {
+      properties,
+      context: context.join("\n"),
+      metrics,
+      elapsedMs: elapsedMs(started),
+      costUsd,
+    };
+  }
+
   const [rates, census, comps] = await Promise.allSettled([
     measuredDataCall("fred_mortgage_rates", "fred", () => fetchMortgageRates()),
     measuredDataCall("census_zip_stats", "census", () => fetchCensusZip(enrichedFirst.zip)),

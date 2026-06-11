@@ -75,6 +75,55 @@ test("lookupPropertyForVoice: enrichment wins inside budget", async () => {
   assert.equal(cached, true, "fresh property cached");
 });
 
+test("lookupPropertyForVoice: uses lead memory to correct STT-misheard address", async () => {
+  const calls: string[] = [];
+  const result = await lookupPropertyForVoice(
+    {
+      address: "4309 Fairwood Avenue",
+      phone: "+15558675310",
+      lead: { property_interest: "4309 Fairway Path" },
+    },
+    deps({
+      findByAddresses: async (addresses) => {
+        calls.push(addresses[0]);
+        if (addresses[0] === "4309 Fairwood Avenue") {
+          return [property({ address: "4309 Fairwood Avenue caller asked for details" })];
+        }
+        if (addresses[0] === "4309 Fairway Path") {
+          return [property({ address: "4309 Fairway Path", price: "407800", beds: "4", baths: "2.5", sqft: "2702", city: "Round Rock" })];
+        }
+        return [];
+      },
+      enrich: async ({ properties }) => ({ properties: properties || [], context: "" }),
+      budgetMs: 1000,
+    }),
+  );
+  assert.equal(result.timedOut, false);
+  assert.match(result.spoken, /4309 Fairway Path/);
+  assert.match(result.spoken, /\$407,800/);
+  assert.ok(calls.includes("4309 Fairway Path"), "lead-memory correction was searched");
+});
+
+test("lookupPropertyForVoice: filters junk property rows and asks for confirmation", async () => {
+  let cached = false;
+  const result = await lookupPropertyForVoice(
+    { address: "4309 Fairwood Avenue", phone: "+15558675310" },
+    deps({
+      findByAddresses: async () => [property({ address: "4309 Fairwood Avenue caller asked for details" })],
+      enrich: async () => ({ properties: [property({ address: "4309 Fairwood Avenue caller asked for details" })], context: "" }),
+      cacheProperty: async () => {
+        cached = true;
+        return null;
+      },
+      budgetMs: 1000,
+    }),
+  );
+  assert.equal(result.properties.length, 0);
+  assert.equal(cached, false, "junk row was not cached");
+  assert.match(result.spoken, /confirm the full street address and city/i);
+  assert.doesNotMatch(result.spoken, /caller asked/i);
+});
+
 test("lookupPropertyForVoice: timeout speaks cache + schedules SMS", async () => {
   let smsSentTo = "";
   let smsBody = "";
@@ -145,9 +194,63 @@ test("searchPropertiesForVoice: builds criteria and speaks matches", async () =>
         received = criteria;
         return [property({ address: "1 A St", price: "450000", beds: "3", baths: "2", neighborhood: "Mueller" })];
       },
+      enrich: async () => ({ properties: [], context: "" }),
+      cacheProperty: async () => null,
+      sendSms: async () => undefined,
+      budgetMs: 1,
     },
   );
   assert.match(result.spoken, /1 A St/);
   assert.equal((received as { beds?: number }).beds, 3);
   assert.equal((received as { maxPrice?: number }).maxPrice, 500000);
+});
+
+test("searchPropertiesForVoice: enrichment can win and be cached", async () => {
+  let cached = 0;
+  const result = await searchPropertiesForVoice(
+    { query: "4 bed near Austin", beds: 4 },
+    {
+      findCandidates: async () => [],
+      enrich: async () => ({
+        properties: [property({ address: "9 Fresh St", price: "550000", beds: "4", baths: "3", neighborhood: "Austin" })],
+        context: "fresh",
+      }),
+      cacheProperty: async () => {
+        cached += 1;
+        return null;
+      },
+      sendSms: async () => undefined,
+      budgetMs: 1000,
+    },
+  );
+  assert.equal(result.timedOut, false);
+  assert.equal(result.fromCache, false);
+  assert.match(result.spoken, /9 Fresh St/);
+  assert.equal(cached, 1);
+});
+
+test("searchPropertiesForVoice: timeout speaks cache and texts fresh results", async () => {
+  let smsBody = "";
+  const result = await searchPropertiesForVoice(
+    { area: "Austin", beds: 4, phone: "+15125550000" },
+    {
+      findCandidates: async () => [property({ address: "1 Cached St", price: "500000", beds: "4", baths: "2" })],
+      enrich: () => new Promise((resolve) => setTimeout(() => resolve({
+        properties: [property({ address: "2 Fresh Ave", price: "540000", beds: "4", baths: "3", listing_url: "https://z/2" })],
+        context: "fresh",
+      }), 30)),
+      cacheProperty: async () => null,
+      sendSms: async (_to, body) => {
+        smsBody = body;
+      },
+      budgetMs: 5,
+    },
+  );
+  assert.equal(result.timedOut, true);
+  assert.equal(result.fromCache, true);
+  assert.match(result.spoken, /1 Cached St/);
+  assert.match(result.spoken, /text them/);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.match(smsBody, /2 Fresh Ave/);
+  assert.match(smsBody, /https:\/\/z\/2/);
 });

@@ -365,6 +365,21 @@ button {
   background: #fff;
 }
 
+.channel-tile-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.channel-avatar {
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--line), white 30%);
+  border-radius: 999px;
+  height: 30px;
+  object-fit: cover;
+  width: 30px;
+}
+
 .channel-agent {
   display: inline-flex;
   border-radius: 999px;
@@ -840,6 +855,26 @@ button {
   object-fit: cover;
 }
 
+.message-image-link.image-load-failed {
+  display: grid;
+  min-height: 104px;
+  place-items: center;
+  padding: 14px;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+.message-image-link.image-load-failed img {
+  display: none;
+}
+
+.message-image-link.image-load-failed::after {
+  content: "Preview unavailable. Open attachment.";
+}
+
 .email-rendered {
   overflow-x: auto;
   overflow-wrap: anywhere;
@@ -867,6 +902,109 @@ button {
 .email-rendered a {
   color: var(--accent-dark);
   font-weight: 800;
+}
+
+.voice-thread .thread-messages {
+  background: #fbfaf7;
+}
+
+.voice-transcript .message {
+  min-width: min(220px, 80%);
+  max-width: min(88%, 760px);
+}
+
+.voice-message-text {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.voice-call-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.voice-call-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffdf8;
+  padding: 12px;
+}
+
+.voice-call-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.voice-call-card-head div,
+.voice-call-report {
+  display: grid;
+  gap: 4px;
+}
+
+.voice-call-card-head span,
+.voice-call-report p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.voice-call-report {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.voice-recording {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.voice-recording audio {
+  width: 100%;
+}
+
+.voice-recording a {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.voice-raw-transcript {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffdf8;
+  padding: 9px 10px;
+}
+
+.voice-raw-transcript summary {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.voice-raw-transcript pre {
+  overflow: auto;
+  max-height: 260px;
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.voice-empty {
+  min-height: 120px;
 }
 
 .context-rail {

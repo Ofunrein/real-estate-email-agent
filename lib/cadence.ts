@@ -82,8 +82,13 @@ function channelOrder(
 ): TouchChannel[] {
   const usedChannels = new Set(touches.map((t) => (t.channel || "").toLowerCase()));
   const hasSoftTouch = usedChannels.has("email") || usedChannels.has("sms");
+  const hotLead = /priority|hot|showing|tour|appointment|transfer|valuation/i.test(
+    [lead.next_action, lead.intent, lead.handoff_status, lead.summary].filter(Boolean).join(" "),
+  );
   const base: TouchChannel[] = touches.length === 0
     ? [preferred === "voice" ? "sms" : preferred, "sms", "email", "voice"]
+    : (preferred === "voice" || hotLead) && hasSoftTouch
+      ? ["voice", "sms", "email"]
     : ["sms", "email", "voice"];
   const ordered = [...new Set(base)];
   return ordered.filter((channel) => (channel === "voice" ? hasSoftTouch || touches.length === 0 : true));
