@@ -9,6 +9,7 @@ agent.log
 *.log
 .superpowers/
 .playwright-mcp/
+.tmp/
 
 # Python
 __pycache__/

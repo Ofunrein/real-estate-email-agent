@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   try {
-    const { leads, events, properties } = await loadAgentInboxData();
+    const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
     const sourceLabel = databaseEnabled() ? "Database" : "Google Sheets";
     return (
       <AgentInboxClient
-        data={composeInboxData(leads, events, properties)}
+        data={composeInboxData(leads, events, properties, voiceCalls)}
         initialRefreshedAt={new Date().toISOString()}
         sourceLabel={sourceLabel}
       />

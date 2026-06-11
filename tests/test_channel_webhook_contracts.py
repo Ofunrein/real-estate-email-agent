@@ -12,8 +12,14 @@ def read(path: str) -> str:
 class ChannelWebhookContractTests(unittest.TestCase):
     def test_dashboard_uses_olivia_for_website_agent(self):
         dashboard = read("components/AgentInboxClient.tsx")
-        self.assertIn('label: "Website", agent: "Olivia", channel: "website_chat"', dashboard)
+        self.assertIn('label: "Website", agent: "Olivia", avatar: "/images/agents/olivia.png", channel: "website_chat"', dashboard)
         self.assertNotIn('agent: "Nova"', dashboard)
+        self.assertIn('agent: "Iris", avatar: "/images/agents/iris.png"', dashboard)
+        self.assertIn('agent: "Theo", avatar: "/images/agents/theo.png"', dashboard)
+        self.assertIn('agent: "Aria", avatar: "/images/agents/aria.png"', dashboard)
+        self.assertIn('className="channel-avatar"', dashboard)
+        for asset in ["iris.png", "theo.png", "aria.png", "olivia.png", "theo-rcs-logo.jpg"]:
+            self.assertTrue((ROOT / "public" / "images" / "agents" / asset).exists(), asset)
 
     def test_dashboard_auto_refreshes_and_shows_event_times(self):
         dashboard = read("components/AgentInboxClient.tsx")
@@ -114,6 +120,13 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("webhook complete", sms_route)
         self.assertIn("sessionCost", sms_route)
         self.assertIn("elapsedMs", sms_route)
+        self.assertIn("THEO_REPLY_DEBOUNCE_MS", sms_route)
+        self.assertIn("theoReplyDebounceMs", sms_route)
+        self.assertIn("hasNewerInboundForThreadInDatabase", sms_route)
+        self.assertIn("reply_deferred_to_newer_inbound", sms_route)
+        self.assertIn("combinedInboundMessage", sms_route)
+        self.assertIn("messageForReply", sms_route)
+        self.assertIn("combinedMessages", sms_route)
         self.assertIn("reply.mediaUrls", sms_route)
         self.assertIn("smsMessageWithMediaLog", sms_route)
         self.assertIn("extractTheoPropertySearchQuery", sms_route)
@@ -123,6 +136,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("relatedRequest", sms_route)
         self.assertIn("recentSearchContext", sms_route)
         self.assertIn("mediaCount", sms_route)
+        database = read("lib/database.ts")
+        self.assertIn("from conversation_events ce, current_event", database)
+        self.assertIn("ce.created_at > current_event.created_at", database)
 
     def test_whatsapp_route_still_logs_only(self):
         whatsapp_route = read("app/api/webhooks/theo-whatsapp/route.ts")
@@ -165,6 +181,12 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("formatTheoPropertyLinks", theo_agent)
         self.assertIn("property_links_reply_ready", theo_agent)
         self.assertIn("formatTheoPropertyPhotos", theo_agent)
+        self.assertIn("formatTheoPhotoLinkFallback", theo_agent)
+        self.assertIn("property_photo_link_fallback_ready", theo_agent)
+        self.assertIn("property_photos_handoff_reply_ready", theo_agent)
+        self.assertIn("property_photo_link_handoff_fallback_ready", theo_agent)
+        self.assertIn('if (/maps\\.googleapis\\.com/i.test(url)) return "";', theo_agent)
+        self.assertIn('if (/\\.(jpe?g|png|gif|webp)(\\?|$)/i.test(url)) return url;', theo_agent)
         self.assertIn("property_photos_reply_ready", theo_agent)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', theo_agent)
         self.assertIn("CENTRAL_TEXAS_CITIES", theo_agent)
@@ -181,6 +203,9 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("list up to the requested number", theo_llm)
         self.assertIn("neighboring homes", theo_llm)
         self.assertIn("same-spec properties", theo_llm)
+        self.assertIn("Qualification mile markers", theo_llm)
+        self.assertIn("preferred channel, timeline, area, price range, bedroom/bathroom fit", theo_llm)
+        self.assertIn("Human-assisted monitoring is backup", theo_llm)
         self.assertIn("greater Austin / Central Texas metro", theo_llm)
         self.assertIn("put a blank line before each numbered listing", theo_llm)
         self.assertIn("Do not say links are not loaded when listing_url is present", theo_llm)
@@ -190,6 +215,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("cleanSmsReply", theo_llm)
         self.assertIn("sentenceEnd", theo_llm)
         self.assertIn("Do not use human_required only because prior messages had service friction", theo_llm)
+        self.assertIn("Never send maps.googleapis.com", theo_llm)
         for property_field in [
             "description",
             "neighborhood",
@@ -222,6 +248,12 @@ class ChannelWebhookContractTests(unittest.TestCase):
         ]:
             self.assertIn(classifier_signal, theo_llm)
 
+    def test_channel_ingest_extracts_preferred_channel(self):
+        channel_ingest = read("lib/channelIngest.ts")
+        self.assertIn("inferPreferredChannelFromText", channel_ingest)
+        self.assertIn("Email is best", read("tests/ts/channelIngest.test.ts"))
+        self.assertIn("preferredChannel", channel_ingest)
+
     def test_theo_data_enrichment_matches_email_agent_sources(self):
         theo_data = read("lib/theoData.ts")
         for source in [
@@ -240,6 +272,14 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("wantsPropertyImage", theo_data)
         self.assertIn("GOOGLE_MAPS_API_KEY", theo_data)
         self.assertIn("Google Street View fallback", theo_data)
+        self.assertIn("isGoogleStreetViewUrl", theo_data)
+        self.assertIn("hasGenericNeighborhood", theo_data)
+        self.assertIn("shouldReplacePropertyValue", theo_data)
+        self.assertIn('key === "photo_url" && isGoogleStreetViewUrl(current) && !isGoogleStreetViewUrl(incoming)', theo_data)
+        self.assertIn('key === "neighborhood" && hasGenericNeighborhood(current) && truthy(incoming)', theo_data)
+        self.assertIn("photos\\.zillowstatic\\.com", theo_data)
+        self.assertIn("zillowListingUrl", theo_data)
+        self.assertIn("!isGoogleStreetViewUrl(first.photo_url)", theo_data)
         self.assertIn("fetchMortgageRates", theo_data)
         self.assertIn("fetchCensusZip", theo_data)
         self.assertIn("fetchSoldComps", theo_data)
@@ -321,6 +361,13 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("TWILIO_FROM", twilio_sender)
         self.assertIn("TWILIO_MESSAGING_SERVICE_SID", twilio_sender)
         self.assertIn("MessagingServiceSid", twilio_sender)
+        self.assertIn("function isRcsAddress", twilio_sender)
+        self.assertIn("if (messagingServiceSid)", twilio_sender)
+        self.assertIn("recipientForSend", twilio_sender)
+        self.assertIn("TWILIO_MESSAGING_SERVICE_SID is required for RCS replies", twilio_sender)
+        self.assertIn("TWILIO_FROM is required for SMS replies", twilio_sender)
+        self.assertIn("mediaProxyUrl", twilio_sender)
+        self.assertIn("/api/media/proxy?url=", twilio_sender)
         self.assertIn("AGENT_PHONE", twilio_sender)
         self.assertIn("ENABLE_SMS_AGENT", twilio_sender)
         self.assertIn("sendTheoHandoffAlert", twilio_sender)
@@ -342,6 +389,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("propertyAddressStem", database)
         self.assertIn("regexp_replace(address", database)
         self.assertIn("PropertySearchCriteria", database)
+        self.assertIn("hasNewerInboundForThreadInDatabase", database)
+        self.assertIn("current_event", database)
         self.assertIn("GREATER_AUSTIN_CITIES", database)
         self.assertIn("CENTRAL_TEXAS_CITIES", database)
         self.assertIn("AREA_ALIASES", database)
@@ -373,6 +422,23 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('"theo:test"', package_json)
         self.assertIn("/api/webhooks/theo-sms", script)
         self.assertIn("SM_TEST_", script)
+
+    def test_theo_twilio_configurator_sets_service_and_phone_sms_webhooks(self):
+        script = read("scripts/configure-theo-twilio.mjs")
+        self.assertIn("TWILIO_MESSAGING_SERVICE_SID", script)
+        self.assertIn("UseInboundWebhookOnNumber", script)
+        self.assertIn("IncomingPhoneNumbers.json?PhoneNumber", script)
+        self.assertIn("SmsUrl", script)
+        self.assertIn("voice_url_preserved", script)
+
+    def test_media_proxy_allows_only_known_image_hosts(self):
+        route = read("app/api/media/proxy/route.ts")
+        self.assertIn("ALLOWED_IMAGE_HOSTS", route)
+        self.assertIn("photos.zillowstatic.com", route)
+        self.assertIn("lh3.googleusercontent.com", route)
+        self.assertIn("Unsupported image URL", route)
+        self.assertIn('contentType.toLowerCase().startsWith("image/")', route)
+        self.assertIn("Cache-Control", route)
 
 
 if __name__ == "__main__":

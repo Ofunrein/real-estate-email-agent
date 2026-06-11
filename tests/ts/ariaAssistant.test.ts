@@ -46,10 +46,27 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
   const voice = assistant.voice as Record<string, unknown>;
   assert.equal(voice.voiceId, "voice-xyz");
+  assert.equal(voice.provider, "11labs");
   const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
   assert.match(messages[0].content, /Acme Realty/);
   assert.match(messages[0].content, /getCallerContext/);
+  assert.match(messages[0].content, /greater Austin \/ Central Texas metro/);
+  assert.match(messages[0].content, /Fairwood Avenue/);
+  assert.match(messages[0].content, /mile markers/);
+  assert.match(messages[0].content, /preferred follow-up channel/);
+  assert.match(messages[0].content, /Human-assisted does not mean stopping useful property help/);
   assert.match(messages[0].content, /transferToHuman|transfer/i);
+});
+
+test("buildAriaAssistant: qualifyLead captures channel and bed-bath preferences", () => {
+  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  const tools = (assistant.model as Record<string, unknown>).tools as Array<Record<string, unknown>>;
+  const qualify = tools.find((t) => (t.function as Record<string, unknown> | undefined)?.name === "qualifyLead");
+  const params = (qualify!.function as Record<string, unknown>).parameters as Record<string, unknown>;
+  const properties = params.properties as Record<string, unknown>;
+  assert.ok(properties.preferred_channel);
+  assert.ok(properties.bedrooms);
+  assert.ok(properties.bathrooms);
 });
 
 test("buildAriaAssistant: no voice block when voiceId unset", () => {
@@ -68,4 +85,22 @@ test("buildAriaAssistant: no style text when styleContext absent", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
   const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
   assert.ok(!messages[0].content.includes("VOICE_SAMPLE_BLOCK"));
+});
+
+test("buildAriaAssistant: defaults to matching OpenAI provider for GPT models", () => {
+  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  const model = assistant.model as Record<string, unknown>;
+  assert.equal(model.provider, "openai");
+  assert.equal(model.model, "gpt-4.1-mini");
+});
+
+test("buildAriaAssistant: allows explicit Anthropic model/provider override", () => {
+  const assistant = buildAriaAssistant(config(), {
+    publicUrl: "https://app.example.com",
+    respondProvider: "anthropic",
+    respondModel: "claude-sonnet-4-5",
+  });
+  const model = assistant.model as Record<string, unknown>;
+  assert.equal(model.provider, "anthropic");
+  assert.equal(model.model, "claude-sonnet-4-5");
 });
