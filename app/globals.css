@@ -19,6 +19,10 @@
   --blue: #315f8f;
   --shadow: 0 24px 70px rgba(19, 22, 25, 0.08);
   --shadow-tight: 0 10px 28px rgba(19, 22, 25, 0.06);
+  --thread-list-width: clamp(200px, 18vw, 248px);
+  --thread-bubble-max: min(92%, 980px);
+  --thread-bubble-voice-max: min(94%, 1040px);
+  --context-rail-width: clamp(280px, 24vw, 320px);
 }
 
 * {
@@ -413,8 +417,7 @@ button {
 }
 
 .workspace {
-  grid-template-columns: minmax(520px, 860px) minmax(300px, 360px);
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
   align-items: start;
 }
 
@@ -433,7 +436,7 @@ button {
 }
 
 .conversation-panel {
-  width: min(100%, 860px);
+  width: 100%;
 }
 
 .panel-header {
@@ -554,8 +557,8 @@ button {
 
 .conversation-inbox {
   display: grid;
-  grid-template-columns: minmax(220px, 278px) minmax(0, 1fr);
-  min-height: 570px;
+  grid-template-columns: var(--thread-list-width) minmax(0, 1fr);
+  min-height: 520px;
 }
 
 .conversation-list-column {
@@ -691,7 +694,6 @@ button {
 
 .thread-list {
   display: grid;
-  max-width: 860px;
   gap: 14px;
   padding: 14px;
 }
@@ -759,21 +761,21 @@ button {
 
 .thread-messages {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   max-height: calc(100dvh - 405px);
   overflow: auto;
-  padding: 14px 12px 18px;
+  padding: 12px clamp(10px, 1.4vw, 18px) 16px;
 }
 
 .message {
   width: fit-content;
-  max-width: min(76%, 680px);
+  max-width: var(--thread-bubble-max);
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #f7f8f4;
-  padding: 12px 13px;
-  line-height: 1.45;
+  padding: 10px 14px;
+  line-height: 1.38;
   overflow: hidden;
 }
 
@@ -817,6 +819,7 @@ button {
 .message-text {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  text-wrap: pretty;
 }
 
 .message-handoff {
@@ -879,6 +882,8 @@ button {
   overflow-x: auto;
   overflow-wrap: anywhere;
   color: #201f1b;
+  width: 100%;
+  max-width: var(--thread-bubble-max);
 }
 
 .email-rendered,
@@ -909,8 +914,8 @@ button {
 }
 
 .voice-transcript .message {
-  min-width: min(220px, 80%);
-  max-width: min(88%, 760px);
+  min-width: min(260px, 72%);
+  max-width: var(--thread-bubble-voice-max);
 }
 
 .voice-message-text {
@@ -2010,6 +2015,12 @@ button {
 }
 
 @media (max-width: 1160px) {
+  :root {
+    --thread-bubble-max: min(90%, 820px);
+    --thread-bubble-voice-max: min(92%, 880px);
+    --thread-list-width: clamp(210px, 22vw, 240px);
+  }
+
   .metrics-grid,
   .channel-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2018,10 +2029,6 @@ button {
   .workspace,
   .property-layout {
     grid-template-columns: 1fr;
-  }
-
-  .conversation-panel {
-    width: 100%;
   }
 
   .conversation-list,
@@ -2057,6 +2064,11 @@ button {
 }
 
 @media (max-width: 860px) {
+  :root {
+    --thread-bubble-max: min(88%, 720px);
+    --thread-bubble-voice-max: min(90%, 760px);
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -2116,10 +2128,19 @@ button {
     justify-self: start;
   }
 
+  :root {
+    --thread-bubble-max: min(94%, 100%);
+    --thread-bubble-voice-max: min(96%, 100%);
+  }
+
   .message.outbound,
   .message.inbound {
-    margin-left: 12px;
-    margin-right: 12px;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .message {
+    padding: 10px 12px;
   }
 
   .property-card-stage {
