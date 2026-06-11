@@ -409,7 +409,7 @@ def _flush_batch_writes(
                     raise
                 time.sleep(15 * (attempt + 1))
         if start + 50 < len(pending_writes):
-            time.sleep(61)
+            time.sleep(1.2)
 
 
 def _street_view_photo_url(address: str) -> str:
@@ -424,10 +424,15 @@ def _street_view_photo_url(address: str) -> str:
 
 
 def _rentcast_core_lookup(record: dict[str, str]) -> dict[str, str]:
-    rentcast = rentcast_lookup(_query_for_record(record))
+    query = _query_for_record(record)
+    rentcast = rentcast_lookup(query)
+    if not _digits(rentcast.get("yearBuilt")):
+        unitless = re.sub(r"\s*(?:#|unit|apt)\s*[a-z0-9-]+\b", "", query, flags=re.I).strip()
+        if unitless.lower() != query.lower():
+            rentcast = rentcast_lookup(unitless) or rentcast
     photo_url = _first(rentcast.get("photoUrl"))
     if not photo_url:
-        photo_url = _street_view_photo_url(_query_for_record(record))
+        photo_url = _street_view_photo_url(query)
     return {
         "zip": _first(rentcast.get("zipCode")),
         "sqft": _first(rentcast.get("squareFootage"), rentcast.get("livingArea")),
@@ -527,6 +532,7 @@ def enrich_missing(
     apify_index: dict[str, dict[str, str]] | None = None,
     detail_index: dict[str, dict[str, str]] | None = None,
     live_lookup: bool = False,
+    rentcast_lookup_enabled: bool = False,
     mark_unresolved: bool = True,
 ) -> dict:
     records = read_table(sheets, spreadsheet_id, PROPERTIES_TAB)
@@ -568,11 +574,29 @@ def enrich_missing(
                 next_record["year_built"] = year_hint
                 sources.append("description_year")
 
+        if not clean_cell(next_record.get("photo_url", "")):
+            street_view = _street_view_photo_url(_query_for_record(next_record))
+            if street_view:
+                next_record["photo_url"] = street_view
+                sources.append("street_view")
+
         remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
         if remaining and live_lookup:
             detail_queue.append((index, next_record, list(remaining)))
             processed += 1
             continue
+
+        remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
+        if remaining and rentcast_lookup_enabled:
+            if _apply_missing_values(next_record, _rentcast_core_lookup(next_record)):
+                sources.append("rentcast")
+            remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
+            if not clean_cell(next_record.get("photo_url", "")):
+                street_view = _street_view_photo_url(_query_for_record(next_record))
+                if street_view:
+                    next_record["photo_url"] = street_view
+                    sources.append("street_view")
+                    remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
 
         remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
         if remaining and mark_unresolved and not clean_cell(next_record.get("status", "")):
@@ -588,12 +612,59 @@ def enrich_missing(
                 "missing_before": missing,
                 "missing_after": remaining,
             })
+            if rentcast_lookup_enabled and len(pending_writes) >= 50:
+                _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
+                pending_writes = []
         else:
             unresolved.append({"row": index, "address": normalized.get("address", ""), "missing": remaining})
 
     if detail_queue:
-        detail_index = _batch_detail_lookup([_query_for_record(record) for _, record, _ in detail_queue])
-        for index, next_record, missing in detail_queue:
+        batch_updated, batch_unresolved, pending_writes = _process_detail_queue(
+            sheets,
+            spreadsheet_id,
+            records,
+            detail_queue,
+            mark_unresolved=mark_unresolved,
+        )
+        updated.extend(batch_updated)
+        unresolved.extend(batch_unresolved)
+
+    if pending_writes:
+        _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
+    return {"updated": updated, "unresolved": unresolved, "processed": processed}
+
+
+def export_missing_fields_csv(report: dict[str, object], path: str) -> int:
+    missing_rows = report.get("missing_rows", [])
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["row", "address", "missing_fields", "missing_count"])
+        for row in missing_rows:
+            fields = row.get("missing", [])
+            writer.writerow([row.get("row", ""), row.get("address", ""), ",".join(fields), len(fields)])
+    return len(missing_rows)
+
+
+def _process_detail_queue(
+    sheets,
+    spreadsheet_id: str,
+    records: list[dict[str, str]],
+    detail_queue: list[tuple[int, dict[str, str], list[str]]],
+    *,
+    mark_unresolved: bool,
+    batch_size: int = 50,
+) -> tuple[list[dict], list[dict], list[tuple[int, dict[str, str]]]]:
+    updated: list[dict] = []
+    unresolved: list[dict] = []
+    pending_writes: list[tuple[int, dict[str, str]]] = []
+
+    for start in range(0, len(detail_queue), batch_size):
+        chunk = detail_queue[start:start + batch_size]
+        detail_index = _batch_detail_lookup(
+            [_query_for_record(record) for _, record, _ in chunk],
+            batch_size=batch_size,
+        )
+        for index, next_record, missing in chunk:
             detail = _index_match(next_record, detail_index)
             sources = []
             if detail and _apply_missing_values(next_record, detail):
@@ -628,9 +699,12 @@ def enrich_missing(
                 })
             else:
                 unresolved.append({"row": index, "address": normalized.get("address", ""), "missing": remaining})
+        if pending_writes:
+            _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
+            pending_writes = []
+        print(f"detail_batch={start // batch_size + 1} enriched={len(updated)} unresolved={len(unresolved)}", flush=True)
 
-    _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
-    return {"updated": updated, "unresolved": unresolved, "processed": processed}
+    return updated, unresolved, pending_writes
 
 
 def main() -> int:
@@ -645,10 +719,27 @@ def main() -> int:
     parser.add_argument("--apify-index-path", default="", help="Load a prebuilt Apify search index JSON instead of fetching runs live.")
     parser.add_argument("--apify-run-limit", type=int, default=200, help="Maximum Apify runs to scan for --apify-runs-since.")
     parser.add_argument("--apify-detail-index", action="store_true", help="Index prior Zillow detail-scraper runs for year_built backfill.")
-    parser.add_argument("--live", action="store_true", help="Use live RentCast/Apify lookup for rows not found in local sources.")
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="PAID: run Apify detail actor (run-sync-get-dataset-items) + RentCast for unresolved rows.",
+    )
+    parser.add_argument("--rentcast", action="store_true", help="Use RentCast lookup only for remaining core fields.")
     parser.add_argument("--no-mark-unresolved", action="store_true", help="Do not write Needs review status for unresolved rows.")
+    parser.add_argument(
+        "--export-missing-csv",
+        default="",
+        help="Write rows still missing core health fields to a CSV (e.g. reports/property-missing-fields.csv).",
+    )
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     args = parser.parse_args()
+
+    if args.live:
+        print(
+            "WARNING: --live starts new paid Apify actor runs. "
+            "Use --apify-runs-since / --apify-detail-index / --source-csv without --live for free backfill only.",
+            file=sys.stderr,
+        )
 
     load_dotenv()
     spreadsheet_id = os.getenv("GOOGLE_SHEET_ID", "").strip()
@@ -695,6 +786,7 @@ def main() -> int:
             apify_index=apify_index,
             detail_index=detail_index,
             live_lookup=args.live,
+            rentcast_lookup_enabled=args.rentcast,
             mark_unresolved=not args.no_mark_unresolved,
         )
 
@@ -703,6 +795,10 @@ def main() -> int:
     total = result["report"]["row_count"]
     missing = result["report"]["missing_count"]
     result["health_score"] = round(((total - missing) / total) * 100) if total else 100
+
+    if args.export_missing_csv:
+        exported = export_missing_fields_csv(result["report"], args.export_missing_csv)
+        result["export_missing_csv"] = {"path": args.export_missing_csv, "rows": exported}
 
     if args.json:
         print(json.dumps(result, indent=2))
