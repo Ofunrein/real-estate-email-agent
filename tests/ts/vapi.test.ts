@@ -57,6 +57,23 @@ test("parseCallMeta: phone + thread ref", () => {
   assert.equal(meta.threadRef, "voice:call_9");
 });
 
+test("parseEndOfCallReport: builds transcript from artifact messages", () => {
+  const report = parseEndOfCallReport({
+    message: {
+      type: "end-of-call-report",
+      call: { id: "call_2", customer: { number: "+15125550001" } },
+      artifact: {
+        messages: [
+          { role: "assistant", message: "Hello!" },
+          { role: "user", message: "Need a showing." },
+        ],
+      },
+    },
+  });
+  assert.match(report.transcript, /AI: Hello!/);
+  assert.match(report.transcript, /User: Need a showing/);
+});
+
 test("parseEndOfCallReport: computes duration from timestamps", () => {
   const report = parseEndOfCallReport({
     message: {
