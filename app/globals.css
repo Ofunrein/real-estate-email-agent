@@ -916,6 +916,9 @@ button {
 .voice-transcript .message {
   min-width: min(260px, 72%);
   max-width: var(--thread-bubble-voice-max);
+  /* Nested grid + overflow:hidden collapses bubble height to the label row only. */
+  min-height: min-content;
+  overflow: visible;
 }
 
 .voice-message-text {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { AgentInboxData, Channel } from "@/lib/inboxData";
+import { type AgentInboxData, type Channel, parseVoiceTranscript, voiceCallTranscriptSource } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 type View = "overview" | "email" | "sms" | "whatsapp" | "voice" | "website_chat" | "properties";
@@ -319,31 +319,6 @@ function voiceThreadSearchText(threadRef: string, calls: SheetRow[]) {
       call.recording_url,
     ]),
   ].filter(Boolean).join(" ").toLowerCase();
-}
-
-function parseVoiceTranscript(transcript = "") {
-  const turns: { speaker: string; direction: "inbound" | "outbound"; text: string }[] = [];
-  for (const rawLine of transcript.split(/\n+/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const match = /^(AI|Assistant|Aria|User|Caller|Lead|Customer):\s*(.*)$/i.exec(line);
-    if (match) {
-      const label = match[1].toLowerCase();
-      turns.push({
-        speaker: ["ai", "assistant", "aria"].includes(label) ? "Aria" : "Lead",
-        direction: ["ai", "assistant", "aria"].includes(label) ? "outbound" : "inbound",
-        text: match[2].trim(),
-      });
-      continue;
-    }
-    const last = turns[turns.length - 1];
-    if (last) {
-      last.text = `${last.text} ${line}`.trim();
-    } else {
-      turns.push({ speaker: "Call", direction: "inbound", text: line });
-    }
-  }
-  return turns;
 }
 
 function recordingAudioUrl(value?: string) {
@@ -1036,7 +1011,8 @@ function ThreadViewer({
 }
 
 function VoiceCallCard({ call }: { call: SheetRow }) {
-  const turns = parseVoiceTranscript(call.transcript || "");
+  const transcript = voiceCallTranscriptSource(call);
+  const turns = parseVoiceTranscript(transcript);
   const audioUrl = recordingAudioUrl(call.recording_url);
   return (
     <section className="voice-call-card">
@@ -1067,10 +1043,10 @@ function VoiceCallCard({ call }: { call: SheetRow }) {
       <div className="voice-call-report">
         <strong>Call report</strong>
         <p>{call.summary || "No call summary recorded yet."}</p>
-        {call.transcript ? (
+        {transcript ? (
           <details className="voice-raw-transcript">
             <summary>Raw transcript</summary>
-            <pre>{call.transcript}</pre>
+            <pre>{transcript}</pre>
           </details>
         ) : null}
         {call.recording_url ? (
