@@ -16,6 +16,7 @@
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "import:zillow": "node scripts/import-zillow-apify-properties.mjs",
     "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
+    "sync:db-to-sheets": "node scripts/sync-db-to-sheets.mjs",
     "sync:ghl": "node scripts/sync-events-to-ghl.mjs",
     "setup:neon": "bash scripts/setup-neon.sh",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
