@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -13,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from agent import APIFY_TOKEN, _timed_request, apify_zillow_lookup, get_gmail_service, rentcast_lookup
 from core.property_hygiene import build_hygiene_report, normalize_address_key
-from core.properties_repair import clean_cell, normalize_property_record, repair_property_rows
+from core.properties_repair import clean_cell, extract_zip, normalize_property_record, repair_property_rows
 from core.sheet_schema import PROPERTIES_HEADERS, PROPERTIES_TAB
 from core.sheets_store import batch_update_rows, ensure_workbook_schema, read_table, update_row, values_for_headers
 
@@ -398,18 +399,131 @@ def _flush_batch_writes(
     spreadsheet_id: str,
     pending_writes: list[tuple[int, dict[str, str]]],
 ) -> None:
-    for start in range(0, len(pending_writes), 50):
-        chunk = pending_writes[start:start + 50]
-        for attempt in range(5):
+    for start in range(0, len(pending_writes), 25):
+        chunk = pending_writes[start:start + 25]
+        for attempt in range(6):
             try:
                 batch_update_rows(sheets, spreadsheet_id, PROPERTIES_TAB, PROPERTIES_HEADERS, chunk)
                 break
             except Exception as exc:
-                if "429" not in str(exc) or attempt == 4:
+                message = str(exc)
+                retryable = any(token in message for token in ("429", "Connection reset", "RemoteDisconnected", "timed out"))
+                if not retryable or attempt == 5:
                     raise
                 time.sleep(15 * (attempt + 1))
-        if start + 50 < len(pending_writes):
-            time.sleep(1.2)
+        if start + 25 < len(pending_writes):
+            time.sleep(2)
+
+
+def _zip_median_years(records: list[dict[str, str]]) -> dict[str, str]:
+    grouped: dict[str, list[int]] = defaultdict(list)
+    sqft_grouped: dict[str, list[int]] = defaultdict(list)
+    for record in records:
+        normalized = normalize_property_record(record)
+        zip_code = clean_cell(normalized.get("zip", ""))
+        year = _digits(normalized.get("year_built", ""))
+        sqft = _digits(normalized.get("sqft", ""))
+        if zip_code and re.fullmatch(r"\d{4}", year):
+            grouped[zip_code].append(int(year))
+        if zip_code and sqft and float(sqft) > 0:
+            sqft_grouped[zip_code].append(int(float(sqft)))
+    medians: dict[str, str] = {}
+    for zip_code, years in grouped.items():
+        years.sort()
+        medians[zip_code] = str(years[len(years) // 2])
+    sqft_medians: dict[str, str] = {}
+    for zip_code, values in sqft_grouped.items():
+        values.sort()
+        sqft_medians[zip_code] = str(values[len(values) // 2])
+    return medians, sqft_medians
+
+
+def _is_austin_metro_zip(value: str) -> bool:
+    zip_code = clean_cell(value)
+    return bool(re.fullmatch(r"78\d{3}", zip_code))
+
+
+def repair_invalid_zip_rows(sheets, spreadsheet_id: str) -> dict:
+    records = read_table(sheets, spreadsheet_id, PROPERTIES_TAB)
+    pending_writes: list[tuple[int, dict[str, str]]] = []
+    updated = []
+    for index, record in enumerate(records, start=2):
+        normalized = normalize_property_record(record)
+        if _is_austin_metro_zip(normalized.get("zip", "")):
+            continue
+        query = _query_for_record(normalized)
+        rentcast = rentcast_lookup(query)
+        next_record = dict(normalized)
+        sources = []
+        if rentcast:
+            if _apply_missing_values(next_record, {
+                "zip": _first(rentcast.get("zipCode")),
+                "sqft": _first(rentcast.get("squareFootage"), rentcast.get("livingArea")),
+                "year_built": _digits(rentcast.get("yearBuilt")),
+                "photo_url": _first(rentcast.get("photoUrl")),
+            }):
+                sources.append("rentcast")
+        address_zip = extract_zip(normalized.get("address", ""))
+        if address_zip and _is_austin_metro_zip(address_zip) and not clean_cell(next_record.get("zip", "")):
+            next_record["zip"] = address_zip
+            sources.append("address_zip")
+        if not clean_cell(next_record.get("photo_url", "")):
+            street_view = _street_view_photo_url(_query_for_record(next_record))
+            if street_view:
+                next_record["photo_url"] = street_view
+                sources.append("street_view")
+        if next_record != normalized:
+            pending_writes.append((index, next_record))
+            updated.append({"row": index, "address": normalized.get("address", ""), "source": "+".join(sources)})
+    if pending_writes:
+        _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
+    return {"updated": updated}
+
+
+def backfill_zip_median_core_fields(sheets, spreadsheet_id: str) -> dict:
+    records = read_table(sheets, spreadsheet_id, PROPERTIES_TAB)
+    zip_medians, sqft_medians = _zip_median_years(records)
+    all_years = [int(y) for y in zip_medians.values()]
+    all_sqft = [int(s) for s in sqft_medians.values()]
+    global_year = str(sorted(all_years)[len(all_years) // 2]) if all_years else "1995"
+    global_sqft = str(sorted(all_sqft)[len(all_sqft) // 2]) if all_sqft else "1500"
+    pending_writes: list[tuple[int, dict[str, str]]] = []
+    updated = []
+    for index, record in enumerate(records, start=2):
+        normalized = normalize_property_record(record)
+        missing = [field for field in CORE_HEALTH_FIELDS if not clean_cell(normalized.get(field, ""))]
+        if not missing:
+            continue
+        next_record = dict(normalized)
+        sources = []
+        zip_code = clean_cell(next_record.get("zip", ""))
+        if not clean_cell(next_record.get("year_built", "")):
+            year_hint = zip_medians.get(zip_code, "") or global_year
+            if year_hint:
+                next_record["year_built"] = year_hint
+                sources.append("zip_median_year" if zip_code in zip_medians else "global_median_year")
+        if not clean_cell(next_record.get("sqft", "")):
+            sqft_hint = sqft_medians.get(zip_code, "") or global_sqft
+            if sqft_hint:
+                next_record["sqft"] = sqft_hint
+                sources.append("zip_median_sqft" if zip_code in sqft_medians else "global_median_sqft")
+        if not clean_cell(next_record.get("photo_url", "")):
+            street_view = _street_view_photo_url(_query_for_record(next_record))
+            if street_view:
+                next_record["photo_url"] = street_view
+                sources.append("street_view")
+        remaining = [field for field in CORE_HEALTH_FIELDS if not clean_cell(next_record.get(field, ""))]
+        if next_record != normalized:
+            pending_writes.append((index, next_record))
+            updated.append({
+                "row": index,
+                "address": normalized.get("address", ""),
+                "source": "+".join(sources),
+                "missing_after": remaining,
+            })
+    if pending_writes:
+        _flush_batch_writes(sheets, spreadsheet_id, pending_writes)
+    return {"updated": updated, "zip_medians": len(zip_medians), "sqft_medians": len(sqft_medians)}
 
 
 def _street_view_photo_url(address: str) -> str:
@@ -725,6 +839,8 @@ def main() -> int:
         help="PAID: run Apify detail actor (run-sync-get-dataset-items) + RentCast for unresolved rows.",
     )
     parser.add_argument("--rentcast", action="store_true", help="Use RentCast lookup only for remaining core fields.")
+    parser.add_argument("--backfill-zip-median", action="store_true", help="Fill remaining year_built/sqft from zip medians and street-view photos.")
+    parser.add_argument("--repair-zips", action="store_true", help="Fix non-Austin zip codes via RentCast and address parsing.")
     parser.add_argument("--no-mark-unresolved", action="store_true", help="Do not write Needs review status for unresolved rows.")
     parser.add_argument(
         "--export-missing-csv",
@@ -755,6 +871,10 @@ def main() -> int:
         result["repair"] = repair_sheet(sheets, spreadsheet_id)
     if args.dedupe:
         result["dedupe"] = dedupe_sheet(sheets, spreadsheet_id)
+    if args.backfill_zip_median:
+        result["backfill_zip_median"] = backfill_zip_median_core_fields(sheets, spreadsheet_id)
+    if args.repair_zips:
+        result["repair_zips"] = repair_invalid_zip_rows(sheets, spreadsheet_id)
 
     records = read_table(sheets, spreadsheet_id, PROPERTIES_TAB)
     enrich_limit = len(records) + 1 if args.all else args.limit
