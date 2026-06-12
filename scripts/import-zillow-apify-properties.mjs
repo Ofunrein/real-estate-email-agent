@@ -172,6 +172,17 @@ function digits(value) {
   return match ? match[0] : "";
 }
 
+function apifyPriceDigits(priceObj, item) {
+  if (priceObj && typeof priceObj === "object" && Object.keys(priceObj).length > 0) {
+    for (const key of ["value", "market", "min", "text", "rent_estimate"]) {
+      const parsed = digits(priceObj[key]);
+      if (parsed) return parsed;
+    }
+    return "";
+  }
+  return digits(pick(item.list_price, item.priceForHDP, item.price, item.zestimate, item.rentZestimate));
+}
+
 function pick(...values) {
   for (const value of values) {
     const text = clean(value);
@@ -266,7 +277,7 @@ function statusFromItem(item, slice) {
 export function normalizeApifyItem(item, slice = {}) {
   const addressObject = item.address && typeof item.address === "object" ? item.address : {};
   const attribution = item.attributionInfo && typeof item.attributionInfo === "object" ? item.attributionInfo : {};
-  const price = item.price && typeof item.price === "object" ? item.price : {};
+  const price = item.price && typeof item.price === "object" ? item.price : null;
   const rooms = item.rooms && typeof item.rooms === "object" ? item.rooms : {};
   const area = item.area && typeof item.area === "object" ? item.area : {};
   const dates = item.dates && typeof item.dates === "object" ? item.dates : {};
@@ -274,7 +285,7 @@ export function normalizeApifyItem(item, slice = {}) {
   const locationParts = cityStateFromLocation(item.location);
   const row = {
     address: pick(item.address, item.streetAddress, item.street_address, addressObject.streetAddress, item.abbreviatedAddress),
-    price: digits(pick(price.value, price.text, item.price, item.list_price, item.priceForHDP, item.zestimate, item.rentZestimate)),
+    price: apifyPriceDigits(price, item),
     beds: digits(pick(rooms.beds, item.beds, item.bedrooms, item.bedroomsTotal)),
     baths: digits(pick(rooms.baths, item.baths, item.baths_full, item.bathrooms, item.bathroomsTotalInteger)),
     city: pick(item.city, addressObject.city, locationParts.city, slice.city),
