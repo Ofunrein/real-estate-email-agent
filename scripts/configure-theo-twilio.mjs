@@ -18,6 +18,38 @@ function required(name) {
   return value;
 }
 
+function isRcsChannelSender(sender) {
+  const sid = String(sender?.sid || "");
+  const senderType = String(sender?.sender_type || "");
+  const senderName = String(sender?.sender || "");
+  return (
+    senderType.toUpperCase() === "RCS"
+    || senderName.toLowerCase().startsWith("rcs:")
+    || sid.toLowerCase().startsWith("rcs:")
+  );
+}
+
+async function twilioRequest(url, options = {}) {
+  const response = await fetch(url, options);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String(payload.message || response.statusText || `Twilio request failed: ${url}`));
+  }
+  return payload;
+}
+
+async function listTwilioCollection(baseUrl) {
+  const items = [];
+  let nextUrl = baseUrl;
+  while (nextUrl) {
+    const payload = await twilioRequest(nextUrl, { headers: { Authorization: auth } });
+    const key = Object.keys(payload).find((name) => Array.isArray(payload[name]));
+    if (key) items.push(...payload[key]);
+    nextUrl = payload.next_page_uri ? `https://messaging.twilio.com${payload.next_page_uri}` : "";
+  }
+  return items;
+}
+
 loadDotEnv();
 
 const accountSid = required("TWILIO_ACCOUNT_SID");
@@ -52,6 +84,36 @@ console.log(JSON.stringify({
   inbound_request_url: payload.inbound_request_url,
   inbound_method: payload.inbound_method,
   use_inbound_webhook_on_number: payload.use_inbound_webhook_on_number,
+}, null, 2));
+
+const channelSenders = await listTwilioCollection(
+  `https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}/ChannelSenders?PageSize=100`,
+);
+const rcsSenders = channelSenders.filter(isRcsChannelSender);
+const removedRcsSenders = [];
+
+for (const sender of rcsSenders) {
+  const deleteResponse = await fetch(
+    `https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}/ChannelSenders/${encodeURIComponent(sender.sid)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: auth },
+    },
+  );
+  if (!deleteResponse.ok && deleteResponse.status !== 204) {
+    const deletePayload = await deleteResponse.json().catch(() => ({}));
+    throw new Error(String(deletePayload.message || deleteResponse.statusText || `Failed to remove RCS sender ${sender.sid}`));
+  }
+  removedRcsSenders.push({
+    sid: sender.sid,
+    sender_type: sender.sender_type,
+    sender: sender.sender,
+  });
+}
+
+console.log(JSON.stringify({
+  rcs_senders_removed_count: removedRcsSenders.length,
+  rcs_senders_removed: removedRcsSenders,
 }, null, 2));
 
 const numbersResponse = await fetch(
@@ -94,3 +156,32 @@ console.log(JSON.stringify({
   sms_method: numberPayload.sms_method,
   voice_url_preserved: numberPayload.voice_url,
 }, null, 2));
+
+const servicePhoneNumbers = await listTwilioCollection(
+  `https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}/PhoneNumbers?PageSize=100`,
+);
+const remainingChannelSenders = await listTwilioCollection(
+  `https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}/ChannelSenders?PageSize=100`,
+);
+const remainingRcs = remainingChannelSenders.filter(isRcsChannelSender);
+
+console.log(JSON.stringify({
+  sender_pool: {
+    phone_numbers: servicePhoneNumbers.map((entry) => ({
+      sid: entry.sid,
+      phone_number: entry.phone_number,
+      country_code: entry.country_code,
+    })),
+    channel_senders: remainingChannelSenders.map((entry) => ({
+      sid: entry.sid,
+      sender_type: entry.sender_type,
+      sender: entry.sender,
+    })),
+    rcs_remaining_count: remainingRcs.length,
+    sms_only: remainingRcs.length === 0,
+  },
+}, null, 2));
+
+if (remainingRcs.length > 0) {
+  throw new Error(`Messaging service still has ${remainingRcs.length} RCS sender(s) after cleanup`);
+}

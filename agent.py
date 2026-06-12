@@ -2015,6 +2015,8 @@ def generate_property_html(listing: dict, rentcast: dict, calendly: str,
     # Photo URL: sheet column "Photo URL" normalises to "photo_url"; also check Apify/RentCast variants
     photo_url = (listing.get("photo_url") or listing.get("photo url") or
                  rentcast.get("photoUrl") or rentcast.get("photo_url") or "")
+    if photo_url and "maps.googleapis" in photo_url:
+        photo_url = ""
     listing_url = listing.get("listing_url", "")
     address = listing.get("address", "")
     city = listing.get("city", "")

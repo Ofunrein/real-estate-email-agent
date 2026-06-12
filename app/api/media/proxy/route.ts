@@ -8,6 +8,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   "zillowstatic.com",
   "lh3.googleusercontent.com",
   "images.unsplash.com",
+  "maps.googleapis.com",
 ]);
 
 function allowedImageUrl(value: string): URL | null {
