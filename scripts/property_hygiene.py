@@ -39,6 +39,16 @@ def _digits(value: str) -> str:
     return re.sub(r"[^\d.]", "", str(value or ""))
 
 
+def _apify_price_digits(price_obj: object, item: dict) -> str:
+    if isinstance(price_obj, dict) and price_obj:
+        for key in ("value", "market", "min", "text", "rent_estimate"):
+            digits = _digits(price_obj.get(key))
+            if digits:
+                return digits
+        return ""
+    return _digits(_first(price_obj, item.get("list_price"), item.get("priceForHDP"), item.get("price")))
+
+
 def _unitless_address_key(address: str) -> str:
     key = normalize_address_key(address)
     key = re.sub(r"\b(?:apt|unit|#)\s*[a-z0-9-]+\b", "", key)
@@ -163,7 +173,7 @@ def _apify_search_record(item: dict) -> dict[str, str]:
         "city": _first(item.get("city"), address_obj.get("city"), location["city"]),
         "state": _first(item.get("state"), address_obj.get("state"), location["state"]),
         "zip": _first(item.get("zip"), item.get("zipcode"), address_obj.get("zipcode"), location["zip"]),
-        "price": _digits(_first(price.get("market"), price.get("value"), item.get("price"))),
+        "price": _apify_price_digits(price, item),
         "beds": _digits(_first(rooms.get("beds"), item.get("beds"), item.get("bedrooms"))),
         "baths": _digits(_first(rooms.get("baths"), item.get("baths"), item.get("bathrooms"))),
         "sqft": _digits(_first(area.get("floor"), area.get("floor_text"), item.get("sqft"), item.get("livingArea"))),

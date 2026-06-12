@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 import psycopg2
@@ -42,6 +43,96 @@ REQUIRED_FIELDS = [
 
 UPDATE_FIELDS = [field for field in REQUIRED_FIELDS if field != "address"]
 
+REPAIRABLE_FIELDS = ("price", "beds", "baths")
+
+
+def _parse_price(value: str) -> float | None:
+    digits = re.sub(r"[^\d.]", "", str(value or ""))
+    if not digits:
+        return None
+    try:
+        return float(digits)
+    except ValueError:
+        return None
+
+
+def is_corrupt_price(value: str) -> bool:
+    price = _parse_price(value)
+    if price is None:
+        return True
+    if price == 0:
+        return True
+    if price >= 1_000_000_000:
+        return True
+    return False
+
+
+def _zpid_from_url(url: str) -> str:
+    match = re.search(r"/(\d+)_zpid", url or "")
+    return match.group(1) if match else ""
+
+
+def _build_zpid_index(index: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    zpid_index: dict[str, dict[str, str]] = {}
+    for record in index.values():
+        zpid = _zpid_from_url(record.get("listing_url", ""))
+        if zpid and zpid not in zpid_index:
+            zpid_index[zpid] = record
+    return zpid_index
+
+
+def _source_match(
+    record: dict[str, str],
+    *,
+    csv_index: dict[str, dict[str, str]],
+    apify_index: dict[str, dict[str, str]],
+    detail_index: dict[str, dict[str, str]],
+    zpid_index: dict[str, dict[str, str]],
+) -> tuple[dict[str, str], list[str]]:
+    sources: list[str] = []
+    merged: dict[str, str] = {}
+    for label, index in (
+        ("zillow_csv", csv_index),
+        ("apify_search", apify_index),
+        ("apify_detail", detail_index),
+    ):
+        if not index:
+            continue
+        match = _index_match(record, index)
+        if match:
+            merged = dict(match) if not merged else merged
+            if label not in sources:
+                sources.append(label)
+    zpid = _zpid_from_url(record.get("listing_url", ""))
+    if zpid:
+        match = zpid_index.get(zpid)
+        if match:
+            merged = dict(match) if not merged else merged
+            if "apify_zpid" not in sources:
+                sources.append("apify_zpid")
+    return merged, sources
+
+
+def _apply_repair_values(target: dict[str, str], source: dict[str, str]) -> list[str]:
+    changed: list[str] = []
+    for field in PROPERTIES_HEADERS:
+        if field == "address":
+            continue
+        source_value = clean_cell(source.get(field, ""))
+        if not source_value:
+            continue
+        current_value = clean_cell(target.get(field, ""))
+        if field == "price":
+            if not is_corrupt_price(current_value):
+                continue
+            if is_corrupt_price(source_value):
+                continue
+        elif current_value:
+            continue
+        target[field] = source_value
+        changed.append(field)
+    return changed
+
 
 def load_apify_index(path: str) -> dict[str, dict[str, str]]:
     if not path or not os.path.exists(path):
@@ -57,20 +148,29 @@ def merge_sources(
     csv_index: dict[str, dict[str, str]],
     apify_index: dict[str, dict[str, str]],
     detail_index: dict[str, dict[str, str]],
-) -> tuple[dict[str, str], list[str]]:
+    zpid_index: dict[str, dict[str, str]],
+) -> tuple[dict[str, str], list[str], list[str]]:
     merged = dict(record)
-    sources: list[str] = []
-    for label, index in (
-        ("zillow_csv", csv_index),
-        ("apify_search", apify_index),
-        ("apify_detail", detail_index),
-    ):
-        if not index:
-            continue
-        match = _index_match(merged, index)
-        if match and _apply_missing_values(merged, match):
-            sources.append(label)
-    return merged, sources
+    match, sources = _source_match(
+        record,
+        csv_index=csv_index,
+        apify_index=apify_index,
+        detail_index=detail_index,
+        zpid_index=zpid_index,
+    )
+    if not match:
+        return merged, sources, []
+
+    filled_fields = _apply_repair_values(merged, match)
+    if _apply_missing_values(merged, match):
+        for field in UPDATE_FIELDS:
+            if (
+                not clean_cell(record.get(field, ""))
+                and clean_cell(merged.get(field, ""))
+                and field not in filled_fields
+            ):
+                filled_fields.append(field)
+    return merged, sources, filled_fields
 
 
 def fetch_properties(conn, client_id: str) -> list[dict[str, str]]:
@@ -130,29 +230,26 @@ def main() -> int:
     csv_index = build_zillow_csv_index(args.source_csv)
     apify_index = load_apify_index(args.apify_index_path)
     detail_index = load_apify_index(args.apify_detail_index_path)
+    zpid_index = _build_zpid_index(apify_index)
 
     conn = psycopg2.connect(database_url)
     try:
         records = fetch_properties(conn, client_id)
         updated_rows: list[dict[str, object]] = []
         field_fills: dict[str, int] = {field: 0 for field in UPDATE_FIELDS}
+        corrupt_price_before = sum(1 for record in records if is_corrupt_price(record.get("price", "")))
+        corrupt_price_after = corrupt_price_before
 
         for record in records:
             normalized = normalize_property_record(record)
-            merged, sources = merge_sources(
+            merged, sources, filled_fields = merge_sources(
                 normalized,
                 csv_index=csv_index,
                 apify_index=apify_index,
                 detail_index=detail_index,
+                zpid_index=zpid_index,
             )
-            if merged == normalized:
-                continue
-
-            filled_fields = [
-                field
-                for field in UPDATE_FIELDS
-                if not clean_cell(normalized.get(field, "")) and clean_cell(merged.get(field, ""))
-            ]
+            filled_fields = [field for field in filled_fields if field in field_fills]
             if not filled_fields:
                 continue
 
@@ -165,11 +262,17 @@ def main() -> int:
                     "address": normalized.get("address", ""),
                     "sources": sources,
                     "filled_fields": filled_fields,
+                    "price_before": normalized.get("price", ""),
+                    "price_after": merged.get("price", ""),
                 }
             )
 
         if not args.dry_run:
             conn.commit()
+            refreshed = fetch_properties(conn, client_id)
+            corrupt_price_after = sum(1 for record in refreshed if is_corrupt_price(record.get("price", "")))
+        else:
+            corrupt_price_after = corrupt_price_before - field_fills.get("price", 0)
 
         result = {
             "dry_run": args.dry_run,
@@ -178,7 +281,10 @@ def main() -> int:
             "csv_index_keys": len(csv_index),
             "apify_index_keys": len(apify_index),
             "detail_index_keys": len(detail_index),
+            "zpid_index_keys": len(zpid_index),
             "rows_updated": len(updated_rows),
+            "corrupt_prices_before": corrupt_price_before,
+            "corrupt_prices_after": corrupt_price_after,
             "field_fills": field_fills,
             "sample_updates": updated_rows[:10],
         }
@@ -186,6 +292,7 @@ def main() -> int:
             print(json.dumps(result, indent=2))
         else:
             print(f"rows_updated={result['rows_updated']} dry_run={args.dry_run}")
+            print(f"corrupt_prices {corrupt_price_before} -> {corrupt_price_after}")
             for field, count in sorted(field_fills.items(), key=lambda item: -item[1]):
                 if count:
                     print(f"  {field}: +{count}")
