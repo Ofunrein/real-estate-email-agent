@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { type AgentInboxData, type Channel, parseVoiceTranscript, voiceCallTranscriptSource } from "@/lib/inboxData";
+import {
+  inboxImagePreviewUrl,
+  isDisplayableImageUrl,
+  mediaProxyPath,
+  rewriteEmailHtmlForInbox,
+  unwrapMediaProxyUrl,
+  usableInboxPhotoUrl,
+} from "@/lib/mediaProxy";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 type View = "overview" | "email" | "sms" | "whatsapp" | "voice" | "website_chat" | "properties";
@@ -56,62 +64,45 @@ function looksLikeHtml(value: string) {
   return /<\/?[a-z][\s\S]*>/i.test(value);
 }
 
-function sanitizeEmailHtml(value: string) {
-  return value
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
-    .replace(/<object[\s\S]*?<\/object>/gi, "")
-    .replace(/<embed[\s\S]*?>/gi, "")
-    .replace(/<form[\s\S]*?<\/form>/gi, "")
-    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/\s(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, "")
-    .replace(/\s(href|src)\s*=\s*(["'])\s*data:(?!image\/(?:png|jpe?g|gif|webp);)[\s\S]*?\2/gi, "");
-}
-
 function extractUrls(value: string) {
   return Array.from(new Set(value.match(/https?:\/\/[^\s<>"')]+/gi) || []));
 }
 
-function unwrapMediaProxyUrl(value: string) {
-  try {
-    const url = new URL(value);
-    if (url.pathname === "/api/media/proxy") {
-      return url.searchParams.get("url") || value;
-    }
-  } catch {
-    return value;
-  }
-  return value;
-}
+function EmailRenderedHtml({ html, properties }: { html: string; properties: SheetRow[] }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const preparedHtml = useMemo(
+    () => rewriteEmailHtmlForInbox(html, properties),
+    [html, properties],
+  );
 
-function isDisplayableImageUrl(value: string) {
-  const lower = unwrapMediaProxyUrl(value).toLowerCase();
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.querySelectorAll("img").forEach((img) => {
+      img.onerror = () => {
+        img.classList.add("image-load-failed");
+        img.removeAttribute("src");
+      };
+    });
+  }, [preparedHtml]);
+
   return (
-    /\.(png|jpe?g|gif|webp)(?:[?#].*)?$/.test(lower) ||
-    lower.includes("photos.zillowstatic.com/") ||
-    lower.includes("maps.googleapis.com/maps/api/streetview") ||
-    lower.includes("maps.googleapis.com/maps/api/staticmap")
+    <div
+      ref={rootRef}
+      className="email-rendered"
+      dangerouslySetInnerHTML={{ __html: preparedHtml }}
+    />
   );
 }
 
-function imagePreviewUrl(value: string) {
-  return unwrapMediaProxyUrl(value);
-}
-
-function MessageContent({ event }: { event: SheetRow }) {
+function MessageContent({ event, properties }: { event: SheetRow; properties: SheetRow[] }) {
   const text = eventText(event);
   if (!text) {
     return <div className="message-text empty-message">No message text recorded</div>;
   }
 
   if (looksLikeHtml(text)) {
-    return (
-      <div
-        className="email-rendered"
-        dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(text) }}
-      />
-    );
+    return <EmailRenderedHtml html={text} properties={properties} />;
   }
 
   const imageUrls = extractUrls(text).filter(isDisplayableImageUrl);
@@ -128,7 +119,7 @@ function MessageContent({ event }: { event: SheetRow }) {
                 onError={(event) => {
                   event.currentTarget.closest(".message-image-link")?.classList.add("image-load-failed");
                 }}
-                src={imagePreviewUrl(url)}
+                src={inboxImagePreviewUrl(url)}
               />
             </a>
           ))}
@@ -477,7 +468,7 @@ function propertyLabel(property: SheetRow) {
 }
 
 function PropertyPhoto({ property, large = false }: { property: SheetRow; large?: boolean }) {
-  const photoUrl = property.photo_url;
+  const photoUrl = usableInboxPhotoUrl(property.photo_url);
   if (!photoUrl) {
     return <div className={large ? "property-photo missing large" : "property-photo missing"}>No photo</div>;
   }
@@ -486,7 +477,15 @@ function PropertyPhoto({ property, large = false }: { property: SheetRow; large?
       alt={`${property.address || "Property"} photo`}
       className={large ? "property-photo large" : "property-photo"}
       loading="lazy"
-      src={photoUrl}
+      onError={(event) => {
+        event.currentTarget.replaceWith(
+          Object.assign(document.createElement("div"), {
+            className: large ? "property-photo missing large" : "property-photo missing",
+            textContent: "No photo",
+          }),
+        );
+      }}
+      src={mediaProxyPath(photoUrl)}
     />
   );
 }
@@ -862,11 +861,13 @@ function ConversationThread({
   events,
   channelLabel,
   channel,
+  properties,
 }: {
   threadRef: string;
   events: SheetRow[];
   channelLabel: string;
   channel?: Channel;
+  properties: SheetRow[];
 }) {
   const latest = latestEvent(events);
   const needsHuman = threadNeedsHuman(events);
@@ -898,7 +899,7 @@ function ConversationThread({
               <span>{messageSpeaker(event)} {event.direction === "outbound" ? "sent" : "received"}</span>
               <span>{formatEventTime(event.event_at)}</span>
             </div>
-            <MessageContent event={event} />
+            <MessageContent event={event} properties={properties} />
             {event.handoff_reason ? (
               <div className="message-handoff">
                 <strong>Flag</strong>
@@ -920,6 +921,7 @@ function ThreadViewer({
   selectedThreadKey,
   onSearchChange,
   onSelectThread,
+  properties,
 }: {
   threads: [string, SheetRow[]][];
   channelLabel: string;
@@ -928,6 +930,7 @@ function ThreadViewer({
   selectedThreadKey: string;
   onSearchChange: (value: string) => void;
   onSelectThread: (threadRef: string) => void;
+  properties: SheetRow[];
 }) {
   if (!threads.length) {
     return (
@@ -996,6 +999,7 @@ function ThreadViewer({
             channel={channel}
             channelLabel={channelLabel}
             events={activeThread[1]}
+            properties={properties}
             threadRef={activeThread[0]}
           />
         ) : (
@@ -1676,6 +1680,7 @@ export function AgentInboxClient({
                   channelLabel={selectedChannelLabel}
                   onSearchChange={setThreadSearch}
                   onSelectThread={setSelectedThreadKey}
+                  properties={dashboardData.properties}
                   search={threadSearch}
                   selectedThreadKey={selectedThreadKey}
                   threads={channelThreads}
