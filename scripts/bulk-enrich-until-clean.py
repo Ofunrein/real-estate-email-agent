@@ -2,6 +2,7 @@
 """Run checkpointed property enrichment until health score stops improving."""
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -22,7 +23,25 @@ def health_score(report: dict) -> int:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Run checkpointed property enrichment until health score stops improving.",
+    )
+    parser.add_argument(
+        "--accept-paid-apify",
+        action="store_true",
+        help="Acknowledge paid Apify detail actor runs (live_lookup=True).",
+    )
+    args = parser.parse_args()
+
     load_dotenv(".env")
+    if not args.accept_paid_apify and os.getenv("ALLOW_PAID_APIFY", "").strip() != "1":
+        print(
+            "ERROR: this script uses live_lookup=True (paid Apify). "
+            "Set ALLOW_PAID_APIFY=1 or pass --accept-paid-apify.",
+            file=sys.stderr,
+        )
+        return 1
+
     spreadsheet_id = os.getenv("GOOGLE_SHEET_ID", "").strip()
     if not spreadsheet_id:
         print("GOOGLE_SHEET_ID is required")
