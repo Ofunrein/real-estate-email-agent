@@ -21,7 +21,7 @@
   --shadow-tight: 0 10px 28px rgba(19, 22, 25, 0.06);
   --thread-list-width: clamp(200px, 18vw, 248px);
   --thread-bubble-max: min(92%, 980px);
-  --thread-bubble-voice-max: min(94%, 1040px);
+  --thread-bubble-voice-max: min(85%, 680px);
   --context-rail-width: clamp(280px, 24vw, 320px);
 }
 
@@ -761,14 +761,17 @@ button {
 
 .thread-messages {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 8px;
   max-height: calc(100dvh - 405px);
   overflow: auto;
-  padding: 12px clamp(10px, 1.4vw, 18px) 16px;
+  padding: 12px clamp(6px, 0.8vw, 12px) 16px;
 }
 
 .message {
-  width: fit-content;
+  width: min(100%, var(--thread-bubble-max));
   max-width: var(--thread-bubble-max);
   margin: 0;
   border: 1px solid var(--line);
@@ -777,11 +780,11 @@ button {
   padding: 10px 14px;
   line-height: 1.38;
   overflow: hidden;
+  align-self: start;
 }
 
 .message.outbound {
   justify-self: end;
-  margin-right: 8px;
   margin-left: auto;
   border-color: #9bcdbc;
   background: #e4f6ef;
@@ -790,7 +793,6 @@ button {
 
 .message.inbound {
   justify-self: start;
-  margin-left: 8px;
   margin-right: auto;
   border-color: #ded4c6;
   background: #fff;
@@ -883,24 +885,57 @@ button {
   overflow-wrap: anywhere;
   color: #201f1b;
   width: 100%;
-  max-width: var(--thread-bubble-max);
+  max-width: 100%;
 }
 
-.email-rendered,
-.email-rendered p,
+/* Iris property emails ship inline max-width:520px on wrapper + hero img — override for inbox width */
+.email-rendered > div,
+.email-rendered > table,
 .email-rendered div,
+.email-rendered p,
 .email-rendered span {
-  max-width: 100%;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.email-rendered > div,
+.email-rendered > table {
+  width: 100% !important;
 }
 
 .email-rendered img {
-  max-width: 100%;
-  height: auto;
+  display: block !important;
+  width: auto !important;
+  max-width: min(88%, 520px) !important;
+  max-height: 220px;
+  height: auto !important;
+  margin-left: auto;
+  margin-right: auto;
+  object-fit: contain !important;
   border-radius: 8px;
 }
 
+.email-rendered img.image-load-failed {
+  display: none !important;
+}
+
+.email-rendered .email-photo-placeholder {
+  display: block;
+  width: min(88%, 520px);
+  min-height: 120px;
+  margin: 0 auto 14px;
+  padding: 36px 16px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #edf6ef 0%, #dfece3 100%);
+  color: #4f6456;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .email-rendered table {
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   border-collapse: collapse;
 }
 
@@ -913,12 +948,34 @@ button {
   background: #fbfaf7;
 }
 
+.voice-transcript {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
+}
+
 .voice-transcript .message {
-  min-width: min(260px, 72%);
+  width: fit-content;
   max-width: var(--thread-bubble-voice-max);
-  /* Nested grid + overflow:hidden collapses bubble height to the label row only. */
-  min-height: min-content;
+  height: max-content;
   overflow: visible;
+  align-self: start;
+}
+
+.voice-transcript .message-content {
+  display: block;
+}
+
+.voice-transcript .message.inbound {
+  justify-self: start;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.voice-transcript .message.outbound {
+  justify-self: end;
+  margin-right: 0;
+  margin-left: auto;
 }
 
 .voice-message-text {
@@ -2019,8 +2076,8 @@ button {
 
 @media (max-width: 1160px) {
   :root {
-    --thread-bubble-max: min(90%, 820px);
-    --thread-bubble-voice-max: min(92%, 880px);
+    --thread-bubble-max: min(91%, 920px);
+    --thread-bubble-voice-max: min(85%, 620px);
     --thread-list-width: clamp(210px, 22vw, 240px);
   }
 
@@ -2068,8 +2125,8 @@ button {
 
 @media (max-width: 860px) {
   :root {
-    --thread-bubble-max: min(88%, 720px);
-    --thread-bubble-voice-max: min(90%, 760px);
+    --thread-bubble-max: min(90%, 780px);
+    --thread-bubble-voice-max: min(88%, 560px);
   }
 
   .app-shell {
@@ -2133,13 +2190,19 @@ button {
 
   :root {
     --thread-bubble-max: min(94%, 100%);
-    --thread-bubble-voice-max: min(96%, 100%);
+    --thread-bubble-voice-max: min(90%, 100%);
   }
 
   .message.outbound,
   .message.inbound {
-    margin-left: 10px;
-    margin-right: 10px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .voice-transcript .message.inbound,
+  .voice-transcript .message.outbound {
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .message {

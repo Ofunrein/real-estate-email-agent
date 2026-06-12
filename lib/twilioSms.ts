@@ -1,3 +1,5 @@
+import { mediaProxyUrl } from "@/lib/mediaProxy";
+
 export type TwilioSendResult = {
   sent: boolean;
   skipped: boolean;
@@ -19,12 +21,12 @@ function missingConfig(): string {
   return missing.join(", ");
 }
 
-function isRcsAddress(value: string): boolean {
-  return /^rcs:/i.test(value.trim());
+function smsRecipientAddress(value: string): string {
+  return value.replace(/^(?:rcs|sms):/i, "").trim();
 }
 
 function recipientDigits(value: string): string {
-  return value.replace(/^rcs:/i, "").replace(/\D/g, "");
+  return smsRecipientAddress(value).replace(/\D/g, "");
 }
 
 export function isUnsafeSmsRecipient(value: string): boolean {
@@ -47,18 +49,6 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
     .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
 }
 
-function mediaProxyUrl(url: string): string {
-  const base = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
-  if (!base) return url;
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname === new URL(base).hostname) return url;
-    return `${base}/api/media/proxy?url=${encodeURIComponent(url)}`;
-  } catch {
-    return url;
-  }
-}
-
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
   const cleanBody = body.trim();
   const cleanUrls = cleanMediaUrls(mediaUrls);
@@ -77,8 +67,7 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
     return { sent: false, skipped: true, sid: "", error: `Missing Twilio config: ${missing}`, mediaCount: cleanUrls.length };
   }
 
-  const recipient = to.trim();
-  const recipientForSend = recipient.replace(/^rcs:/i, "");
+  const recipient = smsRecipientAddress(to);
   const message = body.trim();
   if (!recipient || !message) {
     return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or body", mediaCount: cleanUrls.length };
@@ -95,27 +84,22 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
   const authToken = process.env.TWILIO_AUTH_TOKEN || "";
-  const messagingServiceSid = (process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
   const fromNumber = (process.env.TWILIO_FROM || "").trim();
+  if (!fromNumber) {
+    return {
+      sent: false,
+      skipped: true,
+      sid: "",
+      error: "TWILIO_FROM is required for SMS replies",
+      mediaCount: cleanUrls.length,
+    };
+  }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
   const form = new URLSearchParams({
-    To: recipientForSend,
+    To: recipient,
+    From: fromNumber,
     Body: message,
   });
-  if (messagingServiceSid) {
-    form.set("MessagingServiceSid", messagingServiceSid);
-  } else {
-    if (!fromNumber) {
-      return {
-        sent: false,
-        skipped: true,
-        sid: "",
-        error: isRcsAddress(recipient) ? "TWILIO_MESSAGING_SERVICE_SID is required for RCS replies" : "TWILIO_FROM is required for SMS replies",
-        mediaCount: cleanUrls.length,
-      };
-    }
-    form.set("From", fromNumber);
-  }
   for (const mediaUrl of cleanUrls) {
     form.append("MediaUrl", mediaUrl);
   }
