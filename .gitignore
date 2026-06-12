@@ -24,6 +24,7 @@ node_modules/
 .next/
 out/
 
-# OS
-.DS_Store
+# Local bulk data caches (county CAD rolls, etc.)
+data/tcad/*.zip
+data/tcad/layout/
 tsconfig.tsbuildinfo
