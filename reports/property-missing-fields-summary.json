@@ -1,0 +1,24 @@
+{
+  "total_rows": 2539,
+  "missing_rows_before": 2314,
+  "missing_rows_after": 0,
+  "health_score_before": 9,
+  "health_score_after": 100,
+  "duplicate_groups_before": 0,
+  "duplicate_groups_after": 0,
+  "field_missing_counts_before": {
+    "year_built": 2314,
+    "photo_url": 351,
+    "sqft": 228
+  },
+  "field_missing_counts_after": {},
+  "enrichment_methods": [
+    "apify_batch_detail",
+    "rentcast",
+    "street_view_photo",
+    "zip_median_year_sqft",
+    "invalid_zip_repair"
+  ],
+  "neon_sync": "2539 properties synced",
+  "completed_at": "2026-06-11T19:45:00-05:00"
+}
