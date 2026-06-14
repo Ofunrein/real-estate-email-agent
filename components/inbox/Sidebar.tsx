@@ -42,6 +42,13 @@ export function Sidebar({
   return (
     <nav className="sidebar" aria-label="Agent Inbox navigation">
       <div className="sidebar-brand">
+        <span className="sidebar-logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect width="24" height="24" rx="6" fill="var(--accent)" />
+            <path d="M4 12.5L12 5l8 7.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 11v7a1 1 0 001 1h3v-4h4v4h3a1 1 0 001-1v-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
         <span className="sidebar-wordmark">Agent Inbox</span>
       </div>
 
