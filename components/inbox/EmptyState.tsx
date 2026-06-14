@@ -44,13 +44,13 @@ const LABELS: Record<string, string> = {
   properties:   "No properties loaded",
 };
 
-export function EmptyState({ channel }: { channel: string }) {
+export function EmptyState({ channel, label }: { channel: string; label?: string }) {
   const icon = ICONS[channel] ?? ICONS.email;
-  const label = LABELS[channel] ?? "Nothing here yet";
+  const text = label ?? LABELS[channel] ?? "Nothing here yet";
   return (
     <div className="bt-empty-state">
       {icon}
-      <span style={{ fontSize: "var(--text-sm)" }}>{label}</span>
+      <span style={{ fontSize: "var(--text-sm)" }}>{text}</span>
     </div>
   );
 }

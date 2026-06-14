@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { EmptyState } from "@/components/inbox/EmptyState";
 import { Sidebar } from "@/components/inbox/Sidebar";
 import { StatusDot } from "@/components/inbox/StatusDot";
 import { SyncIndicator } from "@/components/inbox/SyncIndicator";
@@ -666,8 +667,7 @@ function ThreadViewer({
   if (!threads.length) {
     return (
       <div className="empty-state">
-        <div className="empty-icon">0</div>
-        <strong>No {channelLabel.toLowerCase()} conversations yet</strong>
+        <EmptyState channel={channel ?? "email"} label={`No ${channelLabel.toLowerCase()} conversations yet`} />
         <span>Connected webhooks will appear here as live conversation threads.</span>
       </div>
     );
@@ -736,8 +736,7 @@ function ThreadViewer({
           />
         ) : (
           <div className="empty-state thread-viewer-empty">
-            <div className="empty-icon">0</div>
-            <strong>No conversation selected</strong>
+            <EmptyState channel={channel ?? "email"} label="No conversation selected" />
             <span>Select a conversation from the list.</span>
           </div>
         )}
@@ -817,8 +816,7 @@ function VoiceThreadViewer({
   if (!threads.length) {
     return (
       <div className="empty-state">
-        <div className="empty-icon">0</div>
-        <strong>No voice conversations yet</strong>
+        <EmptyState channel="voice" label="No voice conversations yet" />
         <span>Completed Vapi call transcripts and recordings will appear here.</span>
       </div>
     );
@@ -889,8 +887,7 @@ function VoiceThreadViewer({
           </article>
         ) : (
           <div className="empty-state thread-viewer-empty">
-            <div className="empty-icon">0</div>
-            <strong>No voice conversation selected</strong>
+            <EmptyState channel="voice" label="No voice conversation selected" />
             <span>Select a caller from the list.</span>
           </div>
         )}
