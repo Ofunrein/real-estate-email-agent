@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Sidebar } from "@/components/inbox/Sidebar";
 import { StatusDot } from "@/components/inbox/StatusDot";
+import { SyncIndicator } from "@/components/inbox/SyncIndicator";
 import {
   PreviewIcon,
   PropertyPhoto,
@@ -128,17 +129,6 @@ function formatEventTime(value?: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  });
-}
-
-function formatRefreshTime(value?: string) {
-  if (!value) return "pending";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
   });
 }
 
@@ -712,6 +702,7 @@ function ThreadViewer({
             return (
               <button
                 className={active ? "conversation-list-item active" : "conversation-list-item"}
+                data-unread={needsHuman ? "true" : "false"}
                 key={threadRef}
                 onClick={() => onSelectThread(threadRef)}
                 type="button"
@@ -1089,7 +1080,6 @@ export function AgentInboxClient({
     : 0;
   const activeThreads = threadEntries.length;
   const latestCurrentEvent = latestEvent(currentEvents);
-  const dataStatus = effectiveLoadError ? "Limited" : "Live";
   const sortedProperties = useMemo(
     () => sortProperties(dashboardData.properties, propertySort),
     [dashboardData.properties, propertySort],
@@ -1198,21 +1188,10 @@ export function AgentInboxClient({
       <Sidebar currentView={view} onViewChange={setView} data={dashboardData} />
 
       <main className="inbox-main">
-        <div className="topbar">
-          <div>
-            <span className="eyebrow">Urban Mail command center</span>
-            <h1>{viewTitle(view)}</h1>
-            <p>Monitor real AI conversations, channel readiness, lead memory, and property data quality without replacing the client CRM.</p>
-          </div>
-          <div className="top-actions">
-            <div className="sync-status">{sourceLabel} {dataStatus.toLowerCase()}</div>
-            <div className="sync-status secondary">Auto refresh {DASHBOARD_REFRESH_MS / 1000}s</div>
-            <div className={refreshError ? "sync-status warning" : "sync-status secondary"}>
-              Updated {formatRefreshTime(lastRefreshedAt)}
-            </div>
-            {view === "properties" ? <div className="sync-status">Sort {sortLabel(propertySort)}</div> : null}
-          </div>
-        </div>
+        <header className="inbox-topbar">
+          <span className="inbox-topbar-title">{selectedChannel ? selectedChannelLabel : viewTitle(view)}</span>
+          <SyncIndicator lastUpdated={lastRefreshedAt || null} isLive={!effectiveLoadError} />
+        </header>
 
         {effectiveLoadError ? (
           <section className="panel notice-panel">
