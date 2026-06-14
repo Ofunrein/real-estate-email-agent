@@ -20,6 +20,7 @@ const LABEL: Record<Status, string> = {
 
 export function StatusDot({ status }: { status: string }) {
   const s = (STATUS_KEYS.includes(status) ? status : "unknown") as Status;
+  const isUnknown = s === "unknown";
   return (
     <span
       style={{
@@ -27,7 +28,8 @@ export function StatusDot({ status }: { status: string }) {
         width: 6,
         height: 6,
         borderRadius: "50%",
-        backgroundColor: COLOR[s],
+        backgroundColor: isUnknown ? "transparent" : COLOR[s],
+        border: isUnknown ? "1px solid var(--text-muted)" : undefined,
         flexShrink: 0,
       }}
       aria-label={LABEL[s]}

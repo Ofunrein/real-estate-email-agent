@@ -5,18 +5,21 @@ function format(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  const diff = Date.now() - d.getTime();
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
   if (diff < 60_000) return "just now";
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
-  if (diff < 86_400_000) {
+  // Same calendar day → time of day
+  if (d.toDateString() === now.toDateString()) {
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  // Calendar yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  if (diff < 604_800_000) {
-    return d.toLocaleDateString([], { weekday: "short" });
-  }
+  // Within last 7 days → weekday
+  if (diff < 604_800_000) return d.toLocaleDateString([], { weekday: "short" });
+  // Older → Mon D
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
