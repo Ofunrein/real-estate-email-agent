@@ -1801,153 +1801,10 @@ button {
   line-height: 1.45;
 }
 
-@media (max-width: 1160px) {
-  :root {
-    --thread-bubble-max: min(91%, 920px);
-    --thread-bubble-voice-max: min(85%, 620px);
-    --thread-list-width: clamp(210px, 22vw, 240px);
-  }
-
-  .metrics-grid,
-  .channel-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workspace,
-  .property-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .conversation-list,
-  .thread-messages {
-    max-height: 520px;
-  }
-
-  .context-rail {
-    position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .property-detail-panel {
-    position: static;
-  }
-
-  .property-table-wrap {
-    max-height: 620px;
-  }
-
-  .property-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .property-search {
-    max-width: none;
-  }
-
-  .property-toolbar-meta {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 860px) {
-  :root {
-    --thread-bubble-max: min(90%, 780px);
-    --thread-bubble-voice-max: min(88%, 560px);
-  }
-
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: static;
-    height: auto;
-  }
-
-  .side-footer {
-    margin-top: 24px;
-  }
-
-  .conversation-inbox {
-    grid-template-columns: 1fr;
-  }
-
-  .conversation-list-column {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .conversation-list {
-    max-height: 260px;
-  }
-
-  .thread-messages {
-    max-height: none;
-  }
-}
-
-@media (max-width: 640px) {
-  .inbox-main {
-    padding: 16px;
-  }
-
-  .table-row,
-  .detail-item {
-    grid-template-columns: 1fr;
-  }
-
-  .status {
-    justify-self: start;
-  }
-
-  :root {
-    --thread-bubble-max: min(94%, 100%);
-    --thread-bubble-voice-max: min(90%, 100%);
-  }
-
-  .message.outbound,
-  .message.inbound {
-    max-width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .message.inbound {
-    justify-self: stretch;
-  }
-
-  .message.outbound {
-    justify-self: stretch;
-  }
-
-  .voice-transcript .message.inbound,
-  .voice-transcript .message.outbound {
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .message {
-    padding: 10px 14px;
-  }
-
-  .property-card-stage {
-    padding: 10px;
-  }
-
-  .property-phone {
-    width: 100%;
-    border-radius: 26px;
-  }
-
-  .phone-card {
-    max-height: calc(100dvh - 78px);
-  }
-
-  .phone-hero .property-photo.large {
-    height: 272px;
-  }
-}
+/* NOTE: The unified responsive system lives at the end of this file
+   (see "RESPONSIVE SYSTEM" banner). The legacy 1160 / 860 / 640 / 1100 / 900
+   breakpoints were consolidated there to remove cascade conflicts between the
+   grid-era and flex-era .app-shell definitions. */
 
 /* EmptyState — no border, no background, pure muted tone */
 .bt-empty-state {
@@ -2008,7 +1865,7 @@ time,
 
 /* ============ APP SHELL + SIDEBAR ============ */
 .app-shell { display: flex; min-height: 100dvh; background: var(--bg); }
-.inbox-main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: var(--sp-6); }
+.inbox-main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: clamp(var(--sp-3), 2vw, var(--sp-6)); }
 .sidebar { background: var(--nav); display: flex; flex-direction: column; width: 220px; flex-shrink: 0; min-height: 100dvh; border-right: 1px solid rgba(255,255,255,0.06); }
 .sidebar-brand { padding: var(--sp-4); border-bottom: 1px solid rgba(255,255,255,0.06); }
 .sidebar-wordmark { font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 600; color: var(--text-nav); letter-spacing: 0.02em; }
@@ -2039,7 +1896,6 @@ time,
 /* ============ INBOX TOPBAR ============ */
 .inbox-topbar { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--sp-4); border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
 .inbox-topbar-title { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
-@media (max-width: 1100px) { .sidebar { width: 64px; } .sidebar-wordmark, .sidebar-nav-agent, .sidebar-metric-label { display: none; } }
 
 /* ============ OVERVIEW CHARTS ============ */
 .overview-charts {
@@ -2063,4 +1919,223 @@ time,
 .channel-bar { display: block; height: 100%; border-radius: 999px; background: var(--text-muted); transition: width var(--dur-base) var(--ease-out); }
 .channel-bar.is-top { background: var(--accent); }
 .channel-count { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); min-width: 2ch; text-align: right; }
-@media (max-width: 900px) { .overview-charts { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   RESPONSIVE SYSTEM — single source of truth
+   Tiers (max-width, layered widest -> narrowest so the cascade
+   resolves cleanly; later/narrower rules override earlier ones):
+
+     >= 1200px  Wide desktop  — full layout (base rules above, no media query)
+     1024-1199  Laptop        — sidebar 200px, rail narrower, charts 2-col
+      768-1023  Tablet        — single-column workspace, rail below, table scrolls
+      < 768px   Mobile phone  — sidebar -> sticky top nav bar, everything stacks
+
+   .app-shell is flex (sidebar + .inbox-main). .workspace is a 2-col grid
+   (conversation panel + .context-rail). .property-layout is a 3-col grid.
+   ============================================================ */
+
+/* ---------- LAPTOP: 1024-1199px ---------- */
+@media (max-width: 1199px) {
+  :root {
+    --thread-bubble-max: min(91%, 920px);
+    --thread-bubble-voice-max: min(85%, 620px);
+    --thread-list-width: clamp(200px, 22vw, 240px);
+  }
+
+  .sidebar { width: 200px; }
+
+  /* Keep workspace 2-col; rail just narrower. */
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) clamp(260px, 26vw, 320px);
+  }
+
+  /* Property layout drops the fixed left rail down a notch. */
+  .property-layout {
+    grid-template-columns: 220px minmax(0, 1fr) 320px;
+  }
+}
+
+/* ---------- TABLET: 768-1023px ---------- */
+@media (max-width: 1023px) {
+  :root {
+    --thread-bubble-max: min(90%, 780px);
+    --thread-bubble-voice-max: min(88%, 560px);
+  }
+
+  .sidebar { width: 200px; }
+
+  /* Single-column workspace: context rail drops BELOW the conversation panel. */
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .property-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Rail is no longer a side column — lay it out as a responsive row of cards. */
+  .context-rail {
+    position: static;
+    top: auto;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .property-detail-panel {
+    position: static;
+  }
+
+  /* Scroll heights relax when columns stack. */
+  .conversation-list,
+  .thread-messages {
+    max-height: 520px;
+  }
+
+  .property-table-wrap {
+    max-height: 620px;
+    overflow-x: auto;
+  }
+
+  .property-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .property-search { max-width: none; }
+  .property-toolbar-meta { justify-content: flex-start; }
+}
+
+/* ---------- MOBILE PHONE: < 768px ---------- */
+@media (max-width: 767px) {
+  :root {
+    --thread-bubble-max: min(94%, 100%);
+    --thread-bubble-voice-max: min(90%, 100%);
+  }
+
+  /* Shell stacks: top nav bar, then main content. */
+  .app-shell { flex-direction: column; }
+
+  /* Sidebar (dark rail) -> sticky horizontal top nav bar.
+     Stays on the dark --nav background so channel labels remain readable. */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Brand wordmark + bottom metrics are noise on a phone nav bar. */
+  .sidebar-brand,
+  .sidebar-metrics { display: none; }
+
+  /* Nav becomes a horizontal scroll strip of chips. */
+  .sidebar-nav {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    padding: 0;
+    gap: 2px;
+  }
+
+  .sidebar-nav li { flex: 0 0 auto; }
+
+  /* Each item becomes an inline chip with a tappable target. */
+  .sidebar-nav-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: auto;
+    min-height: 44px;
+    padding: var(--sp-2) var(--sp-4);
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+  }
+
+  /* Active accent moves from left border (vertical rail) to bottom border (top bar). */
+  .sidebar-nav-item.active {
+    border-left: none;
+    border-bottom: 2px solid var(--accent);
+    padding-left: var(--sp-4);
+  }
+
+  /* Hide the agent sublabel on mobile chips; keep the channel label. */
+  .sidebar-nav-agent { display: none; }
+
+  /* Topbar title can be a touch smaller. */
+  .inbox-topbar { padding: 0 var(--sp-3); }
+
+  /* Workspace + property layout already single-column from the tablet tier;
+     restate context rail as a simple vertical stack on the smallest screens. */
+  .context-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Conversation inbox: list stacks above thread. */
+  .conversation-inbox {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .conversation-list-column {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .conversation-list { max-height: 280px; }
+  .thread-messages { max-height: none; }
+
+  /* Charts: single column. */
+  .overview-charts { grid-template-columns: minmax(0, 1fr); }
+
+  /* Property table keeps its horizontal scroll wrapper (table is min 1380px wide). */
+  .property-table-wrap { overflow-x: auto; }
+
+  /* Generic two-up rows collapse. */
+  .table-row,
+  .detail-item { grid-template-columns: minmax(0, 1fr); }
+
+  .status { justify-self: start; }
+
+  /* Message bubbles go full width with tighter horizontal padding. */
+  .message.outbound,
+  .message.inbound {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .message.inbound,
+  .message.outbound { justify-self: stretch; }
+
+  .voice-transcript .message.inbound,
+  .voice-transcript .message.outbound {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .message { padding: 10px 13px; }
+
+  /* Mobile property card preview fills the viewport. */
+  .property-card-stage { padding: 10px; }
+
+  .property-phone {
+    width: 100%;
+    border-radius: 26px;
+  }
+
+  .phone-card { max-height: calc(100dvh - 78px); }
+  .phone-hero .property-photo.large { height: 272px; }
+
+  /* Comfortable touch targets for tappable rows. */
+  .conversation-list-item,
+  .activity-row,
+  .property-table tbody tr { min-height: 44px; }
+}
