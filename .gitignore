@@ -31,3 +31,7 @@ tsconfig.tsbuildinfo
 
 # Local docs dump (553MB, not part of build)
 claude-md/
+
+# Playwright CLI artifacts
+.playwright-cli/
+.DS_Store
