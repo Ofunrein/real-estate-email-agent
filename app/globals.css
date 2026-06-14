@@ -2291,3 +2291,13 @@ button {
     height: 272px;
   }
 }
+
+/* EmptyState — no border, no background, pure muted tone */
+.bt-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-8);
+  color: var(--text-muted);
+}
