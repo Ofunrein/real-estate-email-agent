@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Sidebar } from "@/components/inbox/Sidebar";
 import { StatusDot } from "@/components/inbox/StatusDot";
 import {
   PreviewIcon,
@@ -31,35 +32,6 @@ const channelViews: { key: View; label: string; agent: string; avatar: string; c
   { key: "voice", label: "Voice", agent: "Aria", avatar: "/images/agents/aria.png", channel: "voice" },
   { key: "website_chat", label: "Website", agent: "Olivia", avatar: "/images/agents/olivia.png", channel: "website_chat" },
 ];
-
-function formatNumber(value: number | string) {
-  if (typeof value === "number") {
-    return value.toLocaleString();
-  }
-  return value;
-}
-
-function metric(label: string, value: number | string, note = "", onClick?: () => void) {
-  const content = (
-    <>
-      <span className="metric-label">{label}</span>
-      <strong>{formatNumber(value)}</strong>
-      {note ? <small>{note}</small> : null}
-    </>
-  );
-  if (onClick) {
-    return (
-      <button className="metric metric-button" onClick={onClick} type="button">
-        {content}
-      </button>
-    );
-  }
-  return (
-    <div className="metric">
-      {content}
-    </div>
-  );
-}
 
 function eventText(event: SheetRow) {
   return event.message_text || event.summary || event.ai_action || "";
@@ -1197,16 +1169,6 @@ export function AgentInboxClient({
     setMobileCardIndex(null);
   }
 
-  function openPropertiesReview() {
-    const hasReviewRows = dashboardData.properties.some((property) => missingPropertyFields(property).length);
-    setView("properties");
-    setPropertySort({ key: "source_order", direction: "asc" });
-    setShowPropertyReviewOnly(hasReviewRows);
-    setPropertySearch("");
-    setSelectedPropertyIndex(0);
-    setMobileCardIndex(null);
-  }
-
   function openEventThread(event: SheetRow) {
     const channel = eventChannel(event) as Channel;
     const target = channelViews.find((item) => item.channel === channel);
@@ -1233,63 +1195,9 @@ export function AgentInboxClient({
 
   return (
     <div className="app-shell">
-      <nav className="sidebar" aria-label="Agent Inbox navigation">
-        <div className="brand">
-          <div className="brand-mark">L</div>
-          <div>
-            <h1 className="brand-title">Agent OS</h1>
-            <p className="brand-subtitle">Lumenosis AI</p>
-          </div>
-        </div>
+      <Sidebar currentView={view} onViewChange={setView} data={dashboardData} />
 
-        <div className="source-card">
-          <span>Database</span>
-          <strong>{dataStatus}</strong>
-          <div className="source-meter" aria-label={`Property data health ${propertyHealthScore}%`}>
-            <span style={{ width: `${propertyHealthScore}%` }} />
-          </div>
-          <small>{propertyHealthScore}% property health</small>
-        </div>
-
-        <div className="side-section">
-          <p className="side-label">Workspace</p>
-          <button className={`nav-button ${view === "overview" ? "active" : ""}`} onClick={() => setView("overview")}>
-            <span><i />Overview</span>
-            <span className="nav-count">{dashboardData.metrics.event_count}</span>
-          </button>
-          <button
-            className={`nav-button ${view === "properties" ? "active" : ""}`}
-            onClick={() => {
-              setView("properties");
-              setShowPropertyReviewOnly(false);
-            }}
-          >
-            <span><i />Properties</span>
-            <span className="nav-count">{dashboardData.propertyHealth.total}</span>
-          </button>
-        </div>
-
-        <div className="side-section">
-          <p className="side-label">Channels</p>
-          {channelViews.map((item) => (
-            <button
-              className={`nav-button ${view === item.key ? "active" : ""}`}
-              key={item.key}
-              onClick={() => setView(item.key)}
-            >
-              <span><i />{item.label}</span>
-              <span className="nav-count">{dashboardData.metrics.channels[item.channel || "unknown"] || 0}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="side-footer">
-          <span>Current mode</span>
-          <strong>Monitor only</strong>
-        </div>
-      </nav>
-
-      <main className="main">
+      <main className="inbox-main">
         <div className="topbar">
           <div>
             <span className="eyebrow">Urban Mail command center</span>
@@ -1315,35 +1223,6 @@ export function AgentInboxClient({
             </div>
           </section>
         ) : null}
-
-        <section className="metrics-grid" aria-label="Agent metrics">
-          {metric("Leads", dashboardData.metrics.lead_count, "shared memory")}
-          {metric("Threads", activeThreads, "cross-channel")}
-          {metric("Inbound", dashboardData.metrics.inbound_messages, "lead messages")}
-          {metric("AI replies", dashboardData.metrics.outbound_replies, "sent events")}
-          {metric("Handoffs", dashboardData.metrics.needs_human, "needs human")}
-          {metric("Properties", dashboardData.propertyHealth.total, `${dashboardData.propertyHealth.missing_core} need review`, openPropertiesReview)}
-        </section>
-
-        <section className="channel-strip" aria-label="Channel status">
-          {channelViews.map((item) => {
-            const count = dashboardData.metrics.channels[item.channel || "unknown"] || 0;
-            return (
-              <button
-                className={`channel-tile ${view === item.key ? "active" : ""}`}
-                key={item.key}
-                onClick={() => setView(item.key)}
-              >
-                <span className="channel-tile-head">
-                  <img alt="" className="channel-avatar" src={item.avatar} />
-                  <span className="channel-agent">{item.agent}</span>
-                </span>
-                <strong>{item.label}</strong>
-                <small>{count ? `${count} events` : "waiting for webhook"}</small>
-              </button>
-            );
-          })}
-        </section>
 
         {view === "properties" ? (
           <div className="property-layout">
