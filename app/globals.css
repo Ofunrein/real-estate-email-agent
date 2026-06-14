@@ -1,3 +1,68 @@
+/* ============================================================
+   BROKERAGE TERMINAL — Design Tokens
+   ============================================================ */
+:root {
+  /* Backgrounds */
+  --bg:              #F7F5F2;
+  --surface:         #FFFFFF;
+  --surface-raised:  #FAFAF8;
+  --nav:             #0F1210;
+
+  /* Borders — one value only */
+  --border:          #E5E1DB;
+
+  /* Text */
+  --text-primary:    #1C1917;
+  --text-secondary:  #6B6560;
+  --text-muted:      #A8A39E;
+  --text-nav:        #E8E4DF;
+  --text-nav-muted:  #737068;
+
+  /* Accent — clay/rust */
+  --accent:          #B85C38;
+  --accent-subtle:   #F5EDE8;
+  --accent-dark:     #7A3A22;
+
+  /* Status */
+  --status-needs-human: #B85C38;
+  --status-active:      #2D7A4F;
+  --status-complete:    #A8A39E;
+  --status-voice:       #1E6A6A;
+
+  /* Danger */
+  --danger:          #C0392B;
+
+  /* Typography */
+  --font-ui:    "Inter", system-ui, -apple-system, sans-serif;
+  --font-prose: "Lora", Georgia, serif;
+  --font-mono:  "Berkeley Mono", "Geist Mono", "Courier New", monospace;
+
+  /* Type scale */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 14px;
+  --text-lg:   17px;
+
+  /* Spacing scale (4px base) */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-12: 48px;
+
+  /* Motion */
+  --dur-fast: 80ms;
+  --dur-base: 120ms;
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
 :root {
   --background: #f5f6f3;
   --surface: #ffffff;
@@ -8,11 +73,11 @@
   --muted-strong: #39414a;
   --line: #dde2d9;
   --line-strong: #bfc8bd;
-  --nav: #101817;
+  --nav: #0F1210;
   --nav-soft: #172322;
   --nav-text: #f3f7f2;
-  --accent: #b4492f;
-  --accent-dark: #7f2f22;
+  --accent: #B85C38;
+  --accent-dark: #7A3A22;
   --teal: #0e766c;
   --green: #246b4f;
   --amber: #b0822f;
