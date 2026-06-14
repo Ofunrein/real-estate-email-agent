@@ -82,8 +82,6 @@
   --green: #246b4f;
   --amber: #b0822f;
   --blue: #315f8f;
-  --shadow: 0 24px 70px rgba(19, 22, 25, 0.08);
-  --shadow-tight: 0 10px 28px rgba(19, 22, 25, 0.06);
   --thread-list-width: clamp(200px, 18vw, 248px);
   --thread-bubble-max: min(92%, 980px);
   --thread-bubble-voice-max: min(85%, 680px);
@@ -101,9 +99,7 @@ body {
 
 body {
   margin: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(245, 246, 243, 0) 340px),
-    var(--background);
+  background: var(--bg);
   color: var(--ink);
   font-family: "Avenir Next", "SF Pro Text", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0;
@@ -155,7 +151,6 @@ button {
   background: linear-gradient(145deg, var(--accent), var(--teal));
   color: white;
   font-weight: 900;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
 }
 
 .brand-title {
@@ -335,13 +330,12 @@ button {
 }
 
 .sync-status {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   padding: 9px 12px;
   color: var(--muted-strong);
   white-space: nowrap;
-  box-shadow: var(--shadow-tight);
   font-size: 13px;
   font-weight: 750;
 }
@@ -369,11 +363,10 @@ button {
 
 .metric {
   min-height: 92px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   padding: 13px;
-  box-shadow: var(--shadow-tight);
 }
 
 .metric-button {
@@ -420,12 +413,11 @@ button {
 
 .channel-tile {
   min-height: 86px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 78%, var(--surface-wash));
   padding: 12px;
   text-align: left;
-  box-shadow: var(--shadow-tight);
 }
 
 .channel-tile:hover,
@@ -494,10 +486,9 @@ button {
 .panel {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: var(--shadow);
 }
 
 .conversation-panel {
@@ -1145,11 +1136,10 @@ button {
 }
 
 .context-card {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   padding: 14px;
-  box-shadow: var(--shadow-tight);
 }
 
 .context-card h2,
@@ -1865,7 +1855,8 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.26);
   border-radius: 34px;
   background: #151915;
-  box-shadow: 0 36px 90px rgba(0, 0, 0, 0.36);
+  /* Intentional popover elevation: phone preview floats above content as an overlay. Subtle, not card-grid drop-shadow. */
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
 }
 
 .phone-bar {
@@ -2300,4 +2291,51 @@ button {
   gap: var(--sp-3);
   padding: var(--sp-8);
   color: var(--text-muted);
+}
+
+/* ============================================================
+   BROKERAGE TERMINAL — Editorial Typography (Task 7)
+   - Message/email body prose -> Lora (var(--font-prose))
+   - All timestamps -> mono (var(--font-mono))
+   - Weight-based unread (forward-compatible with data-unread)
+   ============================================================ */
+
+/* Message + email body prose -> Lora.
+   .email-rendered descendants included so injected email HTML inherits Lora. */
+.message-text,
+.email-rendered,
+.email-rendered p,
+.email-rendered div,
+.email-rendered span {
+  font-family: var(--font-prose);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+
+/* Timestamps -> mono. Bare <time> in conversation rows, event rows, and message meta.
+   Real timestamp markup is the bare <time> element (no .message-time/.event-time class exists). */
+time,
+.row-meta time,
+.conversation-row-top time,
+.message-meta time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Weight-based unread (additive). The data-unread attribute is added by a later task.
+   No .conversation-subject/.thread-subject class exists in markup: the conversation subject/sender
+   is the bare <strong> inside .conversation-row-top, so that is the real subject selector. */
+.conversation-list-item[data-unread="true"] .conversation-row-top strong,
+[data-unread="true"] .conversation-row-top strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.conversation-list-item[data-unread="false"] .conversation-row-top strong,
+[data-unread="false"] .conversation-row-top strong {
+  font-weight: 400;
+  color: var(--text-secondary);
 }
