@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/inbox/EmptyState";
+import { ActivityChart } from "@/components/inbox/charts/ActivityChart";
+import { ChannelMix } from "@/components/inbox/charts/ChannelMix";
 import { Sidebar } from "@/components/inbox/Sidebar";
 import { StatusDot } from "@/components/inbox/StatusDot";
 import { SyncIndicator } from "@/components/inbox/SyncIndicator";
@@ -1310,7 +1312,13 @@ export function AgentInboxClient({
                   threads={channelThreads}
                 />
               ) : (
-                <TableRows events={currentEvents} onOpenEvent={openEventThread} />
+                <>
+                  <div className="overview-charts">
+                    <ActivityChart events={currentEvents} />
+                    <ChannelMix events={currentEvents} />
+                  </div>
+                  <TableRows events={currentEvents} onOpenEvent={openEventThread} />
+                </>
               )}
             </section>
             <ContextRail
