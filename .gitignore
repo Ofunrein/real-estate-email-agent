@@ -28,3 +28,6 @@ out/
 data/tcad/*.zip
 data/tcad/layout/
 tsconfig.tsbuildinfo
+
+# Local docs dump (553MB, not part of build)
+claude-md/
