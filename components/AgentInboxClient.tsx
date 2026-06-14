@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { StatusDot } from "@/components/inbox/StatusDot";
 import { type AgentInboxData, type Channel, parseVoiceTranscript, voiceCallTranscriptSource } from "@/lib/inboxData";
 import {
   inboxImagePreviewUrl,
@@ -829,7 +830,7 @@ function TableRows({
             <div className="row-title">{event.email || event.phone || event.thread_ref || "Unknown lead"}</div>
             <div className="row-body">{event.summary || eventText(event)}</div>
             <div className="row-meta">
-              <span className="status">{event.status || event.event_type || event.direction}</span>
+              <StatusDot status={eventNeedsHuman(event) ? "needs_human" : (event.status || event.event_type || event.direction || "")} />
               <time>{formatEventTime(event.event_at)}</time>
             </div>
           </>
@@ -879,8 +880,7 @@ function ConversationThread({
           <div className="brand-subtitle">{threadSubtitle(threadRef, events, channel)}</div>
         </div>
         <div className="thread-status-stack">
-          {needsHuman ? <span className="handoff-badge">Needs human</span> : null}
-          <span className="status">{latest.status || latest.event_type || "active"}</span>
+          <StatusDot status={needsHuman ? "needs_human" : (latest.status || latest.event_type || "active")} />
         </div>
       </div>
       {needsHuman ? (
@@ -982,7 +982,7 @@ function ThreadViewer({
                 <span className="conversation-preview">{latest.summary || eventText(latest)}</span>
                 <span className="conversation-row-bottom">
                   <em>{events.length} messages</em>
-                  {needsHuman ? <span className="handoff-badge compact">Needs human</span> : null}
+                  {needsHuman ? <StatusDot status="needs_human" /> : null}
                 </span>
               </button>
             );
