@@ -2238,3 +2238,35 @@ time,
     scroll-behavior: auto !important;
   }
 }
+/* ============ CONTRAST FIXES ============ */
+/* Bubble sender labels: black on white inbound, dark on clay outbound */
+.message.inbound .message-meta,
+.message.inbound .message-meta span:first-child { color: #1C1917; }
+.message.inbound .message-meta time,
+.message.inbound .message-meta :last-child { color: #6B6560; }
+
+.message.outbound .message-meta,
+.message.outbound .message-meta span:first-child { color: #5C2410; font-weight: 700; }
+.message.outbound .message-meta time,
+.message.outbound .message-meta :last-child { color: #7A3A22; }
+
+/* Outbound bubble: darker background, guaranteed contrast on body text */
+.message.outbound { background: #F0D6CA; border-color: #D9A898; }
+.message.outbound .message-text { color: #3A1A0A; }
+
+/* Sidebar: all text must be white / near-white on dark nav background */
+.sidebar-wordmark { color: #FFFFFF !important; }
+.sidebar-nav-agent { color: rgba(255,255,255,0.55) !important; }
+.sidebar-metric-value { color: #FFFFFF !important; }
+.sidebar-metric-label { color: rgba(255,255,255,0.50) !important; }
+.sidebar-nav-item { color: rgba(255,255,255,0.65) !important; }
+.sidebar-nav-item:hover { color: #FFFFFF !important; }
+.sidebar-nav-item.active { color: #FFFFFF !important; }
+
+/* Sidebar logo layout */
+.sidebar-brand { display: flex; align-items: center; gap: var(--sp-2); }
+.sidebar-logo { display: flex; align-items: center; flex-shrink: 0; }
+
+/* Voice transcript bubbles (same contrast fix) */
+.voice-transcript .message.outbound .message-meta span:first-child { color: #5C2410; font-weight: 700; }
+.voice-transcript .message.inbound .message-meta span:first-child { color: #1C1917; }
