@@ -1,0 +1,432 @@
+{
+  "fill_rates": [
+    {
+      "label": "neon",
+      "total": 2540,
+      "rates": {
+        "address": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "price": {
+          "filled": 2537,
+          "total": 2540,
+          "pct": 99.9
+        },
+        "beds": {
+          "filled": 2359,
+          "total": 2540,
+          "pct": 92.9
+        },
+        "baths": {
+          "filled": 2297,
+          "total": 2540,
+          "pct": 90.4
+        },
+        "state": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "zip": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "description": {
+          "filled": 1262,
+          "total": 2540,
+          "pct": 49.7
+        },
+        "neighborhood": {
+          "filled": 211,
+          "total": 2540,
+          "pct": 8.3
+        },
+        "property_type": {
+          "filled": 2538,
+          "total": 2540,
+          "pct": 99.9
+        },
+        "features": {
+          "filled": 2467,
+          "total": 2540,
+          "pct": 97.1
+        },
+        "days_on_market": {
+          "filled": 1327,
+          "total": 2540,
+          "pct": 52.2
+        },
+        "photo_url": {
+          "filled": 2539,
+          "total": 2540,
+          "pct": 100
+        },
+        "sqft": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "year_built": {
+          "filled": 2539,
+          "total": 2540,
+          "pct": 100
+        },
+        "status": {
+          "filled": 751,
+          "total": 2540,
+          "pct": 29.6
+        },
+        "listing_url": {
+          "filled": 2432,
+          "total": 2540,
+          "pct": 95.7
+        }
+      }
+    },
+    {
+      "label": "properties",
+      "total": 2540,
+      "rates": {
+        "address": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "price": {
+          "filled": 2537,
+          "total": 2540,
+          "pct": 99.9
+        },
+        "beds": {
+          "filled": 2359,
+          "total": 2540,
+          "pct": 92.9
+        },
+        "baths": {
+          "filled": 2297,
+          "total": 2540,
+          "pct": 90.4
+        },
+        "state": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "zip": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "description": {
+          "filled": 1262,
+          "total": 2540,
+          "pct": 49.7
+        },
+        "neighborhood": {
+          "filled": 211,
+          "total": 2540,
+          "pct": 8.3
+        },
+        "property_type": {
+          "filled": 2538,
+          "total": 2540,
+          "pct": 99.9
+        },
+        "features": {
+          "filled": 2467,
+          "total": 2540,
+          "pct": 97.1
+        },
+        "days_on_market": {
+          "filled": 1327,
+          "total": 2540,
+          "pct": 52.2
+        },
+        "photo_url": {
+          "filled": 2539,
+          "total": 2540,
+          "pct": 100
+        },
+        "sqft": {
+          "filled": 2540,
+          "total": 2540,
+          "pct": 100
+        },
+        "year_built": {
+          "filled": 2539,
+          "total": 2540,
+          "pct": 100
+        },
+        "status": {
+          "filled": 751,
+          "total": 2540,
+          "pct": 29.6
+        },
+        "listing_url": {
+          "filled": 2432,
+          "total": 2540,
+          "pct": 95.7
+        }
+      }
+    },
+    {
+      "label": "backup_may27",
+      "total": 199,
+      "rates": {
+        "address": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "price": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "beds": {
+          "filled": 198,
+          "total": 199,
+          "pct": 99.5
+        },
+        "baths": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "state": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "zip": {
+          "filled": 108,
+          "total": 199,
+          "pct": 54.3
+        },
+        "description": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "neighborhood": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "property_type": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "features": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "days_on_market": {
+          "filled": 173,
+          "total": 199,
+          "pct": 86.9
+        },
+        "photo_url": {
+          "filled": 199,
+          "total": 199,
+          "pct": 100
+        },
+        "sqft": {
+          "filled": 180,
+          "total": 199,
+          "pct": 90.5
+        },
+        "year_built": {
+          "filled": 173,
+          "total": 199,
+          "pct": 86.9
+        },
+        "status": {
+          "filled": 0,
+          "total": 199,
+          "pct": 0
+        },
+        "listing_url": {
+          "filled": 0,
+          "total": 199,
+          "pct": 0
+        }
+      }
+    },
+    {
+      "label": "backup_jun12",
+      "total": 2539,
+      "rates": {
+        "address": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "price": {
+          "filled": 2537,
+          "total": 2539,
+          "pct": 99.9
+        },
+        "beds": {
+          "filled": 2359,
+          "total": 2539,
+          "pct": 92.9
+        },
+        "baths": {
+          "filled": 2296,
+          "total": 2539,
+          "pct": 90.4
+        },
+        "state": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "zip": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "description": {
+          "filled": 1262,
+          "total": 2539,
+          "pct": 49.7
+        },
+        "neighborhood": {
+          "filled": 211,
+          "total": 2539,
+          "pct": 8.3
+        },
+        "property_type": {
+          "filled": 2537,
+          "total": 2539,
+          "pct": 99.9
+        },
+        "features": {
+          "filled": 2466,
+          "total": 2539,
+          "pct": 97.1
+        },
+        "days_on_market": {
+          "filled": 1326,
+          "total": 2539,
+          "pct": 52.2
+        },
+        "photo_url": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "sqft": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "year_built": {
+          "filled": 2539,
+          "total": 2539,
+          "pct": 100
+        },
+        "status": {
+          "filled": 751,
+          "total": 2539,
+          "pct": 29.6
+        },
+        "listing_url": {
+          "filled": 2431,
+          "total": 2539,
+          "pct": 95.7
+        }
+      }
+    }
+  ],
+  "neon_has_sheet_empty": {},
+  "neon_has_sheet_empty_total": 0,
+  "recoverable_from_backups": {
+    "address": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 0
+    },
+    "price": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 3
+    },
+    "beds": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 181
+    },
+    "baths": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 243
+    },
+    "state": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 0
+    },
+    "zip": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 0
+    },
+    "description": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 1278
+    },
+    "neighborhood": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 2329
+    },
+    "property_type": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 2
+    },
+    "features": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 73
+    },
+    "days_on_market": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 1213
+    },
+    "photo_url": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 1
+    },
+    "sqft": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 0
+    },
+    "year_built": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 1
+    },
+    "status": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 1789
+    },
+    "listing_url": {
+      "from_b1": 0,
+      "from_b2": 0,
+      "neon_empty": 108
+    }
+  }
+}

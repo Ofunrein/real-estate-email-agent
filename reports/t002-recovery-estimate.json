@@ -1,0 +1,78 @@
+{
+  "neon_rows": 2540,
+  "csv_keys": 181,
+  "apify_keys": 2595,
+  "rows_would_update": 2371,
+  "recoverable": {
+    "price": {
+      "neon_empty": 3,
+      "would_fill_csv": 1,
+      "would_fill_apify": 0
+    },
+    "beds": {
+      "neon_empty": 181,
+      "would_fill_csv": 1,
+      "would_fill_apify": 0
+    },
+    "baths": {
+      "neon_empty": 243,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "zip": {
+      "neon_empty": 0,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "description": {
+      "neon_empty": 1278,
+      "would_fill_csv": 1,
+      "would_fill_apify": 0
+    },
+    "neighborhood": {
+      "neon_empty": 2329,
+      "would_fill_csv": 1,
+      "would_fill_apify": 0
+    },
+    "property_type": {
+      "neon_empty": 2,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "features": {
+      "neon_empty": 73,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "days_on_market": {
+      "neon_empty": 1213,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "photo_url": {
+      "neon_empty": 1,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "sqft": {
+      "neon_empty": 0,
+      "would_fill_csv": 0,
+      "would_fill_apify": 0
+    },
+    "year_built": {
+      "neon_empty": 1,
+      "would_fill_csv": 1,
+      "would_fill_apify": 0
+    },
+    "status": {
+      "neon_empty": 1789,
+      "would_fill_csv": 99,
+      "would_fill_apify": 0
+    },
+    "listing_url": {
+      "neon_empty": 109,
+      "would_fill_csv": 100,
+      "would_fill_apify": 9
+    }
+  }
+}

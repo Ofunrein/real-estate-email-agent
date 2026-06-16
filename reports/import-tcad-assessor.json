@@ -1,0 +1,150 @@
+{
+  "source": {
+    "name": "Travis Central Appraisal District (TCAD)",
+    "url": "https://traviscad.org/wp-content/largefiles/2025%20Certified%20Appraisal%20Export%20Supp%200_07202025.zip",
+    "zip_path": "data/tcad/tcad-2025-certified.zip",
+    "tcad_properties": 435537,
+    "tcad_address_keys": 430531
+  },
+  "dry_run": false,
+  "neon_rows": 2540,
+  "rows_matched": 1423,
+  "rows_updated": 7,
+  "match_rate_pct": 56.0,
+  "field_fills": {
+    "beds": 0,
+    "baths": 0,
+    "sqft": 0,
+    "year_built": 0,
+    "features": 7
+  },
+  "fill_rates_before": {
+    "beds": {
+      "filled": 2363,
+      "total": 2540,
+      "pct": 93.0
+    },
+    "baths": {
+      "filled": 2297,
+      "total": 2540,
+      "pct": 90.4
+    },
+    "sqft": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "year_built": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "description": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "neighborhood": {
+      "filled": 2124,
+      "total": 2540,
+      "pct": 83.6
+    },
+    "features": {
+      "filled": 2507,
+      "total": 2540,
+      "pct": 98.7
+    }
+  },
+  "fill_rates_after": {
+    "beds": {
+      "filled": 2363,
+      "total": 2540,
+      "pct": 93.0
+    },
+    "baths": {
+      "filled": 2297,
+      "total": 2540,
+      "pct": 90.4
+    },
+    "sqft": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "year_built": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "description": {
+      "filled": 2540,
+      "total": 2540,
+      "pct": 100.0
+    },
+    "neighborhood": {
+      "filled": 2124,
+      "total": 2540,
+      "pct": 83.6
+    },
+    "features": {
+      "filled": 2514,
+      "total": 2540,
+      "pct": 99.0
+    }
+  },
+  "sample_updates": [
+    {
+      "address": "1212 Guadalupe St APT 502",
+      "tcad_prop_id": "000000196816",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "210 Lavaca St APT 3601",
+      "tcad_prop_id": "000000798737",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "222 West Ave Unit 2910",
+      "tcad_prop_id": "000000888161",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "300 Bowie St APT 902",
+      "tcad_prop_id": "000000750347",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "4608 Wally Ave, Austin, TX 78721",
+      "tcad_prop_id": "000000202762",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "613 Baylor St",
+      "tcad_prop_id": "000000106582",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "800 Brazos St Unit 705",
+      "tcad_prop_id": "000000739456",
+      "filled_fields": [
+        "features"
+      ]
+    }
+  ],
+  "notes": [
+    "TCAD fixed-width export provides sqft, year_built, and lot acreage; bed/bath counts are not exported.",
+    "Only empty Neon fields are filled; existing values are never overwritten."
+  ]
+}

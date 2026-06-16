@@ -1,0 +1,620 @@
+{
+  "city": "Austin",
+  "state": "TX",
+  "dry_run": false,
+  "fetched_count": 5618,
+  "normalized_count": 5618,
+  "existing_sheet_count": 2469,
+  "existing_neon_count": 2109,
+  "existing_zillow_csv_count": 172,
+  "existing_duplicate_index_count": 4750,
+  "duplicate_count": 5618,
+  "appended_to_sheets_count": 0,
+  "upserted_to_neon_count": 0,
+  "candidate_new_count": 0,
+  "missing_required_fields": {
+    "address": 0,
+    "city": 0,
+    "state": 0,
+    "listing_url": 0
+  },
+  "sample_rows": [],
+  "per_slice": [
+    {
+      "label": "recovered/hV5hqhjGVeZsuAcJ2/2026-06-11T18:11:33.862Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/RmWkkSa9UzVjZ8hJl/2026-06-11T18:11:48.278Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/wl89dmi0JEtBCk9jm/2026-06-11T18:12:13.768Z",
+      "fetched": 1,
+      "normalized": 1
+    },
+    {
+      "label": "recovered/O4IuTlC0qaNL17UA7/2026-06-11T18:13:07.071Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/cNkKoHazOMmsBDZbQ/2026-06-11T18:13:19.586Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/olDl0wn06XL6oZTWs/2026-06-11T18:13:48.101Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/ZWSvtYnewwfgECU6R/2026-06-11T18:13:56.185Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/pGV9mZqZx5QbiczrG/2026-06-11T18:18:15.539Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/8lPHsncZ6K0dMHTbo/2026-06-11T18:18:24.720Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/Tz42H9ucntptUxZCo/2026-06-11T18:18:32.811Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/Pzy57pN7yVp5GFXc1/2026-06-11T18:18:39.884Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/tZX1xlqETl8VjXOHz/2026-06-11T18:19:03.843Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/UwsSXQWWRqJa8f04d/2026-06-11T18:21:36.989Z",
+      "fetched": 3,
+      "normalized": 3
+    },
+    {
+      "label": "recovered/ouZNiH23m2hyOjEbd/2026-06-11T18:21:46.844Z",
+      "fetched": 3,
+      "normalized": 3
+    },
+    {
+      "label": "recovered/o4og3xmB9Zmh2X33z/2026-06-11T18:21:55.410Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/yHV5BOAPW3wucMZJn/2026-06-11T18:22:03.174Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/1Hf4qBrbtfcbGyMLh/2026-06-11T20:54:42.188Z",
+      "fetched": 3,
+      "normalized": 3
+    },
+    {
+      "label": "recovered/FbVo7YdrCubcSF7DB/2026-06-11T20:55:02.741Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/BEpvvOy8m2f6Ip3mE/2026-06-11T20:55:26.720Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/4vvKqzqNh1cAB7lv7/2026-06-11T20:57:01.905Z",
+      "fetched": 20,
+      "normalized": 20
+    },
+    {
+      "label": "recovered/Owljvt5QJhxhCEIM1/2026-06-11T20:57:27.150Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/Emu6jqg6Vt7eGmgbj/2026-06-11T20:57:34.962Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/hU6yMVdWd9DF8G4Ql/2026-06-11T20:58:01.152Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/IRpQQk6uV4DizTdrp/2026-06-11T20:58:31.204Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/SbPjrEDJitz9B8x9h/2026-06-11T20:59:23.376Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/XEDkalkUDSGyEBVch/2026-06-11T20:59:57.181Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/cAnLH7nU6ePjFLwaE/2026-06-11T21:00:03.848Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/PS82vheeN3lvylvFT/2026-06-11T21:00:52.089Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/eRKm9y0efKp3g6Hcd/2026-06-11T21:01:06.877Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/2hIxB7FB0TAXwgVI3/2026-06-11T21:01:16.663Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/OudYHLuQXa0QBNmIR/2026-06-11T21:01:48.724Z",
+      "fetched": 26,
+      "normalized": 26
+    },
+    {
+      "label": "recovered/sV6lJm8M2ibvym2bW/2026-06-11T21:02:14.117Z",
+      "fetched": 1,
+      "normalized": 1
+    },
+    {
+      "label": "recovered/wuzCwncXxac2gzFfc/2026-06-11T21:02:24.142Z",
+      "fetched": 4,
+      "normalized": 4
+    },
+    {
+      "label": "recovered/QX1sGP0pT5EOVfOP0/2026-06-11T21:02:36.141Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/HG07p0I9FCd0AhOcy/2026-06-11T21:03:27.997Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/uv4gb3zaXuHjh5qLe/2026-06-11T21:04:08.947Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/DGH4eqGuhZUEjKNgc/2026-06-11T21:04:35.296Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/RYxty7EbR11AhaIBI/2026-06-11T21:05:17.375Z",
+      "fetched": 22,
+      "normalized": 22
+    },
+    {
+      "label": "recovered/r8wxB1uJl2Sd92pbS/2026-06-11T21:05:42.854Z",
+      "fetched": 1,
+      "normalized": 1
+    },
+    {
+      "label": "recovered/g6fx5G0ejsPTbbKBg/2026-06-11T21:05:57.785Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/dKd2Z7dDMC5ccAnN9/2026-06-11T21:06:33.839Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/ioCo9Hy2CWBAKtk8F/2026-06-11T21:07:00.247Z",
+      "fetched": 49,
+      "normalized": 49
+    },
+    {
+      "label": "recovered/w3JdzFDq2eh1Y8XQG/2026-06-11T21:07:31.072Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/HJdUyQwrrHdkExbDI/2026-06-11T21:08:06.907Z",
+      "fetched": 43,
+      "normalized": 43
+    },
+    {
+      "label": "recovered/aHx5QaCZHuretbhSH/2026-06-11T21:08:59.505Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/Mv7qhBY2m4uMiQPMJ/2026-06-11T21:09:48.578Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/OwDeQ48BwVOzolykV/2026-06-11T21:10:27.073Z",
+      "fetched": 49,
+      "normalized": 49
+    },
+    {
+      "label": "recovered/DuUjQfzEIk2bzPDaD/2026-06-11T21:11:08.148Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/IQJn53eZkHdUlz5jI/2026-06-11T21:12:11.299Z",
+      "fetched": 50,
+      "normalized": 50
+    },
+    {
+      "label": "recovered/p6ARzjcBt1J3kiyNf/2026-06-11T21:13:15.410Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/R6bAgfbBYRj2yVXgq/2026-06-11T21:14:35.836Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/x1yfFk8nC9QIwFw4x/2026-06-11T21:15:26.600Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/LzERHiRvwkJVaDlSt/2026-06-11T21:16:14.072Z",
+      "fetched": 1,
+      "normalized": 1
+    },
+    {
+      "label": "recovered/AHaRGDpljUjya9Ha3/2026-06-11T21:17:52.835Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/hvBtKsUagZyfa7upa/2026-06-11T21:18:59.937Z",
+      "fetched": 94,
+      "normalized": 94
+    },
+    {
+      "label": "recovered/5fMqcPlOzAlufM5gO/2026-06-11T21:20:20.493Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/COIea4Ui1jztcqZWy/2026-06-11T21:21:40.339Z",
+      "fetched": 91,
+      "normalized": 91
+    },
+    {
+      "label": "recovered/ylnlEFfrXFmVIYuDO/2026-06-11T21:22:54.309Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/ryJLC9BajZxpWy4lF/2026-06-11T21:24:37.879Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/Tabhh9nIoHY8znToZ/2026-06-11T21:26:27.471Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/Qzgk7grkS7OwnXiSU/2026-06-11T21:28:05.462Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/fEVmIcAt83g96buQs/2026-06-11T21:29:07.382Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/fjbtEnvzAEUbOBK1R/2026-06-11T21:30:01.164Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/xjuK81EFxhxHMzCtE/2026-06-11T21:31:14.025Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/10I1Pd64qUiOBbbVo/2026-06-11T21:32:15.786Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/5KX4sell2eLn5ssct/2026-06-11T21:33:15.258Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/qJ6ZxLXizfEedBdna/2026-06-11T21:34:33.971Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/kTM2pyjq84gHmroN1/2026-06-11T21:34:52.277Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/mvD6P5hJirUyJbMeh/2026-06-11T21:35:01.206Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/U9yA8TxIlBOtYZabh/2026-06-11T21:37:14.856Z",
+      "fetched": 7,
+      "normalized": 7
+    },
+    {
+      "label": "recovered/muNigoRqr4BF5gnZm/2026-06-11T21:38:57.156Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/a9s5I2GaDo99QmwAT/2026-06-11T21:39:11.390Z",
+      "fetched": 19,
+      "normalized": 19
+    },
+    {
+      "label": "recovered/OwYaXjwq5MnpyfeEH/2026-06-11T21:39:37.651Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/pdvPXSxKVvKvGaa0t/2026-06-11T21:40:35.533Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/U5qWLBFCrp7tbghD1/2026-06-11T21:41:44.435Z",
+      "fetched": 86,
+      "normalized": 86
+    },
+    {
+      "label": "recovered/BCUfWYd6z927ZEGWc/2026-06-11T21:43:02.990Z",
+      "fetched": 20,
+      "normalized": 20
+    },
+    {
+      "label": "recovered/uF2PCZczhwUIKRbeY/2026-06-11T21:43:28.412Z",
+      "fetched": 66,
+      "normalized": 66
+    },
+    {
+      "label": "recovered/j5zjtTwmfaZYbtRPr/2026-06-11T21:44:33.585Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/OMPscuy7Wa7213AR9/2026-06-11T21:46:14.330Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/WxI8qxRgyjagZy734/2026-06-11T21:47:25.064Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/Netoh80q5iE2rsbzX/2026-06-11T21:48:25.951Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/YwgNv5WfNpFaid6hA/2026-06-11T21:48:47.547Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/T2KnTHwIGxtOkpcza/2026-06-11T21:49:00.363Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/mfaeFyKRDj5TWr6qY/2026-06-11T21:52:26.061Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/dJ3CS24NBWXMWnUES/2026-06-11T21:53:48.802Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/4Cuvuuau598nhEh0W/2026-06-11T21:57:01.271Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/r97TJfAzX0f0bdM0a/2026-06-11T21:58:05.036Z",
+      "fetched": 94,
+      "normalized": 94
+    },
+    {
+      "label": "recovered/jLiv34EwgJrWNe9zp/2026-06-11T21:59:30.588Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/1y0ciYQwVyjqBWXCb/2026-06-11T22:00:58.029Z",
+      "fetched": 91,
+      "normalized": 91
+    },
+    {
+      "label": "recovered/nLPRgTfgw4BMRwQba/2026-06-11T22:01:52.931Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/ceJoco3ff4E8cgGLG/2026-06-11T22:03:15.110Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/MkDAcXWVzIMuSN6fL/2026-06-11T22:04:15.845Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/Vdr8UJZ5kvHC8SbiY/2026-06-11T22:05:20.359Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/ncUWEcGa3JkBMDTir/2026-06-11T22:06:54.074Z",
+      "fetched": 1,
+      "normalized": 1
+    },
+    {
+      "label": "recovered/8TpVnZEOYMUTBKQYZ/2026-06-11T22:08:01.248Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/5rOS5bzgOAl8FgeRg/2026-06-11T22:09:12.465Z",
+      "fetched": 94,
+      "normalized": 94
+    },
+    {
+      "label": "recovered/RUjGxinO0DUTJdcf3/2026-06-11T22:10:31.190Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/VJF3OWAdlv8pXxaGh/2026-06-11T22:11:27.328Z",
+      "fetched": 91,
+      "normalized": 91
+    },
+    {
+      "label": "recovered/ztozFzR3Fi7NRnVes/2026-06-11T22:12:56.728Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/9LQO92ZDllcY2gfLV/2026-06-11T22:14:18.396Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/pZzr5E8w1qlxKmcB9/2026-06-11T22:15:45.716Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/S2ounaneckkgxnPhT/2026-06-11T22:16:58.300Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/e4PeObzHA4XgcgevF/2026-06-11T22:17:53.000Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/oHVxYeeNkxBSXsYKh/2026-06-11T22:18:47.321Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/WgpJHownhXK3ijti6/2026-06-11T22:19:37.792Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/B1aVyQg5QMl9DZZgK/2026-06-11T22:21:03.696Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/qdHsyaVEwIYhiVrEn/2026-06-11T22:21:24.304Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/AurY9Fdw1dxgCCyu1/2026-06-11T22:22:26.795Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/hQwwwlG9FXO880y4H/2026-06-11T22:23:20.119Z",
+      "fetched": 5,
+      "normalized": 5
+    },
+    {
+      "label": "recovered/JpqSEmGbzSetGLha2/2026-06-11T22:23:36.795Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/zOeci96NgrU7U6d5Z/2026-06-11T22:23:44.690Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/HmX1MfckKOUxadDCd/2026-06-11T22:24:42.752Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/8Fb8zCUEoOTjrqSW3/2026-06-11T22:25:50.369Z",
+      "fetched": 7,
+      "normalized": 7
+    },
+    {
+      "label": "recovered/3dPBskluvKWCYmZzU/2026-06-11T22:27:05.505Z",
+      "fetched": 0,
+      "normalized": 0
+    },
+    {
+      "label": "recovered/VBhKaAAP1BvIP88TB/2026-06-11T22:27:13.080Z",
+      "fetched": 19,
+      "normalized": 19
+    },
+    {
+      "label": "recovered/SElVh2XHQO2llzejm/2026-06-11T22:27:45.055Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/2fZJ8So591yXjcqVs/2026-06-11T22:29:15.382Z",
+      "fetched": 100,
+      "normalized": 100
+    },
+    {
+      "label": "recovered/0kMHEZmKwg49dMxXD/2026-06-11T22:30:37.467Z",
+      "fetched": 37,
+      "normalized": 37
+    },
+    {
+      "label": "recovered/3BRuKj51UvajC6SIT/2026-06-11T22:32:37.743Z",
+      "fetched": 20,
+      "normalized": 20
+    }
+  ],
+  "candidate_rows": []
+}

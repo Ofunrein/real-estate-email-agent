@@ -1,0 +1,50 @@
+{
+  "sheet_rows": 2540,
+  "headers": [
+    "address",
+    "price",
+    "beds",
+    "baths",
+    "city",
+    "state",
+    "zip",
+    "description",
+    "neighborhood",
+    "property_type",
+    "features",
+    "days_on_market",
+    "photo_url",
+    "sqft",
+    "year_built",
+    "status",
+    "listing_url",
+    "agent_name",
+    "agent_email"
+  ],
+  "missing_headers_in_sheet": [],
+  "missingCounts": {
+    "address": 0,
+    "price": 3,
+    "beds": 181,
+    "baths": 243,
+    "city": 0,
+    "state": 0,
+    "zip": 0,
+    "description": 1278,
+    "neighborhood": 2329,
+    "property_type": 2,
+    "features": 73,
+    "days_on_market": 1213,
+    "photo_url": 1,
+    "sqft": 0,
+    "year_built": 1,
+    "status": 1789,
+    "listing_url": 108,
+    "agent_name": 1779,
+    "agent_email": 2540
+  },
+  "coreMissingRows": 2355,
+  "sampleMissingYearBuilt": [
+    "12401 Los Indios Trl Unit 5"
+  ]
+}

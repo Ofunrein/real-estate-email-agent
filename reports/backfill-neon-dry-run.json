@@ -1,0 +1,128 @@
+{
+  "dry_run": true,
+  "client_id": "austin-realty",
+  "neon_rows": 2540,
+  "csv_index_keys": 181,
+  "apify_index_keys": 2595,
+  "detail_index_keys": 0,
+  "rows_updated": 102,
+  "field_fills": {
+    "price": 1,
+    "beds": 1,
+    "baths": 0,
+    "state": 0,
+    "zip": 0,
+    "description": 1,
+    "neighborhood": 1,
+    "property_type": 0,
+    "features": 0,
+    "days_on_market": 0,
+    "photo_url": 0,
+    "sqft": 0,
+    "year_built": 1,
+    "status": 99,
+    "listing_url": 101
+  },
+  "sample_updates": [
+    {
+      "address": "10005 Quail Hutch, Austin, Texas 78758",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "10101 Dobbin Dr, Austin, Texas 78748",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "10116 Willfield Dr, Austin, Texas 78753",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "10800 Sea Hero Ct, Austin, Texas 78748",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "10825 Blacket Dr, Austin, Texas 78747",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "10900 Mickelson Dr, Austin, Texas 78747",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "11036 Cherisse Dr, Austin, Texas 78739",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "1105 Brookswood Ave, Austin, Texas 78721",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "11128 Callanish Park Dr, Austin, Texas 78750",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    },
+    {
+      "address": "1122 Colorado St APT 1409, Austin, Texas 78701",
+      "sources": [
+        "zillow_csv"
+      ],
+      "filled_fields": [
+        "status",
+        "listing_url"
+      ]
+    }
+  ]
+}

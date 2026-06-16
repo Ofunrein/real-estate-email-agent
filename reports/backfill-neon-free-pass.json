@@ -1,0 +1,27 @@
+{
+  "dry_run": false,
+  "client_id": "austin-realty",
+  "neon_rows": 2540,
+  "csv_index_keys": 181,
+  "apify_index_keys": 2595,
+  "detail_index_keys": 0,
+  "rows_updated": 0,
+  "field_fills": {
+    "price": 0,
+    "beds": 0,
+    "baths": 0,
+    "state": 0,
+    "zip": 0,
+    "description": 0,
+    "neighborhood": 0,
+    "property_type": 0,
+    "features": 0,
+    "days_on_market": 0,
+    "photo_url": 0,
+    "sqft": 0,
+    "year_built": 0,
+    "status": 0,
+    "listing_url": 0
+  },
+  "sample_updates": []
+}
