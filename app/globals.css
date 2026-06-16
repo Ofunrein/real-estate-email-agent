@@ -2744,3 +2744,30 @@ time,
   }
   .sidebar-nav-agent { display: none !important; }
 }
+
+/* ── Dark mode topbar + text fixes ── */
+.dark .inbox-topbar { background: var(--s-sidebar-bg) !important; border-color: var(--s-sidebar-border) !important; }
+.dark .inbox-topbar-title { color: var(--s-text-1) !important; }
+.dark .panel-title, .dark .panel-kicker { color: var(--s-text-1) !important; }
+.dark .panel-kicker { color: var(--s-text-2) !important; }
+.dark body, .dark .inbox-main { color: var(--s-text-1) !important; background: var(--s-bg) !important; }
+.dark .conversation-list-item .conversation-row-top strong { color: var(--s-text-1) !important; }
+.dark .conversation-list-item { border-color: var(--s-divider) !important; }
+.dark .status { background: var(--s-surface) !important; color: var(--s-text-2) !important; }
+.dark .handoff-summary strong, .dark .handoff-summary span { color: var(--s-text-1) !important; }
+.dark .rail-section, .dark .context-rail { background: var(--s-sidebar-bg) !important; }
+.dark .panel, .dark .card, .dark .context-card { background: var(--s-card) !important; border-color: var(--s-card-border) !important; }
+.dark .message { border-color: var(--s-card-border) !important; }
+.dark .message.inbound { background: var(--s-card) !important; }
+.dark .message-text { color: var(--s-text-1) !important; }
+.dark .conversation-search, .dark .property-search input {
+  background: var(--s-surface) !important; 
+  border-color: var(--s-card-border) !important;
+  color: var(--s-text-1) !important;
+}
+/* Stat numbers in dark */
+.dark .sidebar-metric-value { color: var(--s-text-1) !important; }
+.dark .chart-total { color: var(--s-text-1) !important; }
+/* Link colors */
+.dark a { color: var(--s-accent) !important; }
+.dark .message-link { color: var(--s-accent) !important; }
