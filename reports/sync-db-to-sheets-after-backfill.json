@@ -1,0 +1,36 @@
+
+> lumenosis-real-estate-agent-inbox@0.1.0 sync:db-to-sheets
+> node scripts/sync-db-to-sheets.mjs
+
+read batch offset=0 size=100 total=100/2540
+read batch offset=100 size=100 total=200/2540
+read batch offset=200 size=100 total=300/2540
+read batch offset=300 size=100 total=400/2540
+read batch offset=400 size=100 total=500/2540
+read batch offset=500 size=100 total=600/2540
+read batch offset=600 size=100 total=700/2540
+read batch offset=700 size=100 total=800/2540
+read batch offset=800 size=100 total=900/2540
+read batch offset=900 size=100 total=1000/2540
+read batch offset=1000 size=100 total=1100/2540
+read batch offset=1100 size=100 total=1200/2540
+read batch offset=1200 size=100 total=1300/2540
+read batch offset=1300 size=100 total=1400/2540
+read batch offset=1400 size=100 total=1500/2540
+read batch offset=1500 size=100 total=1600/2540
+read batch offset=1600 size=100 total=1700/2540
+read batch offset=1700 size=100 total=1800/2540
+read batch offset=1800 size=100 total=1900/2540
+read batch offset=1900 size=100 total=2000/2540
+read batch offset=2000 size=100 total=2100/2540
+read batch offset=2100 size=100 total=2200/2540
+read batch offset=2200 size=100 total=2300/2540
+read batch offset=2300 size=100 total=2400/2540
+read batch offset=2400 size=100 total=2500/2540
+read batch offset=2500 size=40 total=2540/2540
+{
+  "neon_rows": 2540,
+  "sheet_rows_before": 2540,
+  "sheet_rows_after": 2540,
+  "backup_tab": "properties_backup_20260612_093959"
+}

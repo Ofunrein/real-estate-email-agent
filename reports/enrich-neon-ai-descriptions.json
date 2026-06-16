@@ -1,0 +1,143 @@
+{
+  "provider": "groq",
+  "model": "llama-3.3-70b-versatile",
+  "dry_run": false,
+  "targets": 1264,
+  "rows_updated": 289,
+  "field_fills": {
+    "description": 289,
+    "neighborhood": 135,
+    "beds": 0,
+    "baths": 0,
+    "property_type": 0,
+    "features": 0,
+    "listing_url": 0,
+    "status": 0
+  },
+  "missing_before": {
+    "description": {
+      "filled": 0,
+      "total": 1264,
+      "missing": 1264
+    },
+    "neighborhood": {
+      "filled": 0,
+      "total": 1264,
+      "missing": 1264
+    },
+    "beds": {
+      "filled": 1096,
+      "total": 1264,
+      "missing": 168
+    },
+    "baths": {
+      "filled": 1216,
+      "total": 1264,
+      "missing": 48
+    },
+    "property_type": {
+      "filled": 1262,
+      "total": 1264,
+      "missing": 2
+    },
+    "features": {
+      "filled": 1262,
+      "total": 1264,
+      "missing": 2
+    },
+    "listing_url": {
+      "filled": 1263,
+      "total": 1264,
+      "missing": 1
+    },
+    "status": {
+      "filled": 482,
+      "total": 1264,
+      "missing": 782
+    }
+  },
+  "errors": [
+    "batch@75: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@90: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@105: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@135: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@150: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@165: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@180: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@195: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@210: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@240: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@255: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@270: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@285: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@300: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@315: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@345: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@360: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@375: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@390: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions",
+    "batch@420: 429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat/completions"
+  ],
+  "sample_updates": [
+    {
+      "address": "1008 Wilks Ave",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "10080 Circleview Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "101 Clearday Dr APT 105",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "101 E 33rd St #206",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1010 Del Roy Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1010 Springdale Rd # 1-106",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1010 W Rundberg Ln APT 5",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "10105 Pickfair Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1011 Chesapeake Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1015 E Yager Ln Unit 205",
+      "filled_fields": [
+        "description"
+      ]
+    }
+  ]
+}

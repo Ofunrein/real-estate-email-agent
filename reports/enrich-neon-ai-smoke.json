@@ -1,0 +1,122 @@
+{
+  "provider": "groq",
+  "model": "llama-3.3-70b-versatile",
+  "dry_run": false,
+  "targets": 24,
+  "rows_updated": 14,
+  "field_fills": {
+    "description": 13,
+    "neighborhood": 0,
+    "beds": 0,
+    "baths": 0,
+    "property_type": 0,
+    "features": 1,
+    "listing_url": 0,
+    "status": 0
+  },
+  "missing_before": {
+    "description": {
+      "filled": 11,
+      "total": 24,
+      "missing": 13
+    },
+    "neighborhood": {
+      "filled": 0,
+      "total": 24,
+      "missing": 24
+    },
+    "beds": {
+      "filled": 23,
+      "total": 24,
+      "missing": 1
+    },
+    "baths": {
+      "filled": 23,
+      "total": 24,
+      "missing": 1
+    },
+    "property_type": {
+      "filled": 24,
+      "total": 24,
+      "missing": 0
+    },
+    "features": {
+      "filled": 23,
+      "total": 24,
+      "missing": 1
+    },
+    "listing_url": {
+      "filled": 24,
+      "total": 24,
+      "missing": 0
+    },
+    "status": {
+      "filled": 4,
+      "total": 24,
+      "missing": 20
+    }
+  },
+  "errors": [],
+  "sample_updates": [
+    {
+      "address": "(undisclosed Address)",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "100 E 51st St #7",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "10012 Milla Cir #20",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1002 Deepwood Dr",
+      "filled_fields": [
+        "features"
+      ]
+    },
+    {
+      "address": "1003 Arthur Stiles Rd",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1003 Canyon Edge Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1003 Justin Ln APT 2081",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1003 Justin Ln APT 2126",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1003 Justin Ln APT 3061",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "1004 Morrow St #1",
+      "filled_fields": [
+        "description"
+      ]
+    }
+  ]
+}

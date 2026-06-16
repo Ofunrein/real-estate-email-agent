@@ -1,0 +1,1036 @@
+{
+  "audit_at": "2026-06-11T23:16:11.558Z",
+  "actor": "truefetch~zillow-real-estate-listings",
+  "since": "2026-05-18T00:00:00.000Z",
+  "apify": {
+    "successful_runs": 126,
+    "total_raw_items": 5748,
+    "unique_properties": 2379,
+    "unique_normalized_rows": 2379,
+    "cross_run_duplicate_addresses": 10,
+    "cross_run_zpid_collisions": 0,
+    "runs": [
+      {
+        "runId": "qqedW3tb0NNFBNTFm",
+        "startedAt": "2026-05-18T18:47:20.382Z",
+        "datasetId": "TJcp3S3P22Lagp7nc",
+        "rawItems": 10,
+        "normalizedItems": 10
+      },
+      {
+        "runId": "yQdLnXNmfSzwP08Ub",
+        "startedAt": "2026-05-18T18:58:35.567Z",
+        "datasetId": "uGQw6K43u4mtVxgj7",
+        "rawItems": 24,
+        "normalizedItems": 24
+      },
+      {
+        "runId": "ta7mlBB556i9JLIqr",
+        "startedAt": "2026-05-18T19:04:14.522Z",
+        "datasetId": "06gEeyTszBJXFBDhl",
+        "rawItems": 24,
+        "normalizedItems": 24
+      },
+      {
+        "runId": "kAxCv2UcAHqmrDzBZ",
+        "startedAt": "2026-05-18T19:09:20.783Z",
+        "datasetId": "NFE4zMDKTD3ON03ns",
+        "rawItems": 24,
+        "normalizedItems": 24
+      },
+      {
+        "runId": "bzTJtK4FLgitx0R09",
+        "startedAt": "2026-05-19T18:33:25.189Z",
+        "datasetId": "jnp3qbhnTopefr31X",
+        "rawItems": 24,
+        "normalizedItems": 24
+      },
+      {
+        "runId": "zxt9CkitbaB8Qzz6C",
+        "startedAt": "2026-05-25T03:43:50.922Z",
+        "datasetId": "cP3Q2cVjZPFTv4olG",
+        "rawItems": 24,
+        "normalizedItems": 24
+      },
+      {
+        "runId": "xhArs1OJGK36Gf4IN",
+        "startedAt": "2026-05-25T04:07:36.007Z",
+        "datasetId": "7NZx2oxv5HnFCI3yV",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "hV5hqhjGVeZsuAcJ2",
+        "startedAt": "2026-06-11T18:11:33.862Z",
+        "datasetId": "jccbJdMEoifmkch9y",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "RmWkkSa9UzVjZ8hJl",
+        "startedAt": "2026-06-11T18:11:48.278Z",
+        "datasetId": "rBm3Y5mzwgmNXjgIT",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "wl89dmi0JEtBCk9jm",
+        "startedAt": "2026-06-11T18:12:13.768Z",
+        "datasetId": "98MRak5V1PfQPGOHN",
+        "rawItems": 1,
+        "normalizedItems": 1
+      },
+      {
+        "runId": "O4IuTlC0qaNL17UA7",
+        "startedAt": "2026-06-11T18:13:07.071Z",
+        "datasetId": "H9xflqH5MooymgWmS",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "cNkKoHazOMmsBDZbQ",
+        "startedAt": "2026-06-11T18:13:19.586Z",
+        "datasetId": "nl4mLDp6Ix2LdBAJ6",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "olDl0wn06XL6oZTWs",
+        "startedAt": "2026-06-11T18:13:48.101Z",
+        "datasetId": "LIQkAwe6qoYhOhxGJ",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "ZWSvtYnewwfgECU6R",
+        "startedAt": "2026-06-11T18:13:56.185Z",
+        "datasetId": "t2wdVliM6jAm02bum",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "pGV9mZqZx5QbiczrG",
+        "startedAt": "2026-06-11T18:18:15.539Z",
+        "datasetId": "IigkyfQHLsDhlsxnO",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "8lPHsncZ6K0dMHTbo",
+        "startedAt": "2026-06-11T18:18:24.720Z",
+        "datasetId": "vjySzPLs2HzYOe1SA",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "Tz42H9ucntptUxZCo",
+        "startedAt": "2026-06-11T18:18:32.811Z",
+        "datasetId": "IADRRZfia2KvQpGFf",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "Pzy57pN7yVp5GFXc1",
+        "startedAt": "2026-06-11T18:18:39.884Z",
+        "datasetId": "RQZoPGh6dsHPjKVkq",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "tZX1xlqETl8VjXOHz",
+        "startedAt": "2026-06-11T18:19:03.843Z",
+        "datasetId": "vtdajblvJqA53iv5C",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "UwsSXQWWRqJa8f04d",
+        "startedAt": "2026-06-11T18:21:36.989Z",
+        "datasetId": "rYhfKWdJf5x9SlMEF",
+        "rawItems": 3,
+        "normalizedItems": 3
+      },
+      {
+        "runId": "ouZNiH23m2hyOjEbd",
+        "startedAt": "2026-06-11T18:21:46.844Z",
+        "datasetId": "x9Ovv65bZIqFoydaV",
+        "rawItems": 3,
+        "normalizedItems": 3
+      },
+      {
+        "runId": "o4og3xmB9Zmh2X33z",
+        "startedAt": "2026-06-11T18:21:55.410Z",
+        "datasetId": "WfNbxe7XGXereJvx8",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "yHV5BOAPW3wucMZJn",
+        "startedAt": "2026-06-11T18:22:03.174Z",
+        "datasetId": "gUlL7njurtSQm5Euw",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "1Hf4qBrbtfcbGyMLh",
+        "startedAt": "2026-06-11T20:54:42.188Z",
+        "datasetId": "49KDuHgRF9Aiu7lod",
+        "rawItems": 3,
+        "normalizedItems": 3
+      },
+      {
+        "runId": "FbVo7YdrCubcSF7DB",
+        "startedAt": "2026-06-11T20:55:02.741Z",
+        "datasetId": "cs3C5Ghud82xvDJGZ",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "BEpvvOy8m2f6Ip3mE",
+        "startedAt": "2026-06-11T20:55:26.720Z",
+        "datasetId": "mlJYgHhnfMzeGVd4g",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "4vvKqzqNh1cAB7lv7",
+        "startedAt": "2026-06-11T20:57:01.905Z",
+        "datasetId": "Mepeu0lCDbH4DWJbK",
+        "rawItems": 20,
+        "normalizedItems": 20
+      },
+      {
+        "runId": "Owljvt5QJhxhCEIM1",
+        "startedAt": "2026-06-11T20:57:27.150Z",
+        "datasetId": "WWZmTKuqBvqeAA1bK",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "Emu6jqg6Vt7eGmgbj",
+        "startedAt": "2026-06-11T20:57:34.962Z",
+        "datasetId": "a7WBTQRM8KeOuRNWa",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "hU6yMVdWd9DF8G4Ql",
+        "startedAt": "2026-06-11T20:58:01.152Z",
+        "datasetId": "SMElaOZXQpr0xiXN3",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "IRpQQk6uV4DizTdrp",
+        "startedAt": "2026-06-11T20:58:31.204Z",
+        "datasetId": "OmYWIGiLgaGsmprnn",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "SbPjrEDJitz9B8x9h",
+        "startedAt": "2026-06-11T20:59:23.376Z",
+        "datasetId": "7gZ6zZBvSbqpeoU5j",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "XEDkalkUDSGyEBVch",
+        "startedAt": "2026-06-11T20:59:57.181Z",
+        "datasetId": "RU3Sk9gn0LGIRPvUe",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "cAnLH7nU6ePjFLwaE",
+        "startedAt": "2026-06-11T21:00:03.848Z",
+        "datasetId": "BOqqiWebjKp7EZ54a",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "PS82vheeN3lvylvFT",
+        "startedAt": "2026-06-11T21:00:52.089Z",
+        "datasetId": "mAEwVKMSqXigBBkYJ",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "eRKm9y0efKp3g6Hcd",
+        "startedAt": "2026-06-11T21:01:06.877Z",
+        "datasetId": "s1LpbQsacpct6t1v5",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "2hIxB7FB0TAXwgVI3",
+        "startedAt": "2026-06-11T21:01:16.663Z",
+        "datasetId": "XBUx5dsWXz2W6CZFp",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "OudYHLuQXa0QBNmIR",
+        "startedAt": "2026-06-11T21:01:48.724Z",
+        "datasetId": "DrXhqeOfxEU5D9FAC",
+        "rawItems": 26,
+        "normalizedItems": 26
+      },
+      {
+        "runId": "sV6lJm8M2ibvym2bW",
+        "startedAt": "2026-06-11T21:02:14.117Z",
+        "datasetId": "iRqWl8GgWJm3NsYj1",
+        "rawItems": 1,
+        "normalizedItems": 1
+      },
+      {
+        "runId": "wuzCwncXxac2gzFfc",
+        "startedAt": "2026-06-11T21:02:24.142Z",
+        "datasetId": "A38FYlZgAcHg24sjx",
+        "rawItems": 4,
+        "normalizedItems": 4
+      },
+      {
+        "runId": "QX1sGP0pT5EOVfOP0",
+        "startedAt": "2026-06-11T21:02:36.141Z",
+        "datasetId": "f1sHiTM8YwhWsxU70",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "HG07p0I9FCd0AhOcy",
+        "startedAt": "2026-06-11T21:03:27.997Z",
+        "datasetId": "cphys8IPU52pBWnyq",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "uv4gb3zaXuHjh5qLe",
+        "startedAt": "2026-06-11T21:04:08.947Z",
+        "datasetId": "4CX8i9M8LOqGaD5me",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "DGH4eqGuhZUEjKNgc",
+        "startedAt": "2026-06-11T21:04:35.296Z",
+        "datasetId": "2sx2Hc9GPXjkbKHDp",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "RYxty7EbR11AhaIBI",
+        "startedAt": "2026-06-11T21:05:17.375Z",
+        "datasetId": "T9cOWHqMvF9Pl0B60",
+        "rawItems": 22,
+        "normalizedItems": 22
+      },
+      {
+        "runId": "r8wxB1uJl2Sd92pbS",
+        "startedAt": "2026-06-11T21:05:42.854Z",
+        "datasetId": "aSlCikbHqjPCpqcCc",
+        "rawItems": 1,
+        "normalizedItems": 1
+      },
+      {
+        "runId": "g6fx5G0ejsPTbbKBg",
+        "startedAt": "2026-06-11T21:05:57.785Z",
+        "datasetId": "ADpPfdLiFLql48NRa",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "dKd2Z7dDMC5ccAnN9",
+        "startedAt": "2026-06-11T21:06:33.839Z",
+        "datasetId": "nHftTI8X8IITDyERD",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "ioCo9Hy2CWBAKtk8F",
+        "startedAt": "2026-06-11T21:07:00.247Z",
+        "datasetId": "AdimMcfwttzB2MhYh",
+        "rawItems": 49,
+        "normalizedItems": 49
+      },
+      {
+        "runId": "w3JdzFDq2eh1Y8XQG",
+        "startedAt": "2026-06-11T21:07:31.072Z",
+        "datasetId": "jweCgieLnRdmrt0PU",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "HJdUyQwrrHdkExbDI",
+        "startedAt": "2026-06-11T21:08:06.907Z",
+        "datasetId": "t7wyN1USX7vdi7JM4",
+        "rawItems": 43,
+        "normalizedItems": 43
+      },
+      {
+        "runId": "aHx5QaCZHuretbhSH",
+        "startedAt": "2026-06-11T21:08:59.505Z",
+        "datasetId": "AR6zGeDEH5tDJeTON",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "Mv7qhBY2m4uMiQPMJ",
+        "startedAt": "2026-06-11T21:09:48.578Z",
+        "datasetId": "DaehlraPh3TYArbrh",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "OwDeQ48BwVOzolykV",
+        "startedAt": "2026-06-11T21:10:27.073Z",
+        "datasetId": "gmGCqgz7plUy2TpKl",
+        "rawItems": 49,
+        "normalizedItems": 49
+      },
+      {
+        "runId": "DuUjQfzEIk2bzPDaD",
+        "startedAt": "2026-06-11T21:11:08.148Z",
+        "datasetId": "bswbkaZS26yB03DhW",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "IQJn53eZkHdUlz5jI",
+        "startedAt": "2026-06-11T21:12:11.299Z",
+        "datasetId": "OyRh3zMaVo2GkgyQe",
+        "rawItems": 50,
+        "normalizedItems": 50
+      },
+      {
+        "runId": "p6ARzjcBt1J3kiyNf",
+        "startedAt": "2026-06-11T21:13:15.410Z",
+        "datasetId": "EL4lNK1y9DTljpKcY",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "R6bAgfbBYRj2yVXgq",
+        "startedAt": "2026-06-11T21:14:35.836Z",
+        "datasetId": "AayQ1W8z9GLXjnBmX",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "x1yfFk8nC9QIwFw4x",
+        "startedAt": "2026-06-11T21:15:26.600Z",
+        "datasetId": "W9c8Q7b5EItuewEBC",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "LzERHiRvwkJVaDlSt",
+        "startedAt": "2026-06-11T21:16:14.072Z",
+        "datasetId": "hCXIZdIkMrjYieEPW",
+        "rawItems": 1,
+        "normalizedItems": 1
+      },
+      {
+        "runId": "AHaRGDpljUjya9Ha3",
+        "startedAt": "2026-06-11T21:17:52.835Z",
+        "datasetId": "y6jemLYzmKoKCKMpd",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "hvBtKsUagZyfa7upa",
+        "startedAt": "2026-06-11T21:18:59.937Z",
+        "datasetId": "nycmudQHq47ADbruk",
+        "rawItems": 94,
+        "normalizedItems": 94
+      },
+      {
+        "runId": "5fMqcPlOzAlufM5gO",
+        "startedAt": "2026-06-11T21:20:20.493Z",
+        "datasetId": "ubgfYMFneghcZXHlw",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "COIea4Ui1jztcqZWy",
+        "startedAt": "2026-06-11T21:21:40.339Z",
+        "datasetId": "qXp0a2ySyIdKocyLF",
+        "rawItems": 91,
+        "normalizedItems": 91
+      },
+      {
+        "runId": "ylnlEFfrXFmVIYuDO",
+        "startedAt": "2026-06-11T21:22:54.309Z",
+        "datasetId": "P3YQxLsurd4m9I7dp",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "ryJLC9BajZxpWy4lF",
+        "startedAt": "2026-06-11T21:24:37.879Z",
+        "datasetId": "NknJSQB72HGKMbD6G",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "Tabhh9nIoHY8znToZ",
+        "startedAt": "2026-06-11T21:26:27.471Z",
+        "datasetId": "fRvvy6jhB5uPCi1X3",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "Qzgk7grkS7OwnXiSU",
+        "startedAt": "2026-06-11T21:28:05.462Z",
+        "datasetId": "Cq68qudfGWxa2WIAo",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "fEVmIcAt83g96buQs",
+        "startedAt": "2026-06-11T21:29:07.382Z",
+        "datasetId": "PqaVLnaqM8R00AFOk",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "fjbtEnvzAEUbOBK1R",
+        "startedAt": "2026-06-11T21:30:01.164Z",
+        "datasetId": "vf0MgL2Yf9G9jjY1D",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "xjuK81EFxhxHMzCtE",
+        "startedAt": "2026-06-11T21:31:14.025Z",
+        "datasetId": "7hTzuYciZUK91Q6IV",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "10I1Pd64qUiOBbbVo",
+        "startedAt": "2026-06-11T21:32:15.786Z",
+        "datasetId": "ISG8PjggOdLhPZ9SG",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "5KX4sell2eLn5ssct",
+        "startedAt": "2026-06-11T21:33:15.258Z",
+        "datasetId": "7gK5O3SZA1P0i6zVx",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "qJ6ZxLXizfEedBdna",
+        "startedAt": "2026-06-11T21:34:33.971Z",
+        "datasetId": "IMX00ddVO52swLqlt",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "kTM2pyjq84gHmroN1",
+        "startedAt": "2026-06-11T21:34:52.277Z",
+        "datasetId": "unMuJgaSb43TEEdfj",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "mvD6P5hJirUyJbMeh",
+        "startedAt": "2026-06-11T21:35:01.206Z",
+        "datasetId": "drOXS0Uzd81OgAoEa",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "U9yA8TxIlBOtYZabh",
+        "startedAt": "2026-06-11T21:37:14.856Z",
+        "datasetId": "iPfF2Yy9UlRbz2iPN",
+        "rawItems": 7,
+        "normalizedItems": 7
+      },
+      {
+        "runId": "muNigoRqr4BF5gnZm",
+        "startedAt": "2026-06-11T21:38:57.156Z",
+        "datasetId": "BP5qCqm3XBiQpvqGY",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "a9s5I2GaDo99QmwAT",
+        "startedAt": "2026-06-11T21:39:11.390Z",
+        "datasetId": "2pv54LWeekcJeqpkg",
+        "rawItems": 19,
+        "normalizedItems": 19
+      },
+      {
+        "runId": "OwYaXjwq5MnpyfeEH",
+        "startedAt": "2026-06-11T21:39:37.651Z",
+        "datasetId": "y1oVqQDURPu0tb73j",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "pdvPXSxKVvKvGaa0t",
+        "startedAt": "2026-06-11T21:40:35.533Z",
+        "datasetId": "Hf3Kyam4vyC7OaXhe",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "U5qWLBFCrp7tbghD1",
+        "startedAt": "2026-06-11T21:41:44.435Z",
+        "datasetId": "155LP59JOAf7Hoezk",
+        "rawItems": 86,
+        "normalizedItems": 86
+      },
+      {
+        "runId": "BCUfWYd6z927ZEGWc",
+        "startedAt": "2026-06-11T21:43:02.990Z",
+        "datasetId": "5etDQxtjNIpdLlxj9",
+        "rawItems": 20,
+        "normalizedItems": 20
+      },
+      {
+        "runId": "uF2PCZczhwUIKRbeY",
+        "startedAt": "2026-06-11T21:43:28.412Z",
+        "datasetId": "c7M8Xxgii6d3gLS0D",
+        "rawItems": 66,
+        "normalizedItems": 66
+      },
+      {
+        "runId": "j5zjtTwmfaZYbtRPr",
+        "startedAt": "2026-06-11T21:44:33.585Z",
+        "datasetId": "DxxMjJZZLus05jJaW",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "OMPscuy7Wa7213AR9",
+        "startedAt": "2026-06-11T21:46:14.330Z",
+        "datasetId": "23GOc1RNkPnZkoQwr",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "WxI8qxRgyjagZy734",
+        "startedAt": "2026-06-11T21:47:25.064Z",
+        "datasetId": "KmxWG5rh3Hu9X3zTy",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "Netoh80q5iE2rsbzX",
+        "startedAt": "2026-06-11T21:48:25.951Z",
+        "datasetId": "os94KL9kwxEOJeQfS",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "YwgNv5WfNpFaid6hA",
+        "startedAt": "2026-06-11T21:48:47.547Z",
+        "datasetId": "GRcuuZIwRxc7qmOeR",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "T2KnTHwIGxtOkpcza",
+        "startedAt": "2026-06-11T21:49:00.363Z",
+        "datasetId": "HKhohb0Pza8CaKnPT",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "mfaeFyKRDj5TWr6qY",
+        "startedAt": "2026-06-11T21:52:26.061Z",
+        "datasetId": "odKmFglk6ol9o6cL4",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "dJ3CS24NBWXMWnUES",
+        "startedAt": "2026-06-11T21:53:48.802Z",
+        "datasetId": "Ww6ubCZIfuu1l0Mwx",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "4Cuvuuau598nhEh0W",
+        "startedAt": "2026-06-11T21:57:01.271Z",
+        "datasetId": "b30UrFr9SPZRb51oh",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "r97TJfAzX0f0bdM0a",
+        "startedAt": "2026-06-11T21:58:05.036Z",
+        "datasetId": "dwX3AjxusC4LLwrPZ",
+        "rawItems": 94,
+        "normalizedItems": 94
+      },
+      {
+        "runId": "jLiv34EwgJrWNe9zp",
+        "startedAt": "2026-06-11T21:59:30.588Z",
+        "datasetId": "vBtTJsuflgQFTHbGw",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "1y0ciYQwVyjqBWXCb",
+        "startedAt": "2026-06-11T22:00:58.029Z",
+        "datasetId": "PpM4CcrfNDWELm7IK",
+        "rawItems": 91,
+        "normalizedItems": 91
+      },
+      {
+        "runId": "nLPRgTfgw4BMRwQba",
+        "startedAt": "2026-06-11T22:01:52.931Z",
+        "datasetId": "7CFpxzS3hM6d2wQmU",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "ceJoco3ff4E8cgGLG",
+        "startedAt": "2026-06-11T22:03:15.110Z",
+        "datasetId": "eZ45gB8JRzw3OsRGN",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "MkDAcXWVzIMuSN6fL",
+        "startedAt": "2026-06-11T22:04:15.845Z",
+        "datasetId": "3Driu0DRAWcQlubBm",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "Vdr8UJZ5kvHC8SbiY",
+        "startedAt": "2026-06-11T22:05:20.359Z",
+        "datasetId": "ZCuideTy70qyfCBtL",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "ncUWEcGa3JkBMDTir",
+        "startedAt": "2026-06-11T22:06:54.074Z",
+        "datasetId": "kYljq6GHcef16MeVp",
+        "rawItems": 1,
+        "normalizedItems": 1
+      },
+      {
+        "runId": "8TpVnZEOYMUTBKQYZ",
+        "startedAt": "2026-06-11T22:08:01.248Z",
+        "datasetId": "gtO90cA2VDao85DwC",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "5rOS5bzgOAl8FgeRg",
+        "startedAt": "2026-06-11T22:09:12.465Z",
+        "datasetId": "TTauPoOhcjIq1vZW1",
+        "rawItems": 94,
+        "normalizedItems": 94
+      },
+      {
+        "runId": "RUjGxinO0DUTJdcf3",
+        "startedAt": "2026-06-11T22:10:31.190Z",
+        "datasetId": "qdeH1t5kL8kBDXbdN",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "VJF3OWAdlv8pXxaGh",
+        "startedAt": "2026-06-11T22:11:27.328Z",
+        "datasetId": "fkW3RqAdmiBmTuV1t",
+        "rawItems": 91,
+        "normalizedItems": 91
+      },
+      {
+        "runId": "ztozFzR3Fi7NRnVes",
+        "startedAt": "2026-06-11T22:12:56.728Z",
+        "datasetId": "QqEwoSkWerobg68NR",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "9LQO92ZDllcY2gfLV",
+        "startedAt": "2026-06-11T22:14:18.396Z",
+        "datasetId": "MRiB1iZRHklD2tBBH",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "pZzr5E8w1qlxKmcB9",
+        "startedAt": "2026-06-11T22:15:45.716Z",
+        "datasetId": "ezlt8tFgUBcOhgwkl",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "S2ounaneckkgxnPhT",
+        "startedAt": "2026-06-11T22:16:58.300Z",
+        "datasetId": "XaRO5q3vDbyVmH01q",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "e4PeObzHA4XgcgevF",
+        "startedAt": "2026-06-11T22:17:53.000Z",
+        "datasetId": "Xl6qh0NGfmu92Z5mG",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "oHVxYeeNkxBSXsYKh",
+        "startedAt": "2026-06-11T22:18:47.321Z",
+        "datasetId": "nuVg23zF25FT0WFcc",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "WgpJHownhXK3ijti6",
+        "startedAt": "2026-06-11T22:19:37.792Z",
+        "datasetId": "FqCpIVhBfe3cwfhYJ",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "B1aVyQg5QMl9DZZgK",
+        "startedAt": "2026-06-11T22:21:03.696Z",
+        "datasetId": "VsV4db5rOb7r5xWE0",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "qdHsyaVEwIYhiVrEn",
+        "startedAt": "2026-06-11T22:21:24.304Z",
+        "datasetId": "NebhfqYKLE7nINhhp",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "AurY9Fdw1dxgCCyu1",
+        "startedAt": "2026-06-11T22:22:26.795Z",
+        "datasetId": "Sdttv94br6rxGKXJU",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "hQwwwlG9FXO880y4H",
+        "startedAt": "2026-06-11T22:23:20.119Z",
+        "datasetId": "2fPVLTmpxdKNWibTY",
+        "rawItems": 5,
+        "normalizedItems": 5
+      },
+      {
+        "runId": "JpqSEmGbzSetGLha2",
+        "startedAt": "2026-06-11T22:23:36.795Z",
+        "datasetId": "oL3W4uG7l4BkIvIVF",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "zOeci96NgrU7U6d5Z",
+        "startedAt": "2026-06-11T22:23:44.690Z",
+        "datasetId": "WGyCsG7M53ACjPpZy",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "HmX1MfckKOUxadDCd",
+        "startedAt": "2026-06-11T22:24:42.752Z",
+        "datasetId": "aZ25jPWbzoYfSvbLo",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "8Fb8zCUEoOTjrqSW3",
+        "startedAt": "2026-06-11T22:25:50.369Z",
+        "datasetId": "gN2vo4dr1kwMFT5Pj",
+        "rawItems": 7,
+        "normalizedItems": 7
+      },
+      {
+        "runId": "3dPBskluvKWCYmZzU",
+        "startedAt": "2026-06-11T22:27:05.505Z",
+        "datasetId": "c2tAbwqCDKXhCqOrP",
+        "rawItems": 0,
+        "normalizedItems": 0
+      },
+      {
+        "runId": "VBhKaAAP1BvIP88TB",
+        "startedAt": "2026-06-11T22:27:13.080Z",
+        "datasetId": "sZu6ZBBtZvQV4Y1OB",
+        "rawItems": 19,
+        "normalizedItems": 19
+      },
+      {
+        "runId": "SElVh2XHQO2llzejm",
+        "startedAt": "2026-06-11T22:27:45.055Z",
+        "datasetId": "O45nVc8xuHSKoUb0G",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "2fZJ8So591yXjcqVs",
+        "startedAt": "2026-06-11T22:29:15.382Z",
+        "datasetId": "aAnGakS9fvFBHXHwR",
+        "rawItems": 100,
+        "normalizedItems": 100
+      },
+      {
+        "runId": "0kMHEZmKwg49dMxXD",
+        "startedAt": "2026-06-11T22:30:37.467Z",
+        "datasetId": "Rx1DVx25YWRKAGNDt",
+        "rawItems": 37,
+        "normalizedItems": 37
+      },
+      {
+        "runId": "3BRuKj51UvajC6SIT",
+        "startedAt": "2026-06-11T22:32:37.743Z",
+        "datasetId": "ATgyvWdxbii0xXI4m",
+        "rawItems": 20,
+        "normalizedItems": 20
+      }
+    ]
+  },
+  "sheets": {
+    "total_rows": 2539,
+    "address_duplicates": 0,
+    "zpid_collisions": 2
+  },
+  "neon": {
+    "total_rows": 2540,
+    "address_duplicates": 0,
+    "zpid_collisions": 2
+  },
+  "csv_baseline": {
+    "path": "dataset_zillow-detail-scraper_2026-05-18_18-15-11-332.csv",
+    "rows": 172
+  },
+  "comparison": {
+    "missing_from_sheets": 5,
+    "missing_from_neon": 4,
+    "missing_from_combined": 0,
+    "extra_in_sheets_not_in_apify": 175,
+    "extra_in_neon_not_in_apify": 175
+  },
+  "import_action": {
+    "import_missing_requested": false,
+    "appended_to_sheets": 0,
+    "synced_to_neon": 0,
+    "recovery_import_at": "2026-06-11T23:14:19.414Z",
+    "recovery_appended_to_sheets": 71,
+    "recovery_synced_to_neon": 71,
+    "recovery_source": "7 May 18-25 Apify runs (Round Rock smoke tests); not covered by June 11 recovery"
+  },
+  "audit_scope_notes": {
+    "june_11_runs_only": {
+      "successful_runs": 119,
+      "raw_items": 5618,
+      "unique_properties": 2288,
+      "missing_before_recovery": 0
+    },
+    "all_runs_since_may_18": {
+      "successful_runs": 126,
+      "raw_items": 5748,
+      "unique_properties": 2379,
+      "missing_before_recovery": 71
+    },
+    "dedupe_stats": {
+      "apify_cross_run_address_dupes": 10,
+      "apify_cross_run_zpid_collisions": 0,
+      "sheets_zpid_collisions": 2,
+      "neon_zpid_collisions": 2
+    },
+    "post_recovery_totals": {
+      "sheets": 2539,
+      "neon": 2540,
+      "sheets_neon_delta": 1
+    }
+  },
+  "missing_sample": [],
+  "extra_in_sheets_sample": [
+    {
+      "address": "5005 Buchanan Draw Rd, Austin, Texas 78738",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78738",
+      "listing_url": "",
+      "price": "650000"
+    },
+    {
+      "address": "7808 Woodcroft Dr, Austin, Texas 78749",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78749",
+      "listing_url": "",
+      "price": "425000"
+    },
+    {
+      "address": "9600 Claxton Dr, Austin, Texas 78736",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78736",
+      "listing_url": "",
+      "price": "600000"
+    },
+    {
+      "address": "1900 Barton Springs Rd UNIT 3016, Austin, Texas 78704",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78704",
+      "listing_url": "",
+      "price": "425000"
+    },
+    {
+      "address": "12725 Bloomington Dr #129, Austin, Texas 78748",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78748",
+      "listing_url": "",
+      "price": "268000"
+    },
+    {
+      "address": "3909 Skipton Dr, Austin, Texas 78727",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78727",
+      "listing_url": "",
+      "price": "799900"
+    },
+    {
+      "address": "6202 Carnation Ter, Austin, Texas 78741",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78741",
+      "listing_url": "",
+      "price": "499000"
+    },
+    {
+      "address": "10900 Mickelson Dr, Austin, Texas 78747",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78747",
+      "listing_url": "",
+      "price": "439000"
+    },
+    {
+      "address": "608 Shep St, Austin, Texas 78748",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78748",
+      "listing_url": "",
+      "price": "399500"
+    },
+    {
+      "address": "7104 Brick Slope Path, Austin, Texas 78744",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78744",
+      "listing_url": "",
+      "price": "575000"
+    }
+  ],
+  "recommendation": "All 2,379 unique paid Apify properties (126 runs since 2026-05-18) are now in Sheets/Neon. Recovered 71 Round Rock rows from May 18-25 runs that were never imported. June 11 batch (119 runs, 5,618 raw items) was already complete. 175 extra rows in Sheets/Neon are from older CSV baseline (no listing_url). Re-run audit-apify-zillow-import.mjs after future Apify batches; use --run-limit above 119 or paginate."
+}
