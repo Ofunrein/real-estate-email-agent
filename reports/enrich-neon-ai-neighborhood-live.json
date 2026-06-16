@@ -1,0 +1,126 @@
+{
+  "providers": [
+    "groq:llama-3.3-70b-versatile",
+    "openai:gpt-4o-mini"
+  ],
+  "dry_run": false,
+  "targets": 416,
+  "rows_updated": 382,
+  "field_fills": {
+    "description": 0,
+    "neighborhood": 382,
+    "beds": 0,
+    "baths": 0,
+    "property_type": 0,
+    "features": 10,
+    "listing_url": 0,
+    "status": 15
+  },
+  "missing_before": {
+    "description": {
+      "filled": 416,
+      "total": 416,
+      "missing": 0
+    },
+    "neighborhood": {
+      "filled": 0,
+      "total": 416,
+      "missing": 416
+    },
+    "beds": {
+      "filled": 399,
+      "total": 416,
+      "missing": 17
+    },
+    "baths": {
+      "filled": 339,
+      "total": 416,
+      "missing": 77
+    },
+    "property_type": {
+      "filled": 415,
+      "total": 416,
+      "missing": 1
+    },
+    "features": {
+      "filled": 406,
+      "total": 416,
+      "missing": 10
+    },
+    "listing_url": {
+      "filled": 415,
+      "total": 416,
+      "missing": 1
+    },
+    "status": {
+      "filled": 73,
+      "total": 416,
+      "missing": 343
+    }
+  },
+  "errors": [
+    "batch@0 (llama-3.3-70b-versatile): 429 rate limit for https://api.groq.com/openai/v1/chat/completions"
+  ],
+  "sample_updates": [
+    {
+      "address": "1002 Deepwood Dr",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "10026 Mirage Cv",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "10411 Thomaswood Ln",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "10412 Turnbull Loop",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "10416 Hansa Dr",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "10420 Slaughter Creek Dr",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "105 Elkhart St #3",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "1050 Springdale Rd Apt 103",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "11203 Ranch Rd #2222-1605",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "11203 Ranch Rd #2222-1801",
+      "filled_fields": [
+        "neighborhood"
+      ]
+    }
+  ]
+}

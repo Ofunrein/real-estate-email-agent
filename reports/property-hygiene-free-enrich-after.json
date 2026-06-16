@@ -1,0 +1,68 @@
+2026-06-12 04:40:19 [INFO] file_cache is only supported with oauth2client<4.0.0
+2026-06-12 04:40:19 [INFO] file_cache is only supported with oauth2client<4.0.0
+{
+  "backfill_zip_median": {
+    "updated": [
+      {
+        "row": 400,
+        "address": "12401 Los Indios Trl Unit 5",
+        "source": "street_view",
+        "missing_after": []
+      }
+    ],
+    "zip_medians": 389,
+    "sqft_medians": 389
+  },
+  "apify_index_keys": 2595,
+  "apify_detail_index_keys": 1559,
+  "enrich": {
+    "updated": [],
+    "unresolved": [],
+    "processed": 0
+  },
+  "report": {
+    "row_count": 2540,
+    "issue_count": 0,
+    "missing_count": 0,
+    "duplicate_group_count": 1,
+    "issues": [],
+    "missing_rows": [],
+    "duplicates": [
+      {
+        "key": "12401 los indios trl unit 5",
+        "rows": [
+          {
+            "row": 398,
+            "address": "12401 Los Indios Trl UNIT 5, Austin, Texas 78729"
+          },
+          {
+            "row": 400,
+            "address": "12401 Los Indios Trl Unit 5"
+          }
+        ]
+      }
+    ],
+    "headers": [
+      "address",
+      "price",
+      "beds",
+      "baths",
+      "city",
+      "state",
+      "zip",
+      "description",
+      "neighborhood",
+      "property_type",
+      "features",
+      "days_on_market",
+      "photo_url",
+      "sqft",
+      "year_built",
+      "status",
+      "listing_url",
+      "agent_name",
+      "agent_email"
+    ]
+  },
+  "health_score": 100
+}

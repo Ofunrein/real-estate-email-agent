@@ -1,0 +1,79 @@
+{
+  "neon_count": 2540,
+  "sheet_count": 2540,
+  "sheet_headers": [
+    "address",
+    "price",
+    "beds",
+    "baths",
+    "city",
+    "state",
+    "zip",
+    "description",
+    "neighborhood",
+    "property_type",
+    "features",
+    "days_on_market",
+    "photo_url",
+    "sqft",
+    "year_built",
+    "status",
+    "listing_url",
+    "agent_name",
+    "agent_email"
+  ],
+  "missing_headers_in_sheet": [],
+  "extra_headers_in_sheet": [],
+  "neon_only": 0,
+  "sheet_only": 0,
+  "neon_missing_core": 2355,
+  "sheet_missing_core": 2355,
+  "neon_has_sheet_empty": {},
+  "sample": [
+    {
+      "address": "(undisclosed Address)",
+      "neon_year_built": "1979",
+      "sheet_year_built": "1979",
+      "neon_photo": true,
+      "sheet_photo": true,
+      "neon_sqft": "1193",
+      "sheet_sqft": "1193"
+    },
+    {
+      "address": "100 E 51st St #7",
+      "neon_year_built": "2005",
+      "sheet_year_built": "2005",
+      "neon_photo": true,
+      "sheet_photo": true,
+      "neon_sqft": "1902",
+      "sheet_sqft": "1902"
+    },
+    {
+      "address": "1000 W 26th St APT 109",
+      "neon_year_built": "1973",
+      "sheet_year_built": "1973",
+      "neon_photo": true,
+      "sheet_photo": true,
+      "neon_sqft": "376",
+      "sheet_sqft": "376"
+    },
+    {
+      "address": "10001 N Capital Of Texas Hwy # 243",
+      "neon_year_built": "2001",
+      "sheet_year_built": "2001",
+      "neon_photo": true,
+      "sheet_photo": true,
+      "neon_sqft": "411",
+      "sheet_sqft": "411"
+    },
+    {
+      "address": "10004 1/2 Gail Rd",
+      "neon_year_built": "1950",
+      "sheet_year_built": "1950",
+      "neon_photo": true,
+      "sheet_photo": true,
+      "neon_sqft": "840",
+      "sheet_sqft": "840"
+    }
+  ]
+}

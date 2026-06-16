@@ -1,0 +1,110 @@
+{
+  "recoverable_source_oracle": {
+    "price": {
+      "recoverable_rows": 2538,
+      "filled": 2538,
+      "filled_where_source": 2538,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "beds": {
+      "recoverable_rows": 2360,
+      "filled": 2360,
+      "filled_where_source": 2360,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "baths": {
+      "recoverable_rows": 2297,
+      "filled": 2297,
+      "filled_where_source": 2297,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "state": {
+      "recoverable_rows": 2540,
+      "filled": 2540,
+      "filled_where_source": 2540,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "zip": {
+      "recoverable_rows": 2540,
+      "filled": 2540,
+      "filled_where_source": 2540,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "description": {
+      "recoverable_rows": 1263,
+      "filled": 1263,
+      "filled_where_source": 1263,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "neighborhood": {
+      "recoverable_rows": 212,
+      "filled": 212,
+      "filled_where_source": 212,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "property_type": {
+      "recoverable_rows": 2538,
+      "filled": 2538,
+      "filled_where_source": 2538,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "features": {
+      "recoverable_rows": 2467,
+      "filled": 2467,
+      "filled_where_source": 2467,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "days_on_market": {
+      "recoverable_rows": 1327,
+      "filled": 1327,
+      "filled_where_source": 1327,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "photo_url": {
+      "recoverable_rows": 2540,
+      "filled": 2540,
+      "filled_where_source": 2540,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "sqft": {
+      "recoverable_rows": 2540,
+      "filled": 2540,
+      "filled_where_source": 2540,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "year_built": {
+      "recoverable_rows": 2540,
+      "filled": 2540,
+      "filled_where_source": 2540,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "status": {
+      "recoverable_rows": 850,
+      "filled": 850,
+      "filled_where_source": 850,
+      "coverage_pct": 100.0,
+      "pass": true
+    },
+    "listing_url": {
+      "recoverable_rows": 2533,
+      "filled": 2533,
+      "filled_where_source": 2533,
+      "coverage_pct": 100.0,
+      "pass": true
+    }
+  },
+  "all_pass": true
+}

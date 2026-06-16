@@ -1,0 +1,151 @@
+{
+  "dry_run": false,
+  "client_id": "austin-realty",
+  "neon_rows": 2540,
+  "csv_index_keys": 181,
+  "apify_index_keys": 2688,
+  "detail_index_keys": 0,
+  "zpid_index_keys": 2133,
+  "rows_updated": 110,
+  "corrupt_prices_before": 114,
+  "corrupt_prices_after": 4,
+  "field_fills": {
+    "price": 110,
+    "beds": 0,
+    "baths": 0,
+    "state": 0,
+    "zip": 0,
+    "description": 0,
+    "neighborhood": 0,
+    "property_type": 0,
+    "features": 0,
+    "days_on_market": 0,
+    "photo_url": 0,
+    "sqft": 0,
+    "year_built": 0,
+    "status": 0,
+    "listing_url": 0
+  },
+  "sample_updates": [
+    {
+      "address": "1007 Markham Ln APT A",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1647216300",
+      "price_after": "1647"
+    },
+    {
+      "address": "1007 Markham Ln APT B",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1680236702",
+      "price_after": "1680"
+    },
+    {
+      "address": "1008 Wilks Ave",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "2241427408",
+      "price_after": "2241"
+    },
+    {
+      "address": "101 Clearday Dr APT 105",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1533208304",
+      "price_after": "1533"
+    },
+    {
+      "address": "1010 W Rundberg Ln APT 5",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1688145810",
+      "price_after": "1688"
+    },
+    {
+      "address": "1011 Chesapeake Dr",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "3497519619",
+      "price_after": "3497"
+    },
+    {
+      "address": "1015 E Yager Ln Unit 205",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1413121200",
+      "price_after": "1413"
+    },
+    {
+      "address": "1015 E Yager Ln Unit 41",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "1454121250",
+      "price_after": "1454"
+    },
+    {
+      "address": "10707 Daryl Cv",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "2989445608",
+      "price_after": "2989"
+    },
+    {
+      "address": "10707 Indian Scout Trl",
+      "sources": [
+        "apify_search",
+        "apify_zpid"
+      ],
+      "filled_fields": [
+        "price"
+      ],
+      "price_before": "2287404649",
+      "price_after": "2287"
+    }
+  ]
+}

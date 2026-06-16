@@ -1,0 +1,132 @@
+{
+  "providers": [
+    "groq:llama-3.3-70b-versatile",
+    "openai:gpt-4o-mini"
+  ],
+  "dry_run": false,
+  "targets": 975,
+  "rows_updated": 974,
+  "field_fills": {
+    "description": 974,
+    "neighborhood": 800,
+    "beds": 2,
+    "baths": 0,
+    "property_type": 1,
+    "features": 1,
+    "listing_url": 0,
+    "status": 30
+  },
+  "missing_before": {
+    "description": {
+      "filled": 0,
+      "total": 975,
+      "missing": 975
+    },
+    "neighborhood": {
+      "filled": 0,
+      "total": 975,
+      "missing": 975
+    },
+    "beds": {
+      "filled": 845,
+      "total": 975,
+      "missing": 130
+    },
+    "baths": {
+      "filled": 934,
+      "total": 975,
+      "missing": 41
+    },
+    "property_type": {
+      "filled": 973,
+      "total": 975,
+      "missing": 2
+    },
+    "features": {
+      "filled": 973,
+      "total": 975,
+      "missing": 2
+    },
+    "listing_url": {
+      "filled": 974,
+      "total": 975,
+      "missing": 1
+    },
+    "status": {
+      "filled": 377,
+      "total": 975,
+      "missing": 598
+    }
+  },
+  "errors": [
+    "batch@250 (llama-3.3-70b-versatile): 429 rate limit for https://api.groq.com/openai/v1/chat/completions"
+  ],
+  "sample_updates": [
+    {
+      "address": "1116 Teapot Dr",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "1118 Algarita Ave Unit 1",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "1118 Stobaugh St #B",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "1119 Orchard Park Cir",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "112 White Sands Dr",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "1120 Colorado St #1601",
+      "filled_fields": [
+        "description",
+        "neighborhood"
+      ]
+    },
+    {
+      "address": "11200 Savin Hill Ln",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "11203 Andenwood Dr",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "11203 Ranch Rd #2222-1605",
+      "filled_fields": [
+        "description"
+      ]
+    },
+    {
+      "address": "11203 Ranch Rd #2222-1801",
+      "filled_fields": [
+        "description"
+      ]
+    }
+  ]
+}
