@@ -49,6 +49,16 @@ function extractUrls(value: string) {
   return Array.from(new Set(value.match(/https?:\/\/[^\s<>"')]+/gi) || []));
 }
 
+function linkifyText(text: string): React.ReactNode {
+  const parts = text.split(/(https?:\/\/[^\s<>"')]+)/gi);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    /^https?:\/\//i.test(part)
+      ? <a key={i} href={part} rel="noreferrer" target="_blank" className="message-link">{part}</a>
+      : part
+  );
+}
+
 function EmailRenderedHtml({ html, properties }: { html: string; properties: SheetRow[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const preparedHtml = useMemo(
@@ -87,9 +97,11 @@ function MessageContent({ event, properties }: { event: SheetRow; properties: Sh
   }
 
   const imageUrls = extractUrls(text).filter(isDisplayableImageUrl);
+  // Linkify URLs in plain-text messages
+  const linkified = linkifyText(text);
   return (
     <div className="message-content">
-      <div className="message-text">{text}</div>
+      <div className="message-text">{linkified}</div>
       {imageUrls.length ? (
         <div className="message-images" aria-label="Images mentioned in message">
           {imageUrls.map((url) => (
