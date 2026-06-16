@@ -1062,6 +1062,7 @@ export function AgentInboxClient({
   const [refreshError, setRefreshError] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState(initialRefreshedAt);
   const [view, setView] = useState<View>("overview");
+  const [darkMode, setDarkMode] = useState(false);
   const [selectedPropertyIndex, setSelectedPropertyIndex] = useState(0);
   const [mobileCardIndex, setMobileCardIndex] = useState<number | null>(null);
   const [propertySort, setPropertySort] = useState<PropertySort>({ key: "source_order", direction: "asc" });
@@ -1195,8 +1196,8 @@ export function AgentInboxClient({
   }, [mobileCardIndex]);
 
   return (
-    <div className="app-shell">
-      <Sidebar currentView={view} onViewChange={setView} data={dashboardData} />
+    <div className={`app-shell${darkMode ? " dark" : ""}`}>
+      <Sidebar currentView={view} onViewChange={setView} data={dashboardData} darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
 
       <main className="inbox-main">
         <header className="inbox-topbar">
