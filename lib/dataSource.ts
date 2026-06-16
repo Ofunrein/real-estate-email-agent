@@ -12,7 +12,11 @@ export async function loadAgentInboxData() {
     return loadAgentInboxDataFromDatabase();
   }
   const data = await loadAgentInboxDataFromSheets();
-  return { ...data, voiceCalls: [] };
+  // Derive voice calls from conversation events when DB not available
+  const voiceCalls = (data.events || []).filter(
+    (e: SheetRow) => (e.channel || "").toLowerCase() === "voice"
+  );
+  return { ...data, voiceCalls };
 }
 
 export async function readLeads(): Promise<SheetRow[]> {
