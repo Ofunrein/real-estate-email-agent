@@ -1195,9 +1195,16 @@ export function AgentInboxClient({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileCardIndex]);
 
+  const toggleDark = () => {
+    setDarkMode(d => {
+      document.documentElement.classList.toggle("dark", !d);
+      return !d;
+    });
+  };
+
   return (
     <div className={`app-shell${darkMode ? " dark" : ""}`}>
-      <Sidebar currentView={view} onViewChange={setView} data={dashboardData} darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
+      <Sidebar currentView={view} onViewChange={setView} data={dashboardData} darkMode={darkMode} onToggleDark={toggleDark} />
 
       <main className="inbox-main">
         <header className="inbox-topbar">
