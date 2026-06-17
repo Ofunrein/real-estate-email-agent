@@ -52,7 +52,7 @@ export function PropertyPhoto({ property, large = false }: { property: SheetRow;
           }),
         );
       }}
-      src={rawUrl.startsWith("http") ? rawUrl : mediaProxyPath(rawUrl)}
+      src={mediaProxyPath(rawUrl) || rawUrl}
     />
   );
 }

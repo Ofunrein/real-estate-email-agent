@@ -2314,13 +2314,13 @@ time,
   --s-card-hover:   #F4F4F8;
   --s-surface:      #F4F4F8;
 
-  --s-text-1:       #0F0F14;
-  --s-text-2:       #5A5A72;
-  --s-text-3:       #9898AE;
-  --s-label:        #9898AE;
+  --s-text-1:       #09091A;
+  --s-text-2:       #2E2E48;
+  --s-text-3:       #62627E;
+  --s-label:        #62627E;
 
   --s-accent:       #7C6AF5;
-  --s-accent-soft:  #EEECff;
+  --s-accent-soft:  #E4E0FF;
   --s-accent-2:     #F07A4A;
   --s-accent-2-soft:#FEF0E8;
   --s-success:      #22C55E;
@@ -2349,18 +2349,18 @@ time,
 
 /* ── Dark mode tokens ── */
 .dark {
-  --s-bg:           #0E0E14;
-  --s-sidebar-bg:   #12121A;
-  --s-sidebar-border: rgba(255,255,255,0.07);
-  --s-card:         #18181F;
-  --s-card-border:  rgba(255,255,255,0.07);
-  --s-card-hover:   #1E1E28;
-  --s-surface:      #1E1E28;
+  --s-bg:           #08080E;
+  --s-sidebar-bg:   #0B0B13;
+  --s-sidebar-border: rgba(255,255,255,0.09);
+  --s-card:         #12121A;
+  --s-card-border:  rgba(255,255,255,0.10);
+  --s-card-hover:   #1A1A26;
+  --s-surface:      #1A1A26;
 
-  --s-text-1:       #EEEEF5;
-  --s-text-2:       #8888A4;
-  --s-text-3:       #55556A;
-  --s-label:        #55556A;
+  --s-text-1:       #F4F4FF;
+  --s-text-2:       #C2C2DC;
+  --s-text-3:       #9090AE;
+  --s-label:        #9090AE;
 
   --s-accent:       #8B7EFF;
   --s-accent-soft:  rgba(124,106,245,0.15);
@@ -2639,11 +2639,14 @@ time,
   border-color: rgba(124,106,245,0.2) !important;
 }
 .dark .message.outbound {
-  background: rgba(124,106,245,0.1) !important;
-  border-color: rgba(139,126,255,0.2) !important;
+  background: rgba(139,126,255,0.22) !important;
+  border-color: rgba(139,126,255,0.35) !important;
 }
 .message.outbound .message-text { color: var(--s-text-1) !important; }
+.message.inbound .message-text { color: var(--s-text-1) !important; }
 .message.inbound .message-meta span:first-child { color: var(--s-text-1) !important; }
+.message.inbound .message-meta time,
+.message.inbound .message-meta :last-child { color: var(--s-text-2) !important; }
 .message.outbound .message-meta span:first-child { color: var(--s-accent) !important; font-weight: 600 !important; }
 .message.outbound .message-meta time,
 .message.outbound .message-meta :last-child { color: var(--s-text-3) !important; }
@@ -2758,8 +2761,12 @@ time,
 .dark .rail-section, .dark .context-rail { background: var(--s-sidebar-bg) !important; }
 .dark .panel, .dark .card, .dark .context-card { background: var(--s-card) !important; border-color: var(--s-card-border) !important; }
 .dark .message { border-color: var(--s-card-border) !important; }
-.dark .message.inbound { background: var(--s-card) !important; }
+.dark .message.inbound { background: var(--s-card) !important; border-color: var(--s-card-border) !important; }
 .dark .message-text { color: var(--s-text-1) !important; }
+.dark .message-meta { color: var(--s-text-2) !important; }
+.dark .message-meta span:first-child { color: var(--s-text-1) !important; }
+.dark .message-meta time, .dark .message-meta :last-child { color: var(--s-text-3) !important; }
+.dark .voice-message-text { color: var(--s-text-1) !important; }
 .dark .conversation-search, .dark .property-search input {
   background: var(--s-surface) !important; 
   border-color: var(--s-card-border) !important;
@@ -2771,3 +2778,24 @@ time,
 /* Link colors */
 .dark a { color: var(--s-accent) !important; }
 .dark .message-link { color: var(--s-accent) !important; }
+
+/* ── Dark mode: rail cards, review items, metric grid ── */
+.dark .review-item { background: var(--s-surface) !important; border-color: var(--s-card-border) !important; }
+.dark .review-item strong { color: var(--s-text-1) !important; }
+.dark .review-item span { color: var(--s-text-2) !important; }
+.dark .human-review-card { background: var(--s-card) !important; border-color: rgba(239,68,68,0.25) !important; }
+.dark .handoff-summary { background: var(--s-surface) !important; border-color: var(--s-card-border) !important; color: var(--s-text-1) !important; }
+.dark .rail-metric-grid { background: var(--s-card-border) !important; border-color: var(--s-card-border) !important; }
+.dark .rail-metric-grid div { background: var(--s-card) !important; }
+.dark .rail-metric-grid strong { color: var(--s-text-1) !important; }
+.dark .rail-metric-grid span { color: var(--s-text-2) !important; }
+.dark .rail-facts dt { color: var(--s-text-3) !important; }
+.dark .rail-facts dd { color: var(--s-text-1) !important; }
+.dark .context-card h2, .dark .context-card h3 { color: var(--s-text-1) !important; }
+.dark .context-card p { color: var(--s-text-2) !important; }
+/* ── Dark mode: thread list ── */
+.dark .thread { background: var(--s-card) !important; border-color: var(--s-divider) !important; }
+.dark .thread:hover, .dark .thread:focus-visible { background: var(--s-card-hover) !important; }
+.dark .thread-head strong, .dark .thread-head span { color: var(--s-text-1) !important; }
+.dark .thread-head time { color: var(--s-text-3) !important; }
+.dark .handoff-note { background: rgba(251,185,72,0.12) !important; border-color: rgba(251,185,72,0.25) !important; color: var(--s-warn) !important; }
