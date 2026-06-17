@@ -31,24 +31,28 @@ function propertySubtitle(property: SheetRow) {
 }
 
 export function PropertyPhoto({ property, large = false }: { property: SheetRow; large?: boolean }) {
-  const photoUrl = usableInboxPhotoUrl(property.photo_url);
+  // Use any available URL — Street View, Zillow, whatever; degrade on load error
+  const rawUrl = (property.photo_url || "").trim();
+  const photoUrl = rawUrl || null;
+  const cls = large ? "property-photo large" : "property-photo";
+  const missingCls = large ? "property-photo missing large" : "property-photo missing";
   if (!photoUrl) {
-    return <div className={large ? "property-photo missing large" : "property-photo missing"}>No photo</div>;
+    return <div className={missingCls}>No photo</div>;
   }
   return (
     <img
       alt={`${property.address || "Property"} photo`}
-      className={large ? "property-photo large" : "property-photo"}
+      className={cls}
       loading="lazy"
       onError={(event) => {
         event.currentTarget.replaceWith(
           Object.assign(document.createElement("div"), {
-            className: large ? "property-photo missing large" : "property-photo missing",
+            className: missingCls,
             textContent: "No photo",
           }),
         );
       }}
-      src={mediaProxyPath(photoUrl)}
+      src={rawUrl.startsWith("http") ? rawUrl : mediaProxyPath(rawUrl)}
     />
   );
 }
