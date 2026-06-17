@@ -10,21 +10,34 @@ Stack: Next.js 16, React 19, TypeScript 5.7, custom CSS, no Tailwind.
 - `direction` values: `"inbound"` / `"outbound"` (case-sensitive)
 - `/api/data` response shape — all top-level keys must be present
 
-## UI Overhaul Active
-Direction: "Brokerage Terminal" — Superhuman × Bloomberg. Warm off-white `#F7F5F2`, dark sidebar `#0F1210`, clay accent `#B85C38`.
-Plan: `docs/superpowers/plans/2026-06-13-agent-inbox-ui-overhaul.md`
-Design brief: `docs/design/DESIGN_BRIEF.md`
-Codebase onboarding: `docs/CODEBASE_ONBOARDING.md`
+## UI Design System — Stacked (current)
+Theme: **Stacked** (`stacked.so`) — light + dark mode, purple/violet accent.
+Tokens: `--s-*` vars in `app/globals.css`. Use `var(--s-*)` for all new UI. No hardcoded hex.
+Dark mode: toggled via "Dark mode" button in sidebar footer → adds `.dark` class to `<html>` + `.app-shell`.
 
-## Anti-slop rules (enforced)
+Key tokens:
+- `--s-bg` page bg, `--s-card` card surface, `--s-card-border` borders
+- `--s-accent` #7C6AF5 (purple), `--s-accent-soft` subtle accent bg
+- `--s-text-1/2/3` text hierarchy, `--s-label` uppercase section labels
+- `--s-success` green, `--s-warn` amber, `--s-danger` red
+
+Sidebar: dot-grid texture (CSS `::before`), icon + label nav items, active = purple bg + purple text.
+
+Previous "Brokerage Terminal" tokens (`--bg`, `--accent #B85C38` clay, etc.) still in file but overridden by `--s-*` rules. Do not add new rules using old tokens.
+
+## Anti-slop rules (still enforced)
 1. No avatar grid navigation
-2. No colored status pill badges — StatusDot (6px) only
-3. No metric card grid — sidebar metrics only
-4. No `0` as empty state icon — SVG icons
-5. No data-dump topbar — channel name + sync dot only
+2. StatusDot (6px) only — no colored text badges
+3. Metrics in sidebar only — no card grid
+4. SVG empty states — no `0` as icon
+5. Topbar: channel name + sync dot only
 
-## CSS tokens
-All in `app/globals.css` `:root` block. Use `var(--*)` only. No hardcoded hex in TSX.
+## Key components
+- `components/inbox/Sidebar.tsx` — nav, logo, dark toggle, dot-grid texture
+- `components/inbox/charts/ActivityChart.tsx` — 14-day SVG area chart
+- `components/inbox/charts/ChannelMix.tsx` — horizontal bar chart
+- `components/inbox/PropertyTable.tsx` — property table + photo display
+- `components/inbox/StatusDot.tsx` — 6px status dot
 
 ## Dev
 ```bash
