@@ -4,6 +4,7 @@ const PROXIABLE_IMAGE_HOSTS = new Set([
   "zillowstatic.com",
   "lh3.googleusercontent.com",
   "images.unsplash.com",
+  "maps.googleapis.com",
 ]);
 
 export function isGoogleStreetViewUrl(value = ""): boolean {
