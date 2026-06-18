@@ -27,12 +27,32 @@ import { resolveCrmAdapter } from "@/lib/crm";
 import type { CrmAdapter } from "@/lib/crm/types";
 import { clientConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
+import {
+  bookAppointment as bookSharedAppointment,
+  cancelGHLEvent,
+  parseLocalDateTime,
+  rescheduleGHLEvent,
+  type AppointmentInput,
+} from "@/lib/ariaCalendar";
+import {
+  cancelAppointmentById,
+  findAppointmentById,
+  findUpcomingAppointmentByPhone,
+  rescheduleAppointmentById,
+  type AppointmentRecord,
+} from "@/lib/appointmentStore";
+import { buildCallerContextResponse, compileCallerContext } from "@/lib/ariaMemory";
+import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
+import { sendTheoSms } from "@/lib/twilioSms";
 
 export type AriaToolName =
   | "getCallerContext"
   | "lookupProperty"
   | "searchProperties"
   | "scheduleShowing"
+  | "bookAppointment"
+  | "cancelAppointment"
+  | "rescheduleAppointment"
   | "syncToCrm"
   | "qualifyLead";
 
@@ -50,6 +70,16 @@ export type AriaToolDeps = {
   getCrm: () => CrmAdapter | null;
   calendarId: string;
   timezone: string;
+  bookAppointment: (input: AppointmentInput) => Promise<{ success: boolean; appointment_id?: string; neon_id?: string; confirmed_time?: string; error?: string }>;
+  findUpcomingAppointmentByPhone: (phone: string) => Promise<AppointmentRecord | null>;
+  findAppointmentById: (id: string) => Promise<AppointmentRecord | null>;
+  cancelAppointmentById: (id: string) => Promise<boolean>;
+  rescheduleAppointmentById: (id: string, newScheduledAt: string, newScheduledAtLocal: string, newGhlEventId?: string) => Promise<AppointmentRecord | null>;
+  cancelGHLEvent: (ghlEventId: string) => Promise<boolean>;
+  rescheduleGHLEvent: (ghlEventId: string, newDate: string, newTime: string, timezone?: string) => Promise<{ success: boolean; confirmed_time?: string; error?: string }>;
+  sendSms: (to: string, body: string) => Promise<unknown>;
+  notifyBooking: typeof notifySlackOnBooking;
+  notifyTransfer: typeof notifySlackOnTransfer;
 };
 
 const defaultDeps: AriaToolDeps = {
@@ -59,6 +89,16 @@ const defaultDeps: AriaToolDeps = {
   getCrm: () => resolveCrmAdapter(),
   calendarId: process.env.GHL_CALENDAR_ID || "",
   timezone: process.env.CALENDAR_TIMEZONE || "America/Chicago",
+  bookAppointment: bookSharedAppointment,
+  findUpcomingAppointmentByPhone,
+  findAppointmentById,
+  cancelAppointmentById,
+  rescheduleAppointmentById,
+  cancelGHLEvent,
+  rescheduleGHLEvent,
+  sendSms: sendTheoSms,
+  notifyBooking: notifySlackOnBooking,
+  notifyTransfer: notifySlackOnTransfer,
 };
 
 export type AriaToolOutcome = {
@@ -99,7 +139,7 @@ async function hydrateContext(ctx: AriaToolContext, deps: AriaToolDeps): Promise
   }
 }
 
-function getCallerContext(ctx: AriaToolContext, identity: CallerIdentity): AriaToolOutcome {
+async function getCallerContext(ctx: AriaToolContext, identity: CallerIdentity): Promise<AriaToolOutcome> {
   const ingest: ChannelIngestInput = {
     ...baseIngest(ctx),
     eventType: "voice_caller_context",
@@ -113,32 +153,21 @@ function getCallerContext(ctx: AriaToolContext, identity: CallerIdentity): AriaT
     };
   }
 
-  const lead = identity.lead;
-  const name = str(lead.full_name);
-  const interest = str(lead.property_interest) || str(lead.area);
-  const role = str(lead.lead_role);
-  const budget = str(lead.budget);
-
-  // Return structured context for the AI to use naturally — NOT as a greeting instruction.
-  // Only include name if actually known (not blank). AI should use this context silently
-  // and work it into conversation naturally, NOT announce "welcome back" or say they called before.
-  const contextParts = [
-    name ? `Caller name: ${name}.` : "",
-    role ? `Role: ${role}.` : "",
-    interest ? `Property interest: ${interest}.` : "",
-    budget ? `Budget: ${budget}.` : "",
-    identity.channelsSeen.length ? `Prior contact channels: ${identity.channelsSeen.join(", ")}.` : "",
-    identity.lastTouchAt ? `Last contact: ${identity.lastTouchAt.slice(0, 10)}.` : "",
-  ].filter(Boolean).join(" ");
+  const callerContext = await compileCallerContext(
+    identity.lead,
+    identity.events,
+    identity.channelsSeen,
+    identity.lastTouchAt,
+  );
 
   return {
-    result: contextParts || "Returning caller. No detailed profile. Greet naturally.",
+    result: buildCallerContextResponse(callerContext),
     ingest: {
       ...ingest,
-      fullName: name,
-      email: str(lead.email),
-      propertyInterest: str(lead.property_interest),
-      summary: `Context loaded for${name ? ` ${name}` : " caller"}.`,
+      fullName: callerContext.full_name,
+      email: callerContext.email,
+      propertyInterest: callerContext.property_interest,
+      summary: `Context loaded for${callerContext.full_name ? ` ${callerContext.full_name}` : " caller"}.`,
     },
   };
 }
@@ -274,6 +303,161 @@ async function scheduleShowingTool(ctx: AriaToolContext, args: Record<string, un
   };
 }
 
+function appointmentType(value: unknown): AppointmentInput["appointment_type"] {
+  const text = str(value);
+  if (text === "consultation" || text === "listing_appt" || text === "follow_up") return text;
+  return "showing";
+}
+
+async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const date = str(args.date);
+  const time = str(args.time);
+  const callerPhone = str(args.caller_phone || args.phone) || ctx.phone;
+  const callerName = str(args.caller_name || args.name) || str(ctx.lead?.full_name);
+  const callerEmail = str(args.caller_email || args.email) || str(ctx.lead?.email);
+  const propertyAddress = str(args.property_address || args.address || args.property) || str(ctx.lead?.property_interest);
+  const appointmentKind = appointmentType(args.appointment_type);
+  const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_booked" };
+
+  if (!date || !time || !callerPhone) {
+    return {
+      result: "I need the date, time, and best phone number before I can book that.",
+      ingest: { ...ingestBase, aiAction: "appointment_needs_details", status: "awaiting_response", summary: "Booking requested with missing date, time, or phone." },
+    };
+  }
+
+  const result = await deps.bookAppointment({
+    date,
+    time,
+    duration_minutes: num(args.duration_minutes) || 30,
+    property_address: propertyAddress,
+    caller_name: callerName,
+    caller_phone: callerPhone,
+    caller_email: callerEmail,
+    notes: str(args.notes),
+    appointment_type: appointmentKind,
+    booked_via_channel: "voice",
+    timezone: deps.timezone,
+    call_id: ctx.callId,
+  });
+
+  if (!result.success) {
+    return {
+      result: "I couldn't lock that in right now. I'll flag it so the team can confirm with you directly.",
+      ingest: { ...ingestBase, aiAction: "appointment_booking_failed", status: "error", summary: `Booking failed: ${result.error || "unknown error"}` },
+    };
+  }
+
+  await deps.notifyBooking({
+    outcome: "BOOKED",
+    caller_name: callerName,
+    caller_phone: callerPhone,
+    appointment_time: result.confirmed_time,
+    property_address: propertyAddress,
+    notes: str(args.notes),
+    channel: "voice",
+    call_id: ctx.callId,
+  }).catch(() => null);
+
+  return {
+    result: `Booked - ${result.confirmed_time || `${date} at ${time}`}. Confirmation text coming now.`,
+    ingest: {
+      ...ingestBase,
+      fullName: callerName,
+      email: callerEmail,
+      propertyInterest: propertyAddress,
+      aiAction: "appointment_booked",
+      nextAction: "appointment_confirmed",
+      status: "booked",
+      appointmentId: result.neon_id || result.appointment_id || "",
+      outcomeCode: "BOOKED",
+      summary: `Booked ${appointmentKind} at ${result.confirmed_time || `${date} at ${time}`}${propertyAddress ? ` - ${propertyAddress}` : ""}.`,
+    },
+  };
+}
+
+async function resolveAppointmentForChange(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AppointmentRecord | null> {
+  const appointmentId = str(args.appointment_id || args.appointmentId);
+  if (appointmentId) {
+    const byId = await deps.findAppointmentById(appointmentId).catch(() => null);
+    if (byId) return byId;
+  }
+  const phone = str(args.caller_phone || args.phone) || ctx.phone;
+  return phone ? deps.findUpcomingAppointmentByPhone(phone).catch(() => null) : null;
+}
+
+async function cancelAppointmentTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const appt = await resolveAppointmentForChange(ctx, args, deps);
+  const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_cancelled" };
+  if (!appt) {
+    return {
+      result: "I don't see an upcoming appointment on file. Want to book one?",
+      ingest: { ...ingestBase, eventType: "voice_cancel_no_appt", aiAction: "appointment_cancel_not_found", status: "not_found" },
+    };
+  }
+
+  await deps.cancelAppointmentById(appt.id);
+  if (appt.ghl_event_id) await deps.cancelGHLEvent(appt.ghl_event_id).catch(() => false);
+
+  return {
+    result: "Done - your appointment has been cancelled. Anything else I can help with?",
+    ingest: {
+      ...ingestBase,
+      aiAction: "appointment_cancelled",
+      appointmentId: appt.id,
+      status: "cancelled",
+      summary: `Cancelled ${appt.scheduled_at_local || appt.scheduled_at}${str(args.reason) ? ` - ${str(args.reason)}` : ""}.`,
+    },
+  };
+}
+
+async function rescheduleAppointmentTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const appt = await resolveAppointmentForChange(ctx, args, deps);
+  const newDate = str(args.new_date || args.date);
+  const newTime = str(args.new_time || args.time);
+  const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_rescheduled" };
+  if (!appt) {
+    return {
+      result: "I don't see an upcoming appointment on file. Want to book a new one?",
+      ingest: { ...ingestBase, eventType: "voice_reschedule_no_appt", aiAction: "appointment_reschedule_not_found", status: "not_found" },
+    };
+  }
+  if (!newDate || !newTime) {
+    return {
+      result: "What new day and time works?",
+      ingest: { ...ingestBase, aiAction: "appointment_reschedule_needs_time", status: "awaiting_response" },
+    };
+  }
+
+  const ghlResult = appt.ghl_event_id
+    ? await deps.rescheduleGHLEvent(appt.ghl_event_id, newDate, newTime, deps.timezone)
+    : { success: true, confirmed_time: `${newDate} at ${newTime}` };
+  if (ghlResult.success) {
+    await deps.rescheduleAppointmentById(
+      appt.id,
+      parseLocalDateTime(newDate, newTime, deps.timezone),
+      ghlResult.confirmed_time || `${newDate} at ${newTime}`,
+      appt.ghl_event_id,
+    );
+    if (process.env.SEND_BOOKING_CONFIRMATION_SMS === "true") {
+      await deps.sendSms(ctx.phone, `Rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}. Questions? Reply here.`).catch(() => null);
+    }
+  }
+
+  return {
+    result: ghlResult.success
+      ? `Done - rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}. Another confirmation is coming now.`
+      : "I had trouble updating that. I'll flag it for the team.",
+    ingest: {
+      ...ingestBase,
+      aiAction: ghlResult.success ? "appointment_rescheduled" : "appointment_reschedule_failed",
+      appointmentId: appt.id,
+      status: ghlResult.success ? "rescheduled" : "error",
+      summary: ghlResult.success ? `Rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}.` : `Reschedule failed: ${ghlResult.error || "unknown error"}`,
+    },
+  };
+}
+
 async function syncToCrm(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
   const adapter = deps.getCrm();
   const ingestBase = { ...baseIngest(ctx), eventType: "voice_crm_sync" };
@@ -287,6 +471,17 @@ async function syncToCrm(ctx: AriaToolContext, args: Record<string, unknown>, de
   const upserted = await adapter.upsertContact({ phone: contact.phone, email: contact.email, fullName: contact.fullName });
   const note = str(args.note || args.summary) || "Voice call handled by Aria.";
   await adapter.logActivity({ contactId: upserted.id, body: note, channel: "voice", direction: "inbound", type: "note" });
+  if (str(args.outcome).toUpperCase() === "TRANSFERRED") {
+    await deps.notifyTransfer({
+      outcome: "TRANSFERRED",
+      caller_phone: ctx.phone,
+      caller_name: contact.fullName || str(ctx.lead?.full_name),
+      notes: note,
+      tone: "neutral",
+      call_id: ctx.callId,
+      channel: "voice",
+    }).catch(() => null);
+  }
   return {
     result: "Done, I've saved that to your record.",
     ingest: { ...ingestBase, fullName: contact.fullName || "", email: contact.email || "", aiAction: "crm_synced", summary: `Synced to CRM: ${note}` },
@@ -363,6 +558,12 @@ export async function runAriaTool(
       return searchProperties(await hydrateContext(ctx, deps), args, deps);
     case "scheduleShowing":
       return scheduleShowingTool(await hydrateContext(ctx, deps), args, deps);
+    case "bookAppointment":
+      return bookAppointmentTool(await hydrateContext(ctx, deps), args, deps);
+    case "cancelAppointment":
+      return cancelAppointmentTool(await hydrateContext(ctx, deps), args, deps);
+    case "rescheduleAppointment":
+      return rescheduleAppointmentTool(await hydrateContext(ctx, deps), args, deps);
     case "syncToCrm":
       return syncToCrm(await hydrateContext(ctx, deps), args, deps);
     case "qualifyLead":
