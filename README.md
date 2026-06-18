@@ -217,7 +217,16 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 - Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
 - Theo can send MMS/RCS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has a real public HTTPS image URL. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. Sendable media is proxied through `/api/media/proxy` so Twilio can fetch it reliably. Google Street View fallback URLs are not treated as sendable photos because they can return Google error images; when no real photo is available, Theo sends the listing/photo-gallery link instead. Sensitive/handoff replies never attach images.
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
-- WhatsApp, voice, and website chat remain logging/monitoring routes until those channel agents are enabled.
+- Theo WhatsApp uses Meta Cloud API when `ENABLE_WHATSAPP_AGENT=true`. Meta webhook verification is handled by `GET /api/webhooks/theo-whatsapp` with `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; inbound text/image/button messages are logged, passed through the same Claude/property/booking logic as SMS, sent with `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN`, and outbound replies are logged to the WhatsApp thread. If `META_APP_SECRET` is set, POST requests must pass Meta's `x-hub-signature-256` check.
+- Theo WhatsApp can send property images as native Meta image messages when `ENABLE_WHATSAPP_IMAGES=true`. It uses the same safe-photo selection as SMS, caps sends with `WHATSAPP_MAX_IMAGES`, and uses `/api/media/proxy` as an absolute URL when `PUBLIC_BASE_URL` is set.
+- Voice and website chat remain logging/monitoring routes until those channel agents are enabled.
+
+Meta WhatsApp setup:
+
+1. Set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `ENABLE_WHATSAPP_AGENT=true`, and optionally `ENABLE_WHATSAPP_IMAGES=true`.
+2. In Meta Developers → App → WhatsApp → Configuration, set callback URL to `${PUBLIC_BASE_URL}/api/webhooks/theo-whatsapp` and verify token to `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
+3. Subscribe the app to WhatsApp `messages`.
+4. Send a WhatsApp test message from an allowed number and confirm the inbound and outbound events appear under the dashboard's WhatsApp channel.
 
 Local Theo SMS test without a public Twilio webhook:
 

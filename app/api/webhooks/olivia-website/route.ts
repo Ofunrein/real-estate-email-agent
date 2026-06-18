@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { bookAppointment } from "@/lib/ariaCalendar";
+import { notifySlackOnHotLead } from "@/lib/ariaSlack";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
@@ -70,6 +72,49 @@ export async function POST(request: NextRequest) {
         source: "form",
         dataContext: enriched.context,
       });
+      const showingDatePreference = stringValue(payload, "preferred_date", "showing_date", "appointment_date");
+      const propertyForShowing = propertyInterest || stringValue(payload, "address");
+      if (
+        process.env.ENABLE_CROSS_CHANNEL_BOOKING === "true"
+        && showingDatePreference
+        && propertyForShowing
+      ) {
+        const lower = showingDatePreference.toLowerCase();
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const date = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+        const time = /afternoon/.test(lower) ? "2:00 PM" : /evening/.test(lower) ? "5:00 PM" : "10:00 AM";
+        const booking = await bookAppointment({
+          date,
+          time,
+          caller_phone: phone,
+          caller_name: fullName,
+          caller_email: email,
+          property_address: propertyForShowing,
+          appointment_type: "showing",
+          notes: `Booked via website form. Preference: ${showingDatePreference}`,
+          booked_via_channel: "web",
+        }).catch(() => null);
+        if (booking?.success && reply.shouldSend) {
+          reply.reply = `You're set for ${booking.confirmed_time} at ${propertyForShowing}. ${reply.reply}`;
+        }
+      }
+
+      const hotTimeline = (result.lead?.timeline || lead?.timeline || "").toLowerCase();
+      const hotBudget = result.lead?.budget || lead?.budget || "";
+      const hotArea = result.lead?.area || lead?.area || "";
+      const hotRole = result.lead?.lead_role || lead?.lead_role || "";
+      if (hotRole && hotBudget && hotArea && /\b([0-3]\s*(?:month|mo)|asap|immediately|soon)\b/.test(hotTimeline)) {
+        await notifySlackOnHotLead({
+          outcome: "HOT_LEAD",
+          caller_phone: phone,
+          caller_name: fullName,
+          timeline: hotTimeline,
+          property_address: propertyForShowing,
+          notes: `Web form submission. Budget: ${hotBudget}, Area: ${hotArea}`,
+          channel: "web",
+        }).catch(() => null);
+      }
 
       if (reply.shouldSend) {
         const sendResult = await sendTheoSms(phone, reply.reply, reply.mediaUrls);

@@ -55,7 +55,7 @@ Call flow:
 - When the caller describes what they want instead of one address (an area, bedroom count, or budget), say "Let me check what we have" out loud first, then call searchProperties and read back the top matches.
 - Do not say you cannot access listings until after lookupProperty or searchProperties returns no usable result. If a tool returns options, use them.
 - When you learn who they are and what they want (buyer/seller/renter/investor, budget, area, timeline, beds/baths, preferred channel, sell-before-buy), call qualifyLead to capture it. Ask at most one question at a time.
-- To book, cancel, or move a tour, call scheduleShowing. Confirm the date and time back to the caller before booking. Only schedule for the person on this call.
+- To book a tour or consultation, call bookAppointment after confirming the date and time out loud. To cancel or move an existing appointment, use cancelAppointment or rescheduleAppointment with the appointment_id from getCallerContext when available. scheduleShowing remains available for legacy showing flows.
 - When wrapping up a useful call, call syncToCrm with a one-line summary.
 - If the caller asks for a human, or raises anything sensitive (fair housing, lending/mortgage qualification, legal/contract, negotiation, pricing judgment, or a complaint), use transferToHuman to connect them. Provide safe factual info first if you have it. Human-assisted does not mean stopping useful property help; it means backup on judgment-sensitive parts.
 - If the caller is qualified but not ready, close with the next clear step and save it to CRM. The outbound cadence can keep working the lead later; do not promise unconfigured manual callbacks.
@@ -75,6 +75,7 @@ function modelProviderFor(model: string, explicit?: string): string {
 export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOptions): Record<string, unknown> {
   const voiceName = config.agentNames.voice;
   const system = opts.styleContext ? `${systemPrompt(config)}\n\n${opts.styleContext}` : systemPrompt(config);
+  const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini";
 
   const tools: Record<string, unknown>[] = [
     serverTool(opts, "getCallerContext", "Load any prior cross-channel history for the current caller. Call once at the start of the call. Takes no arguments.", {
@@ -111,11 +112,46 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
         area: { type: "string" },
         bedrooms: { type: "string", description: "Bedroom preference, e.g. 3 bed." },
         bathrooms: { type: "string", description: "Bathroom preference, e.g. 2.5 bath." },
+        sell_before_buy: { type: "string", enum: ["yes", "no", "unknown"] },
         preferred_channel: { type: "string", enum: ["voice", "sms", "email"], description: "How the caller prefers follow-up." },
         property: { type: "string", description: "Address or listing they're interested in." },
         call_consent: { type: "string", description: "yes/no — may we call them back." },
         sms_consent: { type: "string", description: "yes/no — may we text them." },
       },
+    }),
+    serverTool(opts, "bookAppointment", "Book a showing or consultation. Confirm date and time verbally before calling this.", {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "ISO date, e.g. 2026-06-20." },
+        time: { type: "string", description: "Local time, e.g. 10:00 AM." },
+        duration_minutes: { type: "number" },
+        property_address: { type: "string" },
+        caller_name: { type: "string" },
+        caller_phone: { type: "string" },
+        caller_email: { type: "string" },
+        notes: { type: "string" },
+        appointment_type: { type: "string", enum: ["showing", "consultation", "listing_appt", "follow_up"] },
+      },
+      required: ["date", "time", "caller_phone"],
+    }),
+    serverTool(opts, "cancelAppointment", "Cancel an existing appointment. Prefer appointment_id from getCallerContext.", {
+      type: "object",
+      properties: {
+        appointment_id: { type: "string" },
+        caller_phone: { type: "string" },
+        reason: { type: "string" },
+      },
+    }),
+    serverTool(opts, "rescheduleAppointment", "Move an existing appointment to a new date and time.", {
+      type: "object",
+      properties: {
+        appointment_id: { type: "string" },
+        caller_phone: { type: "string" },
+        new_date: { type: "string" },
+        new_time: { type: "string" },
+        notes: { type: "string" },
+      },
+      required: ["new_date", "new_time"],
     }),
     serverTool(opts, "scheduleShowing", "Book, cancel, or reschedule a property showing for the caller.", {
       type: "object",
@@ -154,8 +190,8 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
     name: `${voiceName} — ${config.clientName}`,
     firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
     model: {
-      provider: modelProviderFor(opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini", opts.respondProvider || process.env.ARIA_MODEL_PROVIDER),
-      model: opts.respondModel || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini",
+      provider: modelProviderFor(modelName, opts.respondProvider || process.env.ARIA_MODEL_PROVIDER),
+      model: modelName,
       messages: [{ role: "system", content: system }],
       tools,
     },

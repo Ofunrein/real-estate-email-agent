@@ -46,6 +46,13 @@ export const LEAD_MEMORY_HEADERS = [
   "handoff_reason",
   "next_action",
   "summary",
+  "bedrooms",
+  "bathrooms",
+  "sell_before_buy",
+  "lead_score",
+  "appointment_count",
+  "do_not_contact",
+  "whatsapp_consent",
 ] as const;
 
 export const CONVERSATION_EVENTS_HEADERS = [
@@ -67,6 +74,9 @@ export const CONVERSATION_EVENTS_HEADERS = [
   "ai_action",
   "handoff_reason",
   "status",
+  "call_duration_seconds",
+  "appointment_id",
+  "outcome_code",
 ] as const;
 
 export type SheetRow = Record<string, string>;
