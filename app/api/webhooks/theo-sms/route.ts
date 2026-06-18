@@ -4,6 +4,7 @@ import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlActi
 import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
+import { isTakeoverActive } from "@/lib/humanTakeover";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
@@ -272,6 +273,22 @@ export async function POST(request: NextRequest) {
         handoff_alert_sent: handoffAlertSent,
         handoff_alert_error: handoffAlertError || undefined,
         send_error: sendResult.error || undefined,
+      });
+    }
+
+    // Human takeover: owner is handling this thread — log inbound, skip AI reply.
+    if (await isTakeoverActive(result.event.thread_ref)) {
+      logTheo("human takeover active — skipping AI reply", {
+        leadPhone: payload.From,
+        threadRef: result.event.thread_ref,
+        totalMs: elapsedMs(requestStarted),
+      });
+      return webhookResponse(request, {
+        ok: true,
+        channel: result.event.channel,
+        status: "human_takeover",
+        action: "ai_skipped_human_takeover",
+        reply_sent: false,
       });
     }
 
