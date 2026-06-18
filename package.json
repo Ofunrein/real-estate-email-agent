@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "tsc --project tsconfig.lint.json --pretty false",
     "theo:test": "node scripts/test-theo-sms.mjs",
     "theo:twilio:configure": "node scripts/configure-theo-twilio.mjs",
     "aria:provision": "node --import tsx scripts/aria-provision.mjs",
