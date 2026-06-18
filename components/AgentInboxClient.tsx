@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/inbox/EmptyState";
+import { HumanTakeover } from "@/components/inbox/HumanTakeover";
 import { ActivityChart } from "@/components/inbox/charts/ActivityChart";
 import { ChannelMix } from "@/components/inbox/charts/ChannelMix";
 import { Sidebar } from "@/components/inbox/Sidebar";
@@ -655,6 +656,15 @@ function ConversationThread({
           </div>
         ))}
       </div>
+      {channel === "sms" || channel === "whatsapp" || channel === "email" ? (
+        <HumanTakeover
+          threadRef={threadRef}
+          channel={channel}
+          to={(channel === "email" ? latest.email : latest.phone) || ""}
+          subject={channel === "email" ? latest.summary || "" : undefined}
+          gmailThreadId={channel === "email" ? threadRef : undefined}
+        />
+      ) : null}
     </article>
   );
 }
