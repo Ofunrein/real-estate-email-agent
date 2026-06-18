@@ -818,6 +818,26 @@ def send_reply(gmail, parsed: dict, html_body: str, text_body: str):
 
 _label_id_cache: dict = {}
 
+def is_thread_taken_over(thread_ref: str) -> bool:
+    """Check if owner has paused AI for this email thread via the dashboard takeover UI."""
+    if not DATABASE_URL:
+        return False
+    try:
+        import psycopg2  # type: ignore
+        conn = psycopg2.connect(DATABASE_URL)
+        with conn.cursor() as cur:
+            cur.execute(
+                "select 1 from thread_takeovers where client_id=%s and thread_ref=%s and is_active=true limit 1",
+                (CLIENT_ID, thread_ref),
+            )
+            found = cur.fetchone() is not None
+        conn.close()
+        return found
+    except Exception as exc:  # noqa: BLE001
+        log.warning("is_thread_taken_over check failed for %s: %s", thread_ref, exc)
+        return False
+
+
 def apply_labels(gmail, msg_id: str, label_names: list[str]):
     label_ids = []
     for name in label_names:
@@ -2666,6 +2686,10 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
             labels.append("NEEDS_HUMAN")
 
     if html_body:
+        if is_thread_taken_over(thread_id):
+            log.info("Human takeover active — skipping Iris reply for thread=%s", thread_id)
+            state["replied_ids"].append(msg_id)
+            return
         send_reply(gmail, parsed, html_body, text_body)
         lead_memory["last_ai_touch_at"] = _iso_now()
         if SHEET_ID:

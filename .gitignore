@@ -35,3 +35,4 @@ claude-md/
 # Playwright CLI artifacts
 .playwright-cli/
 .DS_Store
+public/uploads/
