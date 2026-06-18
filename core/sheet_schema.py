@@ -15,14 +15,16 @@ LEAD_MEMORY_HEADERS = [
     "intent", "property_interest", "budget", "area", "timeline",
     "preferred_channel", "sms_consent", "call_consent", "last_channel",
     "last_ai_touch_at", "assigned_owner", "handoff_status", "handoff_reason",
-    "next_action", "summary",
+    "next_action", "summary", "bedrooms", "bathrooms", "sell_before_buy",
+    "lead_score", "appointment_count", "do_not_contact", "whatsapp_consent",
 ]
 
 CONVERSATION_EVENTS_HEADERS = [
     "event_at", "channel", "direction", "email", "phone", "full_name", "source",
     "thread_ref", "agent_name", "human_owner", "event_type", "message_text",
     "summary", "transcript_url", "recording_url", "ai_action",
-    "handoff_reason", "status",
+    "handoff_reason", "status", "call_duration_seconds", "appointment_id",
+    "outcome_code",
 ]
 
 TAB_HEADERS = {

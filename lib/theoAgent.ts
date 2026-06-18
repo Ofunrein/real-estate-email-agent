@@ -1,5 +1,6 @@
 import type { SheetRow } from "@/lib/sheetSchema";
 import { CENTRAL_TEXAS_CITIES } from "@/lib/serviceAreas";
+import { handleTheoAppointmentMessage } from "@/lib/theoAppointments";
 import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
 import type { TheoMetric } from "@/lib/theoTelemetry";
 
@@ -32,7 +33,7 @@ export type TheoReplyContext = {
   lead?: Partial<SheetRow>;
   properties?: SheetRow[];
   propertyInterest?: string;
-  source?: "sms" | "form";
+  source?: "sms" | "form" | "whatsapp";
   recentEvents?: SheetRow[];
   dataContext?: string;
   styleContext?: string;
@@ -108,6 +109,14 @@ function envFlag(value?: string): boolean {
 
 function smsImagesEnabled(): boolean {
   return envFlag(process.env.ENABLE_SMS_IMAGES);
+}
+
+function whatsAppImagesEnabled(): boolean {
+  return envFlag(process.env.ENABLE_WHATSAPP_IMAGES || process.env.ENABLE_SMS_IMAGES);
+}
+
+function mediaImagesEnabled(source?: TheoReplyContext["source"]): boolean {
+  return source === "whatsapp" ? whatsAppImagesEnabled() : smsImagesEnabled();
 }
 
 function smsImageMode(): string {
@@ -282,7 +291,7 @@ function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: 
 }
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
-  if (!smsImagesEnabled()) return [];
+  if (!mediaImagesEnabled(context.source)) return [];
   if (classification.intent === "spam") return [];
   if (classification.intent === "human_required" && (!asksForSafePropertyFact(context.message) || !canShareSafeFactsDuringHandoff(classification))) return [];
 
@@ -291,7 +300,7 @@ export function selectTheoMediaUrls(context: TheoReplyContext, classification: T
   if (mode === "on_request" && !wantsPropertyImage(context.message)) return [];
   if (!["on_request", "property_reply"].includes(mode)) return [];
 
-  const maxImages = Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3"));
+  const maxImages = Math.max(0, Number((context.source === "whatsapp" ? process.env.WHATSAPP_MAX_IMAGES : "") || process.env.SMS_MAX_IMAGES || "3"));
   return (context.properties || [])
     .map((property) => usablePhotoUrl(property.photo_url))
     .filter(Boolean)
@@ -331,6 +340,31 @@ export function shouldTheoAutoReply(classification: TheoClassification, lead: Pa
 }
 
 export async function generateTheoReply(context: TheoReplyContext): Promise<TheoReplyResult> {
+  if (context.lead?.phone) {
+    const appointmentResult = await handleTheoAppointmentMessage(
+      context.lead.phone,
+      context.message,
+      context.lead || null,
+    );
+    if (appointmentResult.handled) {
+      return {
+        classification: {
+          intent: "showing_request",
+          leadRole: context.lead?.lead_role || "buyer",
+          handoffReason: "",
+          status: appointmentResult.nextAction === "done" ? "replied" : "awaiting_response",
+        },
+        reply: appointmentResult.reply,
+        mediaUrls: [],
+        shouldSend: true,
+        aiAction: "appointment_handled",
+        handoffReason: "",
+        status: appointmentResult.nextAction === "done" ? "replied" : "awaiting_response",
+        metrics: [],
+      };
+    }
+  }
+
   let classification: TheoClassification;
   const metrics: TheoMetric[] = [];
   try {
