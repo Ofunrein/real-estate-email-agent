@@ -11,6 +11,7 @@
     "theo:test": "node scripts/test-theo-sms.mjs",
     "theo:twilio:configure": "node scripts/configure-theo-twilio.mjs",
     "aria:provision": "node --import tsx scripts/aria-provision.mjs",
+    "aria:provision:dry": "node --import tsx scripts/aria-provision.mjs --dry-run",
     "aria:verify": "node scripts/verify-aria-live.mjs",
     "aria:test": "node --import tsx scripts/test-aria-voice.mjs",
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",

@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape as html_escape
 
 import requests
 from dotenv import load_dotenv
@@ -2345,15 +2346,18 @@ def generate_multi_property_html(listings_data: list[dict], calendly: str) -> tu
     return html, "\n".join(plain_lines)
 
 
-def generate_showing_reply(calendly: str, address: str = "") -> tuple[str, str]:
+def generate_showing_reply(calendly: str, address: str = "", lead_name: str = "") -> tuple[str, str]:
     """Showing request — just return Calendly link, no auto-calendar."""
     addr_str = f" for {address}" if address else ""
-    text = (f"Hello,\n\nHappy to set up a showing{addr_str}. "
-            f"You can book a time directly here:\n\n{calendly}\n\n"
+    first_name = lead_name.split()[0] if lead_name else ""
+    greeting = f"Hi {first_name}," if first_name else "Hi,"
+    text = (f"{greeting}\n\nI can set up a showing{addr_str}. "
+            f"Grab a time that works for you here:\n\n{calendly}\n\n"
             f"If none of those slots work, just reply and we'll find something.\n\n"
             f"Best regards,\nAustin Realty\n(512) 555-0192")
-    html = (f'<p>Hello,</p>'
-            f'<p>Happy to set up a showing{addr_str}. You can book a time directly here:</p>'
+    html_addr = f" for {html_escape(address)}" if address else ""
+    html = (f'<p>{html_escape(greeting)}</p>'
+            f'<p>I can set up a showing{html_addr}. Grab a time that works for you here:</p>'
             f'<p><a href="{calendly}" style="display:inline-block;padding:10px 24px;background:#0066cc;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Schedule a Showing</a></p>'
             f'<p>If none of those slots work, just reply and we\'ll find something.</p>'
             f'<p style="margin-top:20px;color:#555">Best regards,<br><strong>Austin Realty</strong><br>(512) 555-0192</p>')
@@ -2618,7 +2622,8 @@ def process_message(gmail, sheets, state: dict, msg: dict, my_email: str):
         html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
     elif intent == "showing_request":
-        html_body, text_body = generate_showing_reply(CALENDLY_URL, address or "")
+        lead_name, _ = _sender_parts(parsed.get("from", ""))
+        html_body, text_body = generate_showing_reply(CALENDLY_URL, address or "", lead_name)
         html_body, text_body = append_question_to_reply(html_body, text_body, next_question)
 
     elif intent in ("buyer_lead", "seller_lead", "renter_lead"):
