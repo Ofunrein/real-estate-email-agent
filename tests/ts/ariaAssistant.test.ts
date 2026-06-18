@@ -19,7 +19,17 @@ test("buildAriaAssistant: includes all server tools with secret-bearing urls", (
   const names = tools
     .filter((t) => t.type === "function")
     .map((t) => (t.function as Record<string, unknown>).name);
-  assert.deepEqual(names, ["getCallerContext", "lookupProperty", "searchProperties", "qualifyLead", "scheduleShowing", "syncToCrm"]);
+  assert.deepEqual(names, [
+    "getCallerContext",
+    "lookupProperty",
+    "searchProperties",
+    "qualifyLead",
+    "bookAppointment",
+    "cancelAppointment",
+    "rescheduleAppointment",
+    "scheduleShowing",
+    "syncToCrm",
+  ]);
 
   const lookup = tools.find((t) => (t.function as Record<string, unknown> | undefined)?.name === "lookupProperty");
   const server = lookup?.server as Record<string, unknown>;
@@ -67,6 +77,7 @@ test("buildAriaAssistant: qualifyLead captures channel and bed-bath preferences"
   assert.ok(properties.preferred_channel);
   assert.ok(properties.bedrooms);
   assert.ok(properties.bathrooms);
+  assert.ok(properties.sell_before_buy);
 });
 
 test("buildAriaAssistant: no voice block when voiceId unset", () => {

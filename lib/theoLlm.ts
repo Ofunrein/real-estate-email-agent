@@ -1,6 +1,7 @@
 import type { SheetRow } from "@/lib/sheetSchema";
 
 import { AGENCY_KNOWLEDGE_CONTEXT } from "@/lib/agencyKnowledge";
+import { findUpcomingAppointmentByPhone, formatAppointmentForAgent } from "@/lib/appointmentStore";
 import type { TheoClassification } from "@/lib/theoAgent";
 import { claudeCostUsd, elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
@@ -13,7 +14,7 @@ export type TheoLlmContext = {
   lead?: Partial<SheetRow>;
   properties?: SheetRow[];
   propertyInterest?: string;
-  source?: "sms" | "form";
+  source?: "sms" | "form" | "whatsapp";
   recentEvents?: SheetRow[];
   dataContext?: string;
   styleContext?: string;
@@ -126,7 +127,12 @@ function leadSummary(lead: Partial<SheetRow> = {}): string {
     lead.budget ? `budget=${lead.budget}` : "",
     lead.area ? `area=${lead.area}` : "",
     lead.timeline ? `timeline=${lead.timeline}` : "",
+    lead.bedrooms ? `bedrooms=${lead.bedrooms}` : "",
+    lead.bathrooms ? `bathrooms=${lead.bathrooms}` : "",
+    lead.sell_before_buy ? `sell_before_buy=${lead.sell_before_buy}` : "",
     lead.preferred_channel ? `preferred_channel=${lead.preferred_channel}` : "",
+    lead.appointment_count ? `appointment_count=${lead.appointment_count}` : "",
+    lead.whatsapp_consent ? `whatsapp_consent=${lead.whatsapp_consent}` : "",
     lead.next_action ? `next_action=${lead.next_action}` : "",
     lead.sms_consent ? `sms_consent=${lead.sms_consent}` : "",
     lead.assigned_owner ? `assigned_owner=${lead.assigned_owner}` : "",
@@ -202,11 +208,12 @@ Look for channel preference too: "email is best", "text me", "call me", "send it
 
 Allowed intent values: property_details, showing_request, buyer_lead, seller_lead, renter_lead, human_required, spam.
 Lead roles: buyer, seller, first_time_buyer, second_time_buyer, renter, landlord, investor, expired_listing_seller, open_house_lead, property_management_lead, mortgage_adjacent_lead, unknown.
-Opportunity tags: valuation_interest, mortgage_interest, renter_purchase_potential, sell_before_buy, high_urgency, stale_lead, confused_lead, angry_lead, compliance_sensitive, needs_human_trust.
+Opportunity tags: valuation_interest, mortgage_interest, renter_purchase_potential, sell_before_buy, hot_lead, high_urgency, stale_lead, confused_lead, angry_lead, compliance_sensitive, needs_human_trust.
 Compliance flags: fair_housing, mortgage_license, legal, contract_terms, angry_or_complaint, privacy, broker_approval.
 
 Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.
-If the latest SMS asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, comparable properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.`;
+If the latest SMS asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, comparable properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.
+If timeline is 0-3 months, budget is set, and area is set, include hot_lead in opportunityTags.`;
   const user = `Latest lead SMS: ${context.message}
 
 Lead memory: ${leadSummary(context.lead)}
@@ -251,6 +258,13 @@ export type TheoSmsGeneration = {
 };
 
 export async function generateTheoSmsWithLlm(context: TheoLlmContext, classification: TheoClassification): Promise<TheoSmsGeneration> {
+  const phone = context.lead?.phone || "";
+  const upcomingAppointment = phone
+    ? await findUpcomingAppointmentByPhone(phone).catch(() => null)
+    : null;
+  const appointmentContext = upcomingAppointment
+    ? `\nUpcoming appointment: ${formatAppointmentForAgent(upcomingAppointment)}`
+    : "";
   const system = `You are Theo, the SMS personality for Austin Realty.
 Write one natural SMS reply. Be concise, human, emotionally intelligent, and useful.
 Mirror the feel of a good human real estate assistant: casual, clear, not robotic, not pushy.
@@ -261,6 +275,8 @@ Rules:
 - Use a compact ISA cadence: acknowledge, answer the immediate ask, then ask the next missing mile-marker question.
 - Qualification mile markers, in order when missing: preferred channel, timeline, area, price range, bedroom/bathroom fit, and sell-before-buy.
 - Use prior thread context so short replies like "yes", "thanks", or "Wednesday works" make sense.
+- You share memory with Aria voice, Iris email, and Olivia web chat. If the lead has prior context from another channel, reference it briefly and skip re-asking known budget, area, timeline, beds, or appointment details.
+- If lead memory or appointment context shows an upcoming appointment, reference it naturally when relevant. Do not re-book if one already exists unless they ask to reschedule.
 - Use only the property facts provided. Never invent listing facts, status, pricing, availability, schools, crime, or neighborhood claims.
 - Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
@@ -286,6 +302,7 @@ Rules:
 Source: ${context.source || "sms"}
 Classification: ${JSON.stringify(classification)}
 Lead memory: ${leadSummary(context.lead)}
+${appointmentContext}
 
 Recent SMS thread:
 ${threadSummary(context.recentEvents)}

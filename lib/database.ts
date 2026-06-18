@@ -63,6 +63,33 @@ function rowToStrings(headers: readonly string[], row: Record<string, unknown>):
   return Object.fromEntries(headers.map((header) => [header, row[header] == null ? "" : String(row[header])]));
 }
 
+function intDbValue(value: unknown): number {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+}
+
+function nullableIntDbValue(value: unknown): number | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? Math.round(parsed) : null;
+}
+
+function boolDbValue(value: unknown): boolean {
+  return ["1", "true", "yes", "on", "y"].includes(String(value ?? "").trim().toLowerCase());
+}
+
+function leadMemoryDbValue(header: string, value: unknown): unknown {
+  if (header === "lead_score" || header === "appointment_count") return intDbValue(value);
+  if (header === "do_not_contact") return boolDbValue(value);
+  return value ?? "";
+}
+
+function eventDbValue(header: string, value: unknown): unknown {
+  if (header === "call_duration_seconds") return nullableIntDbValue(value);
+  return value ?? "";
+}
+
 export async function ensureClientInDatabase(): Promise<void> {
   await getPool().query(
     `insert into clients (id, name)
@@ -483,7 +510,7 @@ export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): P
           and email = $${LEAD_MEMORY_HEADERS.length + 2}
           and phone = $${LEAD_MEMORY_HEADERS.length + 3}
           and full_name = $${LEAD_MEMORY_HEADERS.length + 4}`,
-      [clientId(), ...LEAD_MEMORY_HEADERS.map((header) => next[header]), existing.email, existing.phone, existing.full_name],
+      [clientId(), ...LEAD_MEMORY_HEADERS.map((header) => leadMemoryDbValue(header, next[header])), existing.email, existing.phone, existing.full_name],
     );
     return next;
   }
@@ -496,7 +523,7 @@ export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): P
          .map((header) => `${header} = excluded.${header}`)
          .join(", ")},
        updated_at = now()`,
-    [clientId(), ...LEAD_MEMORY_HEADERS.map((header) => next[header])],
+    [clientId(), ...LEAD_MEMORY_HEADERS.map((header) => leadMemoryDbValue(header, next[header]))],
   );
   return next;
 }
@@ -507,7 +534,7 @@ export async function appendConversationEventToDatabase(event: Partial<SheetRow>
   await getPool().query(
     `insert into conversation_events (client_id, ${CONVERSATION_EVENTS_HEADERS.join(", ")})
      values ($1, ${CONVERSATION_EVENTS_HEADERS.map((_, index) => `$${index + 2}`).join(", ")})`,
-    [clientId(), ...CONVERSATION_EVENTS_HEADERS.map((header) => cleaned[header])],
+    [clientId(), ...CONVERSATION_EVENTS_HEADERS.map((header) => eventDbValue(header, cleaned[header]))],
   );
   return cleaned;
 }

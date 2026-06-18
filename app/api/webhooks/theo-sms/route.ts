@@ -486,6 +486,23 @@ export async function POST(request: NextRequest) {
         elapsedMs: elapsedMs(alertStarted),
         error: handoffAlertError,
       });
+    } else if ((reply.classification.opportunityTags || []).includes("hot_lead")) {
+      const alertStarted = nowMs();
+      const alertResult = await sendTheoHandoffAlert({
+        leadPhone,
+        leadName: payload.ProfileName || "",
+        reason: "Hot lead detected",
+        summary: messageForReply || reply.reply,
+        threadRef: result.event.thread_ref,
+      });
+      handoffAlertSent = alertResult.sent;
+      handoffAlertError = alertResult.error;
+      logTheo("hot lead alert processed", {
+        leadPhone: payload.From,
+        sent: handoffAlertSent,
+        elapsedMs: elapsedMs(alertStarted),
+        error: handoffAlertError,
+      });
     }
     logTheo("reply send processed", {
       leadPhone: payload.From,

@@ -29,6 +29,9 @@ export type ChannelIngestInput = {
   assignedOwner?: string;
   handoffStatus?: string;
   nextAction?: string;
+  callDurationSeconds?: number;
+  appointmentId?: string;
+  outcomeCode?: string;
 };
 
 const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
@@ -118,6 +121,9 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     ai_action: input.aiAction || "",
     handoff_reason: input.handoffReason || "",
     status: input.status || "received",
+    call_duration_seconds: input.callDurationSeconds == null ? "" : String(input.callDurationSeconds),
+    appointment_id: input.appointmentId || "",
+    outcome_code: input.outcomeCode || "",
   });
 
   return { event, lead };
@@ -129,6 +135,80 @@ export function twilioSmsIngestInput(payload: Record<string, string>): ChannelIn
 
 export function twilioWhatsAppIngestInput(payload: Record<string, string>): ChannelIngestInput {
   return twilioTextIngestInput(payload, "whatsapp");
+}
+
+export type MetaWhatsAppIngestPayload = {
+  from: string;
+  body: string;
+  profileName?: string;
+  messageId?: string;
+  phoneNumberId?: string;
+  displayPhoneNumber?: string;
+  messageType?: string;
+};
+
+export function metaWhatsAppIngestInput(payload: MetaWhatsAppIngestPayload): ChannelIngestInput {
+  const body = payload.body || "";
+  const action = smsControlAction(body);
+  const from = normalizeTwilioContactAddress(payload.from || "");
+  const threadRef = from ? `whatsapp:${from}` : payload.messageId || "whatsapp:unknown";
+  const sourceDetail = [
+    payload.displayPhoneNumber ? `to ${payload.displayPhoneNumber}` : "",
+    payload.phoneNumberId ? `phone_number_id ${payload.phoneNumberId}` : "",
+    payload.messageType ? `type ${payload.messageType}` : "",
+  ].filter(Boolean).join("; ");
+  const base: ChannelIngestInput = {
+    channel: "whatsapp",
+    agentName: "Theo",
+    phone: from,
+    fullName: payload.profileName || "",
+    source: "meta_whatsapp",
+    sourceDetail,
+    threadRef,
+    eventType: action ? `whatsapp_${action}` : "whatsapp_inbound",
+    messageText: body,
+    preferredChannel: "whatsapp",
+    status: action ? "processed" : "received",
+  };
+
+  if (action === "stop") {
+    return {
+      ...base,
+      smsConsent: "no",
+      aiAction: "opt_out_recorded",
+      nextAction: "do_not_contact",
+      handoffStatus: "human_review",
+      handoffReason: "Lead opted out of WhatsApp",
+      summary: "Lead opted out of WhatsApp.",
+    };
+  }
+
+  if (action === "start") {
+    return {
+      ...base,
+      smsConsent: "yes",
+      aiAction: "opt_in_recorded",
+      nextAction: "continue_whatsapp",
+      summary: "Lead opted back into WhatsApp.",
+    };
+  }
+
+  if (action === "help") {
+    return {
+      ...base,
+      aiAction: "help_requested",
+      nextAction: "human_follow_up",
+      handoffStatus: "needs_human",
+      handoffReason: "Lead asked for WhatsApp help",
+      summary: "Lead asked for WhatsApp help.",
+    };
+  }
+
+  return {
+    ...base,
+    nextAction: "review_or_reply",
+    summary: body ? `Inbound WhatsApp: ${body}` : "Inbound WhatsApp received.",
+  };
 }
 
 function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" | "whatsapp"): ChannelIngestInput {
