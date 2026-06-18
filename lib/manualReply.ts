@@ -4,6 +4,7 @@ import { google } from "googleapis";
 
 import { sendTheoSms } from "@/lib/twilioSms";
 
+export type EmailAttachment = { filename: string; contentType: string; path: string };
 export type ManualReplyInput = {
   channel: "sms" | "whatsapp" | "email";
   to: string; // phone for sms/wa, email address for email
@@ -14,6 +15,7 @@ export type ManualReplyInput = {
   threadId?: string; // Gmail thread id for in-thread reply
   messageId?: string; // In-Reply-To header value
   references?: string;
+  attachments?: EmailAttachment[]; // local file paths (from upload endpoint)
 };
 
 export type ManualReplyResult = { ok: true } | { ok: false; error: string };
@@ -86,17 +88,50 @@ async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
   const gmail = await gmailClient();
   const subjectRaw = input.subject || "(no subject)";
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
-  const headers = [
+  const boundary = `boundary_${Date.now().toString(36)}`;
+
+  const baseHeaders = [
     `To: ${input.to}`,
     `Subject: ${subject}`,
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=utf-8",
     ...(input.messageId
-      ? [`In-Reply-To: ${input.messageId}`, `References: ${(input.references || "") + " " + input.messageId}`.trim()]
+      ? [`In-Reply-To: ${input.messageId}`, `References: ${((input.references || "") + " " + input.messageId).trim()}`]
       : []),
   ];
-  // ponytail: plain-text only. Add multipart/HTML + attachments when a client asks.
-  const raw = Buffer.from(`${headers.join("\r\n")}\r\n\r\n${input.body}`).toString("base64url");
+
+  let raw: string;
+  if (!input.attachments?.length) {
+    // ponytail: plain-text when no attachments — saves bytes
+    const lines = [...baseHeaders, "Content-Type: text/plain; charset=utf-8", "", input.body];
+    raw = Buffer.from(lines.join("\r\n")).toString("base64url");
+  } else {
+    const parts: string[] = [
+      `--${boundary}`,
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      input.body,
+    ];
+    for (const att of input.attachments) {
+      const data = fs.readFileSync(att.path);
+      parts.push(
+        `--${boundary}`,
+        `Content-Type: ${att.contentType}`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: attachment; filename="${att.filename}"`,
+        "",
+        data.toString("base64"),
+      );
+    }
+    parts.push(`--${boundary}--`);
+    const lines = [
+      ...baseHeaders,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      ...parts,
+    ];
+    raw = Buffer.from(lines.join("\r\n")).toString("base64url");
+  }
+
   await gmail.users.messages.send({ userId: "me", requestBody: { raw, threadId: input.threadId } });
   return { ok: true };
 }
