@@ -2799,3 +2799,26 @@ time,
 .dark .thread-head strong, .dark .thread-head span { color: var(--s-text-1) !important; }
 .dark .thread-head time { color: var(--s-text-3) !important; }
 .dark .handoff-note { background: rgba(251,185,72,0.12) !important; border-color: rgba(251,185,72,0.25) !important; color: var(--s-warn) !important; }
+
+/* ── Human Takeover bar ── */
+.human-takeover-bar { border-top: 1px solid var(--s-card-border); background: var(--s-card); padding: var(--sp-3) var(--sp-4); }
+.human-takeover-header { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.human-takeover-status { display: flex; align-items: center; gap: 8px; }
+.takeover-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s-text-3); flex-shrink: 0; }
+.takeover-dot.active { background: var(--s-warn); box-shadow: 0 0 0 3px rgba(251,185,72,0.25); }
+.takeover-label { font-size: 12px; font-weight: 500; color: var(--s-text-2); }
+.takeover-toggle-btn { border-radius: var(--s-r-sm); border: 1px solid var(--s-card-border); background: var(--s-surface); color: var(--s-text-1); padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.takeover-toggle-btn.take { border-color: var(--s-accent); background: var(--s-accent-soft); color: var(--s-accent); }
+.takeover-toggle-btn.release { border-color: var(--s-warn); background: var(--s-warn-soft); color: var(--s-warn); }
+.human-compose { margin-top: var(--sp-3); display: grid; gap: var(--sp-2); }
+.human-compose-textarea { width: 100%; border: 1px solid var(--s-card-border); border-radius: var(--s-r-sm); background: var(--s-bg); color: var(--s-text-1); padding: var(--sp-3); font-size: 13px; resize: vertical; outline: none; font-family: var(--s-font); }
+.human-compose-textarea:focus { border-color: var(--s-accent); box-shadow: 0 0 0 3px rgba(124,106,245,0.12); }
+.human-compose-attachments { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.human-compose-attachment { display: flex; align-items: center; gap: 6px; border: 1px solid var(--s-card-border); border-radius: 6px; background: var(--s-surface); padding: 3px 8px; font-size: 11px; color: var(--s-text-2); }
+.human-compose-attachment button { border: 0; background: none; color: var(--s-danger); font-size: 14px; line-height: 1; cursor: pointer; padding: 0; }
+.human-compose-error { font-size: 12px; color: var(--s-danger); }
+.human-compose-actions { display: flex; align-items: center; gap: var(--sp-2); justify-content: flex-end; }
+.human-compose-attach-btn { border: 1px solid var(--s-card-border); border-radius: var(--s-r-sm); background: var(--s-surface); color: var(--s-text-2); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.human-compose-attach-btn:hover { color: var(--s-text-1); }
+.human-compose-send-btn { border: 0; border-radius: var(--s-r-sm); background: var(--s-accent); color: #fff; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.human-compose-send-btn:disabled { opacity: 0.45; cursor: default; }
