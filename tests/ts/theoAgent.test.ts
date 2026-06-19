@@ -44,7 +44,7 @@ test("generateTheoReply: ordinal property detail follow-up does not hand off", a
   }));
 
   assert.equal(result.status, "ready_to_reply");
-  assert.equal(result.aiAction, "property_details_reply_ready");
+  assert.equal(result.aiAction, "property_safe_inquiry_reply_ready");
   assert.equal(result.handoffReason, "");
   assert.match(result.reply, /6814 Old Quarry Ln/);
   assert.match(result.reply, /\$1,703 per month/);
@@ -96,4 +96,78 @@ test("generateTheoReply: photo follow-up sends media when enabled", async () => 
   assert.equal(result.aiAction, "property_photos_reply_ready");
   assert.deepEqual(result.mediaUrls, ["https://photos.zillowstatic.com/fp/example-p_e.jpg"]);
   assert.match(result.reply, /Sending the property photo/i);
+});
+
+test("generateTheoReply: availability question answers from listing context instead of handoff", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Is it still available?",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [property({ status: "Active" })],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_safe_inquiry_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /Status for 6814 Old Quarry Ln: Active/i);
+});
+
+test("generateTheoReply: amenity question answers known and unknown listing fields", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Does the first one allow pets and have parking?",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [property({ features: "Community pool, covered parking, washer dryer connections." })],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_safe_inquiry_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /parking/i);
+  assert.match(result.reply, /pets/i);
+});
+
+test("generateTheoReply: showing request asks for timing instead of human handoff", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Can I tour the first one?",
+    source: "sms",
+    properties: [property()],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_showing_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /what day and time/i);
+});
+
+test("generateTheoReply: comparison question ranks saved listings", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Which one is cheapest?",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [
+      property({ address: "6814 Old Quarry Ln", price: "1703 per month" }),
+      property({ address: "8600 N Fm 620 APT 1841", price: "1643 per month" }),
+      property({ address: "8330 Fathom Cir APT 702", price: "1900 per month" }),
+    ],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_comparison_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /Lowest listed price/i);
+  assert.ok(result.reply.indexOf("8600 N Fm 620 APT 1841") < result.reply.indexOf("6814 Old Quarry Ln"));
+});
+
+test("generateTheoReply: fair housing sensitive property question still hands off", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Is this a safe neighborhood with good schools?",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [property()],
+  }));
+
+  assert.equal(result.status, "needs_human");
+  assert.equal(result.aiAction, "handoff_reply_ready");
+  assert.match(result.handoffReason, /Fair Housing/i);
 });

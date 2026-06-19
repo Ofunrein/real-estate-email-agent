@@ -216,7 +216,7 @@ function normalizeAreaName(area?: string): string {
 
 function propertySearchMode(text: string): TheoPropertySearchIntent["mode"] {
   if (/\b(neighboring|neighbor|nearby|next to|around it|around that|close to it|close by)\b/i.test(text)) return "neighboring";
-  if (/\b(similar|same spec|same specs|same size|same price|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(text)) return "similar";
+  if (/\b(similar|same spec|same specs|same size|same price|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?|cheaper|lower price|less expensive|more affordable|more expensive|higher price|bigger|larger|smaller|more bedrooms?|more baths?)\b/i.test(text)) return "similar";
   return "general";
 }
 

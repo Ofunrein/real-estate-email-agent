@@ -125,7 +125,7 @@ function referencesPriorProperties(message = ""): boolean {
 
 function wantsRelatedProperties(message = ""): boolean {
   const normalized = normalizeFollowupText(message);
-  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(normalized);
+  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?|cheaper|lower price|less expensive|more affordable|more expensive|higher price|bigger|larger|smaller|more bedrooms?|more baths?)\b/i.test(normalized);
 }
 
 function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPropertySearchIntent>): boolean {
