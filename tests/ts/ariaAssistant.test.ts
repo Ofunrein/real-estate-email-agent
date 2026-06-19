@@ -35,9 +35,19 @@ test("buildAriaAssistant: uses only Vapi-native inline call controls", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com/", secret: "s3cr3t" });
   const model = assistant.model as Record<string, unknown>;
   const tools = model.tools as Array<Record<string, unknown>>;
-  assert.equal(tools.length, 2);
-  assert.deepEqual(tools.map((t) => t.type), ["transferCall", "endCall"]);
+  assert.equal(tools.length, 3);
+  assert.deepEqual(tools.map((t) => t.type), ["voicemail", "transferCall", "endCall"]);
   assert.equal(model.toolIds, undefined);
+  assert.match(String(assistant.voicemailMessage), /I also sent you a quick text/);
+  assert.deepEqual(assistant.voicemailDetection, {
+    provider: "vapi",
+    backoffPlan: {
+      maxRetries: 8,
+      startAtSeconds: 1,
+      frequencySeconds: 2.5,
+    },
+    beepMaxAwaitSeconds: 20,
+  });
 });
 
 test("buildAriaAssistant: transferCall destination is the human transfer number", () => {
@@ -79,6 +89,8 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   assert.match(messages[0].content, /searchProperties/);
   assert.match(messages[0].content, /lookupProperty/);
   assert.match(messages[0].content, /sendPropertyDetailsSms/);
+  assert.match(messages[0].content, /leaveVoicemail/);
+  assert.match(messages[0].content, /also sent a text/);
   assert.match(messages[0].content, /OPERATING PRINCIPLES/);
   assert.match(messages[0].content, /Direction over script/);
   assert.match(messages[0].content, /not canned rebuttals/);

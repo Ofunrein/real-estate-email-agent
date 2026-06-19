@@ -40,6 +40,18 @@ function webhookResponse(request: NextRequest, payload: Record<string, unknown>,
   });
 }
 
+// Detects automated OTP/verification messages from platforms like Meta, Google, Apple, etc.
+// These should never receive an AI reply.
+function isSystemOtpMessage(body: string, from: string): boolean {
+  const normalized = body.trim();
+  // Short codes (4-6 digits) are almost always automated system senders
+  const fromDigits = from.replace(/\D/g, "");
+  if (fromDigits.length >= 4 && fromDigits.length <= 6) return true;
+  // Match verification code body patterns
+  const otpPattern = /(\b\d{4,8}\b.{0,80}(code|verify|verification|otp|one.?time|password|auth(?:entication|enticate)?|login|confirm|passcode|pin\b)|(code|verify|verification|otp|one.?time|password|auth(?:entication|enticate)?|login|confirm|passcode|\bpin\b).{0,80}\b\d{4,8}\b)/i;
+  return otpPattern.test(normalized);
+}
+
 function maskPhone(value = "") {
   const digits = value.replace(/\D/g, "");
   if (digits.length < 4) return value || "unknown";
@@ -101,6 +113,10 @@ function referencesPriorProperties(message = ""): boolean {
 
 function wantsRelatedProperties(message = ""): boolean {
   return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(message);
+}
+
+function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPropertySearchIntent>): boolean {
+  return Boolean(search.area || search.beds || search.baths || search.minPrice || search.maxPrice);
 }
 
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
@@ -178,6 +194,23 @@ export async function POST(request: NextRequest) {
         channel: "sms",
         status: "skipped",
         action: "blocked_test_number",
+        reply_sent: false,
+      });
+    }
+
+    if (isSystemOtpMessage(payload.Body || "", payload.From || "")) {
+      logTheo("system otp message — skipped", {
+        from: payload.From,
+        to: payload.To,
+        messageSid: payload.MessageSid || "",
+        bodyPreview: (payload.Body || "").slice(0, 60),
+        totalMs: elapsedMs(requestStarted),
+      });
+      return webhookResponse(request, {
+        ok: true,
+        channel: "sms",
+        status: "skipped",
+        action: "blocked_system_otp",
         reply_sent: false,
       });
     }
@@ -352,11 +385,12 @@ export async function POST(request: NextRequest) {
       result.lead.property_interest || "",
       recentSearchContext,
     );
+    const freshPropertySearch = hasFreshPropertySearchCriteria(propertySearch);
     const requestedAddresses = extractTheoListedPropertyAddresses(messageForReply);
-    const referencedInboundAddresses = !requestedAddresses.length && referencesPriorProperties(messageForReply)
+    const referencedInboundAddresses = !freshPropertySearch && !requestedAddresses.length && referencesPriorProperties(messageForReply)
       ? recentInboundAddresses(recentEvents)
       : [];
-    const priorAddresses = !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
+    const priorAddresses = !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
       ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
       : [];
     const exactAddresses = requestedAddresses.length ? requestedAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
@@ -380,6 +414,7 @@ export async function POST(request: NextRequest) {
       propertyQuery,
       propertySearchMode: propertySearch.mode,
       propertySearchArea: propertySearch.area || "",
+      freshPropertySearch,
       combinedMessages: messageForReply.split("\n").filter(Boolean).length,
       requestedAddressRows: requestedAddresses.length,
       referencedInboundAddressRows: referencedInboundAddresses.length,

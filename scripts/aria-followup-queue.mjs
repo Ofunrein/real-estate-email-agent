@@ -14,7 +14,7 @@ import process from "node:process";
 import pg from "pg";
 
 import { resolveClientConfig } from "../lib/clientConfig.ts";
-import { evaluateFollowups, selectVoiceFollowups, placeOutboundCall } from "../lib/outbound.ts";
+import { evaluateFollowups, selectVoiceFollowups, placeOutboundCall, sendOutboundAttemptSms } from "../lib/outbound.ts";
 
 const { Pool } = pg;
 
@@ -102,6 +102,10 @@ async function main() {
     if (result.ok) {
       placed += 1;
       console.log(`  called ${lead.phone} -> ${result.id}`);
+      const sms = await sendOutboundAttemptSms(lead.phone, {
+        context: lead.property_interest || lead.intent || lead.summary || "",
+      }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
+      console.log(`    sms ${sms.ok ? "sent" : `skipped: ${sms.error || "unknown"}`}`);
     } else {
       console.error(`  failed ${lead.phone}: ${result.error}`);
     }
