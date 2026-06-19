@@ -225,6 +225,10 @@ function asksForPropertySafeInquiry(message: string): boolean {
     || /\b(send|share|text).{0,25}\b(first|second|third|1st|2nd|3rd|that|this|it)\b/i.test(normalized);
 }
 
+function asksForLightGreeting(message: string): boolean {
+  return /^(hi|hello|hey|yo|good morning|good afternoon|good evening|thanks|thank you|ok|okay|cool|great|sounds good)[!. ]*$/i.test(cleanText(message));
+}
+
 function latestMessageHasSensitiveTopic(message: string): boolean {
   return SENSITIVE_PATTERNS.some(({ pattern }) => pattern.test(message));
 }
@@ -497,6 +501,19 @@ function formatTheoNoPropertyOptions(message: string): string {
   return "I don't see a clean matching listing in the saved inventory yet. Send me the area, budget, and bedroom count and I'll narrow it down.";
 }
 
+function formatTheoGeneralReply(message: string, classification: TheoClassification): string {
+  if (asksForLightGreeting(message)) {
+    return "Hi, this is Aria with Austin Realty. I can help find listings, send photos, compare options, or book a showing. What area, budget, and bedroom count should I search?";
+  }
+  if (classification.intent === "seller_lead" || classification.leadRole === "seller") {
+    return "I can help with that. Are you looking for a home value estimate, help listing the property, or timing a sell-before-buy move?";
+  }
+  if (classification.intent === "renter_lead" || classification.leadRole === "renter") {
+    return "I can help narrow rentals. What area, monthly budget, bedroom count, and move-in timing should I use?";
+  }
+  return "I can help narrow the search. Send me the area, budget, bedroom count, and whether you want to buy or rent.";
+}
+
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
   if (!mediaImagesEnabled(context.source)) return [];
   if (classification.intent === "spam") return [];
@@ -579,14 +596,6 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     metrics.push(...(classification.metrics || []));
   } catch {
     classification = classifyTheoMessage(context.message);
-    if (classification.status !== "needs_human") {
-      classification = {
-        intent: "human_required",
-        leadRole: classification.leadRole || "unknown",
-        handoffReason: "Theo AI classification failed",
-        status: "needs_human",
-      };
-    }
   }
   if (asksForPropertyOptions(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
     classification = {
@@ -802,6 +811,19 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     }
   }
 
+  if (asksForLightGreeting(context.message)) {
+    return {
+      classification,
+      reply: formatTheoGeneralReply(context.message, classification),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "general_lead_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
+
   let reply: string;
   try {
     const generated = await generateTheoSmsWithLlm(context, classification);
@@ -809,18 +831,13 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     metrics.push(...generated.metrics);
   } catch {
     return {
-      classification: {
-        intent: "human_required",
-        leadRole: classification.leadRole || "unknown",
-        handoffReason: "Theo AI reply generation failed",
-        status: "needs_human",
-      },
-      reply: "I'm going to have a real person follow up so we handle that correctly.",
+      classification,
+      reply: formatTheoGeneralReply(context.message, classification),
       mediaUrls: [],
       shouldSend: true,
-      aiAction: "handoff_reply_ready",
-      handoffReason: "Theo AI reply generation failed",
-      status: "needs_human",
+      aiAction: "general_lead_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
       metrics,
     };
   }
