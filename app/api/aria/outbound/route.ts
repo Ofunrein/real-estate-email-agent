@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { clientConfig } from "@/lib/clientConfig";
-import { placeOutboundCall, type OutboundConfig } from "@/lib/outbound";
+import { placeOutboundCall, sendOutboundAttemptSms, type OutboundConfig } from "@/lib/outbound";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
-    return NextResponse.json({ ok: true, call_id: result.id });
+    const sms = await sendOutboundAttemptSms(phone).catch((error) => ({
+      ok: false,
+      error: error instanceof Error ? error.message : "Unable to send outbound attempt SMS",
+    }));
+    return NextResponse.json({ ok: true, call_id: result.id, sms });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to place outbound call.";
     const status = message.includes("secret") ? 401 : 500;

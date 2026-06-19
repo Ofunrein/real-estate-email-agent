@@ -174,6 +174,8 @@ function asksForAlternativeProperties(message: string): boolean {
 
 function asksForPropertyOptions(message: string): boolean {
   return asksForAlternativeProperties(message)
+    || /\b(available|availability|have available|what (?:do )?you have|options?|properties|apartments?|condos?|rentals?|listings?)\b/i.test(message)
+    || /\b(under|below|less than|max|maximum|up to)\s+\$?\s*\d/i.test(message)
     || /\b(something close|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|sticking to \d+\s*(?:bed|bd|bedroom)|find .{0,30}\d+\s*(?:bed|bd|bedroom)|want .{0,30}\d+\s*(?:bed|bd|bedroom))\b/i.test(message);
 }
 
@@ -429,10 +431,13 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     ? formatTheoPropertyOptions(context.properties, classification)
     : "";
   if (optionsReply) {
+    const mediaUrls = wantsPropertyImage(context.message)
+      ? selectTheoMediaUrls(context, classification)
+      : [];
     return {
       classification,
       reply: truncateSms(optionsReply, LINK_SMS_LIMIT),
-      mediaUrls: [],
+      mediaUrls,
       shouldSend: true,
       aiAction: classification.status === "needs_human" ? "property_options_handoff_reply_ready" : "property_options_reply_ready",
       handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
