@@ -171,3 +171,17 @@ test("generateTheoReply: fair housing sensitive property question still hands of
   assert.equal(result.aiAction, "handoff_reply_ready");
   assert.match(result.handoffReason, /Fair Housing/i);
 });
+
+test("generateTheoReply: greeting does not hand off when LLM is unavailable", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "hi",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "general_lead_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /area, budget, and bedroom count/i);
+});
