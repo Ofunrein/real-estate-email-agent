@@ -14,6 +14,7 @@ import {
 } from "@/lib/serviceAreas";
 
 let pool: Pool | null = null;
+const tableColumnCache = new Map<string, Set<string>>();
 
 export type PropertySearchCriteria = {
   query?: string;
@@ -49,6 +50,28 @@ function getPool(): Pool {
     });
   }
   return pool;
+}
+
+async function tableColumns(tableName: string): Promise<Set<string>> {
+  const cached = tableColumnCache.get(tableName);
+  if (cached) return cached;
+  const result = await getPool().query(
+    `select column_name
+       from information_schema.columns
+      where table_schema = 'public'
+        and table_name = $1`,
+    [tableName],
+  );
+  const columns = new Set(result.rows.map((row) => String(row.column_name)));
+  tableColumnCache.set(tableName, columns);
+  return columns;
+}
+
+async function selectHeaders(tableName: string, headers: readonly string[]): Promise<string> {
+  const columns = await tableColumns(tableName);
+  return headers
+    .map((header) => columns.has(header) ? header : `'' as ${header}`)
+    .join(", ");
 }
 
 function clientName(): string {
@@ -102,8 +125,9 @@ export async function ensureClientInDatabase(): Promise<void> {
 }
 
 export async function readPropertiesFromDatabase(): Promise<SheetRow[]> {
+  const columns = await selectHeaders("properties", PROPERTIES_HEADERS);
   const result = await getPool().query(
-    `select ${PROPERTIES_HEADERS.join(", ")}
+    `select ${columns}
        from properties
       where client_id = $1
       order by updated_at desc, address asc`,
@@ -113,8 +137,9 @@ export async function readPropertiesFromDatabase(): Promise<SheetRow[]> {
 }
 
 export async function readLeadsFromDatabase(): Promise<SheetRow[]> {
+  const columns = await selectHeaders("lead_memory", LEAD_MEMORY_HEADERS);
   const result = await getPool().query(
-    `select ${LEAD_MEMORY_HEADERS.join(", ")}
+    `select ${columns}
        from lead_memory
       where client_id = $1
       order by updated_at desc`,
@@ -124,8 +149,9 @@ export async function readLeadsFromDatabase(): Promise<SheetRow[]> {
 }
 
 export async function readEventsFromDatabase(): Promise<SheetRow[]> {
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
   const result = await getPool().query(
-    `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
+    `select ${columns}
        from conversation_events
       where client_id = $1
       order by id asc`,
@@ -155,8 +181,9 @@ const VOICE_CALL_HEADERS = [
 ] as const;
 
 export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
+  const columns = await selectHeaders("voice_calls", VOICE_CALL_HEADERS);
   const result = await getPool().query(
-    `select ${VOICE_CALL_HEADERS.join(", ")}
+    `select ${columns}
        from voice_calls
       where client_id = $1
       order by created_at asc`,
@@ -166,8 +193,9 @@ export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
 }
 
 export async function readEventsForThreadFromDatabase(threadRef: string, limit = 12): Promise<SheetRow[]> {
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
   const result = await getPool().query(
-    `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
+    `select ${columns}
        from conversation_events
       where client_id = $1
         and thread_ref = $2
@@ -212,8 +240,9 @@ export async function readEventsForLeadFromDatabase(
   const phone = normalizePhone(lead.phone);
   const email = normalizeEmail(lead.email);
   if (!phone && !email) return [];
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
   const result = await getPool().query(
-    `select ${CONVERSATION_EVENTS_HEADERS.join(", ")}
+    `select ${columns}
        from conversation_events
       where client_id = $1
         and (
@@ -241,8 +270,9 @@ async function findMatchingLead(incoming: SheetRow): Promise<SheetRow | null> {
     return null;
   }
 
+  const columns = await selectHeaders("lead_memory", LEAD_MEMORY_HEADERS);
   const result = await getPool().query(
-    `select ${LEAD_MEMORY_HEADERS.join(", ")}
+    `select ${columns}
        from lead_memory
       where client_id = $1
         and (
@@ -295,19 +325,23 @@ function criteriaFromQuery(query: string | PropertySearchCriteria = ""): Propert
 
 function areaTerms(criteria: PropertySearchCriteria): string[] {
   const text = normalizeSearchText([criteria.area, criteria.query].filter(Boolean).join(" "));
-  const terms = new Set<string>();
+  const aliasTerms = new Set<string>();
+  const neighborhoodTerms = new Set<string>();
+  const cityTerms = new Set<string>();
   for (const [alias, values] of Object.entries(AREA_ALIASES)) {
     if (new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text)) {
-      values.forEach((value) => terms.add(value));
+      values.forEach((value) => aliasTerms.add(value));
     }
   }
   for (const city of GREATER_AUSTIN_CITIES) {
-    if (new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text)) terms.add(city);
+    if (new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text)) cityTerms.add(city);
   }
   for (const neighborhood of AUSTIN_NEIGHBORHOODS) {
-    if (new RegExp(`\\b${neighborhood.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text)) terms.add(neighborhood);
+    if (new RegExp(`\\b${neighborhood.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text)) neighborhoodTerms.add(neighborhood);
   }
-  return [...terms];
+  if (aliasTerms.size) return [...aliasTerms];
+  if (neighborhoodTerms.size) return [...neighborhoodTerms];
+  return [...cityTerms];
 }
 
 function propertyHaystack(property: SheetRow): string {
@@ -325,9 +359,36 @@ function propertyHaystack(property: SheetRow): string {
 function textTokens(criteria: PropertySearchCriteria): string[] {
   const text = normalizeSearchText(criteria.query || criteria.area || "");
   return text
-    .replace(/\b(show|send|find|give|me|more|other|similar|neighboring|nearby|properties|property|homes|home|listings|listing|spec|same|around|area|in|the|a|an|to|of|with|under|over)\b/g, " ")
+    .replace(/\b(show|send|find|give|me|more|other|similar|neighboring|nearby|properties|property|homes|home|listings|listing|spec|same|around|area|available|can|photos|photo|pictures|picture|too|least|month|monthly|in|the|a|an|to|of|with|under|over)\b/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 2 && !/^\d+$/.test(token));
+}
+
+function wantsRental(criteria: PropertySearchCriteria): boolean {
+  const text = normalizeSearchText([criteria.query, criteria.area].filter(Boolean).join(" "));
+  const maxPrice = numericValue(criteria.maxPrice);
+  return /\b(apartment|apartments|apt|apts|condo|condos|rent|rental|lease|leasing|per month|a month|monthly|mo)\b/i.test(text)
+    || (maxPrice != null && maxPrice <= 20000);
+}
+
+function propertyLooksRental(property: SheetRow): boolean {
+  const text = normalizeSearchText([
+    property.price,
+    property.property_type,
+    property.status,
+    property.listing_url,
+    property.description,
+  ].filter(Boolean).join(" "));
+  return /\b(per month|month|monthly|rent|rental|lease|leasing|apartment|apartments|apt|condo|condos)\b/i.test(text)
+    || /\/apartments\//i.test(property.listing_url || "");
+}
+
+function hasHardStructuredCriteria(criteria: PropertySearchCriteria): boolean {
+  return numericValue(criteria.beds) != null
+    || numericValue(criteria.baths) != null
+    || numericValue(criteria.minPrice) != null
+    || numericValue(criteria.maxPrice) != null
+    || wantsRental(criteria);
 }
 
 function matchesArea(property: SheetRow, terms: string[]): boolean {
@@ -347,6 +408,7 @@ function referenceRange(criteria: PropertySearchCriteria, key: "price" | "beds" 
 function propertyMatchesCriteria(property: SheetRow, criteria: PropertySearchCriteria): boolean {
   const excluded = new Set((criteria.excludeAddresses || []).map((address) => normalizeSearchText(address)));
   if (excluded.has(normalizeSearchText(property.address))) return false;
+  if (wantsRental(criteria) && !propertyLooksRental(property)) return false;
 
   const terms = areaTerms(criteria);
   if (!matchesArea(property, terms)) return false;
@@ -391,6 +453,8 @@ function scorePropertyCandidate(property: SheetRow, criteria: PropertySearchCrit
   let score = 0;
   const terms = areaTerms(criteria);
   const haystack = propertyHaystack(property);
+  if (wantsRental(criteria) && propertyLooksRental(property)) score -= 50;
+  if (/\b(apartment|apartments|apt|apts)\b/i.test(normalizeSearchText(criteria.query || "")) && /\b(apartment|apartments|apt)\b/i.test(normalizeSearchText(property.property_type))) score -= 20;
   if (terms.some((term) => normalizeSearchText(property.city) === normalizeSearchText(term))) score -= 40;
   if (terms.some((term) => normalizeSearchText(property.neighborhood).includes(normalizeSearchText(term)))) score -= 35;
   if (terms.some((term) => haystack.includes(normalizeSearchText(term)))) score -= 10;
@@ -424,7 +488,7 @@ export async function findCandidatePropertiesFromDatabase(query: string | Proper
   );
   const rows = result.rows.map((row) => rowToStrings(PROPERTIES_HEADERS, row));
   const matched = rows.filter((property) => propertyMatchesCriteria(property, criteria));
-  const candidates = matched.length ? matched : rows.filter((property) => {
+  const candidates = matched.length || hasHardStructuredCriteria(criteria) ? matched : rows.filter((property) => {
     const terms = areaTerms(criteria);
     return terms.length ? matchesArea(property, terms) : true;
   });

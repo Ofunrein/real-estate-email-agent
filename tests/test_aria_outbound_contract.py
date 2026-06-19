@@ -24,7 +24,14 @@ class AriaOutboundContractTests(unittest.TestCase):
     def test_followup_queue_uses_shared_cadence(self):
         script = read("scripts/aria-followup-queue.mjs")
         self.assertIn("selectVoiceFollowups", script)
+        self.assertIn("sendOutboundAttemptSms", script)
         self.assertIn("--live", script)
+
+    def test_assistant_has_voicemail_tool(self):
+        assistant = read("lib/ariaAssistant.ts")
+        self.assertIn('type: "voicemail"', assistant)
+        self.assertIn("leaveVoicemail", assistant)
+        self.assertIn("voicemailMessage", assistant)
 
 
 if __name__ == "__main__":

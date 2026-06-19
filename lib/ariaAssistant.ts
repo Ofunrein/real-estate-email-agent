@@ -23,6 +23,7 @@ export type AriaAssistantOptions = {
 
 function systemPrompt(config: ClientConfig): string {
   const name = config.agentNames.voice;
+  const callbackNumber = process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || config.humanTransferNumber;
   return `You are ${name}, a real estate voice assistant for ${config.clientName}.
 Brand voice: ${config.brandVoice}
 Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems. If sincerely asked whether you're AI: "I'm ${name}, I help ${config.clientName} connect with buyers and sellers - what can I do for you?"
@@ -48,6 +49,7 @@ Call flow:
 - At the very start of every inbound or outbound call, call getCallerContext once before making assumptions from caller ID, prior texts, emails, chats, or voice calls. Use that result as the shared omnichannel brain for the call: lead summary, intent, property interest, preferred channel, consent, last touch, next action, and recent Theo/Iris/Olivia/Aria conversations. If context exists, acknowledge only the useful part naturally; if no context exists, proceed as a new lead.
 - Timing: on outbound calls, wait one full second of silence before the first spoken words so the caller has time to switch audio. On inbound calls and normal replies, allow about half a second before speaking. Do not fill that initial pause with "um" or noise.
 - For outbound calls, never sound like a blind cold call when getCallerContext returns history. Briefly connect the reason for calling to the known lead context, then ask the smallest useful next question.
+- If an outbound call reaches voicemail, answering machine language, an auto-attendant, a "leave a message" greeting, a mailbox greeting, or a beep, your next action must be leaveVoicemail. Do not improvise a normal spoken reply. Do not ask a question. Do not keep talking over the mailbox. The voicemail should be short, calm, and complete: who you are, why you called, the callback number ${callbackNumber}, and that you also sent a text.
 - Run the call like a good ISA with mile markers, not a rigid script. Ask one question at a time, in this priority order when the field is still unknown: preferred follow-up channel, timeline, area, price range, bedroom/bathroom fit, whether they need to sell before buying, and pre-approval/lender status.
 - Keep the voice cadence light: quick acknowledgment, answer the immediate request, then one useful question. Avoid long monologues.
 - For any property availability, home search, listing options, similar-home, area, budget, bedroom, bathroom, property-type, or keyword request, call searchProperties immediately before answering. Pass the caller's exact wording as query plus parsed area, beds, baths, minPrice, and maxPrice when heard. If the caller asks "what properties do you have available?", search with that wording and read the best options aloud.
@@ -153,12 +155,36 @@ function buildVoiceConfig(config: ClientConfig): Record<string, unknown> | undef
   return voice;
 }
 
+function voicemailMessage(config: ClientConfig): string {
+  const callbackNumber = process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || config.humanTransferNumber;
+  return [
+    `Hi, this is ${config.agentNames.voice} with ${config.clientName}.`,
+    "I called about your real estate request.",
+    "I also sent you a quick text.",
+    `Call or text me back at ${callbackNumber}.`,
+    "Thanks.",
+  ].join(" ");
+}
+
 export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOptions): Record<string, unknown> {
   const voiceName = config.agentNames.voice;
   const system = opts.styleContext ? `${systemPrompt(config)}\n\n${opts.styleContext}` : systemPrompt(config);
   const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini";
 
   const tools: Record<string, unknown>[] = [
+    {
+      type: "voicemail",
+      function: {
+        name: "leaveVoicemail",
+        description: "Leave the configured voicemail when you detect voicemail, an answering machine, a mailbox greeting, an auto-attendant, or a beep during outbound calls.",
+      },
+      messages: [
+        {
+          type: "request-start",
+          content: voicemailMessage(config),
+        },
+      ],
+    },
     {
       type: "transferCall",
       function: {
@@ -185,6 +211,16 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
   const assistant: Record<string, unknown> = {
     name: `${voiceName} — ${config.clientName}`,
     firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
+    voicemailMessage: voicemailMessage(config),
+    voicemailDetection: {
+      provider: "vapi",
+      backoffPlan: {
+        maxRetries: 8,
+        startAtSeconds: 1,
+        frequencySeconds: 2.5,
+      },
+      beepMaxAwaitSeconds: 20,
+    },
     startSpeakingPlan: {
       waitSeconds: 0.5,
     },

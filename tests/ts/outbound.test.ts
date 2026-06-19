@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { evaluateFollowups, placeOutboundCall, selectVoiceFollowups, type LeadWithEvents } from "@/lib/outbound";
+import { evaluateFollowups, outboundAttemptSmsBody, placeOutboundCall, selectVoiceFollowups, sendOutboundAttemptSms, type LeadWithEvents } from "@/lib/outbound";
 import { resolveClientConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -67,4 +67,29 @@ test("placeOutboundCall: missing config fails fast", async () => {
 test("placeOutboundCall: missing number fails", async () => {
   const result = await placeOutboundCall({ apiKey: "k", assistantId: "a", phoneNumberId: "p" }, { customerNumber: "" });
   assert.equal(result.ok, false);
+});
+
+test("outboundAttemptSmsBody: covers the text follow-up channel", () => {
+  const body = outboundAttemptSmsBody({
+    agentName: "Aria",
+    companyName: "Austin Realty",
+    callbackNumber: "+15128152032",
+    context: "the Mueller listings",
+  });
+  assert.match(body, /just tried reaching you by phone/i);
+  assert.match(body, /Mueller listings/);
+  assert.match(body, /\+15128152032/);
+});
+
+test("sendOutboundAttemptSms: uses injected sender", async () => {
+  let sentTo = "";
+  let sentBody = "";
+  const result = await sendOutboundAttemptSms("+15125550000", { agentName: "Aria" }, async (to, body) => {
+    sentTo = to;
+    sentBody = body;
+    return { sent: true };
+  });
+  assert.equal(result.ok, true);
+  assert.equal(sentTo, "+15125550000");
+  assert.match(sentBody, /Aria/);
 });

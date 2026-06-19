@@ -57,7 +57,10 @@ const authToken = required("TWILIO_AUTH_TOKEN");
 const serviceSid = required("TWILIO_MESSAGING_SERVICE_SID");
 const twilioFrom = required("TWILIO_FROM");
 const publicBaseUrl = required("PUBLIC_BASE_URL").replace(/\/$/, "");
-const inboundUrl = `${publicBaseUrl}/api/webhooks/theo-sms`;
+const webhookSecret = process.env.CHANNEL_WEBHOOK_SECRET || "";
+const inbound = new URL(`${publicBaseUrl}/api/webhooks/theo-sms`);
+if (webhookSecret) inbound.searchParams.set("secret", webhookSecret);
+const inboundUrl = inbound.toString();
 const auth = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
 
 const response = await fetch(`https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}`, {
