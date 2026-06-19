@@ -30,10 +30,18 @@ class AriaVoiceContractTests(unittest.TestCase):
         self.assertIn('type: "endCall"', assistant)
         self.assertIn("config.humanTransferNumber", assistant)
 
-    def test_aria_server_tools_named(self):
+    def test_live_aria_is_vapi_adapter_not_repo_server_tools(self):
         assistant = read("lib/ariaAssistant.ts")
-        for tool in ("getCallerContext", "lookupProperty", "searchProperties", "qualifyLead", "scheduleShowing", "syncToCrm"):
-            self.assertIn(tool, assistant)
+        for legacy_tool in ("qualifyLead", "scheduleShowing", "syncToCrm"):
+            self.assertNotIn(legacy_tool, assistant)
+        self.assertNotIn("serverUrl", assistant)
+        self.assertIn("getCallerContext", assistant)
+        self.assertIn("searchProperties", assistant)
+        self.assertIn("lookupProperty", assistant)
+        self.assertIn("sendPropertyDetailsSms", assistant)
+        self.assertIn("checkAvailability", assistant)
+        self.assertIn("bookConsultation", assistant)
+        self.assertIn("sendBookingSmsConfirmation", assistant)
 
     def test_ghl_calendar_endpoints_match_official_spec(self):
         ghl = read("lib/crm/ghl.ts")

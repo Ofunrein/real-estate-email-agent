@@ -17,18 +17,19 @@ function deps(overrides: Partial<AriaToolDeps> = {}): AriaToolDeps {
       needsStitch: true,
     }),
     lookupProperty: async ({ address }) => ({
-      properties: [{ address } as never],
+      properties: [{ address, price: "450000", beds: "3", baths: "2", photo_url: "https://photos.zillowstatic.com/fp/one.jpg", listing_url: "https://example.com/listing" } as never],
       spoken: `${address} is listed at $450,000, 3 bed, 2 bath.`,
       timedOut: false,
       fromCache: false,
     }),
     searchProperties: async () => ({
-      properties: [{ address: "1 A St" } as never],
+      properties: [{ address: "1 A St", price: "400000", beds: "3", baths: "2", photo_url: "https://photos.zillowstatic.com/fp/two.jpg", listing_url: "https://example.com/1-a" } as never],
       spoken: "I found one option: 1. 1 A St, $400,000, 3 bed, 2 bath. Want details on any of these?",
     }),
     getCrm: () => null,
     calendarId: "cal_1",
     timezone: "America/Chicago",
+    sendSms: async () => undefined,
     ...overrides,
   };
 }
@@ -131,6 +132,41 @@ test("searchProperties: empty result action", async () => {
     searchProperties: async () => ({ properties: [], spoken: "I don't see matching listings right now." }),
   }));
   assert.equal(out.ingest.aiAction, "property_search_empty");
+});
+
+test("sendPropertyDetailsSms: sends listing details and photo media", async () => {
+  let sent: { to: string; body: string; mediaUrls?: string[] } | null = null;
+  const out = await runAriaTool("sendPropertyDetailsSms", { address: "123 Main St", query: "send photos" }, ctx, deps({
+    sendSms: async (to, body, mediaUrls) => {
+      sent = { to, body, mediaUrls };
+    },
+  }));
+
+  assert.equal(out.ingest.eventType, "voice_property_details_sms");
+  assert.equal(out.ingest.aiAction, "property_details_sms_sent_with_photos");
+  assert.equal(sent!.to, ctx.phone);
+  assert.match(sent!.body, /123 Main St/);
+  assert.deepEqual(sent!.mediaUrls, ["https://photos.zillowstatic.com/fp/one.jpg"]);
+  assert.match(out.result, /texted the listing details and photos/);
+});
+
+test("sendPropertyDetailsSms: searches when no exact address was selected", async () => {
+  let searched = "";
+  const out = await runAriaTool("sendPropertyDetailsSms", { query: "condos downtown under 900k" }, ctx, deps({
+    searchProperties: async ({ query }) => {
+      searched = query || "";
+      return {
+        properties: [{ address: "70 Rainey St #1509", price: "750000", beds: "2", baths: "2", listing_url: "https://example.com/70" } as never],
+        spoken: "found",
+        timedOut: false,
+        fromCache: true,
+      };
+    },
+  }));
+
+  assert.equal(searched, "condos downtown under 900k");
+  assert.equal(out.ingest.aiAction, "property_details_sms_sent");
+  assert.match(out.ingest.summary || "", /70 Rainey/);
 });
 
 test("qualifyLead: captures fields, normalizes consent + intent", async () => {
@@ -249,7 +285,7 @@ test("syncToCrm: skipped without CRM", async () => {
 });
 
 test("every tool tags channel voice + Aria", async () => {
-  for (const [name, args] of [["getCallerContext", {}], ["lookupProperty", { address: "1 A St" }], ["qualifyLead", {}]] as const) {
+  for (const [name, args] of [["getCallerContext", {}], ["lookupProperty", { address: "1 A St" }], ["sendPropertyDetailsSms", { address: "1 A St", query: "send details" }], ["qualifyLead", {}]] as const) {
     const out = await runAriaTool(name, args, ctx, deps());
     assert.equal(out.ingest.channel, "voice");
     assert.equal(out.ingest.agentName, "Aria");
