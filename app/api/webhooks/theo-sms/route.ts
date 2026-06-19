@@ -119,6 +119,22 @@ function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPro
   return Boolean(search.area || search.beds || search.baths || search.minPrice || search.maxPrice);
 }
 
+function ordinalReferenceIndex(message = ""): number | null {
+  if (/\b(first|1st|#\s*1|number\s+1|one)\b/i.test(message)) return 0;
+  if (/\b(second|2nd|#\s*2|number\s+2|two)\b/i.test(message)) return 1;
+  if (/\b(third|3rd|#\s*3|number\s+3|three)\b/i.test(message)) return 2;
+  return null;
+}
+
+function recentOutboundAddresses(events: Record<string, string>[] = []): string[] {
+  for (const event of [...events].reverse()) {
+    if (event.direction !== "outbound") continue;
+    const addresses = extractTheoListedPropertyAddresses(event.message_text || "");
+    if (addresses.length) return addresses;
+  }
+  return [];
+}
+
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
   const seen = new Set<string>();
   const addresses: string[] = [];
@@ -385,15 +401,18 @@ export async function POST(request: NextRequest) {
       result.lead.property_interest || "",
       recentSearchContext,
     );
-    const freshPropertySearch = hasFreshPropertySearchCriteria(propertySearch);
+    const currentMessageSearch = extractTheoPropertySearchIntent(messageForReply);
+    const freshPropertySearch = hasFreshPropertySearchCriteria(currentMessageSearch);
     const requestedAddresses = extractTheoListedPropertyAddresses(messageForReply);
-    const referencedInboundAddresses = !freshPropertySearch && !requestedAddresses.length && referencesPriorProperties(messageForReply)
+    const ordinalIndex = ordinalReferenceIndex(messageForReply);
+    const ordinalAddresses = ordinalIndex == null ? [] : recentOutboundAddresses(recentEvents).slice(ordinalIndex, ordinalIndex + 1);
+    const referencedInboundAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && referencesPriorProperties(messageForReply)
       ? recentInboundAddresses(recentEvents)
       : [];
-    const priorAddresses = !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
+    const priorAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
       ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
       : [];
-    const exactAddresses = requestedAddresses.length ? requestedAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
+    const exactAddresses = requestedAddresses.length ? requestedAddresses : ordinalAddresses.length ? ordinalAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
     const relatedRequest = wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
     const referenceProperties = relatedRequest && !requestedAddresses.length && exactAddresses.length
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
@@ -415,6 +434,8 @@ export async function POST(request: NextRequest) {
       propertySearchMode: propertySearch.mode,
       propertySearchArea: propertySearch.area || "",
       freshPropertySearch,
+      ordinalIndex,
+      ordinalAddressRows: ordinalAddresses.length,
       combinedMessages: messageForReply.split("\n").filter(Boolean).length,
       requestedAddressRows: requestedAddresses.length,
       referencedInboundAddressRows: referencedInboundAddresses.length,

@@ -164,7 +164,7 @@ function latestMessageAsksForSellerValuation(message: string): boolean {
 }
 
 function asksForSafePropertyFact(message: string): boolean {
-  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|tell me more|more about|more details|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
 }
 
 function asksForAlternativeProperties(message: string): boolean {
@@ -177,6 +177,11 @@ function asksForPropertyOptions(message: string): boolean {
     || /\b(available|availability|have available|what (?:do )?you have|options?|properties|apartments?|condos?|rentals?|listings?)\b/i.test(message)
     || /\b(under|below|less than|max|maximum|up to)\s+\$?\s*\d/i.test(message)
     || /\b(something close|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|sticking to \d+\s*(?:bed|bd|bedroom)|find .{0,30}\d+\s*(?:bed|bd|bedroom)|want .{0,30}\d+\s*(?:bed|bd|bedroom))\b/i.test(message);
+}
+
+function asksForPropertyDetails(message: string): boolean {
+  return /\b(tell me more|more about|more details|details|info|information|what about|how about|first one|second one|third one|1st one|2nd one|3rd one|that one|this one|it)\b/i.test(message)
+    && !asksForPropertyOptions(message);
 }
 
 function latestMessageHasSensitiveTopic(message: string): boolean {
@@ -285,6 +290,24 @@ function formatTheoPhotoLinkFallback(properties: SheetRow[] = []): string {
     cleanText(property.listing_url),
   ]);
   return `I found the listing, but the direct image source is not sendable by SMS. The photo gallery is here:\n\n${lines.join("\n\n")}`;
+}
+
+function formatTheoPropertyDetails(properties: SheetRow[] = []): string {
+  const property = properties.find((row) => cleanText(row.address));
+  if (!property) return "";
+  const fields = [
+    formatFacts(property),
+    formatSqft(property.sqft),
+    property.year_built ? `built ${cleanText(property.year_built)}` : "",
+    property.property_type ? cleanText(property.property_type) : "",
+  ].filter(Boolean);
+  const featureText = cleanText(property.features || property.description).slice(0, 260);
+  return [
+    `${cleanText(property.address)}${fields.length ? `: ${fields.join(", ")}.` : "."}`,
+    featureText,
+    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
+    "Want me to send photos, book a showing, or find similar options?",
+  ].filter(Boolean).join("\n\n");
 }
 
 function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification): string {
@@ -410,6 +433,15 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       recommendedNextAction: "reply_and_qualify",
     };
   }
+  if (asksForPropertyDetails(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
+    classification = {
+      ...classification,
+      intent: "property_details",
+      status: "ready_to_reply",
+      handoffReason: "",
+      recommendedNextAction: "reply_and_qualify",
+    };
+  }
   const lead = context.lead || {};
   const shouldReply = shouldTheoAutoReply(classification, lead);
 
@@ -440,6 +472,26 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       mediaUrls,
       shouldSend: true,
       aiAction: classification.status === "needs_human" ? "property_options_handoff_reply_ready" : "property_options_reply_ready",
+      handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
+      status: classification.status === "needs_human" ? "needs_human" : "ready_to_reply",
+      metrics,
+    };
+  }
+
+  const detailReply = asksForPropertyDetails(context.message)
+    && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
+    ? formatTheoPropertyDetails(context.properties)
+    : "";
+  if (detailReply) {
+    const mediaUrls = wantsPropertyImage(context.message)
+      ? selectTheoMediaUrls(context, classification)
+      : [];
+    return {
+      classification,
+      reply: truncateSms(detailReply, LINK_SMS_LIMIT),
+      mediaUrls,
+      shouldSend: true,
+      aiAction: classification.status === "needs_human" ? "property_details_handoff_reply_ready" : "property_details_reply_ready",
       handoffReason: classification.status === "needs_human" ? classification.handoffReason : "",
       status: classification.status === "needs_human" ? "needs_human" : "ready_to_reply",
       metrics,
