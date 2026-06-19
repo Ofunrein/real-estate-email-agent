@@ -61,6 +61,10 @@ function clean(value?: string): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
+function hasMonthlySuffix(value?: string): boolean {
+  return /\b(per\s*month|monthly)\b|\/\s*(mo|month)\b/i.test(clean(value));
+}
+
 function unique(values: string[]): string[] {
   return [...new Set(values.map(clean).filter(Boolean))];
 }
@@ -113,12 +117,31 @@ function formatPrice(value?: string): string {
   const numeric = clean(value).replace(/[^\d.]/g, "");
   if (!numeric) return "";
   const amount = Number(numeric);
-  return Number.isFinite(amount) ? `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
+  if (!Number.isFinite(amount)) return "";
+  const price = `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return hasMonthlySuffix(value) ? `${price} per month` : price;
 }
 
 function formatSqft(value?: string): string {
   const sqft = Number(clean(value).replace(/[^\d.]/g, ""));
   return Number.isFinite(sqft) && sqft > 0 ? `${sqft.toLocaleString("en-US", { maximumFractionDigits: 0 })} square feet` : "";
+}
+
+const DIGIT_WORDS: Record<string, string> = {
+  "0": "zero",
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+};
+
+function speakAddress(address?: string): string {
+  return clean(address).replace(/^\d+/, (digits) => digits.split("").map((digit) => DIGIT_WORDS[digit] || digit).join(" "));
 }
 
 // Natural spoken sentence for a property (no markdown, no URLs — this is read aloud).
@@ -135,7 +158,7 @@ export function speakProperty(property: SheetRow): string {
   ].filter(Boolean).join(", ");
   const address = clean(property.address);
   if (!facts) return address ? `I found ${address}, but I don't have the full details handy.` : "I couldn't find that property.";
-  return `${address} is ${facts}.`;
+  return `${speakAddress(address)} is ${facts}.`;
 }
 
 // Concise SMS body for the timeout fallback (full details, links allowed).
@@ -258,7 +281,7 @@ function speakSearchOption(property: SheetRow, index: number): string {
   const bedsBaths = property.beds && property.baths ? `${property.beds} bed, ${property.baths} bath` : "";
   const where = clean(property.neighborhood) || clean(property.city);
   const facts = [price, bedsBaths, where].filter(Boolean).join(", ");
-  return `${index + 1}. ${clean(property.address)}${facts ? `, ${facts}` : ""}`;
+  return `${index + 1}. ${speakAddress(property.address)}${facts ? `, ${facts}` : ""}`;
 }
 
 export function speakSearchResults(properties: SheetRow[]): string {
@@ -374,7 +397,7 @@ export async function searchPropertiesForVoice(
   if (cached.length) {
     return {
       properties: cached,
-      spoken: `${speakSearchResults(cached)} I'm also checking fresh options and can text them to you.`,
+      spoken: `${speakSearchResults(cached)} I can text the links too if you want them.`,
       timedOut: raced.kind === "timeout",
       fromCache: true,
     };
@@ -382,7 +405,7 @@ export async function searchPropertiesForVoice(
 
   return {
     properties: [],
-    spoken: "I don't see matching listings in our saved data yet. I'm checking fresh options and can text them to you when they come in.",
+    spoken: "I don't see matching listings in our saved property database from that description. Give me an area, budget, or bedroom count and I'll narrow it down.",
     timedOut: true,
     fromCache: false,
   };

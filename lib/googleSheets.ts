@@ -31,6 +31,12 @@ function readJson<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
 }
 
+function readJsonEnv<T>(name: string): T | null {
+  const value = process.env[name];
+  if (!value) return null;
+  return JSON.parse(value) as T;
+}
+
 function credentialPaths() {
   const credentialsFile = process.env.GMAIL_CREDENTIALS_PATH || "credentials.json";
   const tokenFile = process.env.GMAIL_TOKEN_PATH || "token.json";
@@ -50,8 +56,8 @@ export function spreadsheetId(): string {
 
 export async function sheetsClient(): Promise<sheets_v4.Sheets> {
   const { credentialsPath, tokenPath } = credentialPaths();
-  const credentials = readJson<OAuthCredentials>(credentialsPath);
-  const token = readJson<Record<string, string>>(tokenPath);
+  const credentials = readJsonEnv<OAuthCredentials>("GMAIL_CREDENTIALS_JSON") || readJson<OAuthCredentials>(credentialsPath);
+  const token = readJsonEnv<Record<string, string>>("GMAIL_TOKEN_JSON") || readJson<Record<string, string>>(tokenPath);
   const app = credentials.installed || credentials.web;
   if (!app?.client_id || !app.client_secret) {
     throw new Error("credentials.json is missing OAuth client data");

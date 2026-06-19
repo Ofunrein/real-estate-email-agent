@@ -2,7 +2,6 @@
   "name": "lumenosis-real-estate-agent-inbox",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -16,6 +15,7 @@
     "aria:test": "node --import tsx scripts/test-aria-voice.mjs",
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "import:zillow": "node scripts/import-zillow-apify-properties.mjs",
+    "normalize:rental-prices": "node scripts/normalize-rental-prices.mjs",
     "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
     "sync:db-to-sheets": "node scripts/sync-db-to-sheets.mjs",
     "backfill:neon": "python3 scripts/backfill_neon_from_sources.py --json",
