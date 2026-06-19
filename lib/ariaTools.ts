@@ -13,10 +13,12 @@ import type { ChannelIngestInput } from "@/lib/channelIngest";
 import { resolveCaller as resolveCallerDefault, type CallerIdentity } from "@/lib/identity";
 import {
   lookupPropertyForVoice,
+  propertySmsBody,
   searchPropertiesForVoice,
   type VoiceLookupResult,
   type VoiceSearchResult,
 } from "@/lib/ariaData";
+import { usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import {
   cancelShowing,
   rescheduleShowing,
@@ -49,6 +51,7 @@ export type AriaToolName =
   | "getCallerContext"
   | "lookupProperty"
   | "searchProperties"
+  | "sendPropertyDetailsSms"
   | "scheduleShowing"
   | "bookAppointment"
   | "cancelAppointment"
@@ -77,7 +80,7 @@ export type AriaToolDeps = {
   rescheduleAppointmentById: (id: string, newScheduledAt: string, newScheduledAtLocal: string, newGhlEventId?: string) => Promise<AppointmentRecord | null>;
   cancelGHLEvent: (ghlEventId: string) => Promise<boolean>;
   rescheduleGHLEvent: (ghlEventId: string, newDate: string, newTime: string, timezone?: string) => Promise<{ success: boolean; confirmed_time?: string; error?: string }>;
-  sendSms: (to: string, body: string) => Promise<unknown>;
+  sendSms: (to: string, body: string, mediaUrls?: string[]) => Promise<unknown>;
   notifyBooking: typeof notifySlackOnBooking;
   notifyTransfer: typeof notifySlackOnTransfer;
 };
@@ -224,6 +227,89 @@ async function searchProperties(ctx: AriaToolContext, args: Record<string, unkno
       messageText: criteria,
       aiAction: search.timedOut ? "property_search_async_sms" : search.properties.length ? "property_search_results" : "property_search_empty",
       summary: `Voice property search (${criteria || "general"}) → ${search.properties.length} matches.`,
+    },
+  };
+}
+
+function requestedDetailsBody(properties: SheetRow[]): string {
+  const usable = properties.filter((property) => str(property.address)).slice(0, 3);
+  if (!usable.length) return "";
+  return usable.map(propertySmsBody).join("\n\n");
+}
+
+function listingMediaUrls(properties: SheetRow[], includePhotos: boolean): string[] {
+  if (!includePhotos) return [];
+  return properties
+    .map((property) => usableInboxPhotoUrl(property.photo_url))
+    .filter(Boolean)
+    .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
+}
+
+async function sendPropertyDetailsSms(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const hydrated = await hydrateContext(ctx, deps);
+  const phone = str(args.phone || args.callerPhone) || hydrated.phone;
+  const address = str(args.address || args.property || args.propertyAddress);
+  const query = str(args.query || args.message || args.text) || address || str(hydrated.lead?.property_interest);
+  const includePhotos = str(args.includePhotos ?? args.photos ?? "true").toLowerCase() !== "false";
+  const ingestBase = { ...baseIngest(hydrated), eventType: "voice_property_details_sms" };
+
+  if (!phone) {
+    return {
+      result: "What's the best number to text the listing details to?",
+      ingest: { ...ingestBase, aiAction: "property_details_sms_needs_phone", status: "awaiting_response", summary: "Caller asked for listing details/photos, but no SMS number was available." },
+    };
+  }
+
+  let properties: SheetRow[] = [];
+  if (address) {
+    const lookup = await deps.lookupProperty({
+      address,
+      phone,
+      message: query,
+      lead: hydrated.lead || undefined,
+    });
+    properties = lookup.properties;
+  }
+
+  if (!properties.length) {
+    const search = await deps.searchProperties({
+      query,
+      area: str(args.area || args.location),
+      beds: num(args.beds),
+      baths: num(args.baths),
+      minPrice: num(args.minPrice ?? args.min_price),
+      maxPrice: num(args.maxPrice ?? args.max_price),
+      phone,
+      lead: hydrated.lead || undefined,
+    });
+    properties = search.properties;
+  }
+
+  const body = requestedDetailsBody(properties);
+  if (!body) {
+    return {
+      result: "I don't have a clean listing match to text yet. Can you confirm the address or area?",
+      ingest: { ...ingestBase, messageText: query, aiAction: "property_details_sms_no_match", status: "not_found", summary: `No listing match to text for ${query || "caller request"}.` },
+    };
+  }
+
+  const mediaUrls = listingMediaUrls(properties, includePhotos);
+  await deps.sendSms(phone, body, mediaUrls);
+  const firstAddress = str(properties[0]?.address);
+  const result = mediaUrls.length
+    ? "Sent - I texted the listing details and photos now."
+    : "Sent - I texted the listing details now. I did not have a sendable photo for that one.";
+
+  return {
+    result,
+    ingest: {
+      ...ingestBase,
+      messageText: query,
+      propertyInterest: firstAddress || str(hydrated.lead?.property_interest),
+      aiAction: mediaUrls.length ? "property_details_sms_sent_with_photos" : "property_details_sms_sent",
+      nextAction: "sms_listing_details_sent",
+      status: "sent",
+      summary: `Aria texted ${properties.length} listing detail${properties.length === 1 ? "" : "s"}${mediaUrls.length ? ` with ${mediaUrls.length} photo${mediaUrls.length === 1 ? "" : "s"}` : ""}${firstAddress ? ` for ${firstAddress}` : ""}.`,
     },
   };
 }
@@ -556,6 +642,8 @@ export async function runAriaTool(
       return lookupProperty(await hydrateContext(ctx, deps), args, deps);
     case "searchProperties":
       return searchProperties(await hydrateContext(ctx, deps), args, deps);
+    case "sendPropertyDetailsSms":
+      return sendPropertyDetailsSms(ctx, args, deps);
     case "scheduleShowing":
       return scheduleShowingTool(await hydrateContext(ctx, deps), args, deps);
     case "bookAppointment":

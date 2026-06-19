@@ -12,28 +12,32 @@ function config() {
   });
 }
 
-test("buildAriaAssistant: includes all server tools with secret-bearing urls", () => {
+function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T {
+  const previous: Record<string, string | undefined> = {};
+  for (const key of Object.keys(values)) {
+    previous[key] = process.env[key];
+    const next = values[key];
+    if (next == null) delete process.env[key];
+    else process.env[key] = next;
+  }
+  try {
+    return run();
+  } finally {
+    for (const key of Object.keys(values)) {
+      const old = previous[key];
+      if (old == null) delete process.env[key];
+      else process.env[key] = old;
+    }
+  }
+}
+
+test("buildAriaAssistant: uses only Vapi-native inline call controls", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com/", secret: "s3cr3t" });
   const model = assistant.model as Record<string, unknown>;
   const tools = model.tools as Array<Record<string, unknown>>;
-  const names = tools
-    .filter((t) => t.type === "function")
-    .map((t) => (t.function as Record<string, unknown>).name);
-  assert.deepEqual(names, [
-    "getCallerContext",
-    "lookupProperty",
-    "searchProperties",
-    "qualifyLead",
-    "bookAppointment",
-    "cancelAppointment",
-    "rescheduleAppointment",
-    "scheduleShowing",
-    "syncToCrm",
-  ]);
-
-  const lookup = tools.find((t) => (t.function as Record<string, unknown> | undefined)?.name === "lookupProperty");
-  const server = lookup?.server as Record<string, unknown>;
-  assert.equal(server.url, "https://app.example.com/api/webhooks/aria-tools/lookupProperty?secret=s3cr3t");
+  assert.equal(tools.length, 2);
+  assert.deepEqual(tools.map((t) => t.type), ["transferCall", "endCall"]);
+  assert.equal(model.toolIds, undefined);
 });
 
 test("buildAriaAssistant: transferCall destination is the human transfer number", () => {
@@ -41,43 +45,117 @@ test("buildAriaAssistant: transferCall destination is the human transfer number"
   const tools = (assistant.model as Record<string, unknown>).tools as Array<Record<string, unknown>>;
   const transfer = tools.find((t) => t.type === "transferCall");
   assert.ok(transfer, "transferCall tool present");
+  assert.equal((transfer!.function as Record<string, unknown>).name, "transferToHuman");
   const destinations = transfer!.destinations as Array<Record<string, unknown>>;
   assert.equal(destinations[0].number, "+15128152032");
-  assert.ok(tools.some((t) => t.type === "endCall"), "endCall tool present");
+  const endCall = tools.find((t) => t.type === "endCall");
+  assert.ok(endCall, "endCall tool present");
+  assert.equal((endCall!.function as Record<string, unknown>).name, "endCall");
 });
 
-test("buildAriaAssistant: server url for lifecycle webhook", () => {
+test("buildAriaAssistant: omits assistant server url for Vapi-hosted adapter mode", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com", secret: "k" });
-  const server = assistant.server as Record<string, unknown>;
-  assert.equal(server.url, "https://app.example.com/api/webhooks/aria-voice?secret=k");
+  assert.equal(assistant.server, undefined);
 });
 
 test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
-  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  const assistant = withEnv({ ARIA_VOICE_PROVIDER: undefined, ARIA_VOICE_MODEL: undefined }, () =>
+    buildAriaAssistant(config(), { publicUrl: "https://app.example.com" }),
+  );
   const voice = assistant.voice as Record<string, unknown>;
   assert.equal(voice.voiceId, "voice-xyz");
   assert.equal(voice.provider, "11labs");
+  assert.equal(voice.model, "eleven_flash_v2_5");
+  assert.deepEqual(voice.fallbackPlan, { voices: [{ provider: "openai", voiceId: "alloy", model: "tts-1" }] });
   const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
   assert.match(messages[0].content, /Acme Realty/);
+  assert.match(messages[0].content, /checkAvailability/);
+  assert.match(messages[0].content, /bookConsultation/);
+  assert.match(messages[0].content, /sendBookingSmsConfirmation/);
+  assert.match(messages[0].content, /notifySlackLeadIssue/);
   assert.match(messages[0].content, /getCallerContext/);
+  assert.match(messages[0].content, /shared omnichannel brain/);
+  assert.match(messages[0].content, /recent Theo\/Iris\/Olivia\/Aria conversations/);
+  assert.match(messages[0].content, /searchProperties/);
+  assert.match(messages[0].content, /lookupProperty/);
+  assert.match(messages[0].content, /sendPropertyDetailsSms/);
+  assert.match(messages[0].content, /OPERATING PRINCIPLES/);
+  assert.match(messages[0].content, /Direction over script/);
+  assert.match(messages[0].content, /not canned rebuttals/);
+  assert.match(messages[0].content, /confirm fit, confirm contact details/);
+  assert.match(messages[0].content, /what properties do you have available/i);
+  assert.match(messages[0].content, /never use SMS or email as the substitute/i);
+  assert.match(messages[0].content, /Critical-info confirmation/);
+  assert.match(messages[0].content, /spell it back letter by letter/);
+  assert.match(messages[0].content, /B as in Bravo/);
+  assert.match(messages[0].content, /Do not send a confirmation until the caller says it is correct/);
+  assert.match(messages[0].content, /weekday, date, time, and time zone/);
+  assert.match(messages[0].content, /one zero zero four/);
   assert.match(messages[0].content, /greater Austin \/ Central Texas metro/);
-  assert.match(messages[0].content, /Fairwood Avenue/);
   assert.match(messages[0].content, /mile markers/);
   assert.match(messages[0].content, /preferred follow-up channel/);
-  assert.match(messages[0].content, /Human-assisted does not mean stopping useful property help/);
   assert.match(messages[0].content, /transferToHuman|transfer/i);
+});
+
+test("buildAriaAssistant: sets Vapi response delay", () => {
+  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  assert.deepEqual(assistant.startSpeakingPlan, { waitSeconds: 0.5 });
+});
+
+test("buildAriaAssistant: supports ElevenLabs low-latency voice tuning", () => {
+  const assistant = withEnv(
+    {
+      ARIA_VOICE_PROVIDER: "11labs",
+      ARIA_VOICE_MODEL: "eleven_turbo_v2_5",
+      ARIA_VOICE_OPTIMIZE_STREAMING_LATENCY: "4",
+      ARIA_VOICE_STABILITY: "0.5",
+      ARIA_VOICE_SIMILARITY_BOOST: "0.75",
+      ARIA_VOICE_STYLE: "0.1",
+      ARIA_VOICE_SPEED: "1.05",
+      ARIA_VOICE_USE_SPEAKER_BOOST: "true",
+      ARIA_VOICE_FALLBACK_PROVIDER: undefined,
+      ARIA_VOICE_FALLBACK_ID: undefined,
+      ARIA_VOICE_FALLBACK_MODEL: undefined,
+    },
+    () => buildAriaAssistant(config(), { publicUrl: "https://app.example.com" }),
+  );
+  const voice = assistant.voice as Record<string, unknown>;
+  assert.deepEqual(voice, {
+    provider: "11labs",
+    voiceId: "voice-xyz",
+    fallbackPlan: { voices: [{ provider: "openai", voiceId: "alloy", model: "tts-1" }] },
+    model: "eleven_turbo_v2_5",
+    optimizeStreamingLatency: 4,
+    stability: 0.5,
+    similarityBoost: 0.75,
+    style: 0.1,
+    speed: 1.05,
+    useSpeakerBoost: true,
+  });
+});
+
+test("buildAriaAssistant: allows explicit fallback voice for Vapi publish validation", () => {
+  const assistant = withEnv(
+    {
+      ARIA_VOICE_PROVIDER: "openai",
+      ARIA_VOICE_FALLBACK_PROVIDER: "openai",
+      ARIA_VOICE_FALLBACK_ID: "echo",
+      ARIA_VOICE_FALLBACK_MODEL: "tts-1",
+    },
+    () => buildAriaAssistant(config(), { publicUrl: "https://app.example.com" }),
+  );
+  const voice = assistant.voice as Record<string, unknown>;
+  assert.deepEqual(voice.fallbackPlan, { voices: [{ provider: "openai", voiceId: "echo", model: "tts-1" }] });
 });
 
 test("buildAriaAssistant: qualifyLead captures channel and bed-bath preferences", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
   const tools = (assistant.model as Record<string, unknown>).tools as Array<Record<string, unknown>>;
-  const qualify = tools.find((t) => (t.function as Record<string, unknown> | undefined)?.name === "qualifyLead");
-  const params = (qualify!.function as Record<string, unknown>).parameters as Record<string, unknown>;
-  const properties = params.properties as Record<string, unknown>;
-  assert.ok(properties.preferred_channel);
-  assert.ok(properties.bedrooms);
-  assert.ok(properties.bathrooms);
-  assert.ok(properties.sell_before_buy);
+  assert.ok(!tools.some((t) => (t.function as Record<string, unknown> | undefined)?.name === "qualifyLead"));
+  const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
+  assert.match(messages[0].content, /preferred follow-up channel/);
+  assert.match(messages[0].content, /bedroom\/bathroom/);
+  assert.match(messages[0].content, /sell before buying/);
 });
 
 test("buildAriaAssistant: no voice block when voiceId unset", () => {

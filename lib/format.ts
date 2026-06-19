@@ -2,9 +2,11 @@ import type { SheetRow } from "@/lib/sheetSchema";
 
 export function formatPrice(value?: string) {
   if (!value) return "Blank";
-  const numeric = Number(value);
+  const raw = String(value).trim();
+  const monthly = /\b(per\s*month|monthly)\b|\/\s*(mo|month)\b/i.test(raw);
+  const numeric = Number(raw.replace(/[^\d.]/g, ""));
   if (!Number.isFinite(numeric)) return value;
-  return `$${numeric.toLocaleString()}`;
+  return `$${numeric.toLocaleString()}${monthly ? " per month" : ""}`;
 }
 
 export function formatSqft(value?: string) {

@@ -27,12 +27,12 @@ function property(partial: Partial<SheetRow>): SheetRow {
 
 test("speakProperty: natural spoken sentence, no markdown", () => {
   const spoken = speakProperty(property({ address: "123 Main St", price: "450000", beds: "3", baths: "2", sqft: "1800", neighborhood: "Mueller" }));
-  assert.equal(spoken, "123 Main St is listed at $450,000, 3 bed, 2 bath, 1,800 square feet, in Mueller.");
+  assert.equal(spoken, "one two three Main St is listed at $450,000, 3 bed, 2 bath, 1,800 square feet, in Mueller.");
 });
 
 test("speakProperty: partial data still readable", () => {
   const spoken = speakProperty(property({ address: "9 Oak Dr", city: "Austin" }));
-  assert.match(spoken, /9 Oak Dr/);
+  assert.match(spoken, /nine Oak Dr/);
 });
 
 test("propertySmsBody: includes address, facts, link", () => {
@@ -99,7 +99,7 @@ test("lookupPropertyForVoice: uses lead memory to correct STT-misheard address",
     }),
   );
   assert.equal(result.timedOut, false);
-  assert.match(result.spoken, /4309 Fairway Path/);
+  assert.match(result.spoken, /four three zero nine Fairway Path/);
   assert.match(result.spoken, /\$407,800/);
   assert.ok(calls.includes("4309 Fairway Path"), "lead-memory correction was searched");
 });
@@ -176,8 +176,8 @@ test("speakSearchResults: lists up to 3 options with a question", () => {
     property({ address: "2 B Ave", price: "450000", beds: "4", baths: "3", city: "Austin" }),
   ]);
   assert.match(spoken, /I found 2 options/);
-  assert.match(spoken, /1\. 1 A St/);
-  assert.match(spoken, /2\. 2 B Ave/);
+  assert.match(spoken, /1\. one A St/);
+  assert.match(spoken, /2\. two B Ave/);
   assert.match(spoken, /Want details/);
 });
 
@@ -200,7 +200,7 @@ test("searchPropertiesForVoice: builds criteria and speaks matches", async () =>
       budgetMs: 1,
     },
   );
-  assert.match(result.spoken, /1 A St/);
+  assert.match(result.spoken, /one A St/);
   assert.equal((received as { beds?: number }).beds, 3);
   assert.equal((received as { maxPrice?: number }).maxPrice, 500000);
 });
@@ -225,7 +225,7 @@ test("searchPropertiesForVoice: enrichment can win and be cached", async () => {
   );
   assert.equal(result.timedOut, false);
   assert.equal(result.fromCache, false);
-  assert.match(result.spoken, /9 Fresh St/);
+  assert.match(result.spoken, /nine Fresh St/);
   assert.equal(cached, 1);
 });
 
@@ -248,9 +248,27 @@ test("searchPropertiesForVoice: timeout speaks cache and texts fresh results", a
   );
   assert.equal(result.timedOut, true);
   assert.equal(result.fromCache, true);
-  assert.match(result.spoken, /1 Cached St/);
-  assert.match(result.spoken, /text them/);
+  assert.match(result.spoken, /one Cached St/);
+  assert.match(result.spoken, /text the links/);
   await new Promise((resolve) => setTimeout(resolve, 60));
   assert.match(smsBody, /2 Fresh Ave/);
   assert.match(smsBody, /https:\/\/z\/2/);
+});
+
+test("searchPropertiesForVoice: no matches asks for search criteria instead of deferring to text", async () => {
+  const result = await searchPropertiesForVoice(
+    { query: "what properties do you have available" },
+    {
+      findCandidates: async () => [],
+      enrich: () => new Promise((resolve) => setTimeout(() => resolve({ properties: [], context: "" }), 30)),
+      cacheProperty: async () => null,
+      sendSms: async () => undefined,
+      budgetMs: 5,
+    },
+  );
+  assert.equal(result.timedOut, true);
+  assert.equal(result.properties.length, 0);
+  assert.match(result.spoken, /saved property database/);
+  assert.match(result.spoken, /area, budget, or bedroom count/);
+  assert.doesNotMatch(result.spoken, /text/i);
 });

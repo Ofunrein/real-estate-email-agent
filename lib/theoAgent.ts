@@ -33,7 +33,7 @@ export type TheoReplyContext = {
   lead?: Partial<SheetRow>;
   properties?: SheetRow[];
   propertyInterest?: string;
-  source?: "sms" | "form" | "whatsapp";
+  source?: "sms" | "form" | "whatsapp" | "messenger" | "instagram";
   recentEvents?: SheetRow[];
   dataContext?: string;
   styleContext?: string;
@@ -115,8 +115,23 @@ function whatsAppImagesEnabled(): boolean {
   return envFlag(process.env.ENABLE_WHATSAPP_IMAGES || process.env.ENABLE_SMS_IMAGES);
 }
 
+function socialDmImagesEnabled(): boolean {
+  return envFlag(process.env.ENABLE_SOCIAL_DM_IMAGES);
+}
+
 function mediaImagesEnabled(source?: TheoReplyContext["source"]): boolean {
+  if (source === "messenger" || source === "instagram") return socialDmImagesEnabled();
   return source === "whatsapp" ? whatsAppImagesEnabled() : smsImagesEnabled();
+}
+
+function maxMediaImages(source?: TheoReplyContext["source"]): number {
+  if (source === "messenger" || source === "instagram") {
+    return Math.max(0, Number(process.env.SOCIAL_DM_MAX_IMAGES || process.env.WHATSAPP_MAX_IMAGES || process.env.SMS_MAX_IMAGES || "3"));
+  }
+  if (source === "whatsapp") {
+    return Math.max(0, Number(process.env.WHATSAPP_MAX_IMAGES || process.env.SMS_MAX_IMAGES || "3"));
+  }
+  return Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3"));
 }
 
 function smsImageMode(): string {
@@ -181,10 +196,13 @@ function usablePhotoUrl(value?: string): string {
 }
 
 function formatPrice(value?: string): string {
-  const numeric = cleanText(value).replace(/[^\d.]/g, "");
+  const raw = cleanText(value);
+  const numeric = raw.replace(/[^\d.]/g, "");
   if (!numeric) return cleanText(value);
   const amount = Number(numeric);
-  return Number.isFinite(amount) ? `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : cleanText(value);
+  if (!Number.isFinite(amount)) return cleanText(value);
+  const price = `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return /\b(per\s*month|monthly)\b|\/\s*(mo|month)\b/i.test(raw) ? `${price} per month` : price;
 }
 
 function formatFacts(property: SheetRow): string {
@@ -300,7 +318,7 @@ export function selectTheoMediaUrls(context: TheoReplyContext, classification: T
   if (mode === "on_request" && !wantsPropertyImage(context.message)) return [];
   if (!["on_request", "property_reply"].includes(mode)) return [];
 
-  const maxImages = Math.max(0, Number((context.source === "whatsapp" ? process.env.WHATSAPP_MAX_IMAGES : "") || process.env.SMS_MAX_IMAGES || "3"));
+  const maxImages = maxMediaImages(context.source);
   return (context.properties || [])
     .map((property) => usablePhotoUrl(property.photo_url))
     .filter(Boolean)

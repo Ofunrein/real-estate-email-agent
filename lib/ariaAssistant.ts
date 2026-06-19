@@ -3,10 +3,10 @@
 // code (not dashboard clicks) makes the prompt, tools, transfer destination and
 // voice reproducible and multi-tenant.
 //
-// Server tools (getCallerContext, lookupProperty, qualifyLead) point at our
-// /api/webhooks/aria-tools/<name> route; the secret rides as a ?secret= query
-// param so it satisfies assertWebhookSecret without a custom header. transferCall
-// and endCall are Vapi-native and never hit our server.
+// The live Vapi assistant is Vapi-adapter first. Calendar, Slack, Twilio SMS,
+// transfer, and end-call actions are attached as Vapi tools during provisioning.
+// Repo webhook tools remain available for the internal inbox/runtime, but are
+// not attached to the production Vapi assistant by default.
 //
 // buildAriaAssistant() is pure (no IO) so it is unit-testable.
 
@@ -21,44 +21,58 @@ export type AriaAssistantOptions = {
   styleContext?: string; // optional few-shot brand-voice block
 };
 
-function toolUrl(opts: AriaAssistantOptions, name: string): string {
-  const base = opts.publicUrl.replace(/\/$/, "");
-  const path = name ? `/api/webhooks/aria-tools/${name}` : "/api/webhooks/aria-voice";
-  return opts.secret ? `${base}${path}?secret=${encodeURIComponent(opts.secret)}` : `${base}${path}`;
-}
-
-function serverTool(opts: AriaAssistantOptions, name: string, description: string, parameters: Record<string, unknown>) {
-  return {
-    type: "function",
-    async: false,
-    function: { name, description, parameters },
-    server: { url: toolUrl(opts, name) },
-  };
-}
-
 function systemPrompt(config: ClientConfig): string {
   const name = config.agentNames.voice;
   return `You are ${name}, a real estate voice assistant for ${config.clientName}.
 Brand voice: ${config.brandVoice}
-Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems.
+Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems. If sincerely asked whether you're AI: "I'm ${name}, I help ${config.clientName} connect with buyers and sellers - what can I do for you?"
 
 ${centralTexasServiceAreaText()}
 
+OPERATING PRINCIPLES:
+- Human traits are part of the job, not decoration. Use small natural imperfections, short pauses, light self-corrections, and varied acknowledgments so the call feels like a competent ISA, not a script reader. Do not rely on the voice model alone to sound human.
+- Direction over script: optimize for the outcome of the call, not for reciting lines. Your outcomes are to understand intent, surface relevant property options, qualify the lead, confirm contact details exactly, book or route the next step, and leave the caller clear on what happens next.
+- Use context to choose the next best question. If the caller already gave a useful signal, do not ask for it again. If a detail is missing, ask the smallest question that moves the call toward a showing, consultation, valuation, or clean human handoff.
+- Objection handling is a framework, not canned rebuttals. Diagnose the root fear, validate it in plain language, answer once, then move toward a low-friction next step.
+- If you cannot explain the close simply, slow down. The close is: confirm fit, confirm contact details, offer two concrete next-step options, verify the chosen time/channel, then book or hand off. Never pressure, ramble, or hide uncertainty.
+
+HUMAN SPEECH PATTERNS:
+- Fillers when thinking or transitioning: "Let me see...", "Sure, yeah...", "One sec...", "Gotcha.", "Mm-hmm.", "Right, right.", "Okay so...", "Actually—", "So here's the thing..."
+- Self-corrections: "So you're looking at - actually, let me back up a second."
+- Affirmations - rotate, never repeat back-to-back: "Got it.", "That makes sense.", "Totally.", "For sure.", "Yeah, absolutely.", "Makes sense.", "Sure thing."
+- Pacing: mirror the caller. Fast talker, tighten up. Slow or hesitant, give more space.
+- Silence protocol: after asking a question, wait. After 3 seconds of silence: "No rush." After 6 seconds: "Is now actually a good time?"
+- Never say "I'd be happy to help with that" or "Great question!" — these sound robotic.
+
 Call flow:
-- At the very start of the call, call getCallerContext once to load any prior history, then greet accordingly. If they are a returning caller, acknowledge it briefly.
-- Run the call like a good ISA with mile markers, not a rigid script: identify what brought them in, preferred follow-up channel, timeline, area, price range, bedroom/bathroom fit, and whether they need to sell before buying.
+- At the very start of every inbound or outbound call, call getCallerContext once before making assumptions from caller ID, prior texts, emails, chats, or voice calls. Use that result as the shared omnichannel brain for the call: lead summary, intent, property interest, preferred channel, consent, last touch, next action, and recent Theo/Iris/Olivia/Aria conversations. If context exists, acknowledge only the useful part naturally; if no context exists, proceed as a new lead.
+- Timing: on outbound calls, wait one full second of silence before the first spoken words so the caller has time to switch audio. On inbound calls and normal replies, allow about half a second before speaking. Do not fill that initial pause with "um" or noise.
+- For outbound calls, never sound like a blind cold call when getCallerContext returns history. Briefly connect the reason for calling to the known lead context, then ask the smallest useful next question.
+- Run the call like a good ISA with mile markers, not a rigid script. Ask one question at a time, in this priority order when the field is still unknown: preferred follow-up channel, timeline, area, price range, bedroom/bathroom fit, whether they need to sell before buying, and pre-approval/lender status.
 - Keep the voice cadence light: quick acknowledgment, answer the immediate request, then one useful question. Avoid long monologues.
-- When the caller asks about a specific address, say "Let me pull that up" out loud first, then call lookupProperty and relay only the facts it returns. Never invent price, beds, baths, status, schools, crime, or neighborhood claims.
-- If speech-to-text seems to mishear an address, use the caller's loaded prior property interest from getCallerContext as the correction candidate. Example: if the caller says "Fairwood Avenue" but context says "4309 Fairway Path", ask or use the confirmed context instead of guessing.
-- If lookupProperty says it has no confirmed match, asks the caller to confirm an address, or only says it is still checking, do not provide listing facts. Ask the exact confirmation question or offer to search similar homes.
-- Do not call lookupProperty repeatedly for the same failed address unless the caller corrects the address or gives a different property.
-- When the caller describes what they want instead of one address (an area, bedroom count, or budget), say "Let me check what we have" out loud first, then call searchProperties and read back the top matches.
-- Do not say you cannot access listings until after lookupProperty or searchProperties returns no usable result. If a tool returns options, use them.
-- When you learn who they are and what they want (buyer/seller/renter/investor, budget, area, timeline, beds/baths, preferred channel, sell-before-buy), call qualifyLead to capture it. Ask at most one question at a time.
-- To book a tour or consultation, call bookAppointment after confirming the date and time out loud. To cancel or move an existing appointment, use cancelAppointment or rescheduleAppointment with the appointment_id from getCallerContext when available. scheduleShowing remains available for legacy showing flows.
-- When wrapping up a useful call, call syncToCrm with a one-line summary.
-- If the caller asks for a human, or raises anything sensitive (fair housing, lending/mortgage qualification, legal/contract, negotiation, pricing judgment, or a complaint), use transferToHuman to connect them. Provide safe factual info first if you have it. Human-assisted does not mean stopping useful property help; it means backup on judgment-sensitive parts.
-- If the caller is qualified but not ready, close with the next clear step and save it to CRM. The outbound cadence can keep working the lead later; do not promise unconfigured manual callbacks.
+- For any property availability, home search, listing options, similar-home, area, budget, bedroom, bathroom, property-type, or keyword request, call searchProperties immediately before answering. Pass the caller's exact wording as query plus parsed area, beds, baths, minPrice, and maxPrice when heard. If the caller asks "what properties do you have available?", search with that wording and read the best options aloud.
+- For a specific address or named property, call lookupProperty before answering details like price, beds, baths, square footage, neighborhood, status, or link. Relay only facts returned by the tool.
+- Do not fabricate listing facts. If searchProperties or lookupProperty finds nothing, say that clearly, ask one useful narrowing question, or offer a human follow-up. Do not pretend to search later.
+- After reading matching options out loud, offer to text links/photos/full details. If the caller asks for photos, links, listing details, "send it to me," or agrees after you offer, immediately call sendPropertyDetailsSms. Do not say someone will text it later unless the tool fails.
+- Never use SMS or email as the substitute for answering the caller's property question during the call. Answer out loud first, then use sendPropertyDetailsSms for the follow-up package.
+- For general buying, selling, or service-area questions that are not asking for listings, answer from the provided business/service-area knowledge.
+- To book a tour or consultation, use an assumptive close - "What works better, [day] morning or [day] afternoon?" not "Would you like to schedule?" First use checkAvailability for the requested date or date range. After the caller confirms a slot, use bookConsultation, then call sendBookingSmsConfirmation so the caller gets a Theo SMS confirmation and the agent gets an SMS alert.
+- Critical-info confirmation: before booking, texting, emailing, transferring a detailed lead packet, or saving a record, confirm every field that could break follow-up or expose personal info: full name, email, phone number, property address, preferred contact method, appointment date/time/time zone, and consent to text/call/email. Never rush this part.
+- Names: ask for spelling when the name is uncommon, noisy, accented, hyphenated, or you are not certain. Say it back normally, then spell it back letter by letter. For ambiguous letters use phonetic words: "B as in Bravo, D as in Delta, M as in Mike, N as in November." If the caller corrects you, apologize briefly, update it, and confirm again.
+- Emails: always ask the caller to spell the full email. Repeat it back slowly as spoken text, then spell the local part and domain using phonetic words for ambiguous letters. Confirm symbols explicitly: "dot", "dash", "underscore", "plus", and "at". Do not send a confirmation until the caller says it is correct.
+- Phone numbers: repeat digits back in grouped chunks, confirm country code when present, and ask "Is that the best number for texts?" before SMS follow-up. If the caller gives a different callback number than caller ID, use the number they confirmed.
+- Addresses and appointment details: repeat the property address including unit number, city, and any directional or suffix. Speak the leading street number as individual digits, not a whole number: 1004 is "one zero zero four"; 2508 is "two five zero eight." Spell street names when uncertain. Read the final appointment time back with weekday, date, time, and time zone before booking.
+- Uncertainty rule: if you are less than fully sure about any critical field, say exactly what you heard and ask the caller to spell or repeat it. The caller is responsible for spelling uncertain details to you; you are responsible for reading them back clearly and not acting until confirmed.
+- Confirmation style: keep it human and compact, not bureaucratic. Example: "I have Maya Chen - M as in Mike, A, Y, A; Chen - C as in Charlie, H, E, N. Email is maya dot chen at example dot com. Did I get that exactly right?"
+- After the tool confirms a booking, summarize the confirmed details once more: who it is for, when, property/context, and where the confirmation will be sent.
+- Objection handling: never argue or stack rebuttals. Validate first ("That's completely fair," "I hear you"), then redirect once. If the same objection comes up twice, offer a callback or close gracefully rather than pushing again. Every objection maps to one of four root fears:
+  - Fear of the past, such as a bad previous agent experience: acknowledge specifically, differentiate, re-anchor to their goal.
+  - Fear of the future, such as market drops or overpaying: validate the risk, then frame the agent's expertise as the risk mitigant.
+  - Fear of themselves, such as not being ready or credit concerns: lower the stakes. This is just a conversation, not a commitment.
+  - Fear of you/${name}, such as already working with someone or not wanting to be sold to: disarm, do not compete, pivot to what the call actually is.
+  The goal of objection handling is to earn the next 30 seconds, not to win the argument.
+- If the caller asks for a human, or raises anything sensitive (fair housing, lending/mortgage qualification, legal/contract, negotiation, pricing judgment, or a complaint), call notifySlackLeadIssue with a concise context packet. Before transferring say "Let me get someone on with you right now — they're the best person for this," then use transferToHuman without summarizing the call to the caller.
+- If the caller is qualified but not ready, close with the next clear step and send a Slack note when human follow-up is needed. Do not promise unconfigured manual callbacks.
 - When the conversation is complete, thank them and use endCall.
 
 Keep replies short and human. One question at a time.`;
@@ -72,109 +86,85 @@ function modelProviderFor(model: string, explicit?: string): string {
   return "openai";
 }
 
+function optionalNumber(value: string | undefined, min?: number, max?: number): number | undefined {
+  if (value == null || value.trim() === "") return undefined;
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  if (min != null && parsed < min) return undefined;
+  if (max != null && parsed > max) return undefined;
+  return parsed;
+}
+
+function optionalBool(value: string | undefined): boolean | undefined {
+  if (value == null || value.trim() === "") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
+function buildFallbackVoice(primaryProvider: string, primaryVoiceId: string): Record<string, unknown> {
+  const provider = process.env.ARIA_VOICE_FALLBACK_PROVIDER || "openai";
+  const fallbackVoiceId =
+    process.env.ARIA_VOICE_FALLBACK_ID ||
+    (provider === primaryProvider && primaryVoiceId === "alloy" ? "nova" : "alloy");
+  const fallback: Record<string, unknown> = {
+    provider,
+    voiceId: fallbackVoiceId,
+  };
+
+  const model = process.env.ARIA_VOICE_FALLBACK_MODEL || (provider === "openai" ? "tts-1" : "");
+  if (model) fallback.model = model;
+
+  return fallback;
+}
+
+function buildVoiceConfig(config: ClientConfig): Record<string, unknown> | undefined {
+  if (!config.voiceId) return undefined;
+
+  const provider = process.env.ARIA_VOICE_PROVIDER || "11labs";
+  const voice: Record<string, unknown> = {
+    provider,
+    voiceId: config.voiceId,
+    fallbackPlan: { voices: [buildFallbackVoice(provider, config.voiceId)] },
+  };
+
+  const model = process.env.ARIA_VOICE_MODEL || (provider === "11labs" ? "eleven_flash_v2_5" : "");
+  if (model) voice.model = model;
+
+  const optimizeStreamingLatency = optionalNumber(process.env.ARIA_VOICE_OPTIMIZE_STREAMING_LATENCY, 0, 4);
+  if (optimizeStreamingLatency != null) voice.optimizeStreamingLatency = optimizeStreamingLatency;
+
+  const stability = optionalNumber(process.env.ARIA_VOICE_STABILITY, 0, 1);
+  if (stability != null) voice.stability = stability;
+
+  const similarityBoost = optionalNumber(process.env.ARIA_VOICE_SIMILARITY_BOOST, 0, 1);
+  if (similarityBoost != null) voice.similarityBoost = similarityBoost;
+
+  const style = optionalNumber(process.env.ARIA_VOICE_STYLE, 0, 1);
+  if (style != null) voice.style = style;
+
+  const speed = optionalNumber(process.env.ARIA_VOICE_SPEED, 0.7, 1.2);
+  if (speed != null) voice.speed = speed;
+
+  const useSpeakerBoost = optionalBool(process.env.ARIA_VOICE_USE_SPEAKER_BOOST);
+  if (useSpeakerBoost != null) voice.useSpeakerBoost = useSpeakerBoost;
+
+  return voice;
+}
+
 export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOptions): Record<string, unknown> {
   const voiceName = config.agentNames.voice;
   const system = opts.styleContext ? `${systemPrompt(config)}\n\n${opts.styleContext}` : systemPrompt(config);
   const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini";
 
   const tools: Record<string, unknown>[] = [
-    serverTool(opts, "getCallerContext", "Load any prior cross-channel history for the current caller. Call once at the start of the call. Takes no arguments.", {
-      type: "object",
-      properties: {},
-    }),
-    serverTool(opts, "lookupProperty", "Look up live details for a specific property address the caller asks about.", {
-      type: "object",
-      properties: {
-        address: { type: "string", description: "The full or partial street address the caller mentioned." },
-        message: { type: "string", description: "Optional: what exactly the caller wants to know." },
-      },
-      required: ["address"],
-    }),
-    serverTool(opts, "searchProperties", "Find matching listings when the caller describes criteria instead of one address (area, beds, baths, budget).", {
-      type: "object",
-      properties: {
-        area: { type: "string", description: "City or neighborhood." },
-        query: { type: "string", description: "Free-text of what they want." },
-        beds: { type: "number" },
-        baths: { type: "number" },
-        minPrice: { type: "number" },
-        maxPrice: { type: "number" },
-      },
-    }),
-    serverTool(opts, "qualifyLead", "Capture the caller's lead details once known.", {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        email: { type: "string" },
-        role: { type: "string", enum: ["buyer", "seller", "renter", "investor"] },
-        budget: { type: "string" },
-        timeline: { type: "string" },
-        area: { type: "string" },
-        bedrooms: { type: "string", description: "Bedroom preference, e.g. 3 bed." },
-        bathrooms: { type: "string", description: "Bathroom preference, e.g. 2.5 bath." },
-        sell_before_buy: { type: "string", enum: ["yes", "no", "unknown"] },
-        preferred_channel: { type: "string", enum: ["voice", "sms", "email"], description: "How the caller prefers follow-up." },
-        property: { type: "string", description: "Address or listing they're interested in." },
-        call_consent: { type: "string", description: "yes/no — may we call them back." },
-        sms_consent: { type: "string", description: "yes/no — may we text them." },
-      },
-    }),
-    serverTool(opts, "bookAppointment", "Book a showing or consultation. Confirm date and time verbally before calling this.", {
-      type: "object",
-      properties: {
-        date: { type: "string", description: "ISO date, e.g. 2026-06-20." },
-        time: { type: "string", description: "Local time, e.g. 10:00 AM." },
-        duration_minutes: { type: "number" },
-        property_address: { type: "string" },
-        caller_name: { type: "string" },
-        caller_phone: { type: "string" },
-        caller_email: { type: "string" },
-        notes: { type: "string" },
-        appointment_type: { type: "string", enum: ["showing", "consultation", "listing_appt", "follow_up"] },
-      },
-      required: ["date", "time", "caller_phone"],
-    }),
-    serverTool(opts, "cancelAppointment", "Cancel an existing appointment. Prefer appointment_id from getCallerContext.", {
-      type: "object",
-      properties: {
-        appointment_id: { type: "string" },
-        caller_phone: { type: "string" },
-        reason: { type: "string" },
-      },
-    }),
-    serverTool(opts, "rescheduleAppointment", "Move an existing appointment to a new date and time.", {
-      type: "object",
-      properties: {
-        appointment_id: { type: "string" },
-        caller_phone: { type: "string" },
-        new_date: { type: "string" },
-        new_time: { type: "string" },
-        notes: { type: "string" },
-      },
-      required: ["new_date", "new_time"],
-    }),
-    serverTool(opts, "scheduleShowing", "Book, cancel, or reschedule a property showing for the caller.", {
-      type: "object",
-      properties: {
-        action: { type: "string", enum: ["book", "cancel", "reschedule"], description: "Defaults to book." },
-        startTime: { type: "string", description: "ISO 8601 start time for a new booking." },
-        endTime: { type: "string", description: "Optional ISO 8601 end time." },
-        newStartTime: { type: "string", description: "ISO 8601 new time when rescheduling." },
-        address: { type: "string", description: "Property address for the showing." },
-        name: { type: "string" },
-        email: { type: "string" },
-      },
-    }),
-    serverTool(opts, "syncToCrm", "Save the caller and a short note to the CRM. Call when wrapping up.", {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        email: { type: "string" },
-        note: { type: "string", description: "Short summary of the call to log on the contact." },
-      },
-    }),
     {
       type: "transferCall",
+      function: {
+        name: "transferToHuman",
+        description: "Transfer the call to a human team member when the caller asks for a person or raises a sensitive issue.",
+      },
       destinations: [
         {
           type: "number",
@@ -183,27 +173,31 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
         },
       ],
     },
-    { type: "endCall" },
+    {
+      type: "endCall",
+      function: {
+        name: "endCall",
+        description: "End the call when the conversation is complete.",
+      },
+    },
   ];
 
   const assistant: Record<string, unknown> = {
     name: `${voiceName} — ${config.clientName}`,
     firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
+    startSpeakingPlan: {
+      waitSeconds: 0.5,
+    },
     model: {
       provider: modelProviderFor(modelName, opts.respondProvider || process.env.ARIA_MODEL_PROVIDER),
       model: modelName,
       messages: [{ role: "system", content: system }],
       tools,
     },
-    server: { url: toolUrl(opts, "") },
   };
 
-  if (config.voiceId) {
-    assistant.voice = {
-      provider: process.env.ARIA_VOICE_PROVIDER || "11labs",
-      voiceId: config.voiceId,
-    };
-  }
+  const voice = buildVoiceConfig(config);
+  if (voice) assistant.voice = voice;
 
   return assistant;
 }
