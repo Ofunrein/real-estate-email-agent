@@ -438,11 +438,14 @@ function propertyMatchesCriteria(property: SheetRow, criteria: PropertySearchCri
   if (!terms.length && tokens.length && !hasStructuredCriteria && !tokens.some((token) => haystack.includes(token))) return false;
 
   if (requestedBeds != null && beds != null && beds < requestedBeds) return false;
+  if (requestedBeds != null && beds == null) return false;
   if (requestedBaths != null && baths != null && baths < requestedBaths) return false;
+  if (requestedBaths != null && baths == null) return false;
   if (referenceMinBeds != null && beds != null && beds < referenceMinBeds) return false;
   if (referenceMaxBeds != null && beds != null && beds > referenceMaxBeds) return false;
   if (referenceMinBaths != null && baths != null && baths < referenceMinBaths) return false;
   if (referenceMaxBaths != null && baths != null && baths > referenceMaxBaths) return false;
+  if ((minPrice != null || maxPrice != null) && price == null) return false;
   if (minPrice != null && price != null && price < minPrice) return false;
   if (maxPrice != null && price != null && price > maxPrice) return false;
 

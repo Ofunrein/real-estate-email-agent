@@ -107,12 +107,25 @@ function combinedInboundMessage(events: Record<string, string>[] = [], currentMe
   return messages.slice(-5).join("\n");
 }
 
+function normalizeFollowupText(message = ""): string {
+  return message
+    .replace(/\boptiosn\b/gi, "options")
+    .replace(/\boptoins\b/gi, "options")
+    .replace(/\boptons\b/gi, "options")
+    .replace(/\bsimiliar\b/gi, "similar")
+    .replace(/\bsimliar\b/gi, "similar")
+    .replace(/\bmroe\b/gi, "more")
+    .replace(/\bdetials\b/gi, "details");
+}
+
 function referencesPriorProperties(message = ""): boolean {
-  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(message);
+  const normalized = normalizeFollowupText(message);
+  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(normalized);
 }
 
 function wantsRelatedProperties(message = ""): boolean {
-  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(message);
+  const normalized = normalizeFollowupText(message);
+  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(normalized);
 }
 
 function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPropertySearchIntent>): boolean {
@@ -120,13 +133,22 @@ function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPro
 }
 
 function ordinalReferenceIndex(message = ""): number | null {
-  if (/\b(first|1st|#\s*1|number\s+1|one)\b/i.test(message)) return 0;
-  if (/\b(second|2nd|#\s*2|number\s+2|two)\b/i.test(message)) return 1;
-  if (/\b(third|3rd|#\s*3|number\s+3|three)\b/i.test(message)) return 2;
+  const normalized = normalizeFollowupText(message);
+  if (/\b(first|1st|#\s*1|number\s+1|one)\b/i.test(normalized)) return 0;
+  if (/\b(second|2nd|#\s*2|number\s+2|two)\b/i.test(normalized)) return 1;
+  if (/\b(third|3rd|#\s*3|number\s+3|three)\b/i.test(normalized)) return 2;
   return null;
 }
 
-function recentOutboundAddresses(events: Record<string, string>[] = []): string[] {
+function recentOutboundAddresses(events: Record<string, string>[] = [], options: { preferDetailPrompt?: boolean } = {}): string[] {
+  if (options.preferDetailPrompt) {
+    for (const event of [...events].reverse()) {
+      if (event.direction !== "outbound") continue;
+      if (!/\bfind similar options\b/i.test(event.message_text || "")) continue;
+      const addresses = extractTheoListedPropertyAddresses(event.message_text || "");
+      if (addresses.length) return addresses.slice(0, 1);
+    }
+  }
   for (const event of [...events].reverse()) {
     if (event.direction !== "outbound") continue;
     const addresses = extractTheoListedPropertyAddresses(event.message_text || "");
@@ -405,15 +427,18 @@ export async function POST(request: NextRequest) {
     const freshPropertySearch = hasFreshPropertySearchCriteria(currentMessageSearch);
     const requestedAddresses = extractTheoListedPropertyAddresses(messageForReply);
     const ordinalIndex = ordinalReferenceIndex(messageForReply);
+    const normalizedReply = normalizeFollowupText(messageForReply);
+    const preferDetailPrompt = /\bsimilar|same spec|same specs|other|another|alternative|options?\b/i.test(normalizedReply);
     const ordinalAddresses = ordinalIndex == null ? [] : recentOutboundAddresses(recentEvents).slice(ordinalIndex, ordinalIndex + 1);
     const referencedInboundAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && referencesPriorProperties(messageForReply)
       ? recentInboundAddresses(recentEvents)
       : [];
     const priorAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
-      ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
+      ? recentOutboundAddresses(recentEvents, { preferDetailPrompt })
       : [];
     const exactAddresses = requestedAddresses.length ? requestedAddresses : ordinalAddresses.length ? ordinalAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
     const relatedRequest = wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
+    const candidateSearchMode = relatedRequest && propertySearch.mode === "general" ? "similar" : propertySearch.mode;
     const referenceProperties = relatedRequest && !requestedAddresses.length && exactAddresses.length
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : [];
@@ -421,6 +446,7 @@ export async function POST(request: NextRequest) {
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : await findCandidatePropertiesFromDatabase({
         ...propertySearch,
+        mode: candidateSearchMode,
         query: propertyQuery,
         reference: referenceProperties[0],
         excludeAddresses: referenceProperties.map((property) => property.address).filter(Boolean),
@@ -431,7 +457,7 @@ export async function POST(request: NextRequest) {
       referencePropertyRows: referenceProperties.length,
       relatedRequest,
       propertyQuery,
-      propertySearchMode: propertySearch.mode,
+      propertySearchMode: candidateSearchMode,
       propertySearchArea: propertySearch.area || "",
       freshPropertySearch,
       ordinalIndex,

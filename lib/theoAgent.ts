@@ -86,6 +86,17 @@ function normalize(value?: string): string {
   return cleanText(value).toLowerCase();
 }
 
+function normalizeFollowupText(value?: string): string {
+  return cleanText(value)
+    .replace(/\boptiosn\b/gi, "options")
+    .replace(/\boptoins\b/gi, "options")
+    .replace(/\boptons\b/gi, "options")
+    .replace(/\bsimiliar\b/gi, "similar")
+    .replace(/\bsimliar\b/gi, "similar")
+    .replace(/\bmroe\b/gi, "more")
+    .replace(/\bdetials\b/gi, "details");
+}
+
 function truncateSms(value: string, limit = SMS_LIMIT): string {
   const clean = cleanSmsReply(value);
   if (clean.length <= limit) return clean;
@@ -139,11 +150,11 @@ function smsImageMode(): string {
 }
 
 function wantsPropertyImage(message: string): boolean {
-  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(message);
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me)\b/i.test(normalizeFollowupText(message));
 }
 
 function wantsPropertyLinks(message: string): boolean {
-  return /\b(link|links|url|urls|website|listing page|zillow)\b/i.test(message);
+  return /\b(link|links|url|urls|website|listing page|zillow)\b/i.test(normalizeFollowupText(message));
 }
 
 function valuationUrl(): string {
@@ -164,23 +175,26 @@ function latestMessageAsksForSellerValuation(message: string): boolean {
 }
 
 function asksForSafePropertyFact(message: string): boolean {
-  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|tell me more|more about|more details|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(message);
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|tell me more|more about|more details|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(normalizeFollowupText(message));
 }
 
 function asksForAlternativeProperties(message: string): boolean {
-  return /\b(other|another|similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternative|options?|properties|homes?|listings?)\b/i.test(message)
-    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(message);
+  const normalized = normalizeFollowupText(message);
+  return /\b(other|another|similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternative|options?|properties|homes?|listings?)\b/i.test(normalized)
+    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(normalized);
 }
 
 function asksForPropertyOptions(message: string): boolean {
-  return asksForAlternativeProperties(message)
-    || /\b(available|availability|have available|what (?:do )?you have|options?|properties|apartments?|condos?|rentals?|listings?)\b/i.test(message)
-    || /\b(under|below|less than|max|maximum|up to)\s+\$?\s*\d/i.test(message)
-    || /\b(something close|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|sticking to \d+\s*(?:bed|bd|bedroom)|find .{0,30}\d+\s*(?:bed|bd|bedroom)|want .{0,30}\d+\s*(?:bed|bd|bedroom))\b/i.test(message);
+  const normalized = normalizeFollowupText(message);
+  return asksForAlternativeProperties(normalized)
+    || /\b(available|availability|have available|what (?:do )?you have|options?|properties|apartments?|condos?|rentals?|listings?)\b/i.test(normalized)
+    || /\b(under|below|less than|max|maximum|up to)\s+\$?\s*\d/i.test(normalized)
+    || /\b(something close|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|sticking to \d+\s*(?:bed|bd|bedroom)|find .{0,30}\d+\s*(?:bed|bd|bedroom)|want .{0,30}\d+\s*(?:bed|bd|bedroom))\b/i.test(normalized);
 }
 
 function asksForPropertyDetails(message: string): boolean {
-  return /\b(tell me more|more about|more details|details|info|information|what about|how about|first one|second one|third one|1st one|2nd one|3rd one|that one|this one|it)\b/i.test(message)
+  const normalized = normalizeFollowupText(message);
+  return /\b(tell me more|more about|more details|details|info|information|what about|how about|first one|second one|third one|1st one|2nd one|3rd one|that one|this one|it)\b/i.test(normalized)
     && !asksForPropertyOptions(message);
 }
 
@@ -333,6 +347,14 @@ function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: 
   ].filter(Boolean).join("\n\n");
 }
 
+function formatTheoNoPropertyOptions(message: string): string {
+  const normalized = normalizeFollowupText(message);
+  if (/\bsimilar|same spec|same specs|other|another|alternative|options?\b/i.test(normalized)) {
+    return "I don't see a clean similar match in the saved listings yet. Do you want me to widen it by price, location, or bedroom count?";
+  }
+  return "I don't see a clean matching listing in the saved inventory yet. Send me the area, budget, and bedroom count and I'll narrow it down.";
+}
+
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
   if (!mediaImagesEnabled(context.source)) return [];
   if (classification.intent === "spam") return [];
@@ -351,7 +373,7 @@ export function selectTheoMediaUrls(context: TheoReplyContext, classification: T
 }
 
 export function classifyTheoMessage(message: string): TheoClassification {
-  const text = normalize(message);
+  const text = normalize(normalizeFollowupText(message));
   if (!text || SPAM_PATTERNS.some((pattern) => pattern.test(text))) {
     return { intent: "spam", leadRole: "unknown", handoffReason: "Spam or empty SMS", status: "needs_human" };
   }
@@ -477,8 +499,21 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       metrics,
     };
   }
+  if (asksForPropertyOptions(context.message) && !optionsReply && !latestMessageHasSensitiveTopic(context.message)) {
+    return {
+      classification,
+      reply: formatTheoNoPropertyOptions(context.message),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "property_options_no_match_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
 
   const detailReply = asksForPropertyDetails(context.message)
+    && !wantsPropertyImage(context.message)
     && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
     ? formatTheoPropertyDetails(context.properties)
     : "";
