@@ -175,7 +175,7 @@ function latestMessageAsksForSellerValuation(message: string): boolean {
 }
 
 function asksForSafePropertyFact(message: string): boolean {
-  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|tell me more|more about|more details|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|listing|link|agent)\b/i.test(normalizeFollowupText(message));
+  return /\b(photo|photos|picture|pictures|image|images|pic|pics|look like|see it|show me|tell me more|more about|more details|price|bed|beds|bath|baths|sqft|square feet|year built|built|features|details|address|zip|status|available|availability|still available|listing|link|agent|pet|pets|dog|cat|parking|garage|pool|washer|dryer|laundry|furnished|utilities|deposit|fee|fees|hoa|lease|move.?in|amenit(?:y|ies))\b/i.test(normalizeFollowupText(message));
 }
 
 function asksForAlternativeProperties(message: string): boolean {
@@ -186,6 +186,7 @@ function asksForAlternativeProperties(message: string): boolean {
 
 function asksForPropertyOptions(message: string): boolean {
   const normalized = normalizeFollowupText(message);
+  if (asksForPropertyAvailability(normalized) && /\b(still|it|this|that|status|leased|sold|pending)\b/i.test(normalized)) return false;
   return asksForAlternativeProperties(normalized)
     || /\b(available|availability|have available|what (?:do )?you have|options?|properties|apartments?|condos?|rentals?|listings?)\b/i.test(normalized)
     || /\b(under|below|less than|max|maximum|up to)\s+\$?\s*\d/i.test(normalized)
@@ -196,6 +197,32 @@ function asksForPropertyDetails(message: string): boolean {
   const normalized = normalizeFollowupText(message);
   return /\b(tell me more|more about|more details|details|info|information|what about|how about|first one|second one|third one|1st one|2nd one|3rd one|that one|this one|it)\b/i.test(normalized)
     && !asksForPropertyOptions(message);
+}
+
+function asksForPropertyShowing(message: string): boolean {
+  return /\b(tour|showing|show it|see it|view it|walk.?through|visit|come see|book|schedule|appointment)\b/i.test(normalizeFollowupText(message));
+}
+
+function asksForPropertyAvailability(message: string): boolean {
+  return /\b(available|availability|still available|open|on market|status|leased|sold|pending)\b/i.test(normalizeFollowupText(message));
+}
+
+function asksForPropertyComparison(message: string): boolean {
+  return /\b(cheapest|lowest|least expensive|most affordable|highest|most expensive|largest|biggest|smallest|compare|which one|best option|best deal|better)\b/i.test(normalizeFollowupText(message));
+}
+
+function asksForPropertyAmenities(message: string): boolean {
+  return /\b(pet|pets|dog|cat|parking|garage|pool|washer|dryer|laundry|furnished|utilities|deposit|fee|fees|hoa|lease|move.?in|amenit(?:y|ies)|yard|balcony|patio|gym|fitness|elevator|storage)\b/i.test(normalizeFollowupText(message));
+}
+
+function asksForPropertySafeInquiry(message: string): boolean {
+  const normalized = normalizeFollowupText(message);
+  return asksForSafePropertyFact(normalized)
+    || asksForPropertyShowing(normalized)
+    || asksForPropertyAvailability(normalized)
+    || asksForPropertyComparison(normalized)
+    || asksForPropertyAmenities(normalized)
+    || /\b(send|share|text).{0,25}\b(first|second|third|1st|2nd|3rd|that|this|it)\b/i.test(normalized);
 }
 
 function latestMessageHasSensitiveTopic(message: string): boolean {
@@ -224,6 +251,15 @@ function formatPrice(value?: string): string {
   if (!Number.isFinite(amount)) return cleanText(value);
   const price = `$${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   return /\b(per\s*month|monthly)\b|\/\s*(mo|month)\b/i.test(raw) ? `${price} per month` : price;
+}
+
+function numericValue(value?: string): number | null {
+  const raw = cleanText(value);
+  if (!raw) return null;
+  const match = raw.replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const amount = Number(match[0]);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function formatFacts(property: SheetRow): string {
@@ -322,6 +358,112 @@ function formatTheoPropertyDetails(properties: SheetRow[] = []): string {
     property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
     "Want me to send photos, book a showing, or find similar options?",
   ].filter(Boolean).join("\n\n");
+}
+
+function requestedAmenityLabels(message: string): string[] {
+  const text = normalizeFollowupText(message);
+  const checks: Array<[RegExp, string]> = [
+    [/\bpet|pets|dog|cat\b/i, "pets"],
+    [/\bparking|garage\b/i, "parking"],
+    [/\bpool\b/i, "pool"],
+    [/\bwasher|dryer|laundry\b/i, "laundry"],
+    [/\bfurnished\b/i, "furnished"],
+    [/\butilities\b/i, "utilities"],
+    [/\bdeposit\b/i, "deposit"],
+    [/\bfee|fees\b/i, "fees"],
+    [/\bhoa\b/i, "HOA"],
+    [/\blease\b/i, "lease terms"],
+    [/\bmove.?in\b/i, "move-in"],
+    [/\byard\b/i, "yard"],
+    [/\bbalcony|patio\b/i, "balcony/patio"],
+    [/\bgym|fitness\b/i, "fitness amenities"],
+    [/\belevator\b/i, "elevator"],
+    [/\bstorage\b/i, "storage"],
+  ];
+  return checks.filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
+}
+
+function formatTheoAvailabilityAnswer(property: SheetRow): string {
+  const status = cleanText(property.status);
+  if (status) return `Status for ${cleanText(property.address)}: ${status}.`;
+  return `I have ${cleanText(property.address)} in the saved listing inventory, but I don't have a live availability status field for it yet. I can still send the listing, photos, or help book a showing so the team can confirm access.`;
+}
+
+function formatTheoAmenityAnswer(property: SheetRow, message: string): string {
+  const requested = requestedAmenityLabels(message);
+  if (!requested.length) return "";
+  const listingText = cleanText([property.features, property.description].filter(Boolean).join(" "));
+  const mentioned = requested.filter((label) => new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\/.*/, "")}\\b`, "i").test(listingText));
+  const unknown = requested.filter((label) => !mentioned.includes(label));
+  const knownLine = mentioned.length
+    ? `The saved listing text mentions: ${mentioned.join(", ")}.${unknown.length ? ` I don't see ${unknown.join(", ")} confirmed in the saved listing fields yet.` : ""}`
+    : `I don't see ${requested.join(", ")} confirmed in the saved listing fields yet.`;
+  return [
+    `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`,
+    knownLine,
+    listingText ? `Listing notes: ${listingText.slice(0, 220)}` : "",
+    "Want me to send the listing/photos or find options that clearly match that?",
+  ].filter(Boolean).join("\n\n");
+}
+
+function formatTheoShowingRequest(properties: SheetRow[] = []): string {
+  const property = properties.find((row) => cleanText(row.address));
+  const propertyLine = property
+    ? `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`
+    : "";
+  return [
+    propertyLine,
+    "I can help with that. What day and time works best, morning or afternoon?",
+  ].filter(Boolean).join("\n\n");
+}
+
+function formatTheoPropertyComparison(properties: SheetRow[] = [], message: string): string {
+  const usable = properties.filter((property) => cleanText(property.address));
+  if (!usable.length) return "";
+  const normalized = normalizeFollowupText(message);
+  let label = "Here is the cleanest comparison from the saved listings:";
+  let sorted = [...usable];
+  if (/\b(cheapest|lowest|least expensive|most affordable|best deal|better)\b/i.test(normalized)) {
+    sorted = sorted
+      .filter((property) => numericValue(property.price) != null)
+      .sort((a, b) => (numericValue(a.price) || 0) - (numericValue(b.price) || 0));
+    label = "Lowest listed price from these options:";
+  } else if (/\b(highest|most expensive)\b/i.test(normalized)) {
+    sorted = sorted
+      .filter((property) => numericValue(property.price) != null)
+      .sort((a, b) => (numericValue(b.price) || 0) - (numericValue(a.price) || 0));
+    label = "Highest listed price from these options:";
+  } else if (/\b(largest|biggest)\b/i.test(normalized)) {
+    sorted = sorted
+      .filter((property) => numericValue(property.sqft) != null)
+      .sort((a, b) => (numericValue(b.sqft) || 0) - (numericValue(a.sqft) || 0));
+    label = "Largest saved listing from these options:";
+  } else if (/\b(smallest)\b/i.test(normalized)) {
+    sorted = sorted
+      .filter((property) => numericValue(property.sqft) != null)
+      .sort((a, b) => (numericValue(a.sqft) || 0) - (numericValue(b.sqft) || 0));
+    label = "Smallest saved listing from these options:";
+  }
+  if (!sorted.length) sorted = usable;
+  const lines = sorted.slice(0, 3).map((property, index) => `${index + 1}. ${cleanText(property.address)}${formatOptionFacts(property) ? ` - ${formatOptionFacts(property)}` : ""}`);
+  return [
+    label,
+    lines.join("\n"),
+    "Want photos, the listing link, or similar options for one of these?",
+  ].join("\n\n");
+}
+
+function formatTheoPropertySafeAnswer(properties: SheetRow[] = [], message: string): string {
+  const property = properties.find((row) => cleanText(row.address));
+  if (asksForPropertyShowing(message)) return formatTheoShowingRequest(properties);
+  if (asksForPropertyComparison(message) && properties.length > 1) return formatTheoPropertyComparison(properties, message);
+  if (!property) return "";
+  if (asksForPropertyAvailability(message)) return [
+    formatTheoAvailabilityAnswer(property),
+    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
+  ].filter(Boolean).join("\n\n");
+  if (asksForPropertyAmenities(message)) return formatTheoAmenityAnswer(property, message);
+  return formatTheoPropertyDetails(properties);
 }
 
 function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification): string {
@@ -464,6 +606,15 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       recommendedNextAction: "reply_and_qualify",
     };
   }
+  if (asksForPropertySafeInquiry(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
+    classification = {
+      ...classification,
+      intent: asksForPropertyShowing(context.message) ? "showing_request" : "property_details",
+      status: "ready_to_reply",
+      handoffReason: "",
+      recommendedNextAction: asksForPropertyShowing(context.message) ? "collect_showing_time" : "reply_and_qualify",
+    };
+  }
   const lead = context.lead || {};
   const shouldReply = shouldTheoAutoReply(classification, lead);
 
@@ -506,6 +657,41 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       mediaUrls: [],
       shouldSend: true,
       aiAction: "property_options_no_match_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
+
+  const safePropertyReply = asksForPropertySafeInquiry(context.message)
+    && !wantsPropertyImage(context.message)
+    && !latestMessageHasSensitiveTopic(context.message)
+    && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
+    ? formatTheoPropertySafeAnswer(context.properties, context.message)
+    : "";
+  if (safePropertyReply) {
+    return {
+      classification,
+      reply: truncateSms(safePropertyReply, LINK_SMS_LIMIT),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: asksForPropertyShowing(context.message)
+        ? "property_showing_reply_ready"
+        : asksForPropertyComparison(context.message)
+          ? "property_comparison_reply_ready"
+          : "property_safe_inquiry_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
+  if (asksForPropertySafeInquiry(context.message) && !latestMessageHasSensitiveTopic(context.message) && !(context.properties || []).length) {
+    return {
+      classification,
+      reply: "I can help with that. Send me the area, budget, and bedroom count, or tell me which listing you mean, and I'll narrow it down.",
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "property_safe_inquiry_needs_context",
       handoffReason: "",
       status: "ready_to_reply",
       metrics,
