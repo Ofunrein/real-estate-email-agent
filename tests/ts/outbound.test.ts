@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { evaluateFollowups, outboundAttemptSmsBody, placeOutboundCall, selectVoiceFollowups, sendOutboundAttemptSms, type LeadWithEvents } from "@/lib/outbound";
+import { evaluateFollowups, outboundAttemptSmsBody, outboundFirstMessage, placeOutboundCall, selectVoiceFollowups, sendOutboundAttemptSms, type LeadWithEvents } from "@/lib/outbound";
 import { resolveClientConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -41,11 +41,22 @@ test("evaluateFollowups: returns a decision per lead", () => {
   assert.equal(decisions[0].decision.action, "stop");
 });
 
-test("placeOutboundCall: posts assistant + phone + customer", async () => {
+test("placeOutboundCall: posts assistant + customer + outbound overrides", async () => {
   let body: Record<string, unknown> | null = null;
   const result = await placeOutboundCall(
     { apiKey: "k", assistantId: "a1", phoneNumberId: "p1" },
-    { customerNumber: "+15125550000" },
+    {
+      customerNumber: "+15125550000",
+      leadName: "Maya Chen",
+      leadEmail: "maya@example.com",
+      companyName: "Austin Realty",
+      agentName: "Aria",
+      callReason: "the Mueller listings",
+      leadContext: "Asked for Mueller condos by SMS.",
+      preferredChannel: "sms",
+      clientId: "austin-realty",
+      trigger: "followup_queue",
+    },
     async (b) => {
       body = b;
       return { ok: true, id: "call_x" };
@@ -55,7 +66,26 @@ test("placeOutboundCall: posts assistant + phone + customer", async () => {
   assert.equal(result.id, "call_x");
   assert.equal(body!.assistantId, "a1");
   assert.equal(body!.phoneNumberId, "p1");
-  assert.deepEqual(body!.customer, { number: "+15125550000" });
+  assert.deepEqual(body!.customer, { number: "+15125550000", name: "Maya Chen", email: "maya@example.com" });
+  assert.deepEqual(body!.metadata, {
+    direction: "outbound",
+    trigger: "followup_queue",
+    clientId: "austin-realty",
+    leadPhone: "+15125550000",
+    leadEmail: "maya@example.com",
+  });
+  const overrides = body!.assistantOverrides as Record<string, unknown>;
+  assert.equal(overrides.firstMessageMode, "assistant-speaks-first");
+  assert.equal(overrides.firstMessage, "{{outboundFirstMessage}}");
+  assert.deepEqual(overrides.variableValues, {
+    outboundFirstMessage: "Hi Maya Chen, this is Aria with Austin Realty. I'm calling about the Mueller listings. Do you have a quick minute?",
+    leadName: "Maya Chen",
+    clientName: "Austin Realty",
+    agentName: "Aria",
+    callReason: "the Mueller listings",
+    leadContext: "Asked for Mueller condos by SMS.",
+    preferredChannel: "sms",
+  });
 });
 
 test("placeOutboundCall: missing config fails fast", async () => {
@@ -67,6 +97,27 @@ test("placeOutboundCall: missing config fails fast", async () => {
 test("placeOutboundCall: missing number fails", async () => {
   const result = await placeOutboundCall({ apiKey: "k", assistantId: "a", phoneNumberId: "p" }, { customerNumber: "" });
   assert.equal(result.ok, false);
+});
+
+test("outboundFirstMessage: named and unknown lead openers", () => {
+  assert.equal(
+    outboundFirstMessage({
+      customerNumber: "+15125550000",
+      leadName: "Maya",
+      agentName: "Aria",
+      companyName: "Austin Realty",
+      callReason: "your showing request",
+    }),
+    "Hi Maya, this is Aria with Austin Realty. I'm calling about your showing request. Do you have a quick minute?",
+  );
+  assert.equal(
+    outboundFirstMessage({
+      customerNumber: "+15125550000",
+      agentName: "Aria",
+      companyName: "Austin Realty",
+    }),
+    "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+  );
 });
 
 test("outboundAttemptSmsBody: covers the text follow-up channel", () => {

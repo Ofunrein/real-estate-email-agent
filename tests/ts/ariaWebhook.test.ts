@@ -71,6 +71,55 @@ test("handleAriaEndOfCall: notifies on transfer endedReason", async () => {
   assert.deepEqual(notified, ["transfer_to_human"]);
 });
 
+test("handleAriaEndOfCall: persists outbound direction from Vapi call type", async () => {
+  let savedDirection = "";
+  let recordedDirection = "";
+  await handleAriaEndOfCall(
+    {
+      message: {
+        type: "end-of-call-report",
+        call: { id: "call_out", type: "outboundPhoneCall", customer: { number: "+15125550000" } },
+        summary: "Outbound follow-up completed.",
+      },
+    },
+    {
+      upsertCall: async (call) => {
+        savedDirection = call.direction || "";
+      },
+      record: async (input) => {
+        recordedDirection = input.direction || "";
+      },
+      notify: async () => undefined,
+    },
+  );
+  assert.equal(savedDirection, "outbound");
+  assert.equal(recordedDirection, "outbound");
+});
+
+test("handleAriaEndOfCall: defaults to inbound direction", async () => {
+  let savedDirection = "";
+  let recordedDirection = "";
+  await handleAriaEndOfCall(
+    {
+      message: {
+        type: "end-of-call-report",
+        call: { id: "call_in", customer: { number: "+15125550000" } },
+      },
+    },
+    {
+      upsertCall: async (call) => {
+        savedDirection = call.direction || "";
+      },
+      record: async (input) => {
+        recordedDirection = input.direction || "";
+      },
+      notify: async () => undefined,
+    },
+  );
+  assert.equal(savedDirection, "inbound");
+  assert.equal(recordedDirection, "inbound");
+});
+
 test("handleAriaEndOfCall: no notify on normal hangup", async () => {
   const notified: string[] = [];
   await handleAriaEndOfCall(
