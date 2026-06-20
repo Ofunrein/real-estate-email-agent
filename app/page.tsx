@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+const TEAM_NAME = process.env.TEAM_NAME || process.env.CLIENT_NAME || "";
+
 export default async function Home() {
   const session = await auth();
 
@@ -22,6 +24,7 @@ export default async function Home() {
         data={composeInboxData(leads, events, properties, voiceCalls)}
         initialRefreshedAt={new Date().toISOString()}
         sourceLabel={sourceLabel}
+        teamName={TEAM_NAME}
         userEmail={session?.user?.email ?? ""}
       />
     );
@@ -32,6 +35,7 @@ export default async function Home() {
         data={composeInboxData([], [], [])}
         initialRefreshedAt={new Date().toISOString()}
         loadError={message}
+        teamName={TEAM_NAME}
         userEmail={session?.user?.email ?? ""}
       />
     );
