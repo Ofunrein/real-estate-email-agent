@@ -1,7 +1,6 @@
-import { AgentInboxClient } from "@/components/AgentInboxClient";
+import { InboxApp } from "@/components/inbox-mui/InboxApp";
 import { auth, isAllowedAuthEmail } from "@/auth";
 import { loadAgentInboxData } from "@/lib/dataSource";
-import { databaseEnabled } from "@/lib/database";
 import { composeInboxData } from "@/lib/inboxData";
 import { redirect } from "next/navigation";
 
@@ -18,12 +17,9 @@ export default async function Home() {
 
   try {
     const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
-    const sourceLabel = databaseEnabled() ? "Database" : "Google Sheets";
     return (
-      <AgentInboxClient
+      <InboxApp
         data={composeInboxData(leads, events, properties, voiceCalls)}
-        initialRefreshedAt={new Date().toISOString()}
-        sourceLabel={sourceLabel}
         teamName={TEAM_NAME}
         userEmail={session?.user?.email ?? ""}
       />
@@ -31,9 +27,8 @@ export default async function Home() {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load Google Sheets data.";
     return (
-      <AgentInboxClient
+      <InboxApp
         data={composeInboxData([], [], [])}
-        initialRefreshedAt={new Date().toISOString()}
         loadError={message}
         teamName={TEAM_NAME}
         userEmail={session?.user?.email ?? ""}
