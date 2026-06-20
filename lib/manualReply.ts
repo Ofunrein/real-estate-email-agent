@@ -1,7 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { google } from "googleapis";
-
+import { createIrisGmailClient, sendGmailReply } from "@/lib/gmailConnection";
 import { sendTheoSms } from "@/lib/twilioSms";
 
 export type EmailAttachment = { filename: string; contentType: string; path: string };
@@ -19,10 +16,6 @@ export type ManualReplyInput = {
 };
 
 export type ManualReplyResult = { ok: true } | { ok: false; error: string };
-
-function validGmailThreadId(value?: string) {
-  return Boolean(value && /^[a-f0-9]{8,}$/i.test(value.trim()));
-}
 
 export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
   try {
@@ -75,69 +68,8 @@ async function sendWhatsApp(input: ManualReplyInput): Promise<ManualReplyResult>
   return { ok: true };
 }
 
-// Reuse the same OAuth2 credentials.json/token.json the sheets client uses.
-// token.json scope is gmail.modify, which covers send.
-async function gmailClient() {
-  const credentialsPath = path.resolve(process.cwd(), process.env.GMAIL_CREDENTIALS_PATH || "credentials.json");
-  const tokenPath = path.resolve(process.cwd(), process.env.GMAIL_TOKEN_PATH || "token.json");
-  const creds = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
-  const token = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
-  const app = creds.installed || creds.web;
-  const auth = new google.auth.OAuth2(app.client_id, app.client_secret, app.redirect_uris?.[0]);
-  auth.setCredentials(token);
-  return google.gmail({ version: "v1", auth });
-}
-
 async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
-  const gmail = await gmailClient();
-  const subjectRaw = input.subject || "(no subject)";
-  const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
-  const boundary = `boundary_${Date.now().toString(36)}`;
-
-  const baseHeaders = [
-    `To: ${input.to}`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    ...(input.messageId
-      ? [`In-Reply-To: ${input.messageId}`, `References: ${((input.references || "") + " " + input.messageId).trim()}`]
-      : []),
-  ];
-
-  let raw: string;
-  if (!input.attachments?.length) {
-    // ponytail: plain-text when no attachments — saves bytes
-    const lines = [...baseHeaders, "Content-Type: text/plain; charset=utf-8", "", input.body];
-    raw = Buffer.from(lines.join("\r\n")).toString("base64url");
-  } else {
-    const parts: string[] = [
-      `--${boundary}`,
-      "Content-Type: text/plain; charset=utf-8",
-      "",
-      input.body,
-    ];
-    for (const att of input.attachments) {
-      const data = fs.readFileSync(att.path);
-      parts.push(
-        `--${boundary}`,
-        `Content-Type: ${att.contentType}`,
-        "Content-Transfer-Encoding: base64",
-        `Content-Disposition: attachment; filename="${att.filename}"`,
-        "",
-        data.toString("base64"),
-      );
-    }
-    parts.push(`--${boundary}--`);
-    const lines = [
-      ...baseHeaders,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      "",
-      ...parts,
-    ];
-    raw = Buffer.from(lines.join("\r\n")).toString("base64url");
-  }
-
-  const requestBody: { raw: string; threadId?: string } = { raw };
-  if (validGmailThreadId(input.threadId)) requestBody.threadId = input.threadId?.trim();
-  await gmail.users.messages.send({ userId: "me", requestBody });
+  const gmail = await createIrisGmailClient();
+  await sendGmailReply(gmail, input);
   return { ok: true };
 }

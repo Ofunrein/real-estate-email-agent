@@ -36,6 +36,19 @@ type View = "overview" | "email" | "sms" | "whatsapp" | "messenger" | "instagram
 
 const DASHBOARD_REFRESH_MS = 5000;
 
+type EmailAccountStatus = {
+  connected: boolean;
+  legacy_configured: boolean;
+  database_enabled: boolean;
+  accounts: Array<{
+    email: string;
+    is_default: boolean;
+    status: string;
+    last_error: string;
+    updated_at: string;
+  }>;
+};
+
 const channelViews: { key: View; label: string; agent: string; avatar: string; channel?: Channel }[] = [
   { key: "email", label: "Email", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "email" },
   { key: "sms", label: "SMS", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "sms" },
@@ -1075,6 +1088,50 @@ function viewTitle(view: View) {
   return view[0].toUpperCase() + view.slice(1);
 }
 
+function EmailAccountControl({
+  status,
+  loading,
+  error,
+}: {
+  status: EmailAccountStatus | null;
+  loading: boolean;
+  error: string;
+}) {
+  const defaultAccount = status?.accounts.find((account) => account.is_default) || status?.accounts[0];
+  const label = defaultAccount?.email
+    ? `Email: ${defaultAccount.email}`
+    : status?.legacy_configured
+      ? "Email: legacy token"
+      : "Email: not connected";
+  const state = error
+    ? error
+    : loading
+      ? "checking"
+      : defaultAccount?.status === "error"
+        ? defaultAccount.last_error || "needs reconnect"
+        : status?.connected || status?.legacy_configured
+          ? "ready"
+          : "connect mailbox";
+
+  return (
+    <div className="email-account-control">
+      <div className="email-account-copy">
+        <strong>{label}</strong>
+        <span>{state}</span>
+      </div>
+      <button
+        className="email-account-button"
+        onClick={() => {
+          window.location.href = "/api/settings/email-account/connect";
+        }}
+        type="button"
+      >
+        {defaultAccount ? "Change" : "Connect"}
+      </button>
+    </div>
+  );
+}
+
 export function AgentInboxClient({
   data,
   initialRefreshedAt = "",
@@ -1098,6 +1155,9 @@ export function AgentInboxClient({
   const [propertySearch, setPropertySearch] = useState("");
   const [selectedThreadKey, setSelectedThreadKey] = useState("");
   const [threadSearch, setThreadSearch] = useState("");
+  const [emailAccountStatus, setEmailAccountStatus] = useState<EmailAccountStatus | null>(null);
+  const [emailAccountLoading, setEmailAccountLoading] = useState(true);
+  const [emailAccountError, setEmailAccountError] = useState("");
   const effectiveLoadError = loadError || refreshError;
   const threadEntries = useMemo(() => Object.entries(dashboardData.threads), [dashboardData.threads]);
   const selectedChannel = channelViews.find((channel) => channel.key === view)?.channel;
@@ -1190,6 +1250,31 @@ export function AgentInboxClient({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEmailAccountStatus() {
+      try {
+        const response = await fetch(`/api/settings/email-account?ts=${Date.now()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Email account check failed with ${response.status}`);
+        const payload = await response.json() as EmailAccountStatus;
+        if (!cancelled) {
+          setEmailAccountStatus(payload);
+          setEmailAccountError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setEmailAccountError(error instanceof Error ? error.message : "Email account check failed");
+        }
+      } finally {
+        if (!cancelled) setEmailAccountLoading(false);
+      }
+    }
+    loadEmailAccountStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function updatePropertySort(key: PropertySortKey) {
     setPropertySort((current) => ({
       key,
@@ -1237,7 +1322,14 @@ export function AgentInboxClient({
       <main className="inbox-main">
         <header className="inbox-topbar">
           <span className="inbox-topbar-title">{selectedChannel ? selectedChannelLabel : viewTitle(view)}</span>
-          <SyncIndicator lastUpdated={lastRefreshedAt || null} isLive={!effectiveLoadError} />
+          <div className="inbox-topbar-actions">
+            <EmailAccountControl
+              error={emailAccountError}
+              loading={emailAccountLoading}
+              status={emailAccountStatus}
+            />
+            <SyncIndicator lastUpdated={lastRefreshedAt || null} isLive={!effectiveLoadError} />
+          </div>
         </header>
 
         {effectiveLoadError ? (
