@@ -1994,6 +1994,14 @@ time,
 /* ============ INBOX TOPBAR ============ */
 .inbox-topbar { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--sp-4); border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
 .inbox-topbar-title { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+.inbox-topbar-actions { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.email-account-control { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.email-account-copy { display: grid; gap: 1px; min-width: 0; text-align: right; }
+.email-account-copy strong { overflow: hidden; max-width: 220px; color: var(--text-primary); font-size: var(--text-xs); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.email-account-copy span { overflow: hidden; max-width: 220px; color: var(--text-muted); font-size: 10px; font-weight: 650; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.email-account-button { border: 1px solid var(--border); border-radius: 6px; background: var(--surface-raised); color: var(--text-primary); padding: 6px 9px; font-size: var(--text-xs); font-weight: 750; white-space: nowrap; }
+.email-account-button:hover,
+.email-account-button:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
 
 /* ============ OVERVIEW CHARTS ============ */
 .overview-charts {
@@ -2174,6 +2182,7 @@ time,
 
   /* Topbar title can be a touch smaller. */
   .inbox-topbar { padding: 0 var(--sp-3); }
+  .email-account-copy { display: none; }
 
   /* Workspace + property layout already single-column from the tablet tier;
      restate context rail as a simple vertical stack on the smallest screens. */

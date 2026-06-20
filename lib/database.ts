@@ -193,6 +193,153 @@ export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
   return result.rows.map((row) => rowToStrings(VOICE_CALL_HEADERS, row));
 }
 
+export type EmailAccountRecord = {
+  id: string;
+  client_id: string;
+  provider: string;
+  email: string;
+  display_name: string;
+  token_json_encrypted: string;
+  scopes: string[];
+  is_default: boolean;
+  status: string;
+  connected_by: string;
+  last_error: string;
+  last_used_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function emailAccountFromRow(row: Record<string, unknown>): EmailAccountRecord {
+  return {
+    id: String(row.id || ""),
+    client_id: String(row.client_id || ""),
+    provider: String(row.provider || "gmail"),
+    email: String(row.email || ""),
+    display_name: String(row.display_name || ""),
+    token_json_encrypted: String(row.token_json_encrypted || ""),
+    scopes: Array.isArray(row.scopes) ? row.scopes.map(String) : [],
+    is_default: Boolean(row.is_default),
+    status: String(row.status || ""),
+    connected_by: String(row.connected_by || ""),
+    last_error: String(row.last_error || ""),
+    last_used_at: row.last_used_at ? new Date(String(row.last_used_at)).toISOString() : "",
+    created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
+    updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+async function emailAccountsTableReady(): Promise<boolean> {
+  return (await tableColumns("email_accounts")).has("token_json_encrypted");
+}
+
+export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
+  if (!await emailAccountsTableReady()) return [];
+  const result = await getPool().query(
+    `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
+            is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
+       from email_accounts
+      where client_id = $1
+      order by is_default desc, updated_at desc`,
+    [clientId()],
+  );
+  return result.rows.map(emailAccountFromRow);
+}
+
+export async function readDefaultEmailAccountFromDatabase(): Promise<EmailAccountRecord | null> {
+  if (!await emailAccountsTableReady()) return null;
+  const result = await getPool().query(
+    `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
+            is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
+       from email_accounts
+      where client_id = $1
+        and provider = 'gmail'
+        and is_default = true
+        and status = 'connected'
+      order by updated_at desc
+      limit 1`,
+    [clientId()],
+  );
+  return result.rows[0] ? emailAccountFromRow(result.rows[0]) : null;
+}
+
+export async function upsertEmailAccountInDatabase(input: {
+  email: string;
+  displayName?: string;
+  tokenJsonEncrypted: string;
+  scopes?: string[];
+  connectedBy?: string;
+}): Promise<EmailAccountRecord> {
+  await ensureClientInDatabase();
+  if (!input.email.trim()) throw new Error("Gmail account email is required");
+  await getPool().query(
+    `update email_accounts
+        set is_default = false,
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'`,
+    [clientId()],
+  );
+  const result = await getPool().query(
+    `insert into email_accounts (
+        client_id, provider, email, display_name, token_json_encrypted, scopes,
+        is_default, status, connected_by, last_error
+      ) values (
+        $1, 'gmail', $2, $3, $4, $5, true, 'connected', $6, ''
+      )
+      on conflict (client_id, provider, email) do update set
+        display_name = excluded.display_name,
+        token_json_encrypted = excluded.token_json_encrypted,
+        scopes = excluded.scopes,
+        is_default = true,
+        status = 'connected',
+        connected_by = excluded.connected_by,
+        last_error = '',
+        updated_at = now()
+      returning id, client_id, provider, email, display_name, token_json_encrypted, scopes,
+                is_default, status, connected_by, last_error, last_used_at, created_at, updated_at`,
+    [
+      clientId(),
+      input.email.trim().toLowerCase(),
+      input.displayName || "",
+      input.tokenJsonEncrypted,
+      input.scopes || [],
+      input.connectedBy || "",
+    ],
+  );
+  return emailAccountFromRow(result.rows[0]);
+}
+
+export async function updateEmailAccountTokenInDatabase(email: string, tokenJsonEncrypted: string): Promise<void> {
+  if (!email.trim()) return;
+  await getPool().query(
+    `update email_accounts
+        set token_json_encrypted = $2,
+            status = 'connected',
+            last_error = '',
+            last_used_at = now(),
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $3`,
+    [clientId(), tokenJsonEncrypted, email.trim().toLowerCase()],
+  );
+}
+
+export async function markEmailAccountErrorInDatabase(email: string, error: string): Promise<void> {
+  if (!email.trim() || !await emailAccountsTableReady()) return;
+  await getPool().query(
+    `update email_accounts
+        set status = 'error',
+            last_error = $2,
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $3`,
+    [clientId(), error.slice(0, 500), email.trim().toLowerCase()],
+  );
+}
+
 export async function readEventsForThreadFromDatabase(threadRef: string, limit = 12): Promise<SheetRow[]> {
   const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
   const result = await getPool().query(

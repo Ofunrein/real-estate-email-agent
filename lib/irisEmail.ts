@@ -1,13 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
-import { google } from "googleapis";
-
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
   upsertLeadMemoryToDatabase,
 } from "@/lib/database";
+import { createIrisGmailClient, sendGmailReply, type GmailClient } from "@/lib/gmailConnection";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -567,21 +564,6 @@ export async function processIrisEmailPoll(
   };
 }
 
-type GmailClient = ReturnType<typeof google.gmail>;
-
-function gmailClient(): GmailClient {
-  const credentialsPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.GMAIL_CREDENTIALS_PATH || "credentials.json");
-  const tokenPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.GMAIL_TOKEN_PATH || "token.json");
-  const creds = JSON.parse(fs.readFileSync(credentialsPath, "utf8")) as { installed?: Record<string, string | string[]>; web?: Record<string, string | string[]> };
-  const token = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
-  const app = creds.installed || creds.web;
-  if (!app) throw new Error("Gmail credentials must include installed or web client config");
-  const redirectUris = Array.isArray(app.redirect_uris) ? app.redirect_uris : [];
-  const auth = new google.auth.OAuth2(String(app.client_id || ""), String(app.client_secret || ""), String(redirectUris[0] || ""));
-  auth.setCredentials(token);
-  return google.gmail({ version: "v1", auth });
-}
-
 function header(headers: Array<{ name?: string | null; value?: string | null }> | undefined, name: string): string {
   return headers?.find((item) => item.name?.toLowerCase() === name.toLowerCase())?.value || "";
 }
@@ -651,9 +633,17 @@ async function applyGmailLabels(gmail: GmailClient, messageId: string, labels: s
 }
 
 export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
-  const gmail = gmailClient();
+  const gmail = await createIrisGmailClient();
   return {
     listUnreadMessages: (limit) => listUnreadMessages(gmail, limit),
     applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
+    sendReply: (message, body) => sendGmailReply(gmail, {
+      to: parseEmailContact(message.from).email,
+      subject: message.subject,
+      body,
+      threadId: message.threadId,
+      messageId: message.messageId,
+      references: message.references,
+    }),
   };
 }
