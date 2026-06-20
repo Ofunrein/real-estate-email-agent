@@ -63,9 +63,10 @@ test("buildAriaAssistant: transferCall destination is the human transfer number"
   assert.equal((endCall!.function as Record<string, unknown>).name, "endCall");
 });
 
-test("buildAriaAssistant: omits assistant server url for Vapi-hosted adapter mode", () => {
+test("buildAriaAssistant: sends final call reports to the app lifecycle webhook", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com", secret: "k" });
-  assert.equal(assistant.server, undefined);
+  assert.deepEqual(assistant.server, { url: "https://app.example.com/api/webhooks/aria-voice?secret=k" });
+  assert.deepEqual(assistant.serverMessages, ["end-of-call-report"]);
 });
 
 test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {

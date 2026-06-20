@@ -35,6 +35,8 @@ class AriaVoiceContractTests(unittest.TestCase):
         for legacy_tool in ("qualifyLead", "scheduleShowing", "syncToCrm"):
             self.assertNotIn(legacy_tool, assistant)
         self.assertNotIn("serverUrl", assistant)
+        self.assertIn("/api/webhooks/aria-voice", assistant)
+        self.assertIn('serverMessages: ["end-of-call-report"]', assistant)
         self.assertIn("getCallerContext", assistant)
         self.assertIn("searchProperties", assistant)
         self.assertIn("lookupProperty", assistant)
