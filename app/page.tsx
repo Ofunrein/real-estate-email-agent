@@ -1,11 +1,19 @@
 import { AgentInboxClient } from "@/components/AgentInboxClient";
+import { auth, isAllowedAuthEmail } from "@/auth";
 import { loadAgentInboxData } from "@/lib/dataSource";
 import { databaseEnabled } from "@/lib/database";
 import { composeInboxData } from "@/lib/inboxData";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const session = await auth();
+
+  if (!isAllowedAuthEmail(session?.user?.email)) {
+    redirect("/login");
+  }
+
   try {
     const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
     const sourceLabel = databaseEnabled() ? "Database" : "Google Sheets";

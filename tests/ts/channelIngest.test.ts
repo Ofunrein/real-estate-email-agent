@@ -7,6 +7,7 @@ test("inferPreferredChannelFromText: detects explicit channel preference", () =>
   assert.equal(inferPreferredChannelFromText("Email is best for the details", "sms"), "email");
   assert.equal(inferPreferredChannelFromText("Text me the options", "email"), "sms");
   assert.equal(inferPreferredChannelFromText("Can you call me back?", "sms"), "voice");
+  assert.equal(inferPreferredChannelFromText("Instagram DM works best", "sms"), "instagram");
 });
 
 test("twilioSmsIngestInput: stores preferred channel from SMS wording", () => {

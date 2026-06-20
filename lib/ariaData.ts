@@ -19,6 +19,7 @@ import {
 import { enrichTheoData } from "@/lib/theoData";
 import { sendTheoSms } from "@/lib/twilioSms";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { aiSearchPropertyUrl } from "@/lib/aiSearchLinks";
 
 export type AriaDataDeps = {
   findByAddresses: (addresses: string[], limit?: number) => Promise<SheetRow[]>;
@@ -170,7 +171,7 @@ export function propertySmsBody(property: SheetRow): string {
     formatSqft(property.sqft),
     clean(property.neighborhood) || clean(property.city),
   ].filter(Boolean).join(" • ");
-  const link = clean(property.listing_url);
+  const link = aiSearchPropertyUrl(property);
   return [`Here are the full details on ${clean(property.address) || "that property"}:`, bits, link]
     .filter(Boolean)
     .join("\n");
@@ -333,7 +334,7 @@ function searchSmsBody(properties: SheetRow[], criteria: string): string {
         formatSqft(property.sqft),
         clean(property.neighborhood) || clean(property.city),
       ].filter(Boolean).join(" • ");
-      const link = clean(property.listing_url);
+      const link = aiSearchPropertyUrl(property);
       return [`${index + 1}. ${clean(property.address)}`, facts, link].filter(Boolean).join("\n");
     });
   return [`Fresh options for ${criteria || "your search"}:`, ...lines].filter(Boolean).join("\n\n");

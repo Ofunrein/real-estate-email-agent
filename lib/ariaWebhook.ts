@@ -6,6 +6,7 @@
 import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { upsertVoiceCallToDatabase, type VoiceCallRecord } from "@/lib/database";
 import { runAriaTool } from "@/lib/ariaTools";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { clientConfig } from "@/lib/clientConfig";
 import { notifyAgent, type NotifyEvent } from "@/lib/notify";
 import {
@@ -146,7 +147,7 @@ export async function handleAriaEndOfCall(
     .record({
       channel: "voice",
       direction: "inbound",
-      agentName: "Aria",
+      agentName: IRIS_AGENT_NAME,
       phone: report.phone,
       source: "vapi",
       threadRef,

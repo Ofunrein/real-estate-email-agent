@@ -13,9 +13,9 @@ class AriaVoiceContractTests(unittest.TestCase):
     def test_aria_identity_stable_across_layers(self):
         ingest = read("lib/channelIngest.ts")
         tools = read("lib/ariaTools.ts")
-        self.assertIn('agentName: "Aria"', ingest)
+        self.assertIn("agentName: IRIS_AGENT_NAME", ingest)
         self.assertIn('channel: "voice"', ingest)
-        self.assertIn('agentName: "Aria"', tools)
+        self.assertIn("agentName: IRIS_AGENT_NAME", tools)
         self.assertIn('channel: "voice"', tools)
 
     def test_voice_webhooks_enforce_secret(self):

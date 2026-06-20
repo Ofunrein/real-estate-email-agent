@@ -46,6 +46,7 @@ import {
 import { buildCallerContextResponse, compileCallerContext } from "@/lib/ariaMemory";
 import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
 import { sendTheoSms } from "@/lib/twilioSms";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export type AriaToolName =
   | "getCallerContext"
@@ -123,7 +124,7 @@ function baseIngest(ctx: AriaToolContext): ChannelIngestInput {
   return {
     channel: "voice",
     direction: "inbound",
-    agentName: "Aria",
+    agentName: IRIS_AGENT_NAME,
     phone: ctx.phone,
     source: "vapi",
     threadRef: ctx.threadRef,
@@ -309,7 +310,7 @@ async function sendPropertyDetailsSms(ctx: AriaToolContext, args: Record<string,
       aiAction: mediaUrls.length ? "property_details_sms_sent_with_photos" : "property_details_sms_sent",
       nextAction: "sms_listing_details_sent",
       status: "sent",
-      summary: `Aria texted ${properties.length} listing detail${properties.length === 1 ? "" : "s"}${mediaUrls.length ? ` with ${mediaUrls.length} photo${mediaUrls.length === 1 ? "" : "s"}` : ""}${firstAddress ? ` for ${firstAddress}` : ""}.`,
+      summary: `${IRIS_AGENT_NAME} texted ${properties.length} listing detail${properties.length === 1 ? "" : "s"}${mediaUrls.length ? ` with ${mediaUrls.length} photo${mediaUrls.length === 1 ? "" : "s"}` : ""}${firstAddress ? ` for ${firstAddress}` : ""}.`,
     },
   };
 }
@@ -555,7 +556,7 @@ async function syncToCrm(ctx: AriaToolContext, args: Record<string, unknown>, de
     return { result: "Noted.", ingest: { ...ingestBase, aiAction: "crm_sync_skipped", summary: "CRM sync skipped: no caller identity." } };
   }
   const upserted = await adapter.upsertContact({ phone: contact.phone, email: contact.email, fullName: contact.fullName });
-  const note = str(args.note || args.summary) || "Voice call handled by Aria.";
+  const note = str(args.note || args.summary) || `Voice call handled by ${IRIS_AGENT_NAME}.`;
   await adapter.logActivity({ contactId: upserted.id, body: note, channel: "voice", direction: "inbound", type: "note" });
   if (str(args.outcome).toUpperCase() === "TRANSFERRED") {
     await deps.notifyTransfer({
@@ -663,7 +664,7 @@ export async function runAriaTool(
           ...baseIngest(ctx),
           eventType: "voice_tool_unknown",
           aiAction: "tool_unknown",
-          summary: `Unknown Aria tool requested: ${name}.`,
+          summary: `Unknown ${IRIS_AGENT_NAME} tool requested: ${name}.`,
           status: "error",
         },
       };
