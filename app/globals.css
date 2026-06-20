@@ -421,6 +421,7 @@ button {
 
 .conversation-list {
   display: grid;
+  align-content: start;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -538,6 +539,7 @@ button {
 
 .thread-head {
   display: flex;
+  flex-shrink: 0;
   justify-content: space-between;
   gap: 12px;
   background: linear-gradient(180deg, #fafbf8, #f4f6f1);
@@ -552,6 +554,7 @@ button {
 
 .handoff-note {
   display: grid;
+  flex-shrink: 0;
   gap: 4px;
   border-top: 1px solid #ead2c8;
   border-bottom: 1px solid #ead2c8;
@@ -816,7 +819,12 @@ button {
 
 .voice-call-stack {
   display: grid;
+  align-content: start;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   gap: 14px;
+  padding: 14px;
 }
 
 .voice-call-card {
@@ -2883,7 +2891,7 @@ time,
 .dark .handoff-note { background: rgba(251,185,72,0.12) !important; border-color: rgba(251,185,72,0.25) !important; color: var(--s-warn) !important; }
 
 /* ── Human Takeover bar ── */
-.human-takeover-bar { border-top: 1px solid var(--s-card-border); background: var(--s-card); padding: var(--sp-3) var(--sp-4); }
+.human-takeover-bar { flex-shrink: 0; border-top: 1px solid var(--s-card-border); background: var(--s-card); padding: var(--sp-3) var(--sp-4); }
 .human-takeover-header { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 .human-takeover-status { display: flex; align-items: center; gap: 8px; }
 .takeover-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--s-text-3); flex-shrink: 0; }
