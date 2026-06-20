@@ -125,18 +125,18 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-sms/route.ts": {
-    "mtime": 1781914504.9649384,
-    "ast_hash": "15d70df8fa516746e45a0fc1ae36493e",
+    "mtime": 1781935394.04644,
+    "ast_hash": "c7458cb9855cc1936b9f4e780ef6bcb5",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-social-router/route.ts": {
-    "mtime": 1781914504.965846,
-    "ast_hash": "fad9190a035acd9bf635d6a78d0de8ce",
+    "mtime": 1781935410.2618153,
+    "ast_hash": "7e1345a0cbe916d1bd86c4b6611d7c98",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-whatsapp/route.ts": {
-    "mtime": 1781914504.9735348,
-    "ast_hash": "bd40b82460c4e46e3d55b0d902d77b23",
+    "mtime": 1781935402.6852982,
+    "ast_hash": "99951d0a073e8a62477b642f46e5e7b1",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "components/AgentInboxClient.tsx": {
-    "mtime": 1781918343.7101138,
-    "ast_hash": "94a3da7a6d7551f7f72d3e52fef1f152",
+    "mtime": 1781940394.9667761,
+    "ast_hash": "591e7fefeb4fe3eb336ae255dee1ac15",
     "semantic_hash": ""
   },
   "components/inbox/AgentLabel.tsx": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "components/inbox/charts/ActivityChart.tsx": {
-    "mtime": 1781404375.9795997,
-    "ast_hash": "06eec0410b1ffce7b28f329ec225920d",
+    "mtime": 1781934865.9268267,
+    "ast_hash": "76e00bb074a2f5859a7c8562ff86b0d8",
     "semantic_hash": ""
   },
   "components/inbox/charts/ChannelMix.tsx": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1781914505.2381701,
-    "ast_hash": "13d3c02a5b3aca270b7c8a0d4aa4ce7b",
+    "mtime": 1781940192.1052866,
+    "ast_hash": "4aca0e3846772fcbb62c70de10820942",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -425,8 +425,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1781914505.242014,
-    "ast_hash": "7c3ccecf37fc1afe8be2a450914034ed",
+    "mtime": 1781940293.5403123,
+    "ast_hash": "c7d6f3b44aee488be94747947f316b6d",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "lib/manualReply.ts": {
-    "mtime": 1781917971.521728,
-    "ast_hash": "1a8eec82fae6693c9cd0e071a94bfb33",
+    "mtime": 1781940276.723806,
+    "ast_hash": "b2672c23d05567826a23528769d7a5d5",
     "semantic_hash": ""
   },
   "lib/manychatApi.ts": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "lib/theoAgent.ts": {
-    "mtime": 1781914505.665884,
-    "ast_hash": "df6f44ae0d21aff056f7ac99db517d13",
+    "mtime": 1781935383.5496743,
+    "ast_hash": "44a4db850e4295dba9dbc4013d046807",
     "semantic_hash": ""
   },
   "lib/theoAppointments.ts": {
@@ -1095,8 +1095,8 @@
     "semantic_hash": ""
   },
   "tests/ts/theoAgent.test.ts": {
-    "mtime": 1781905858.514556,
-    "ast_hash": "b605c9e58a339dfb7c9ee9e82f705dbe",
+    "mtime": 1781935423.9749272,
+    "ast_hash": "f82748f7fdbbca4ffcef06ebe4d4c4a6",
     "semantic_hash": ""
   },
   "tests/ts/theoSocialRouter.test.ts": {
@@ -1115,8 +1115,8 @@
     "semantic_hash": ""
   },
   "tsconfig.json": {
-    "mtime": 1781404375.9827793,
-    "ast_hash": "d8f27b53f4d0b6f6df0c1e57f34ef001",
+    "mtime": 1781935618.5365462,
+    "ast_hash": "bc99a60542e613e9f215791def2428cd",
     "semantic_hash": ""
   },
   "tsconfig.lint.json": {
@@ -1170,8 +1170,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1781816913.9254372,
-    "ast_hash": "c4aaafed827e0ddff5ea2d0df0effe32",
+    "mtime": 1781940489.0727994,
+    "ast_hash": "e2afc66de37712d8ea99d8095d0b0f04",
     "semantic_hash": ""
   },
   "docs/CODEBASE_ONBOARDING.md": {
@@ -1407,6 +1407,601 @@
   "scripts/backfill-twilio-sms-events.mjs": {
     "mtime": 1781933523.6381023,
     "ast_hash": "50bbb16cd43d516b56b474416e1fd9e9",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/api/lead/route.ts": {
+    "mtime": 1781935130.9444559,
+    "ast_hash": "2b4ac5f28c4e6a9a173cdb7663220862",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/layout.tsx": {
+    "mtime": 1781935130.9456666,
+    "ast_hash": "4c9c687ea6c297880bf1b1793530a7b2",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/page.tsx": {
+    "mtime": 1781935130.9457707,
+    "ast_hash": "f9a503e25e583f543ab46aeff62aac1c",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/biome.json": {
+    "mtime": 1781935130.9462852,
+    "ast_hash": "f154f5517f8b3f1cb50bc022b2ade34e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components.json": {
+    "mtime": 1781935130.9464061,
+    "ast_hash": "78b3d9efe75f6b70914eea806594111a",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/agent-persona-card.tsx": {
+    "mtime": 1781935130.9466288,
+    "ast_hash": "8a14608923f0e4ed4e97875f66e85767",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/aurora-background.tsx": {
+    "mtime": 1781935130.946752,
+    "ast_hash": "622ee12db094696030dec6f49246f491",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/aurora.tsx": {
+    "mtime": 1781935130.9468775,
+    "ast_hash": "1edef1f190b04734c71c4d9a19f30623",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/fillout-embed.tsx": {
+    "mtime": 1781935130.946996,
+    "ast_hash": "b294c7d3b7faa74945ad9514cabcc9e4",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ghl-calendar.tsx": {
+    "mtime": 1781935130.9471014,
+    "ast_hash": "6a44436fef382195918a36920698e24e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/glass-stat-callout.tsx": {
+    "mtime": 1781935130.947299,
+    "ast_hash": "a7edc62fcf1539830888fc38013d8b3d",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/magnet.tsx": {
+    "mtime": 1781935130.9473927,
+    "ast_hash": "a1a0f3d724b3a0d7d11995327fc3cef9",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/phone-mockup.tsx": {
+    "mtime": 1781935130.94775,
+    "ast_hash": "4a4554a3cb6b8b0afcfbeef6ffba1da5",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/reveal.tsx": {
+    "mtime": 1781935130.9478474,
+    "ast_hash": "5f1ff7e3edbfdfc351976613335c2eda",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/rotating-text.tsx": {
+    "mtime": 1781935130.9479396,
+    "ast_hash": "7054b77b6917c78b3fc44dded0fe46af",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/aria-deep-dive.tsx": {
+    "mtime": 1781935130.9484036,
+    "ast_hash": "7fb6c5b14b394c419140ee42ae55e295",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/calendar-cta.tsx": {
+    "mtime": 1781935130.9501493,
+    "ast_hash": "12341684a2f6ad4de15932a5323c758b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/case-study-wall.tsx": {
+    "mtime": 1781935130.9502852,
+    "ast_hash": "b9c7b8b60e0f194898574481cd38f9f2",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/faq.tsx": {
+    "mtime": 1781935130.95039,
+    "ast_hash": "4fba9d2560c8d8827f0d699e0985a0bb",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/final-cta.tsx": {
+    "mtime": 1781935130.9504921,
+    "ast_hash": "7b2518d203169d977b01c60d9e0a251a",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/footer.tsx": {
+    "mtime": 1781935130.9507592,
+    "ast_hash": "dbe0c48c0fe60d263059a78cc42f30a7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/founder-vsl.tsx": {
+    "mtime": 1781935130.9511359,
+    "ast_hash": "858dc4878cfdd28668e85bb591bf4680",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/hero.tsx": {
+    "mtime": 1781935130.9520738,
+    "ast_hash": "a97c41c752e445ea5e636c8d1e9b296f",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/meet-the-team.tsx": {
+    "mtime": 1781935130.952246,
+    "ast_hash": "3ca4e206faf202824b2c6d0a9596db43",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/problem-agitation.tsx": {
+    "mtime": 1781935130.9523644,
+    "ast_hash": "bad7bdc2521b98050858e9b92e16368b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/pull-quote.tsx": {
+    "mtime": 1781935130.9524689,
+    "ast_hash": "4ccbfcdcf891814e3f4833da7134bf86",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/sticky-cta-bar.tsx": {
+    "mtime": 1781935130.9525628,
+    "ast_hash": "5f101b0015cddb849e67c1e1e13c1869",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/timeline-30day.tsx": {
+    "mtime": 1781935130.9526544,
+    "ast_hash": "5e98f15b19759573d34eb5330d87b470",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/topbar.tsx": {
+    "mtime": 1781935130.9527526,
+    "ast_hash": "e9a79f8c42f1dbd951b030ae977cc28e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/trust-strip.tsx": {
+    "mtime": 1781935130.9528506,
+    "ast_hash": "583d816b8479efe89b97db1d34218df5",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/two-ways-in.tsx": {
+    "mtime": 1781935130.9532454,
+    "ast_hash": "3f6ec6bb03a39ca2a46632130b68119a",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/spotlight-button.tsx": {
+    "mtime": 1781935130.9533446,
+    "ast_hash": "5bc7d13508d4e253c04e168af8c651ee",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/spotlight-card.tsx": {
+    "mtime": 1781935130.953452,
+    "ast_hash": "408c6f1aac2c7a0ddeb3979ba6c4a6b0",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/star-button.tsx": {
+    "mtime": 1781935130.9535673,
+    "ast_hash": "31a0aa0c783c2cc10239b8c92e52a061",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/accordion.tsx": {
+    "mtime": 1781935130.9537234,
+    "ast_hash": "216a4fb35df736454104b050e0adca47",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/badge.tsx": {
+    "mtime": 1781935130.9538147,
+    "ast_hash": "a948f8508f8cbaccddd2abe3487421e2",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/button.tsx": {
+    "mtime": 1781935130.9539108,
+    "ast_hash": "1a5eed687d31667358e5823bb38c6b0e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/card.tsx": {
+    "mtime": 1781935130.954003,
+    "ast_hash": "2fafca848998ee1da022c06406ff12b6",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/carousel.tsx": {
+    "mtime": 1781935130.9541008,
+    "ast_hash": "9b749c6fd0a9866c0aa753052e3c9bb7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/creative-pricing.tsx": {
+    "mtime": 1781935130.9541986,
+    "ast_hash": "def3bde9a0a9797bb4a6f9193b3e4c90",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/glowing-effect-card.tsx": {
+    "mtime": 1781935130.9551558,
+    "ast_hash": "42d4783e5bf7436c2089206c4dcf1a79",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/menu-toggle-icon.tsx": {
+    "mtime": 1781935130.9552689,
+    "ast_hash": "47254513030413f5f06ef5dc5ccb3276",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/separator.tsx": {
+    "mtime": 1781935130.9553576,
+    "ast_hash": "4d10b614bc932b266724c162a91be8a8",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/sheet.tsx": {
+    "mtime": 1781935130.9555655,
+    "ast_hash": "72c6e719f91b1b4041203586f35e1a46",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/star-button.tsx": {
+    "mtime": 1781935130.955694,
+    "ast_hash": "1f18267e9928c528868ac91c34ba5d45",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/tabs.tsx": {
+    "mtime": 1781935130.9558682,
+    "ast_hash": "985cda638993b45da1edb941d36b37b3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/tooltip.tsx": {
+    "mtime": 1781935130.9559715,
+    "ast_hash": "7939f51b4ef27928348b82bfbb5721aa",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/ui/use-scroll.ts": {
+    "mtime": 1781935130.9560864,
+    "ast_hash": "a8327fecd8b4884418e4f126866385ac",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/agents.ts": {
+    "mtime": 1781935130.9563076,
+    "ast_hash": "e82b9588ea7eec336585a03cdc2eb1b0",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/case-studies.ts": {
+    "mtime": 1781935130.9564116,
+    "ast_hash": "c919622a5a9f26b8cc5a15a49e92b756",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/faq.ts": {
+    "mtime": 1781935130.9566307,
+    "ast_hash": "dcf404800942f70c7da2d023d32b82b4",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/niches.ts": {
+    "mtime": 1781935130.957016,
+    "ast_hash": "19a0c8f282efc3c25453aa1426e25433",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/pricing.ts": {
+    "mtime": 1781935130.9572866,
+    "ast_hash": "2b94825a767f3dc57b1c4726be54eb89",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/timeline.ts": {
+    "mtime": 1781935130.957536,
+    "ast_hash": "ee4b4e371f2aa023eb8e544194091fcf",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/content/trust-logos.ts": {
+    "mtime": 1781935130.957781,
+    "ast_hash": "e11c85bdbcb29d94b3ff7cd1f40fb260",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/lib/env.ts": {
+    "mtime": 1781935130.9634423,
+    "ast_hash": "5496fa65599b48a61e845de96438dc22",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/lib/utils.ts": {
+    "mtime": 1781935130.963562,
+    "ast_hash": "618d00bf4537ce84f9ba62c5b215fb30",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/mdx-components.tsx": {
+    "mtime": 1781935130.9637198,
+    "ast_hash": "5d239b30d350b2a270d7e03a2e449c29",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/next.config.ts": {
+    "mtime": 1781935130.964046,
+    "ast_hash": "3bcbeb40d18f7e8c9be6104d12b32f78",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/package.json": {
+    "mtime": 1781935130.9642434,
+    "ast_hash": "56d629aee80e91ea11904acd82365470",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/postcss.config.mjs": {
+    "mtime": 1781935130.965148,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/tsconfig.json": {
+    "mtime": 1781935131.4990652,
+    "ast_hash": "02fc19ad21338c2ab820a70136310db4",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/AGENTS.md": {
+    "mtime": 1781935130.9436014,
+    "ast_hash": "fb427ee067c5f7b797408a3e64e77250",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/CLAUDE.md": {
+    "mtime": 1781935130.9437208,
+    "ast_hash": "fb427ee067c5f7b797408a3e64e77250",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/README.md": {
+    "mtime": 1781935130.9438214,
+    "ast_hash": "f15aaa42d5d299d091b1171097ea56ad",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/privacy/page.mdx": {
+    "mtime": 1781935130.9459887,
+    "ast_hash": "0126571728e9765065d4dae0bc9fbae7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/terms/page.mdx": {
+    "mtime": 1781935130.9461892,
+    "ast_hash": "42545f307dbd04f28317d7410405b8f7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/brand-kit.md": {
+    "mtime": 1781935130.9582338,
+    "ast_hash": "a6b62f8b62a81bef832264918ee74dea",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/plans/2026-05-25-lumenosis-landing.md": {
+    "mtime": 1781935130.9613903,
+    "ast_hash": "c6ce1c18dae6d9392c70823f47c7aaa7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/plans/2026-05-25-polish-sprint.md": {
+    "mtime": 1781935130.9618351,
+    "ast_hash": "0d64d796aed5979bd4ec3efa4bf4a0f9",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/qa/a11y-qa.md": {
+    "mtime": 1781935130.962313,
+    "ast_hash": "95a8ee7595e32f67f15a1d02418b4333",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/qa/lighthouse-qa.md": {
+    "mtime": 1781935130.9625762,
+    "ast_hash": "e826cf4cf4473877f58ebc9b7a32ef98",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/qa/responsive-qa.md": {
+    "mtime": 1781935130.9628317,
+    "ast_hash": "47558fdd0c8036d4f252bd20f8907457",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/superpowers/specs/2026-05-25-lumenosis-landing-design.md": {
+    "mtime": 1781935130.9632196,
+    "ast_hash": "a68af39ad6d100bf2dce63ce2f9b7e90",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/pnpm-workspace.yaml": {
+    "mtime": 1781935130.9650633,
+    "ast_hash": "d2bc6e928998a0548e5216a11e58e132",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/fonts/README.md": {
+    "mtime": 1781935131.4279234,
+    "ast_hash": "cada39c837466dbdcacfe08e9ec36e78",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/apple-icon.png": {
+    "mtime": 1781935130.9452388,
+    "ast_hash": "d50c9d4daeba49d24c62266b3265fb42",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/icon.png": {
+    "mtime": 1781935130.9455497,
+    "ast_hash": "a9cedf7d6192384acb2e74f4210b47ce",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/docs/lumenosis-logo.png": {
+    "mtime": 1781935130.9603605,
+    "ast_hash": "80b9f225401db261c01bc0319bdb13e3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/apple-icon-rounded.png": {
+    "mtime": 1781935130.9655628,
+    "ast_hash": "d50c9d4daeba49d24c62266b3265fb42",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/apple-icon-square.png": {
+    "mtime": 1781935130.9659197,
+    "ast_hash": "d323850a1bd4f199dec2039e5dbfb0df",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/file.svg": {
+    "mtime": 1781935131.427752,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/globe.svg": {
+    "mtime": 1781935131.42803,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/icon-rounded.png": {
+    "mtime": 1781935131.4281235,
+    "ast_hash": "a9cedf7d6192384acb2e74f4210b47ce",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/icon-square.png": {
+    "mtime": 1781935131.4282024,
+    "ast_hash": "76edec712ff5373507942ab429ddc408",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/agents/aria.png": {
+    "mtime": 1781935131.4374192,
+    "ast_hash": "5bc103de5896db792d083afe405f7f94",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/agents/iris.png": {
+    "mtime": 1781935131.446529,
+    "ast_hash": "462efac3edb4613e103475f625c9320d",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/agents/olivia.png": {
+    "mtime": 1781935131.4548724,
+    "ast_hash": "ff55b9b825f2852e81c1ae32c7d4f60c",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/agents/theo.png": {
+    "mtime": 1781935131.4630322,
+    "ast_hash": "f9d3c9fdbcdba3fd133f348cff7cdc1b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/listings/oak-ridge-modern.svg": {
+    "mtime": 1781935131.4647212,
+    "ast_hash": "fd7960ff7a9726c2c868eaf03b1e56cc",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/lumenosis-logo-rounded.png": {
+    "mtime": 1781935131.4661398,
+    "ast_hash": "5dd5d9f6ec35b22255bb2e65c90c73e4",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/lumenosis-logo.png": {
+    "mtime": 1781935131.4671834,
+    "ast_hash": "80b9f225401db261c01bc0319bdb13e3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/martin-headshot.jpg": {
+    "mtime": 1781935131.4688964,
+    "ast_hash": "492cdf7af0f1ed1b3c3f6f38af3d490a",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/martin-vsl-poster.jpg": {
+    "mtime": 1781935131.4716089,
+    "ast_hash": "4e1df3ea5acd3517d8eb8455ab61a999",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/product-card-mockup-day.png": {
+    "mtime": 1781935131.4785898,
+    "ast_hash": "b5e4f16f2d59b363ce6cc1378405f280",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/product-card-mockup.png": {
+    "mtime": 1781935131.4952617,
+    "ast_hash": "c25cc080728cf1aeeed2b11f1857a006",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/compass-logo.svg": {
+    "mtime": 1781935131.496356,
+    "ast_hash": "ea3f95dad4eee5efacb1645a73a5a828",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/exp-realty-logo.png": {
+    "mtime": 1781935131.4969401,
+    "ast_hash": "82a60f9e4969a48d044f4178921ea371",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/keller-williams-logo.svg": {
+    "mtime": 1781935131.4974163,
+    "ast_hash": "d75a101880b50d977aaa2ab0cfe6ae3e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/mls-ready.svg": {
+    "mtime": 1781935131.497566,
+    "ast_hash": "4fafc0e6e743bdce9394bc54acd71d76",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/nar.svg": {
+    "mtime": 1781935131.4976811,
+    "ast_hash": "bee0725e5dd6e45f05dc68984c63a60e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/realtor-com.svg": {
+    "mtime": 1781935131.4977968,
+    "ast_hash": "b2a7264e391a00e90a03e59106a4222c",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/remax-logo.svg": {
+    "mtime": 1781935131.4979582,
+    "ast_hash": "2b90751968acb9f3f7b415ad8000c2c3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/stripe.svg": {
+    "mtime": 1781935131.4981365,
+    "ast_hash": "b1fbd392e498dd25c8f1fa3c90d150c1",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/trust/zillow-premier.svg": {
+    "mtime": 1781935131.4982657,
+    "ast_hash": "6bfb5049ddb68893b96ed0baa347043b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/next.svg": {
+    "mtime": 1781935131.498472,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/vercel.svg": {
+    "mtime": 1781935131.4988055,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/window.svg": {
+    "mtime": 1781935131.4989347,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/aria-oak-ridge-call.mp3": {
+    "mtime": 1781935130.9834242,
+    "ast_hash": "7aa63b920305fe89a9ad66d5296dd4e6",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/copy_9CA895D4-32A0-41F2-8952-2175A52E1C8B.mov": {
+    "mtime": 1781935131.4041734,
+    "ast_hash": "b50ac2af541b4ef313970cb34e2a0125",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/copy_9CA895D4-32A0-41F2-8952-2175A52E1C8B.mp3": {
+    "mtime": 1781935131.4268913,
+    "ast_hash": "7aa63b920305fe89a9ad66d5296dd4e6",
+    "semantic_hash": ""
+  },
+  "app/api/settings/email-account/callback/route.ts": {
+    "mtime": 1781940348.7218401,
+    "ast_hash": "ae70391ec05628f95a422814ba011f3a",
+    "semantic_hash": ""
+  },
+  "app/api/settings/email-account/connect/route.ts": {
+    "mtime": 1781940316.6250293,
+    "ast_hash": "11fb6be5997beea0fd6ffb65cdb9f5c3",
+    "semantic_hash": ""
+  },
+  "app/api/settings/email-account/route.ts": {
+    "mtime": 1781940306.7512167,
+    "ast_hash": "e9d404237296d75fd3b2903af974da0b",
+    "semantic_hash": ""
+  },
+  "db/migrations/007_email_accounts.sql": {
+    "mtime": 1781940149.0223637,
+    "ast_hash": "d32c80b72afa3c5cdfc82c02a8594002",
+    "semantic_hash": ""
+  },
+  "lib/emailAccountCrypto.ts": {
+    "mtime": 1781940161.6273777,
+    "ast_hash": "31fd1dae1914438906e0e04891ab3211",
+    "semantic_hash": ""
+  },
+  "lib/gmailConnection.ts": {
+    "mtime": 1781940878.2139928,
+    "ast_hash": "a7eceab7c250268ef9b7a19e85b1f877",
+    "semantic_hash": ""
+  },
+  "tests/ts/gmailConnection.test.ts": {
+    "mtime": 1781940474.3236868,
+    "ast_hash": "0261caca6307f34bbd2ca3c3c447a861",
+    "semantic_hash": ""
+  },
+  "COPY_PLAN.md": {
+    "mtime": 1781936442.953496,
+    "ast_hash": "9e09a0015b058f192f85db2a21c973a6",
     "semantic_hash": ""
   }
 }

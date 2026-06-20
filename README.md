@@ -180,6 +180,16 @@ Open `http://127.0.0.1:3000`.
 
 The dashboard polls `/api/data` every 5 seconds. Theo/Olivia webhook events usually appear on the next poll because they write to Neon during the inbound request. Iris email events appear after the Gmail poller records them; by default that means up to `POLL_INTERVAL_SECONDS` plus the next 5-second dashboard refresh. In Google Sheets-only mode, the dashboard cache is also 5 seconds.
 
+Hosted Iris email uses a separate Gmail mailbox connection from dashboard login. Operators still sign in to `app.lumenosis.com` with an allowlisted Google account, then click **Connect** in the inbox top bar to choose the Gmail account Iris should read and reply from. That mailbox can be a different Google account than the operator login.
+
+For hosted Gmail OAuth, add this redirect URI to the Google OAuth client:
+
+```text
+https://app.lumenosis.com/api/settings/email-account/callback
+```
+
+Set `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` for a separate Gmail OAuth app, or let it fall back to `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`. Connected Gmail refresh tokens are encrypted before storage with `EMAIL_ACCOUNT_ENCRYPTION_KEY` or `AUTH_SECRET`.
+
 For hosted/multi-client deployment, run the Postgres schema and sync Sheets into the database:
 
 ```bash
