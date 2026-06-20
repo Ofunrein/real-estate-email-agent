@@ -2406,7 +2406,7 @@ time,
   --s-r-sm:         8px;
   --s-r-md:         12px;
   --s-r-lg:         16px;
-  --s-sidebar-w:    220px;
+  --s-sidebar-w:    152px;
 
   /* stat card accent colors */
   --s-stat-1: #7C6AF5;
@@ -2485,8 +2485,8 @@ time,
 .sidebar-brand {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  padding: 18px 16px 14px !important;
+  gap: 8px !important;
+  padding: 18px 12px 14px !important;
   border-bottom: none !important;
 }
 
@@ -2509,7 +2509,7 @@ time,
 }
 
 .sidebar-section-label {
-  padding: 14px 16px 4px;
+  padding: 14px 12px 4px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.09em;
@@ -2520,16 +2520,16 @@ time,
 .sidebar-nav {
   list-style: none !important;
   margin: 0 !important;
-  padding: 2px 8px !important;
+  padding: 2px 6px !important;
   flex: 1 !important;
 }
 
 .sidebar-nav-item {
   display: flex !important;
   align-items: center !important;
-  gap: 9px !important;
+  gap: 8px !important;
   width: 100% !important;
-  padding: 7px 10px !important;
+  padding: 7px 8px !important;
   border-radius: var(--s-r-sm) !important;
   border: none !important;
   background: transparent !important;
@@ -2566,15 +2566,7 @@ time,
   opacity: 0.75;
 }
 .sidebar-nav-item.active .sidebar-nav-icon { opacity: 1; }
-.sidebar-nav-label { flex: 1; }
-.sidebar-nav-agent {
-  font-size: 10px !important;
-  font-weight: 500 !important;
-  color: var(--s-text-3) !important;
-  opacity: 1 !important;
-  margin-left: auto;
-}
-.sidebar-nav-item.active .sidebar-nav-agent { color: var(--s-accent) !important; opacity: 0.7; }
+.sidebar-nav-label { flex: 1; min-width: 0; white-space: nowrap; }
 
 .sidebar-recent {
   padding: 4px 8px 8px;
