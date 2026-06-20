@@ -23,6 +23,19 @@ export type OutboundConfig = {
   apiBase?: string;
 };
 
+export type OutboundCallInput = {
+  customerNumber: string;
+  leadName?: string;
+  leadEmail?: string;
+  companyName?: string;
+  agentName?: string;
+  callReason?: string;
+  leadContext?: string;
+  preferredChannel?: string;
+  clientId?: string;
+  trigger?: string;
+};
+
 export type OutboundRequest = (body: Record<string, unknown>) => Promise<{ ok: boolean; id?: string; error?: string }>;
 export type OutboundSmsSender = (to: string, body: string) => Promise<unknown>;
 
@@ -42,10 +55,73 @@ function realRequest(config: OutboundConfig): OutboundRequest {
   };
 }
 
+function clean(value?: string): string {
+  return String(value || "").trim();
+}
+
+function outboundCallReason(input: OutboundCallInput): string {
+  return clean(input.callReason) || clean(input.leadContext) || "your real estate request";
+}
+
+export function outboundFirstMessage(input: OutboundCallInput): string {
+  const agentName = clean(input.agentName) || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
+  const companyName = clean(input.companyName) || process.env.CLIENT_NAME || "Austin Realty";
+  const callReason = outboundCallReason(input);
+  const leadName = clean(input.leadName);
+  if (leadName) {
+    return `Hi ${leadName}, this is ${agentName} with ${companyName}. I'm calling about ${callReason}. Do you have a quick minute?`;
+  }
+  return `Hi, this is ${agentName} with ${companyName}. I'm calling about your real estate request. Do you have a quick minute?`;
+}
+
+function outboundCallBody(config: OutboundConfig, input: OutboundCallInput): Record<string, unknown> {
+  const agentName = clean(input.agentName) || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
+  const companyName = clean(input.companyName) || process.env.CLIENT_NAME || "Austin Realty";
+  const callReason = outboundCallReason(input);
+  const leadName = clean(input.leadName);
+  const leadEmail = clean(input.leadEmail);
+  const leadContext = clean(input.leadContext);
+  const preferredChannel = clean(input.preferredChannel);
+  const outboundFirstMessage = outboundFirstMessageForVariables(input);
+  const customer: Record<string, unknown> = { number: input.customerNumber };
+  if (leadName) customer.name = leadName;
+  if (leadEmail) customer.email = leadEmail;
+
+  return {
+    assistantId: config.assistantId,
+    phoneNumberId: config.phoneNumberId,
+    customer,
+    metadata: {
+      direction: "outbound",
+      trigger: clean(input.trigger) || "manual",
+      clientId: clean(input.clientId) || process.env.CLIENT_ID || "default",
+      leadPhone: input.customerNumber,
+      leadEmail,
+    },
+    assistantOverrides: {
+      firstMessageMode: "assistant-speaks-first",
+      firstMessage: "{{outboundFirstMessage}}",
+      variableValues: {
+        outboundFirstMessage,
+        leadName,
+        clientName: companyName,
+        agentName,
+        callReason,
+        leadContext,
+        preferredChannel,
+      },
+    },
+  };
+}
+
+function outboundFirstMessageForVariables(input: OutboundCallInput): string {
+  return outboundFirstMessage(input);
+}
+
 // Ask Vapi to place an outbound call to the customer with Aria's assistant.
 export async function placeOutboundCall(
   config: OutboundConfig,
-  input: { customerNumber: string },
+  input: OutboundCallInput,
   request?: OutboundRequest,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
   if (!config.apiKey || !config.assistantId || !config.phoneNumberId) {
@@ -53,11 +129,7 @@ export async function placeOutboundCall(
   }
   if (!input.customerNumber) return { ok: false, error: "Missing customer number" };
   const send = request || realRequest(config);
-  return send({
-    assistantId: config.assistantId,
-    phoneNumberId: config.phoneNumberId,
-    customer: { number: input.customerNumber },
-  });
+  return send(outboundCallBody(config, input));
 }
 
 export function outboundAttemptSmsBody(input: { agentName?: string; companyName?: string; callbackNumber?: string; context?: string } = {}): string {

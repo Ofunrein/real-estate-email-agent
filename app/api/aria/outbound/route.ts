@@ -25,12 +25,29 @@ export async function POST(request: NextRequest) {
     if (!phone) {
       return NextResponse.json({ ok: false, error: "Missing phone" }, { status: 400 });
     }
-    void clientConfig();
-    const result = await placeOutboundCall(outboundConfig(), { customerNumber: phone });
+    const config = clientConfig();
+    const callReason = String(payload.callReason || payload.reason || payload.propertyInterest || payload.intent || payload.summary || "");
+    const leadContext = String(payload.leadContext || payload.context || payload.summary || "");
+    const result = await placeOutboundCall(outboundConfig(), {
+      customerNumber: phone,
+      leadName: String(payload.leadName || payload.name || payload.fullName || payload.full_name || ""),
+      leadEmail: String(payload.leadEmail || payload.email || ""),
+      companyName: config.clientName,
+      agentName: config.agentNames.voice,
+      callReason,
+      leadContext,
+      preferredChannel: String(payload.preferredChannel || payload.preferred_channel || ""),
+      clientId: config.clientId,
+      trigger: String(payload.trigger || "api"),
+    });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
-    const sms = await sendOutboundAttemptSms(phone).catch((error) => ({
+    const sms = await sendOutboundAttemptSms(phone, {
+      agentName: config.agentNames.voice,
+      companyName: config.clientName,
+      context: callReason || leadContext,
+    }).catch((error) => ({
       ok: false,
       error: error instanceof Error ? error.message : "Unable to send outbound attempt SMS",
     }));

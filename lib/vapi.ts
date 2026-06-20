@@ -18,6 +18,7 @@ export type VapiToolCall = {
 export type VapiEndOfCall = {
   callId: string;
   phone: string;
+  direction: "inbound" | "outbound";
   transcript: string;
   recordingUrl: string;
   summary: string;
@@ -130,6 +131,21 @@ function normalizeTranscriptValue(value: unknown, messages: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function parseCallDirection(input: {
+  message: Record<string, unknown>;
+  call: Record<string, unknown>;
+  payload: Record<string, unknown>;
+}): "inbound" | "outbound" {
+  const metadata = asObject(input.call.metadata || input.message.metadata || input.payload.metadata);
+  const metadataDirection = String(metadata.direction || "").trim().toLowerCase();
+  if (metadataDirection === "outbound") return "outbound";
+  if (metadataDirection === "inbound") return "inbound";
+
+  const callType = String(input.call.type || input.message.callType || input.payload.callType || "").trim();
+  if (callType === "outboundPhoneCall") return "outbound";
+  return "inbound";
+}
+
 export function parseEndOfCallReport(payload: Record<string, unknown>): VapiEndOfCall {
   const message = asObject(payload.message);
   const call = asObject(message.call || payload.call);
@@ -147,6 +163,7 @@ export function parseEndOfCallReport(payload: Record<string, unknown>): VapiEndO
   return {
     callId: String(call.id || message.callId || payload.callId || ""),
     phone: String(customer.number || message.phoneNumber || ""),
+    direction: parseCallDirection({ message, call, payload }),
     transcript: normalizeTranscriptValue(message.transcript ?? artifact.transcript, messages),
     recordingUrl: String(message.recordingUrl || artifact.recordingUrl || call.recordingUrl || ""),
     summary: String(message.summary || artifact.summary || ""),

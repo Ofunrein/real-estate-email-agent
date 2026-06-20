@@ -130,7 +130,7 @@ export async function handleAriaEndOfCall(
   const call: VoiceCallRecord = {
     call_id: report.callId,
     thread_ref: threadRef,
-    direction: "inbound",
+    direction: report.direction,
     phone: report.phone,
     started_at: report.startedAt,
     ended_at: report.endedAt,
@@ -146,7 +146,7 @@ export async function handleAriaEndOfCall(
   await deps
     .record({
       channel: "voice",
-      direction: "inbound",
+      direction: report.direction,
       agentName: IRIS_AGENT_NAME,
       phone: report.phone,
       source: "vapi",
