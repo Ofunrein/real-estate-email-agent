@@ -30,8 +30,8 @@
     "semantic_hash": ""
   },
   "app/api/aria/outbound/route.ts": {
-    "mtime": 1781943244.1224992,
-    "ast_hash": "5954a006ae1c5b3191c14f1395b08ba3",
+    "mtime": 1781957143.44516,
+    "ast_hash": "53fb3499679562c28fe190829849e79e",
     "semantic_hash": ""
   },
   "app/api/conversations/route.ts": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "components/AgentInboxClient.tsx": {
-    "mtime": 1781953321.371296,
-    "ast_hash": "8d3db8a6fada697ad886393719c0b754",
+    "mtime": 1781956879.7364638,
+    "ast_hash": "dd5daca6f845a3c6f2ee4b3fc6dac4d6",
     "semantic_hash": ""
   },
   "components/inbox/AgentLabel.tsx": {
@@ -190,8 +190,8 @@
     "semantic_hash": ""
   },
   "components/inbox/Sidebar.tsx": {
-    "mtime": 1781918325.2800226,
-    "ast_hash": "92b02c65542b00d205d492f61f269ae2",
+    "mtime": 1781955796.6815915,
+    "ast_hash": "3e013431698e9d04f27272e4d8d2bb6c",
     "semantic_hash": ""
   },
   "components/inbox/StatusDot.tsx": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "lib/ariaAssistant.ts": {
-    "mtime": 1781943218.1469972,
-    "ast_hash": "3d99d2ec9d9d07cb2bf4e3d4d106b322",
+    "mtime": 1781957131.4445713,
+    "ast_hash": "19215493ba29b46777d5030cb975e366",
     "semantic_hash": ""
   },
   "lib/ariaCalendar.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/clientConfig.ts": {
-    "mtime": 1781914505.236298,
-    "ast_hash": "cf5f43ec7211f14233d389ab00d471f1",
+    "mtime": 1781957108.7741165,
+    "ast_hash": "3cb91f6e35f7834e94e2bb0c45a38b90",
     "semantic_hash": ""
   },
   "lib/crm/ghl.ts": {
@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "lib/outbound.ts": {
-    "mtime": 1781943198.100402,
-    "ast_hash": "faf5c7862f010ecdd7c84ee6a7ff365a",
+    "mtime": 1781957205.6018257,
+    "ast_hash": "5fad6b75b88e59a37477ddb69d722ebb",
     "semantic_hash": ""
   },
   "lib/serviceAreas.ts": {
@@ -745,8 +745,8 @@
     "semantic_hash": ""
   },
   "scripts/aria-followup-queue.mjs": {
-    "mtime": 1781943262.3067622,
-    "ast_hash": "f5b16e9758e14ca61173a22c418ba53d",
+    "mtime": 1781957157.2376177,
+    "ast_hash": "f3338d04a8ffcf9b1a282e2b00021ef2",
     "semantic_hash": ""
   },
   "scripts/aria-provision.mjs": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "tests/ts/ariaAssistant.test.ts": {
-    "mtime": 1781943319.3306205,
-    "ast_hash": "6ed13a72f338fbb95d374415b51f7cde",
+    "mtime": 1781957228.7614758,
+    "ast_hash": "28e9b6540bb4711b332b2dd3401d2e5d",
     "semantic_hash": ""
   },
   "tests/ts/ariaData.test.ts": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": ""
   },
   "tests/ts/outbound.test.ts": {
-    "mtime": 1781943307.3147748,
-    "ast_hash": "6aea8e5656593b8205459752c81ec3ce",
+    "mtime": 1781957251.0347052,
+    "ast_hash": "f856a4639fa0b2befbdf725e9b754874",
     "semantic_hash": ""
   },
   "tests/ts/styleTraining.test.ts": {
@@ -2047,6 +2047,11 @@
   "db/migrations/009_gmail_thread_ownership.sql": {
     "mtime": 1781952717.5589907,
     "ast_hash": "0379eaa5f198deebe0c8988010f70024",
+    "semantic_hash": ""
+  },
+  "components/inbox/HumanReviewQueue.tsx": {
+    "mtime": 1781955857.026461,
+    "ast_hash": "f7b0c61e3c7dd88fd960c00fcec37018",
     "semantic_hash": ""
   }
 }
