@@ -78,7 +78,7 @@ test("parseEndOfCallReport: computes duration from timestamps", () => {
   const report = parseEndOfCallReport({
     message: {
       type: "end-of-call-report",
-      call: { id: "call_1", customer: { number: "+15125550000" } },
+      call: { id: "call_1", type: "inboundPhoneCall", customer: { number: "+15125550000" } },
       startedAt: "2026-06-10T17:00:00Z",
       endedAt: "2026-06-10T17:03:20Z",
       endedReason: "customer-ended-call",
@@ -88,9 +88,30 @@ test("parseEndOfCallReport: computes duration from timestamps", () => {
     },
   });
   assert.equal(report.callId, "call_1");
+  assert.equal(report.direction, "inbound");
   assert.equal(report.durationSec, 200);
   assert.equal(report.endedReason, "customer-ended-call");
   assert.equal(report.recordingUrl, "https://rec/call_1.mp3");
+});
+
+test("parseEndOfCallReport: detects outbound from call type", () => {
+  const report = parseEndOfCallReport({
+    message: {
+      type: "end-of-call-report",
+      call: { id: "call_out", type: "outboundPhoneCall", customer: { number: "+15125550000" } },
+    },
+  });
+  assert.equal(report.direction, "outbound");
+});
+
+test("parseEndOfCallReport: detects outbound from metadata fallback", () => {
+  const report = parseEndOfCallReport({
+    message: {
+      type: "end-of-call-report",
+      call: { id: "call_meta", customer: { number: "+15125550000" }, metadata: { direction: "outbound" } },
+    },
+  });
+  assert.equal(report.direction, "outbound");
 });
 
 test("parseEndOfCallReport: prefers explicit duration", () => {

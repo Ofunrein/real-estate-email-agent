@@ -69,6 +69,13 @@ test("buildAriaAssistant: sends final call reports to the app lifecycle webhook"
   assert.deepEqual(assistant.serverMessages, ["end-of-call-report"]);
 });
 
+test("buildAriaAssistant: keeps saved first message inbound-safe", () => {
+  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  assert.equal(assistant.firstMessage, "Thanks for calling Acme Realty, this is Iris. How can I help?");
+  assert.equal(assistant.firstMessageMode, "assistant-speaks-first");
+  assert.doesNotMatch(String(assistant.firstMessage), /\{\{#|{%\s*if/i);
+});
+
 test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   const assistant = withEnv({ ARIA_VOICE_PROVIDER: undefined, ARIA_VOICE_MODEL: undefined }, () =>
     buildAriaAssistant(config(), { publicUrl: "https://app.example.com" }),
@@ -108,6 +115,8 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   assert.match(messages[0].content, /mile markers/);
   assert.match(messages[0].content, /preferred follow-up channel/);
   assert.match(messages[0].content, /transferToHuman|transfer/i);
+  assert.match(messages[0].content, /\{\{call\.type\}\}/);
+  assert.match(messages[0].content, /outbound openers are resolved before POST \/call/i);
 });
 
 test("buildAriaAssistant: sets Vapi response delay", () => {
