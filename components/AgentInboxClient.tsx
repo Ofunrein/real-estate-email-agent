@@ -61,7 +61,27 @@ const channelViews: { key: View; label: string; agent: string; avatar: string; c
 
 function eventText(event: SheetRow) {
   const text = event.message_text || event.summary || event.ai_action || "";
-  return event.direction === "inbound" ? text : normalizeLegacyAgentText(text);
+  const raw = event.direction === "inbound" ? text : normalizeLegacyAgentText(text);
+  // Strip AI-injected metadata lines from inbound email display
+  if (event.direction === "inbound" && (event.channel || "").toLowerCase() === "email") {
+    return stripEmailMetadata(raw);
+  }
+  return raw;
+}
+
+// Remove lines that are AI extraction output (Intent/role/tags/key=value metadata)
+function stripEmailMetadata(text: string): string {
+  const lines = text.split("\n").filter((line) => {
+    const t = line.trim().toLowerCase();
+    if (!t) return false;
+    // Drop lines that are pure metadata: "Intent: ..." "role: ..." "tags: ..." or semicolon key=value chains
+    if (/^intent:\s/.test(t)) return false;
+    if (/^role:\s/.test(t)) return false;
+    if (/\btimeline=|budget=|beds=|area=|preferred_channel=|current_property_status=/.test(t)) return false;
+    if (/^tags:\s/.test(t)) return false;
+    return true;
+  });
+  return lines.join("\n").trim();
 }
 
 function eventSummaryText(event: SheetRow, fallback = "") {
