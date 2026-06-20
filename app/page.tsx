@@ -22,6 +22,7 @@ export default async function Home() {
         data={composeInboxData(leads, events, properties, voiceCalls)}
         initialRefreshedAt={new Date().toISOString()}
         sourceLabel={sourceLabel}
+        userEmail={session?.user?.email ?? ""}
       />
     );
   } catch (error) {
@@ -31,6 +32,7 @@ export default async function Home() {
         data={composeInboxData([], [], [])}
         initialRefreshedAt={new Date().toISOString()}
         loadError={message}
+        userEmail={session?.user?.email ?? ""}
       />
     );
   }

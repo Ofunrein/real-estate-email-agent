@@ -25,10 +25,35 @@ export type GmailTokenJson = Record<string, unknown> & {
 
 export type GmailClient = gmail_v1.Gmail;
 
+export const GMAIL_MODIFY_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
+export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+export const GMAIL_LABELS_SCOPE = "https://www.googleapis.com/auth/gmail.labels";
+
 export const GMAIL_AGENT_SCOPES = [
-  "https://www.googleapis.com/auth/gmail.modify",
-  "https://www.googleapis.com/auth/gmail.send",
+  GMAIL_MODIFY_SCOPE,
+  GMAIL_LABELS_SCOPE,
 ] as const;
+
+export const GMAIL_AUTOSEND_SCOPES = [
+  ...GMAIL_AGENT_SCOPES,
+  GMAIL_SEND_SCOPE,
+] as const;
+
+export function gmailScopesForMode(mode?: string): string[] {
+  const normalized = String(mode || "").trim().toLowerCase();
+  return normalized === "autosend" || normalized === "send"
+    ? [...GMAIL_AUTOSEND_SCOPES]
+    : [...GMAIL_AGENT_SCOPES];
+}
+
+export function emailCapabilitiesForScopes(scopes: string[] = []) {
+  const granted = new Set(scopes);
+  return [
+    { scope: GMAIL_MODIFY_SCOPE, label: "Read, thread, draft, and label workflow", granted: granted.has(GMAIL_MODIFY_SCOPE) },
+    { scope: GMAIL_LABELS_SCOPE, label: "Create/update Iris Gmail labels", granted: granted.has(GMAIL_LABELS_SCOPE) || granted.has(GMAIL_MODIFY_SCOPE) },
+    { scope: GMAIL_SEND_SCOPE, label: "Auto-send Gmail replies", granted: granted.has(GMAIL_SEND_SCOPE) },
+  ];
+}
 
 type OAuthCredentials = {
   installed?: {
@@ -51,6 +76,14 @@ export type GmailReplyInput = {
   messageId?: string;
   references?: string;
   attachments?: Array<{ filename: string; contentType: string; path: string }>;
+};
+
+export type GmailReplyResult = {
+  threaded: boolean;
+  mailboxEmail: string;
+  messageId: string;
+  threadId: string;
+  fallbackReason?: string;
 };
 
 function readJson<T>(filePath: string): T {
@@ -136,13 +169,13 @@ export function verifyGmailOAuthState(value: string): { clientId: string; operat
   };
 }
 
-export function gmailConnectUrl(input: { request: NextRequest; operatorEmail: string; clientId: string }) {
+export function gmailConnectUrl(input: { request: NextRequest; operatorEmail: string; clientId: string; mode?: string }) {
   const redirectUri = gmailOAuthRedirectUri(input.request);
   const oauth = createGmailOAuthClient(redirectUri);
   return oauth.generateAuthUrl({
     access_type: "offline",
     prompt: "consent select_account",
-    scope: [...GMAIL_AGENT_SCOPES],
+    scope: gmailScopesForMode(input.mode),
     include_granted_scopes: true,
     state: signedGmailOAuthState({
       clientId: input.clientId,
@@ -212,12 +245,18 @@ export async function connectGmailAccountFromCode(input: {
 }
 
 export async function createIrisGmailClient(): Promise<GmailClient> {
+  const session = await createIrisGmailSession();
+  return session.gmail;
+}
+
+export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; accountEmail: string; legacy: boolean }> {
   if (databaseEnabled()) {
     const account = await readDefaultEmailAccountFromDatabase();
     if (account) {
       const token = decryptEmailAccountToken<GmailTokenJson>(account.token_json_encrypted);
       const oauth = createGmailOAuthClient(gmailOAuthRedirectUri());
-      return gmailClientFromToken({
+      return {
+        gmail: gmailClientFromToken({
         token,
         oauth,
         onTokens: (tokens) => {
@@ -234,19 +273,65 @@ export async function createIrisGmailClient(): Promise<GmailClient> {
             markEmailAccountErrorInDatabase(account.email, message).catch(() => {});
           });
         },
-      });
+        }),
+        accountEmail: account.email,
+        legacy: false,
+      };
     }
   }
 
   const oauth = legacyOAuthClient();
-  return gmailClientFromToken({ token: legacyToken(), oauth });
+  return {
+    gmail: gmailClientFromToken({ token: legacyToken(), oauth }),
+    accountEmail: "legacy token",
+    legacy: true,
+  };
 }
 
 export function validGmailThreadId(value?: string) {
   return Boolean(value && /^[a-f0-9]{8,}$/i.test(value.trim()));
 }
 
-export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput): Promise<void> {
+function gmailErrorCode(error: unknown): number {
+  const candidate = error as { code?: unknown; status?: unknown; response?: { status?: unknown } };
+  const value = candidate?.code ?? candidate?.status ?? candidate?.response?.status;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function gmailErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  const candidate = error as { message?: unknown; errors?: Array<{ message?: unknown }> };
+  return String(candidate?.message || candidate?.errors?.[0]?.message || error || "");
+}
+
+export function isGmailNotFoundError(error: unknown): boolean {
+  const message = gmailErrorMessage(error);
+  return gmailErrorCode(error) === 404 || /requested entity was not found|not found/i.test(message);
+}
+
+export function isGmailAuthOrScopeError(error: unknown): boolean {
+  const code = gmailErrorCode(error);
+  return code === 401 || code === 403;
+}
+
+async function verifyGmailThread(gmail: GmailClient, threadId: string): Promise<void> {
+  await gmail.users.threads.get({
+    userId: "me",
+    id: threadId,
+    format: "minimal",
+  });
+}
+
+export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput): Promise<GmailReplyResult> {
+  return sendGmailReplyWithOptions(gmail, input, { mailboxEmail: "" });
+}
+
+export async function sendGmailReplyWithOptions(
+  gmail: GmailClient,
+  input: GmailReplyInput,
+  options: { mailboxEmail?: string; fallbackUnthreadedOnMissingThread?: boolean } = {},
+): Promise<GmailReplyResult> {
   const subjectRaw = input.subject || "(no subject)";
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
   const boundary = `boundary_${Date.now().toString(36)}`;
@@ -295,6 +380,37 @@ export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput)
   }
 
   const requestBody: { raw: string; threadId?: string } = { raw };
-  if (validGmailThreadId(input.threadId)) requestBody.threadId = input.threadId?.trim();
-  await gmail.users.messages.send({ userId: "me", requestBody });
+  const normalizedThreadId = validGmailThreadId(input.threadId) ? input.threadId?.trim() : "";
+  const mailboxEmail = options.mailboxEmail || "";
+  const fallbackEnabled = options.fallbackUnthreadedOnMissingThread !== false;
+
+  async function send(threadId?: string): Promise<GmailReplyResult> {
+    const body = threadId ? { ...requestBody, threadId } : { raw };
+    const result = await gmail.users.messages.send({ userId: "me", requestBody: body });
+    return {
+      threaded: Boolean(threadId),
+      mailboxEmail,
+      messageId: String(result.data.id || ""),
+      threadId: String(result.data.threadId || threadId || ""),
+    };
+  }
+
+  if (!normalizedThreadId) {
+    return send();
+  }
+
+  try {
+    await verifyGmailThread(gmail, normalizedThreadId);
+    return await send(normalizedThreadId);
+  } catch (error) {
+    if (!fallbackEnabled || isGmailAuthOrScopeError(error) || !isGmailNotFoundError(error)) {
+      throw error;
+    }
+    const fresh = await send();
+    return {
+      ...fresh,
+      threaded: false,
+      fallbackReason: "Gmail thread was not found in the active sending mailbox, so Iris sent a fresh email.",
+    };
+  }
 }

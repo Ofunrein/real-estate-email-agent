@@ -6,6 +6,15 @@ import {
   PROPERTIES_HEADERS,
   type SheetRow,
 } from "@/lib/sheetSchema";
+import {
+  DEFAULT_INBOX_CATEGORIES,
+  DEFAULT_INBOX_SETTINGS,
+  normalizeInboxCategory,
+  normalizeInboxSettings,
+  type AiDraft,
+  type InboxCategory,
+  type InboxSettings,
+} from "@/lib/inboxSettings";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mergeNonEmpty, normalizeEmail, normalizeName, normalizePhone } from "@/lib/leadIdentity";
 import {
@@ -210,6 +219,16 @@ export type EmailAccountRecord = {
   updated_at: string;
 };
 
+export type ThreadLinkRecord = {
+  thread_ref: string;
+  channel: string;
+  mailbox_email: string;
+  gmail_thread_id: string;
+  gmail_message_id: string;
+  thread_status: string;
+  updated_at: string;
+};
+
 function emailAccountFromRow(row: Record<string, unknown>): EmailAccountRecord {
   return {
     id: String(row.id || ""),
@@ -231,6 +250,10 @@ function emailAccountFromRow(row: Record<string, unknown>): EmailAccountRecord {
 
 async function emailAccountsTableReady(): Promise<boolean> {
   return (await tableColumns("email_accounts")).has("token_json_encrypted");
+}
+
+async function tableReady(tableName: string, requiredColumn = "client_id"): Promise<boolean> {
+  return (await tableColumns(tableName)).has(requiredColumn);
 }
 
 export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
@@ -337,6 +360,308 @@ export async function markEmailAccountErrorInDatabase(email: string, error: stri
         and provider = 'gmail'
         and email = $3`,
     [clientId(), error.slice(0, 500), email.trim().toLowerCase()],
+  );
+}
+
+function inboxCategoryFromRow(row: Record<string, unknown>): InboxCategory {
+  return normalizeInboxCategory({
+    slug: String(row.slug || ""),
+    name: String(row.name || ""),
+    color: String(row.color || ""),
+    sort_order: Number(row.sort_order || 0),
+    enabled: Boolean(row.enabled),
+    gmail_label_id: String(row.gmail_label_id || ""),
+    gmail_label_name: String(row.gmail_label_name || ""),
+    auto_rules: row.auto_rules && typeof row.auto_rules === "object" ? row.auto_rules as Record<string, unknown> : {},
+  });
+}
+
+function aiDraftFromRow(row: Record<string, unknown>): AiDraft {
+  return {
+    thread_ref: String(row.thread_ref || ""),
+    channel: String(row.channel || ""),
+    body: String(row.body || ""),
+    category_slug: String(row.category_slug || ""),
+    confidence: Number(row.confidence || 0),
+    reason: String(row.reason || ""),
+    next_action: String(row.next_action || ""),
+    safe_to_auto_send: Boolean(row.safe_to_auto_send),
+    needs_human: Boolean(row.needs_human),
+    model: String(row.model || ""),
+    status: String(row.status || ""),
+    fingerprint: String(row.fingerprint || ""),
+    updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+export async function ensureInboxDefaultsInDatabase(): Promise<void> {
+  if (!await tableReady("inbox_settings")) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into inbox_settings (client_id)
+     values ($1)
+     on conflict (client_id) do nothing`,
+    [clientId()],
+  );
+  if (!await tableReady("inbox_categories")) return;
+  for (const category of DEFAULT_INBOX_CATEGORIES) {
+    await getPool().query(
+      `insert into inbox_categories (
+          client_id, slug, name, color, sort_order, enabled, gmail_label_name, auto_rules
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+        on conflict (client_id, slug) do nothing`,
+      [
+        clientId(),
+        category.slug,
+        category.name,
+        category.color,
+        category.sort_order,
+        category.enabled,
+        category.gmail_label_name,
+        JSON.stringify(category.auto_rules),
+      ],
+    );
+  }
+}
+
+export async function readInboxSettingsFromDatabase(): Promise<InboxSettings> {
+  if (!await tableReady("inbox_settings")) return DEFAULT_INBOX_SETTINGS;
+  await ensureInboxDefaultsInDatabase();
+  const result = await getPool().query(
+    `select draft_first, auto_send_email, auto_send_sms, auto_send_whatsapp,
+            auto_send_messenger, auto_send_instagram, auto_send_website_chat,
+            channels_enabled, cache_status
+       from inbox_settings
+      where client_id = $1
+      limit 1`,
+    [clientId()],
+  );
+  const row = result.rows[0];
+  if (!row) return DEFAULT_INBOX_SETTINGS;
+  return normalizeInboxSettings({
+    draft_first: Boolean(row.draft_first),
+    auto_send: {
+      email: Boolean(row.auto_send_email),
+      sms: Boolean(row.auto_send_sms),
+      whatsapp: Boolean(row.auto_send_whatsapp),
+      messenger: Boolean(row.auto_send_messenger),
+      instagram: Boolean(row.auto_send_instagram),
+      website_chat: Boolean(row.auto_send_website_chat),
+    },
+    channels_enabled: row.channels_enabled || {},
+    cache_status: row.cache_status || {},
+  });
+}
+
+export async function upsertInboxSettingsInDatabase(settings: Partial<InboxSettings>): Promise<InboxSettings> {
+  if (!await tableReady("inbox_settings")) return normalizeInboxSettings(settings);
+  await ensureInboxDefaultsInDatabase();
+  const normalized = normalizeInboxSettings(settings);
+  await getPool().query(
+    `insert into inbox_settings (
+        client_id, draft_first, auto_send_email, auto_send_sms, auto_send_whatsapp,
+        auto_send_messenger, auto_send_instagram, auto_send_website_chat,
+        channels_enabled, cache_status
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)
+      on conflict (client_id) do update set
+        draft_first = excluded.draft_first,
+        auto_send_email = excluded.auto_send_email,
+        auto_send_sms = excluded.auto_send_sms,
+        auto_send_whatsapp = excluded.auto_send_whatsapp,
+        auto_send_messenger = excluded.auto_send_messenger,
+        auto_send_instagram = excluded.auto_send_instagram,
+        auto_send_website_chat = excluded.auto_send_website_chat,
+        channels_enabled = excluded.channels_enabled,
+        cache_status = excluded.cache_status,
+        updated_at = now()`,
+    [
+      clientId(),
+      normalized.draft_first,
+      normalized.auto_send.email,
+      normalized.auto_send.sms,
+      normalized.auto_send.whatsapp,
+      normalized.auto_send.messenger,
+      normalized.auto_send.instagram,
+      normalized.auto_send.website_chat,
+      JSON.stringify(normalized.channels_enabled),
+      JSON.stringify(normalized.cache_status),
+    ],
+  );
+  return normalized;
+}
+
+export async function readInboxCategoriesFromDatabase(): Promise<InboxCategory[]> {
+  if (!await tableReady("inbox_categories")) return DEFAULT_INBOX_CATEGORIES;
+  await ensureInboxDefaultsInDatabase();
+  const result = await getPool().query(
+    `select slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules
+       from inbox_categories
+      where client_id = $1
+      order by sort_order asc, name asc`,
+    [clientId()],
+  );
+  return result.rows.length ? result.rows.map(inboxCategoryFromRow) : DEFAULT_INBOX_CATEGORIES;
+}
+
+export async function upsertInboxCategoriesInDatabase(categories: Partial<InboxCategory>[]): Promise<InboxCategory[]> {
+  if (!await tableReady("inbox_categories")) return categories.map((category, index) => normalizeInboxCategory(category, DEFAULT_INBOX_CATEGORIES[index]));
+  await ensureInboxDefaultsInDatabase();
+  for (const [index, input] of categories.entries()) {
+    const category = normalizeInboxCategory(input, DEFAULT_INBOX_CATEGORIES[index]);
+    await getPool().query(
+      `insert into inbox_categories (
+          client_id, slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+        on conflict (client_id, slug) do update set
+          name = excluded.name,
+          color = excluded.color,
+          sort_order = excluded.sort_order,
+          enabled = excluded.enabled,
+          gmail_label_id = excluded.gmail_label_id,
+          gmail_label_name = excluded.gmail_label_name,
+          auto_rules = excluded.auto_rules,
+          updated_at = now()`,
+      [
+        clientId(),
+        category.slug,
+        category.name,
+        category.color,
+        category.sort_order,
+        category.enabled,
+        category.gmail_label_id,
+        category.gmail_label_name,
+        JSON.stringify(category.auto_rules),
+      ],
+    );
+  }
+  return readInboxCategoriesFromDatabase();
+}
+
+export async function readActiveAiDraftsFromDatabase(): Promise<Record<string, AiDraft>> {
+  if (!await tableReady("ai_drafts")) return {};
+  const result = await getPool().query(
+    `select thread_ref, channel, body, category_slug, confidence, reason, next_action,
+            safe_to_auto_send, needs_human, model, status, fingerprint, updated_at
+       from ai_drafts
+      where client_id = $1
+        and status = 'draft'
+      order by updated_at desc`,
+    [clientId()],
+  );
+  return Object.fromEntries(result.rows.map((row) => {
+    const draft = aiDraftFromRow(row);
+    return [`${draft.channel}:${draft.thread_ref}`, draft];
+  }));
+}
+
+export async function readAiDraftFromDatabase(input: { threadRef: string; channel: string }): Promise<AiDraft | null> {
+  if (!await tableReady("ai_drafts")) return null;
+  const result = await getPool().query(
+    `select thread_ref, channel, body, category_slug, confidence, reason, next_action,
+            safe_to_auto_send, needs_human, model, status, fingerprint, updated_at
+       from ai_drafts
+      where client_id = $1
+        and thread_ref = $2
+        and channel = $3
+        and status = 'draft'
+      order by updated_at desc
+      limit 1`,
+    [clientId(), input.threadRef, input.channel],
+  );
+  return result.rows[0] ? aiDraftFromRow(result.rows[0]) : null;
+}
+
+export async function upsertAiDraftInDatabase(input: Omit<AiDraft, "updated_at" | "status"> & { status?: string }): Promise<AiDraft> {
+  if (!await tableReady("ai_drafts")) {
+    return { ...input, status: input.status || "draft", updated_at: new Date().toISOString() };
+  }
+  await ensureClientInDatabase();
+  const result = await getPool().query(
+    `insert into ai_drafts (
+        client_id, thread_ref, channel, body, category_slug, confidence, reason,
+        next_action, safe_to_auto_send, needs_human, model, status, fingerprint
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      on conflict (client_id, thread_ref, channel) where status = 'draft'
+      do update set
+        body = excluded.body,
+        category_slug = excluded.category_slug,
+        confidence = excluded.confidence,
+        reason = excluded.reason,
+        next_action = excluded.next_action,
+        safe_to_auto_send = excluded.safe_to_auto_send,
+        needs_human = excluded.needs_human,
+        model = excluded.model,
+        fingerprint = excluded.fingerprint,
+        updated_at = now()
+      returning thread_ref, channel, body, category_slug, confidence, reason, next_action,
+                safe_to_auto_send, needs_human, model, status, fingerprint, updated_at`,
+    [
+      clientId(),
+      input.thread_ref,
+      input.channel,
+      input.body,
+      input.category_slug,
+      input.confidence,
+      input.reason,
+      input.next_action,
+      input.safe_to_auto_send,
+      input.needs_human,
+      input.model,
+      input.status || "draft",
+      input.fingerprint,
+    ],
+  );
+  return aiDraftFromRow(result.rows[0]);
+}
+
+export async function updateAiDraftStatusInDatabase(input: {
+  threadRef: string;
+  channel: string;
+  status: "sent" | "dismissed" | "archived";
+}): Promise<void> {
+  if (!await tableReady("ai_drafts")) return;
+  await getPool().query(
+    `update ai_drafts
+        set status = $4,
+            updated_at = now()
+      where client_id = $1
+        and thread_ref = $2
+        and channel = $3
+        and status = 'draft'`,
+    [clientId(), input.threadRef, input.channel, input.status],
+  );
+}
+
+export async function upsertThreadLinkInDatabase(input: {
+  threadRef: string;
+  channel: string;
+  mailboxEmail?: string;
+  gmailThreadId?: string;
+  gmailMessageId?: string;
+  threadStatus?: string;
+}): Promise<void> {
+  if (!await tableReady("thread_links")) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into thread_links (
+        client_id, thread_ref, channel, mailbox_email, gmail_thread_id,
+        gmail_message_id, thread_status
+      ) values ($1, $2, $3, $4, $5, $6, $7)
+      on conflict (client_id, thread_ref, channel) do update set
+        mailbox_email = coalesce(nullif(excluded.mailbox_email, ''), thread_links.mailbox_email),
+        gmail_thread_id = coalesce(nullif(excluded.gmail_thread_id, ''), thread_links.gmail_thread_id),
+        gmail_message_id = coalesce(nullif(excluded.gmail_message_id, ''), thread_links.gmail_message_id),
+        thread_status = coalesce(nullif(excluded.thread_status, ''), thread_links.thread_status),
+        updated_at = now()`,
+    [
+      clientId(),
+      input.threadRef,
+      input.channel,
+      input.mailboxEmail || "",
+      input.gmailThreadId || "",
+      input.gmailMessageId || "",
+      input.threadStatus || "",
+    ],
   );
 }
 
@@ -746,10 +1071,12 @@ export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): P
 export async function appendConversationEventToDatabase(event: Partial<SheetRow>): Promise<SheetRow> {
   await ensureClientInDatabase();
   const cleaned = cleanRow(CONVERSATION_EVENTS_HEADERS, event);
+  const columns = await tableColumns("conversation_events");
+  const writableHeaders = CONVERSATION_EVENTS_HEADERS.filter((header) => columns.has(header));
   await getPool().query(
-    `insert into conversation_events (client_id, ${CONVERSATION_EVENTS_HEADERS.join(", ")})
-     values ($1, ${CONVERSATION_EVENTS_HEADERS.map((_, index) => `$${index + 2}`).join(", ")})`,
-    [clientId(), ...CONVERSATION_EVENTS_HEADERS.map((header) => eventDbValue(header, cleaned[header]))],
+    `insert into conversation_events (client_id, ${writableHeaders.join(", ")})
+     values ($1, ${writableHeaders.map((_, index) => `$${index + 2}`).join(", ")})`,
+    [clientId(), ...writableHeaders.map((header) => eventDbValue(header, cleaned[header]))],
   );
   return cleaned;
 }

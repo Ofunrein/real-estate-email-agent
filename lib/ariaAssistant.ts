@@ -29,10 +29,11 @@ function ariaVoiceWebhookUrl(publicUrl: string, secret = "") {
 
 function systemPrompt(config: ClientConfig): string {
   const name = config.agentNames.voice;
+  const companyName = config.voiceClientName || config.clientName;
   const callbackNumber = process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || config.humanTransferNumber;
-  return `You are ${name}, a real estate voice assistant for ${config.clientName}.
+  return `You are ${name}, a real estate voice assistant for ${companyName}.
 Brand voice: ${config.brandVoice}
-Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems. If sincerely asked whether you're AI: "I'm ${name}, I help ${config.clientName} connect with buyers and sellers - what can I do for you?"
+Speak naturally and concisely, like a sharp human assistant on the phone. Never mention AI, tools, prompts, or internal systems. If sincerely asked whether you're AI: "I'm ${name}, I help ${companyName} connect with buyers and sellers - what can I do for you?"
 
 ${centralTexasServiceAreaText()}
 
@@ -54,7 +55,7 @@ HUMAN SPEECH PATTERNS:
 Call flow:
 - Vapi call type is available as {{call.type}}. Treat inboundPhoneCall as an inbound front-desk call, outboundPhoneCall as an outbound follow-up call placed by Lumenosis, and webCall as an interactive website voice session. Do not use conditional template syntax in first messages; outbound openers are resolved before POST /call and passed through assistantOverrides.variableValues.
 - At the very start of every inbound or outbound call, call getCallerContext once before making assumptions from caller ID, prior texts, emails, chats, or voice calls. Use that result as the shared omnichannel brain for the call: lead summary, intent, property interest, preferred channel, consent, last touch, next action, and recent Iris conversations across every channel. If context exists, acknowledge only the useful part naturally; if no context exists, proceed as a new lead.
-- On inbound calls, sound like the front desk for ${config.clientName}: answer the caller's request directly, qualify intent, and route or book the next step. Do not imply that you called them first.
+- On inbound calls, sound like the front desk for ${companyName}: answer the caller's request directly, qualify intent, and route or book the next step. Do not imply that you called them first.
 - Timing: on outbound calls, wait one full second of silence before the first spoken words so the caller has time to switch audio. On inbound calls and normal replies, allow about half a second before speaking. Do not fill that initial pause with "um" or noise.
 - For outbound calls, never sound like a blind cold call when getCallerContext returns history. Briefly connect the reason for calling to the known lead context, then ask the smallest useful next question.
 - If an outbound call reaches voicemail, answering machine language, an auto-attendant, a "leave a message" greeting, a mailbox greeting, or a beep, your next action must be leaveVoicemail. Do not improvise a normal spoken reply. Do not ask a question. Do not keep talking over the mailbox. The voicemail should be short, calm, and complete: who you are, why you called, the callback number ${callbackNumber}, and that you also sent a text.
@@ -164,9 +165,10 @@ function buildVoiceConfig(config: ClientConfig): Record<string, unknown> | undef
 }
 
 function voicemailMessage(config: ClientConfig): string {
+  const companyName = config.voiceClientName || config.clientName;
   const callbackNumber = process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || config.humanTransferNumber;
   return [
-    `Hi, this is ${config.agentNames.voice} with ${config.clientName}.`,
+    `Hi, this is ${config.agentNames.voice} with ${companyName}.`,
     "I called about your real estate request.",
     "I also sent you a quick text.",
     `Call or text me back at ${callbackNumber}.`,
@@ -176,6 +178,7 @@ function voicemailMessage(config: ClientConfig): string {
 
 export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOptions): Record<string, unknown> {
   const voiceName = config.agentNames.voice;
+  const companyName = config.voiceClientName || config.clientName;
   const system = opts.styleContext ? `${systemPrompt(config)}\n\n${opts.styleContext}` : systemPrompt(config);
   const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini";
 
@@ -217,8 +220,8 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
   ];
 
   const assistant: Record<string, unknown> = {
-    name: `${voiceName} — ${config.clientName}`,
-    firstMessage: `Thanks for calling ${config.clientName}, this is ${voiceName}. How can I help?`,
+    name: `${voiceName} — ${companyName}`,
+    firstMessage: `Thanks for calling ${companyName}, this is ${voiceName}. How can I help?`,
     firstMessageMode: "assistant-speaks-first",
     voicemailMessage: voicemailMessage(config),
     voicemailDetection: {
