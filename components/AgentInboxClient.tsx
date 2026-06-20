@@ -39,10 +39,10 @@ const DASHBOARD_REFRESH_MS = 5000;
 const channelViews: { key: View; label: string; agent: string; avatar: string; channel?: Channel }[] = [
   { key: "email", label: "Email", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "email" },
   { key: "sms", label: "SMS", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "sms" },
-  { key: "whatsapp", label: "WhatsApp", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "whatsapp" },
-  { key: "messenger", label: "Messenger", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "messenger" },
-  { key: "instagram", label: "Instagram", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "instagram" },
   { key: "voice", label: "Voice", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "voice" },
+  { key: "instagram", label: "Instagram", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "instagram" },
+  { key: "messenger", label: "Messenger", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "messenger" },
+  { key: "whatsapp", label: "WhatsApp", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "whatsapp" },
   { key: "website_chat", label: "Website", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "website_chat" },
 ];
 
@@ -229,6 +229,10 @@ function threadSubtitle(threadRef: string, events: SheetRow[], channel?: Channel
   if (channel === "email") return latest.thread_ref || latest.source || threadRef;
   if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(channel || "")) return latest.thread_ref || threadRef;
   return latest.source || latest.thread_ref || "";
+}
+
+function gmailThreadIdForEmail(events: SheetRow[]) {
+  return events.map((event) => event.thread_ref).find((threadRef) => /^[a-f0-9]{8,}$/i.test(threadRef || ""));
 }
 
 function threadSearchText(threadRef: string, events: SheetRow[], channel?: Channel) {
@@ -675,7 +679,7 @@ function ConversationThread({
           channel={channel}
           to={(channel === "email" ? latest.email : latest.phone) || ""}
           subject={channel === "email" ? eventSummaryText(latest) : undefined}
-          gmailThreadId={channel === "email" ? threadRef : undefined}
+          gmailThreadId={channel === "email" ? gmailThreadIdForEmail(events) : undefined}
         />
       ) : null}
     </article>
