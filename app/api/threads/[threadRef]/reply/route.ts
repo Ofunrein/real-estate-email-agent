@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { recordChannelInteraction } from "@/lib/channelIngest";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { type EmailAttachment, sendManualReply } from "@/lib/manualReply";
+import { databaseEnabled, upsertThreadLinkInDatabase } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     email: input.channel === "email" ? input.to : undefined,
     threadRef,
     messageText: input.body,
+    status: result.ok && result.fallbackReason ? "sent_fresh" : "sent",
+    mailboxEmail: input.channel === "email" ? result.mailboxEmail : "",
+    gmailThreadId: input.channel === "email" ? result.gmailThreadId : "",
+    gmailMessageId: input.channel === "email" ? result.gmailMessageId : "",
+    threadStatus: input.channel === "email"
+      ? result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox"
+      : "",
   });
 
-  return NextResponse.json({ ok: true });
+  if (databaseEnabled() && input.channel === "email" && result.ok) {
+    await upsertThreadLinkInDatabase({
+      threadRef,
+      channel: "email",
+      mailboxEmail: result.mailboxEmail,
+      gmailThreadId: result.gmailThreadId || input.threadId,
+      gmailMessageId: result.gmailMessageId,
+      threadStatus: result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox",
+    });
+  }
+
+  return NextResponse.json(result);
 }

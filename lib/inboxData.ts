@@ -1,5 +1,14 @@
 import type { SheetRow } from "@/lib/sheetSchema";
 import { IRIS_AGENT_NAME, normalizeLegacyAgentName, normalizeLegacyAgentText } from "@/lib/agentIdentity";
+import {
+  DEFAULT_INBOX_CATEGORIES,
+  DEFAULT_INBOX_SETTINGS,
+  inferCategorySlug,
+  type AiDraft,
+  type EmailCapability,
+  type InboxCategory,
+  type InboxSettings,
+} from "@/lib/inboxSettings";
 
 export type Channel = "email" | "sms" | "whatsapp" | "messenger" | "instagram" | "voice" | "website_chat" | "unknown";
 
@@ -10,6 +19,11 @@ export type AgentInboxData = {
   properties: SheetRow[];
   metrics: ReturnType<typeof buildMetrics>;
   threads: Record<string, SheetRow[]>;
+  threadCategories: Record<string, string>;
+  inboxCategories: InboxCategory[];
+  inboxSettings: InboxSettings;
+  drafts: Record<string, AiDraft>;
+  emailCapabilities: EmailCapability[];
   propertyHealth: ReturnType<typeof buildPropertyHealth>;
 };
 
@@ -175,11 +189,19 @@ export function parseVoiceTranscript(transcript = ""): VoiceTranscriptTurn[] {
   return turns;
 }
 
-export function composeInboxData(leads: SheetRow[], events: SheetRow[], properties: SheetRow[], voiceCalls: SheetRow[] = []): AgentInboxData {
+export function composeInboxData(
+  leads: SheetRow[],
+  events: SheetRow[],
+  properties: SheetRow[],
+  voiceCalls: SheetRow[] = [],
+  extras: Partial<Pick<AgentInboxData, "inboxCategories" | "inboxSettings" | "drafts" | "emailCapabilities">> = {},
+): AgentInboxData {
   const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead)).map(normalizeInboxRow);
   const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event)).map(normalizeInboxRow);
   const visibleVoiceCalls = voiceCalls.filter((call) => !isReservedTestRow(call)).map(normalizeInboxRow);
   const metrics = buildMetrics(visibleLeads, visibleEvents);
+  const threads = groupEventsByThread(visibleEvents);
+  const categories = extras.inboxCategories?.length ? extras.inboxCategories : DEFAULT_INBOX_CATEGORIES;
   if (visibleVoiceCalls.length) {
     metrics.channels.voice = visibleVoiceCalls.length;
   }
@@ -190,7 +212,14 @@ export function composeInboxData(leads: SheetRow[], events: SheetRow[], properti
     voiceCalls: visibleVoiceCalls,
     properties,
     metrics,
-    threads: groupEventsByThread(visibleEvents),
+    threads,
+    threadCategories: Object.fromEntries(
+      Object.entries(threads).map(([threadRef, threadEvents]) => [threadRef, inferCategorySlug(threadEvents, categories)]),
+    ),
+    inboxCategories: categories,
+    inboxSettings: extras.inboxSettings || DEFAULT_INBOX_SETTINGS,
+    drafts: extras.drafts || {},
+    emailCapabilities: extras.emailCapabilities || [],
     propertyHealth: buildPropertyHealth(properties),
   };
 }

@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "app/api/data/route.ts": {
-    "mtime": 1781914504.9301054,
-    "ast_hash": "c29f875bf2ea7238bd57bb520c1d7c2d",
+    "mtime": 1781950326.6167557,
+    "ast_hash": "d18723fe06975c0762c4942faf93827f",
     "semantic_hash": ""
   },
   "app/api/leads/route.ts": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/reply/route.ts": {
-    "mtime": 1781759084.5667386,
-    "ast_hash": "816db9ecd269c0fff3c1575ead0e6d23",
+    "mtime": 1781952907.4207463,
+    "ast_hash": "3156650a2abe452fa16aea5d27c118d3",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/takeover/route.ts": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "app/page.tsx": {
-    "mtime": 1781914505.14422,
-    "ast_hash": "697fc2e6a611d4094371c6cbde1a841d",
+    "mtime": 1781946287.228722,
+    "ast_hash": "427e21c9557d9b81747cf8cba03bb50e",
     "semantic_hash": ""
   },
   "channels/__init__.py": {
@@ -160,8 +160,8 @@
     "semantic_hash": ""
   },
   "components/AgentInboxClient.tsx": {
-    "mtime": 1781940394.9667761,
-    "ast_hash": "591e7fefeb4fe3eb336ae255dee1ac15",
+    "mtime": 1781953321.371296,
+    "ast_hash": "8d3db8a6fada697ad886393719c0b754",
     "semantic_hash": ""
   },
   "components/inbox/AgentLabel.tsx": {
@@ -175,8 +175,8 @@
     "semantic_hash": ""
   },
   "components/inbox/HumanTakeover.tsx": {
-    "mtime": 1781914505.1702538,
-    "ast_hash": "4ab2540f155e340a76d25964598d41e2",
+    "mtime": 1781953029.105821,
+    "ast_hash": "cd332bcde6f41d148257378af4b953ff",
     "semantic_hash": ""
   },
   "components/inbox/PropertyTable.tsx": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "lib/channelIngest.ts": {
-    "mtime": 1781914505.2307699,
-    "ast_hash": "b8cd8126fc8c4d66057402c9a1fa89a1",
+    "mtime": 1781952893.9734192,
+    "ast_hash": "33b6b4c097c2ece80450c3c4048880f9",
     "semantic_hash": ""
   },
   "lib/clientConfig.ts": {
@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1781940192.1052866,
-    "ast_hash": "4aca0e3846772fcbb62c70de10820942",
+    "mtime": 1781952703.872851,
+    "ast_hash": "57bd1b6cd3df62f4d010b02f78ad36c2",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -420,13 +420,13 @@
     "semantic_hash": ""
   },
   "lib/inboxData.ts": {
-    "mtime": 1781914505.2396054,
-    "ast_hash": "e72f5042f01c044cce83c02b79e5ab7f",
+    "mtime": 1781950241.2399545,
+    "ast_hash": "a690560a0793bf94c2b1df93970846f1",
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1781940293.5403123,
-    "ast_hash": "c7d6f3b44aee488be94747947f316b6d",
+    "mtime": 1781953433.3540893,
+    "ast_hash": "0bd154637a00a2e460274bbc5cb92479",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "lib/manualReply.ts": {
-    "mtime": 1781940276.723806,
-    "ast_hash": "b2672c23d05567826a23528769d7a5d5",
+    "mtime": 1781952788.651881,
+    "ast_hash": "d02d135936b8d3ddd5591f625b50b501",
     "semantic_hash": ""
   },
   "lib/manychatApi.ts": {
@@ -475,8 +475,8 @@
     "semantic_hash": ""
   },
   "lib/sheetSchema.ts": {
-    "mtime": 1781816913.9700055,
-    "ast_hash": "ea2037c1f024008721c5e299d0971525",
+    "mtime": 1781952675.8208346,
+    "ast_hash": "8251cdff0c7bb8423b1ceba3267854e2",
     "semantic_hash": ""
   },
   "lib/sheetsSync.ts": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "lib/theoAgent.ts": {
-    "mtime": 1781935383.5496743,
-    "ast_hash": "44a4db850e4295dba9dbc4013d046807",
+    "mtime": 1781950608.59355,
+    "ast_hash": "7b7b7a9f6097307134c68c9637c12cbd",
     "semantic_hash": ""
   },
   "lib/theoAppointments.ts": {
@@ -1095,8 +1095,8 @@
     "semantic_hash": ""
   },
   "tests/ts/theoAgent.test.ts": {
-    "mtime": 1781935423.9749272,
-    "ast_hash": "f82748f7fdbbca4ffcef06ebe4d4c4a6",
+    "mtime": 1781950624.613181,
+    "ast_hash": "fa602428df5f8266e05304973ba7541e",
     "semantic_hash": ""
   },
   "tests/ts/theoSocialRouter.test.ts": {
@@ -1970,8 +1970,8 @@
     "semantic_hash": ""
   },
   "app/api/settings/email-account/connect/route.ts": {
-    "mtime": 1781940316.6250293,
-    "ast_hash": "11fb6be5997beea0fd6ffb65cdb9f5c3",
+    "mtime": 1781950359.9802833,
+    "ast_hash": "a6593b3dc52a39f7c54e4ace47001f54",
     "semantic_hash": ""
   },
   "app/api/settings/email-account/route.ts": {
@@ -1990,18 +1990,63 @@
     "semantic_hash": ""
   },
   "lib/gmailConnection.ts": {
-    "mtime": 1781940878.2139928,
-    "ast_hash": "a7eceab7c250268ef9b7a19e85b1f877",
+    "mtime": 1781952749.2582839,
+    "ast_hash": "9f2e6a0583931174991ce143ec7ab31c",
     "semantic_hash": ""
   },
   "tests/ts/gmailConnection.test.ts": {
-    "mtime": 1781940474.3236868,
-    "ast_hash": "0261caca6307f34bbd2ca3c3c447a861",
+    "mtime": 1781953308.1153398,
+    "ast_hash": "35a60d8436c4b1b549cd6a312139e0d4",
     "semantic_hash": ""
   },
   "COPY_PLAN.md": {
     "mtime": 1781936442.953496,
     "ast_hash": "9e09a0015b058f192f85db2a21c973a6",
+    "semantic_hash": ""
+  },
+  "app/api/settings/email-account/reconnect/route.ts": {
+    "mtime": 1781950374.034891,
+    "ast_hash": "400554895a3321af9086fb98bb60b3dd",
+    "semantic_hash": ""
+  },
+  "app/api/settings/inbox/route.ts": {
+    "mtime": 1781950390.8577123,
+    "ast_hash": "a3948ab25114a0c55f8dbf3afd258141",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/category/route.ts": {
+    "mtime": 1781950437.8798995,
+    "ast_hash": "15b8f7b25423f59777e506b694a9a9d7",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/draft/route.ts": {
+    "mtime": 1781950419.6690657,
+    "ast_hash": "44a3fdb4fe4ea446dcfccd838fbf1aa7",
+    "semantic_hash": ""
+  },
+  "db/migrations/008_inbox_settings.sql": {
+    "mtime": 1781950131.3890295,
+    "ast_hash": "cf16628889483500ab817e6ee1662c66",
+    "semantic_hash": ""
+  },
+  "lib/inboxSettings.ts": {
+    "mtime": 1781950178.3706589,
+    "ast_hash": "5ca69c45e17597fb2081b876841e7e71",
+    "semantic_hash": ""
+  },
+  "lib/irisConversationBrain.ts": {
+    "mtime": 1781950216.2242215,
+    "ast_hash": "52c1518b3c8ca62068b7f2546f029124",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/draft/action/route.ts": {
+    "mtime": 1781952963.5693161,
+    "ast_hash": "dc0c982420e0c49f6b3c99e7c799ece1",
+    "semantic_hash": ""
+  },
+  "db/migrations/009_gmail_thread_ownership.sql": {
+    "mtime": 1781952717.5589907,
+    "ast_hash": "0379eaa5f198deebe0c8988010f70024",
     "semantic_hash": ""
   }
 }

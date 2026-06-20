@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     request,
     operatorEmail: session.user.email,
     clientId: clientId(),
+    mode: request.nextUrl.searchParams.get("mode") || "",
   });
   return NextResponse.redirect(url);
 }

@@ -4,6 +4,16 @@ import { useEffect, useRef, useState } from "react";
 
 type Channel = "sms" | "whatsapp" | "messenger" | "instagram" | "email";
 
+type DraftPayload = {
+  body: string;
+  category_slug: string;
+  confidence: number;
+  reason: string;
+  next_action: string;
+  safe_to_auto_send: boolean;
+  needs_human: boolean;
+};
+
 export function HumanTakeover({
   threadRef,
   channel,
@@ -23,10 +33,13 @@ export function HumanTakeover({
 }) {
   const [isActive, setIsActive] = useState(false);
   const [body, setBody] = useState("");
+  const [draft, setDraft] = useState<DraftPayload | null>(null);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [sendNotice, setSendNotice] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const base = `/api/threads/${encodeURIComponent(threadRef)}`;
@@ -76,6 +89,7 @@ export function HumanTakeover({
     if (!body.trim() && mediaUrls.length === 0) return;
     setSending(true);
     setError("");
+    setSendNotice("");
     const d = await (
       await fetch(`${base}/reply`, {
         method: "POST",
@@ -87,9 +101,30 @@ export function HumanTakeover({
     if (d.ok) {
       setBody("");
       setMediaUrls([]);
+      if (channel === "email") {
+        setSendNotice(d.fallbackReason || (d.threaded === false ? "Sent as a fresh email from the active mailbox." : `Sent from ${d.mailboxEmail || "active mailbox"}.`));
+      }
     } else {
       setError(d.error || "Send failed");
     }
+  }
+
+  async function generateDraft() {
+    setDrafting(true);
+    setError("");
+    const response = await fetch(`${base}/draft`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel }),
+    });
+    const payload = await response.json();
+    setDrafting(false);
+    if (payload.ok && payload.draft) {
+      setDraft(payload.draft);
+      setBody(payload.draft.body || "");
+      return;
+    }
+    setError(payload.error || "Draft failed");
   }
 
   const channelLabel = channel === "whatsapp" ? "WhatsApp" : channel === "sms" ? "SMS" : channel === "messenger" ? "Messenger" : channel === "instagram" ? "Instagram" : "Email";
@@ -115,6 +150,19 @@ export function HumanTakeover({
 
       {isActive && !isSocialDm && (
         <div className="human-compose">
+          <div className="ai-draft-toolbar">
+            <button className="ai-draft-button" onClick={generateDraft} type="button" disabled={drafting}>
+              {drafting ? "Drafting..." : draft ? "Refresh AI draft" : "Generate AI draft"}
+            </button>
+            {draft ? (
+              <div className="ai-draft-meta">
+                <span>{draft.category_slug.replaceAll("_", " ")}</span>
+                <span>{Math.round(draft.confidence * 100)}%</span>
+                <span>{draft.safe_to_auto_send ? "safe if enabled" : "review first"}</span>
+              </div>
+            ) : null}
+          </div>
+          {draft?.reason ? <div className="ai-draft-reason">{draft.reason}</div> : null}
           <textarea
             className="human-compose-textarea"
             placeholder={`Reply as ${channelLabel}…`}
@@ -137,6 +185,7 @@ export function HumanTakeover({
               ))}
             </div>
           )}
+          {sendNotice && <div className="human-compose-notice">{sendNotice}</div>}
           {error && <div className="human-compose-error">{error}</div>}
           <div className="human-compose-actions">
             <input ref={fileRef} type="file" accept="image/*,video/mp4,application/pdf" style={{ display: "none" }} onChange={onFile} />

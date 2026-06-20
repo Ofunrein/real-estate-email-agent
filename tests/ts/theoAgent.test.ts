@@ -154,6 +154,24 @@ test("generateTheoReply: generic amenity follow-up stays on the current listing"
   assert.doesNotMatch(result.reply, /Send me the area, budget, bedroom count/i);
 });
 
+test("generateTheoReply: bare ordinal reply resolves to selected listing", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "2",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [
+      property({ address: "700 Whitetail Dr", price: "699000", beds: "4", baths: "4", neighborhood: "Round Rock" }),
+      property({ address: "701 Old Ravine Ct", price: "700000", beds: "5", baths: "4", neighborhood: "Round Rock" }),
+      property({ address: "808 Bent Wood Pl", price: "560000", beds: "4", baths: "3", neighborhood: "Round Rock" }),
+    ],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_ordinal_reply_ready");
+  assert.match(result.reply, /701 Old Ravine Ct/);
+  assert.doesNotMatch(result.reply, /area, budget, bedroom count/i);
+});
+
 test("generateTheoReply: showing request asks for timing instead of human handoff", async () => {
   const result = await withoutOpenAi(() => generateTheoReply({
     message: "Can I tour the first one?",

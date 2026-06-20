@@ -26,13 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Missing phone" }, { status: 400 });
     }
     const config = clientConfig();
+    const voiceCompanyName = config.voiceClientName || config.clientName;
     const callReason = String(payload.callReason || payload.reason || payload.propertyInterest || payload.intent || payload.summary || "");
     const leadContext = String(payload.leadContext || payload.context || payload.summary || "");
     const result = await placeOutboundCall(outboundConfig(), {
       customerNumber: phone,
       leadName: String(payload.leadName || payload.name || payload.fullName || payload.full_name || ""),
       leadEmail: String(payload.leadEmail || payload.email || ""),
-      companyName: config.clientName,
+      companyName: voiceCompanyName,
       agentName: config.agentNames.voice,
       callReason,
       leadContext,
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
     const sms = await sendOutboundAttemptSms(phone, {
       agentName: config.agentNames.voice,
-      companyName: config.clientName,
+      companyName: voiceCompanyName,
       context: callReason || leadContext,
     }).catch((error) => ({
       ok: false,
