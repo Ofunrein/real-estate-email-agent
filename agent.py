@@ -1,3 +1,9 @@
+"""Legacy Iris email daemon.
+
+Keep this runtime intact while the Gmail polling, reply generation, handoff,
+and event-writing behavior is migrated into Vercel-hosted TypeScript routes.
+"""
+
 import base64
 import email as email_lib
 import json

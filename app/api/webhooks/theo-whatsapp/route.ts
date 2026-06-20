@@ -10,6 +10,7 @@ import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert } from "@/lib/twilioSms";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ async function recordTheoWhatsAppOutbound(input: TheoWhatsAppOutboundInput) {
     eventType: input.eventType || "whatsapp_outbound",
     channel: "whatsapp",
     direction: "outbound",
-    agentName: "Theo",
+    agentName: IRIS_AGENT_NAME,
     source: "meta_whatsapp",
     preferredChannel: "whatsapp",
   });
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
       if (controlAction === "start" || controlAction === "help") {
         const body = controlAction === "start"
           ? "You're opted back in. What home or area can I help with?"
-          : "Theo with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
+          : "Iris with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
         const sendResult = await sendMetaWhatsApp(inbound.from, body);
         let handoffAlertSent = false;
         let handoffAlertError = "";
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
           sourceDetail: inbound.displayPhoneNumber ? `to ${inbound.displayPhoneNumber}` : "",
           threadRef: result.event.thread_ref,
           messageText: body,
-          summary: controlAction === "start" ? "Theo sent WhatsApp opt-in confirmation." : "Theo sent WhatsApp help response.",
+          summary: controlAction === "start" ? "Iris sent WhatsApp opt-in confirmation." : "Iris sent WhatsApp help response.",
           aiAction: sendResult.sent ? "control_reply_sent" : "control_reply_generated",
           status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
           handoffReason: sendResult.error,
@@ -334,7 +335,7 @@ export async function POST(request: NextRequest) {
         threadRef: result.event.thread_ref,
         eventType: reply.status === "needs_human" ? "whatsapp_handoff_reply" : "whatsapp_ai_reply",
         messageText: whatsAppMessageWithMediaLog(reply.reply, reply.mediaUrls),
-        summary: `Theo ${sendResult.sent ? "sent" : "prepared"} WhatsApp reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
+        summary: `Iris ${sendResult.sent ? "sent" : "prepared"} WhatsApp reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
         aiAction: sendResult.sent ? "reply_sent" : "reply_generated",
         handoffReason: reply.handoffReason || sendResult.error,
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -364,7 +365,7 @@ export async function POST(request: NextRequest) {
       session_cost: formatUsd(theoSessionCost()),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process Theo WhatsApp webhook.";
+    const message = error instanceof Error ? error.message : "Unable to process Iris WhatsApp webhook.";
     logTheoWhatsApp("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });

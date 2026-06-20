@@ -503,7 +503,7 @@ function formatTheoNoPropertyOptions(message: string): string {
 
 function formatTheoGeneralReply(message: string, classification: TheoClassification): string {
   if (asksForLightGreeting(message)) {
-    return "Hi, this is Aria with Austin Realty. I can help find listings, send photos, compare options, or book a showing. What area, budget, and bedroom count should I search?";
+    return "Hi, this is Iris with Austin Realty. I can help find listings, send photos, compare options, or book a showing. What area, budget, and bedroom count should I search?";
   }
   if (classification.intent === "seller_lead" || classification.leadRole === "seller") {
     return "I can help with that. Are you looking for a home value estimate, help listing the property, or timing a sell-before-buy move?";
@@ -634,7 +634,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       mediaUrls: [],
       shouldSend: false,
       aiAction: "auto_reply_blocked",
-      handoffReason: classification.handoffReason || "Theo should not auto-reply to this SMS",
+      handoffReason: classification.handoffReason || "Iris should not auto-reply to this SMS",
       status: classification.status,
       metrics,
     };

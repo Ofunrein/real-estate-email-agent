@@ -23,7 +23,7 @@ test("handleAriaToolCalls: records event + returns results body", async () => {
     notify: async () => undefined,
     runTool: async (name) => ({
       result: `did ${name}`,
-      ingest: { channel: "voice", agentName: "Aria", aiAction: "property_lookup" },
+      ingest: { channel: "voice", agentName: "Iris", aiAction: "property_lookup" },
     }),
   });
   assert.equal(body.results[0].toolCallId, "tc_lookupProperty");
@@ -38,12 +38,12 @@ test("handleAriaToolCalls: notifies on showing_booked, not on lookup", async () 
   await handleAriaToolCalls(toolPayload("scheduleShowing", {}), {
     record: async () => undefined,
     notify,
-    runTool: async () => ({ result: "booked", ingest: { channel: "voice", agentName: "Aria", aiAction: "showing_booked" } }),
+    runTool: async () => ({ result: "booked", ingest: { channel: "voice", agentName: "Iris", aiAction: "showing_booked" } }),
   });
   await handleAriaToolCalls(toolPayload("lookupProperty", { address: "1 A St" }), {
     record: async () => undefined,
     notify,
-    runTool: async () => ({ result: "found", ingest: { channel: "voice", agentName: "Aria", aiAction: "property_lookup" } }),
+    runTool: async () => ({ result: "found", ingest: { channel: "voice", agentName: "Iris", aiAction: "property_lookup" } }),
   });
   assert.deepEqual(notified, ["showing_booked"]);
 });

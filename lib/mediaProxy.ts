@@ -36,6 +36,7 @@ export function isProxiableImageUrl(value: string): boolean {
 
 export function mediaProxyPath(url: string): string {
   const raw = unwrapMediaProxyUrl(url.trim());
+  if (isGoogleStreetViewUrl(raw)) return raw;
   if (!raw || !isProxiableImageUrl(raw)) return url;
   return `/api/media/proxy?url=${encodeURIComponent(raw)}`;
 }

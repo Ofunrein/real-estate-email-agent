@@ -949,9 +949,32 @@ export async function notifySlackOnHotLead(p: SlackCallPayload): Promise<void> {
 
 ## PART 3 — ARIA (voice agent, VAPI)
 
-### 3A — lib/ariaAssistant.ts (COMPLETE REPLACEMENT)
+### 3A — lib/ariaAssistant.ts + scripts/aria-provision.mjs
 
 Source of truth for Aria's VAPI config. Run `npm run aria:provision` after every change.
+
+Production rule: Aria is Vapi-adapter first. The live Vapi assistant must use
+Vapi platform tools for calendar availability, booking, Slack notification,
+Twilio/Theo SMS booking confirmation, transfer, and end-call. Do not attach repo webhook tools to the live Vapi
+assistant unless explicitly running a local integration test. The Next app is
+the agent inbox/dashboard and internal data runtime, not the live voice tool
+host.
+
+The live Aria assistant code must only define prompt/model/voice plus native
+Vapi call controls. Reusable action tools are created in
+`scripts/aria-provision.mjs` and attached to the assistant as `model.toolIds`.
+The required live tool set is:
+
+- `checkAvailability` — Vapi Google Calendar availability tool.
+- `bookConsultation` — Vapi Google Calendar event create tool.
+- `notifySlackLeadIssue` — Vapi Slack message send tool.
+- `sendBookingSmsConfirmation` — Vapi code tool that sends Twilio SMS to the caller and `ARIA_AGENT_CONFIRMATION_PHONE`.
+- `transferToHuman` — native Vapi transfer call tool.
+- `endCall` — native Vapi end call tool.
+
+Do not add `server.url`, `serverUrl`, or `/api/webhooks/aria-tools/*` to the
+production assistant config. `npm run aria:verify` must pass before claiming
+Aria is wired.
 
 ```typescript
 // lib/ariaAssistant.ts
@@ -965,28 +988,6 @@ export type AriaAssistantOptions = {
   respondProvider?: string;
   styleContext?: string;
 };
-
-function toolUrl(opts: AriaAssistantOptions, name: string): string {
-  const base = opts.publicUrl.replace(/\/$/, "");
-  const path = `/api/webhooks/aria-tools/${name}`;
-  return opts.secret
-    ? `${base}${path}?secret=${encodeURIComponent(opts.secret)}`
-    : `${base}${path}`;
-}
-
-function serverTool(
-  opts: AriaAssistantOptions,
-  name: string,
-  description: string,
-  parameters: Record<string, unknown>
-) {
-  return {
-    type: "function",
-    async: false,
-    function: { name, description, parameters },
-    server: { url: toolUrl(opts, name) },
-  };
-}
 
 function systemPrompt(config: ClientConfig): string {
   const name = config.agentNames.voice;
@@ -1030,18 +1031,18 @@ Never say "I'd be happy to help with that" or "Great question!" — these flag b
 
 Inbound (lead called in):
 → "${name} with ${config.clientName}, how can I help you?"
-→ Immediately call getCallerContext silently (no announcement).
+→ Keep the opening natural. Do not call repo webhook tools from live Vapi.
 
 Outbound (Aria dialed the lead):
 → "Hey [first name], this is ${name} with ${config.clientName} — did I catch you at an okay time?"
-→ If yes: call getCallerContext, continue.
+→ If yes: continue discovery and use Vapi calendar/Slack tools when needed.
 → If no: "No worries — when works? I can have someone reach out then." Log callback, end.
 
 Never open outbound with "How are you today?" — instant bot signal.
 
 ## CROSS-CHANNEL AWARENESS
 
-getCallerContext returns everything known about this lead across ALL channels:
+The agent inbox/dashboard stores everything known about this lead across ALL channels:
 - Iris email threads (what properties they asked about, what Iris replied)
 - Theo SMS/WhatsApp conversations (their texts, property inquiries, preferences)
 - Olivia web chat sessions
@@ -1073,20 +1074,18 @@ Never stack questions. Best ISAs make it feel like conversation, not intake.
 ## PROPERTY LOOKUPS
 
 When caller asks about a specific address:
-1. Say "Let me pull that up" (out loud, naturally) → call lookupProperty
-2. Relay ONLY what the tool returns. Never invent price, beds, baths, schools, crime, neighborhood stats.
-3. If STT may have misheard: check getCallerContext for prior property interest.
-   If street numbers match → use confirmed address, ask caller to verify.
-4. If lookupProperty returns no match → ask caller to confirm address. Don't guess. Don't retry same address unless they correct it.
-5. Do NOT say "I can't access listings" before calling the tool.
+1. Collect the address naturally.
+2. Never invent price, beds, baths, schools, crime, neighborhood stats.
+3. If the caller needs exact listing details, say a team member can confirm details and call notifySlackLeadIssue with the address and caller context.
+4. Offer a consultation or showing using Vapi calendar tools.
 
 When caller describes criteria (area, beds, budget) not one address:
-1. Say "Let me check what we have" → call searchProperties
-2. Read back top 2-3 matches naturally: "So I'm seeing a couple options..."
+1. Answer with safe service-area knowledge.
+2. Ask a single qualifying question, then offer to book a consultation.
 
 ## QUALIFICATION
 
-Once you know name, role, budget, area, timeline, preferred channel → call qualifyLead.
+Once you know name, role, budget, area, timeline, preferred channel, keep the conversation moving toward calendar booking or Slack follow-up.
 At most one qualifying question per turn. Don't rush.
 Always ask call_consent and sms_consent naturally — don't skip.
 
@@ -1095,19 +1094,21 @@ Always ask call_consent and sms_consent naturally — don't skip.
 Booking:
 1. Assumptive close: "What works better — [day] morning or [day] afternoon?"
    Never "Would you like to schedule?"
-2. When they confirm → call bookAppointment with full details.
+2. When they give a date or date range → call checkAvailability.
+3. When they confirm a slot → call bookConsultation with full details.
+4. After booking succeeds → call sendBookingSmsConfirmation so Theo texts the caller and the configured agent phone gets an SMS alert.
 3. After success: "Perfect, you're set for [day] at [time]. Confirmation text coming now."
 4. Don't end call immediately — wrap up naturally, answer final questions.
 
 Cancelling (verify identity first for inbound):
 1. Confirm they are the person the appointment was booked for.
-2. Call cancelAppointment with appointment_id from getCallerContext.
+2. If cancellation needs team action, call notifySlackLeadIssue with caller details and the appointment context.
 3. Confirm: "Got it, that's cancelled. Anything else I can help with?"
 
 Rescheduling:
 1. Verify identity same as cancel.
 2. Get new preferred time.
-3. Call rescheduleAppointment.
+3. Use checkAvailability, then bookConsultation for the new slot or notifySlackLeadIssue if human follow-up is needed.
 4. Confirm new time: "You're rescheduled for [new time]. Another confirmation text on the way."
 
 ## OBJECTION HANDLING — 4 FEARS (real estate edition)
@@ -1137,8 +1138,7 @@ Transfer immediately if:
 - Any complaint
 
 Before transferring: "Let me get [agent name] on with you right now — they're the best person for this."
-Then call transferToHuman. Do NOT summarize the call to the caller.
-Agent receives full context packet via Slack.
+Then call notifySlackLeadIssue with the context packet, then call transferToHuman. Do NOT summarize the call to the caller.
 
 ## CALL OUTCOMES
 
@@ -1149,17 +1149,17 @@ Every call ends as one of:
 - DNC/LOST: "No problem at all. Take care." Hang up. No persuasion.
 - TRANSFERRED: hand off without narration
 
-After any useful call: call syncToCrm with one-line summary. Then call endCall.
+After any useful call that needs follow-up: call notifySlackLeadIssue with a one-line summary. Then call endCall.
 
 ## HARD RULES
 
-1. Never fabricate listing data. lookupProperty only.
-2. Never say "I can't access that" before calling the tool.
+1. Never fabricate listing data.
+2. Never claim live MLS/listing access unless the attached Vapi adapter provides it.
 3. Never stack multiple questions in one turn.
 4. Never promise callback times you can't guarantee.
 5. Never say "AI", "bot", "automated", "script", "prompt", "system."
 6. One objection redirect max. Second → offer callback or close.
-7. Always confirm appointment details out loud before calling bookAppointment.
+7. Always confirm appointment details out loud before calling bookConsultation, then call sendBookingSmsConfirmation after success.
 8. Silence is not a problem to fill. Wait 3 full seconds.`;
 }
 
@@ -1379,13 +1379,15 @@ export function buildAriaAssistant(
         "Did Aria book an appointment, capture a callback, or qualify a lead? Yes/no with one reason.",
       successEvaluationRubric: "PassFail",
     },
-    serverUrl: `${process.env.PUBLIC_BASE_URL}/api/webhooks/aria-voice`,
-    serverUrlSecret: process.env.CHANNEL_WEBHOOK_SECRET,
   };
 }
 ```
 
-### 3B — lib/ariaTools.ts (ADDITIONS to existing)
+### 3B — lib/ariaTools.ts (internal/legacy only)
+
+`lib/ariaTools.ts` and `/api/webhooks/aria-tools/[tool]` are retained only for
+internal replay, local adapter tests, and dashboard/runtime utilities. They are
+not attached to the production Vapi assistant.
 
 Add these imports and cases to the existing runAriaTool() dispatcher:
 
@@ -3436,5 +3438,3 @@ PUBLIC_BASE_URL=https://your-domain.com
 | `app/api/webhooks/olivia-website/route.ts`        | EDIT    | Booking + hot lead + handoff                                            |
 | `app/api/webhooks/aria-sms-control/route.ts`      | CREATE  | Agent SMS commands                                                      |
 | `scripts/aria-provision.mjs`                      | REPLACE | VAPI CLI + SDK deploy                                                   |
-
-
