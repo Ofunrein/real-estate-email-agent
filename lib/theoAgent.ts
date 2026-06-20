@@ -395,8 +395,17 @@ function formatTheoAvailabilityAnswer(property: SheetRow): string {
 
 function formatTheoAmenityAnswer(property: SheetRow, message: string): string {
   const requested = requestedAmenityLabels(message);
-  if (!requested.length) return "";
   const listingText = cleanText([property.features, property.description].filter(Boolean).join(" "));
+  if (!requested.length) {
+    return [
+      `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`,
+      listingText
+        ? `The saved listing notes mention: ${listingText.slice(0, 260)}.`
+        : "I don't have more amenity notes saved for that listing yet.",
+      property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
+      "Want me to send photos, book a showing, or find options with specific amenities?",
+    ].filter(Boolean).join("\n\n");
+  }
   const mentioned = requested.filter((label) => new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\/.*/, "")}\\b`, "i").test(listingText));
   const unknown = requested.filter((label) => !mentioned.includes(label));
   const knownLine = mentioned.length

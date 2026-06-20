@@ -121,7 +121,7 @@ function normalizeFollowupText(message = ""): string {
 
 function referencesPriorProperties(message = ""): boolean {
   const normalized = normalizeFollowupText(message);
-  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(normalized);
+  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?|amenit(?:y|ies)|features?|details?|property you just sent|listing you just sent|one you just sent|for the property|for that property|for this property)\b/i.test(normalized);
 }
 
 function wantsRelatedProperties(message = ""): boolean {
