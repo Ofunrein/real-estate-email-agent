@@ -21,6 +21,12 @@ export type AriaAssistantOptions = {
   styleContext?: string; // optional few-shot brand-voice block
 };
 
+function ariaVoiceWebhookUrl(publicUrl: string, secret = "") {
+  const url = new URL("/api/webhooks/aria-voice", publicUrl);
+  if (secret) url.searchParams.set("secret", secret);
+  return url.toString();
+}
+
 function systemPrompt(config: ClientConfig): string {
   const name = config.agentNames.voice;
   const callbackNumber = process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || config.humanTransferNumber;
@@ -224,6 +230,10 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
     startSpeakingPlan: {
       waitSeconds: 0.5,
     },
+    server: {
+      url: ariaVoiceWebhookUrl(opts.publicUrl, opts.secret),
+    },
+    serverMessages: ["end-of-call-report"],
     model: {
       provider: modelProviderFor(modelName, opts.respondProvider || process.env.ARIA_MODEL_PROVIDER),
       model: modelName,
