@@ -2037,6 +2037,7 @@ time,
 .channel-bar.is-top { background: var(--accent); }
 .channel-count { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); min-width: 2ch; text-align: right; }
 
+
 /* ============================================================
    RESPONSIVE SYSTEM — single source of truth
    Tiers (max-width, layered widest -> narrowest so the cascade
@@ -2127,6 +2128,7 @@ time,
     --thread-bubble-max: min(94%, 100%);
     --thread-bubble-voice-max: min(90%, 100%);
   }
+
 
   /* Shell stacks: top nav bar, then main content. */
   .app-shell { flex-direction: column; }

@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/inbox/EmptyState";
 import { HumanTakeover } from "@/components/inbox/HumanTakeover";
 import { ActivityChart } from "@/components/inbox/charts/ActivityChart";
 import { ChannelMix } from "@/components/inbox/charts/ChannelMix";
+import { StatCards } from "@/components/inbox/charts/StatCards";
+import { MuiChartsProvider } from "@/components/inbox/charts/MuiChartsProvider";
 import { Sidebar } from "@/components/inbox/Sidebar";
 import { StatusDot } from "@/components/inbox/StatusDot";
 import { SyncIndicator } from "@/components/inbox/SyncIndicator";
@@ -1969,8 +1971,13 @@ export function AgentInboxClient({
                 />
               ) : (
                 <>
+                  <MuiChartsProvider>
+                    <StatCards events={currentEvents} />
+                  </MuiChartsProvider>
                   <div className="overview-charts">
-                    <ActivityChart events={currentEvents} />
+                    <MuiChartsProvider>
+                      <ActivityChart events={currentEvents} />
+                    </MuiChartsProvider>
                     <ChannelMix events={currentEvents} />
                   </div>
                   <TableRows events={currentEvents} onOpenEvent={openEventThread} />
