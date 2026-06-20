@@ -62,7 +62,7 @@ function combinedInboundMessage(events: Record<string, string>[] = [], currentMe
 }
 
 function referencesPriorProperties(message = ""): boolean {
-  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?)\b/i.test(message);
+  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?|amenit(?:y|ies)|features?|details?|property you just sent|listing you just sent|one you just sent|for the property|for that property|for this property)\b/i.test(message);
 }
 
 function wantsRelatedProperties(message = ""): boolean {
