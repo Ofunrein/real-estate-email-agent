@@ -33,6 +33,7 @@ export type StyleTrainingConfig = {
 export type ClientConfig = {
   clientId: string;
   clientName: string;
+  voiceClientName: string;
   agentNames: { email: string; sms: string; voice: string; chat: string };
   brandVoice: string;
   voiceId: string;
@@ -74,6 +75,7 @@ export function resolveClientConfig(env: Env = process.env): ClientConfig {
   return {
     clientId,
     clientName,
+    voiceClientName: str(env, "ARIA_CLIENT_NAME", teamName),
     agentNames: {
       email: str(env, "AGENT_NAME_EMAIL", IRIS_AGENT_NAME),
       sms: str(env, "AGENT_NAME_SMS", IRIS_AGENT_NAME),

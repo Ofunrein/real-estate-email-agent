@@ -59,13 +59,17 @@ function clean(value?: string): string {
   return String(value || "").trim();
 }
 
+function defaultVoiceCompanyName() {
+  return process.env.ARIA_CLIENT_NAME || process.env.TEAM_NAME || process.env.CLIENT_NAME || "Austin Realty";
+}
+
 function outboundCallReason(input: OutboundCallInput): string {
   return clean(input.callReason) || clean(input.leadContext) || "your real estate request";
 }
 
 export function outboundFirstMessage(input: OutboundCallInput): string {
   const agentName = clean(input.agentName) || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
-  const companyName = clean(input.companyName) || process.env.CLIENT_NAME || "Austin Realty";
+  const companyName = clean(input.companyName) || defaultVoiceCompanyName();
   const callReason = outboundCallReason(input);
   const leadName = clean(input.leadName);
   if (leadName) {
@@ -76,7 +80,7 @@ export function outboundFirstMessage(input: OutboundCallInput): string {
 
 function outboundCallBody(config: OutboundConfig, input: OutboundCallInput): Record<string, unknown> {
   const agentName = clean(input.agentName) || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
-  const companyName = clean(input.companyName) || process.env.CLIENT_NAME || "Austin Realty";
+  const companyName = clean(input.companyName) || defaultVoiceCompanyName();
   const callReason = outboundCallReason(input);
   const leadName = clean(input.leadName);
   const leadEmail = clean(input.leadEmail);
@@ -134,7 +138,7 @@ export async function placeOutboundCall(
 
 export function outboundAttemptSmsBody(input: { agentName?: string; companyName?: string; callbackNumber?: string; context?: string } = {}): string {
   const agentName = input.agentName || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
-  const companyName = input.companyName || process.env.CLIENT_NAME || "Austin Realty";
+  const companyName = input.companyName || defaultVoiceCompanyName();
   const callbackNumber = input.callbackNumber || process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || "";
   const context = input.context?.trim();
   return [

@@ -17,6 +17,7 @@ import {
   type PropertySortKey,
 } from "@/components/inbox/PropertyTable";
 import { type AgentInboxData, type Channel, parseVoiceTranscript, voiceCallTranscriptSource } from "@/lib/inboxData";
+import { categoryBySlug, type AiDraft, type InboxCategory, type InboxSettings } from "@/lib/inboxSettings";
 import { displayValue, formatPrice, missingPropertyFields } from "@/lib/format";
 import {
   inboxImagePreviewUrl,
@@ -46,6 +47,7 @@ type EmailAccountStatus = {
     status: string;
     last_error: string;
     updated_at: string;
+    scopes?: string[];
   }>;
 };
 
@@ -60,10 +62,13 @@ const channelViews: { key: View; label: string; agent: string; avatar: string; c
 ];
 
 function eventText(event: SheetRow) {
-  const text = event.message_text || event.summary || event.ai_action || "";
+  const isInboundEmail = event.direction === "inbound" && (event.channel || "").toLowerCase() === "email";
+  // For inbound emails, only use message_text — summary is AI-generated metadata, not the email body
+  const text = isInboundEmail
+    ? (event.message_text || "")
+    : (event.message_text || event.summary || event.ai_action || "");
   const raw = event.direction === "inbound" ? text : normalizeLegacyAgentText(text);
-  // Strip AI-injected metadata lines from inbound email display
-  if (event.direction === "inbound" && (event.channel || "").toLowerCase() === "email") {
+  if (isInboundEmail) {
     return stripEmailMetadata(raw);
   }
   return raw;
@@ -133,8 +138,26 @@ function EmailRenderedHtml({ html, properties }: { html: string; properties: She
   );
 }
 
+function isHistoricalEmailBodyUnavailable(event: SheetRow, text: string) {
+  if (eventChannel(event) !== "email") return false;
+  const reason = `${event.handoff_reason || ""} ${event.summary || ""}`.toLowerCase();
+  const source = `${event.source || ""} ${event.thread_status || ""}`.toLowerCase();
+  return reason.includes("full body was not recorded") ||
+    reason.includes("historical log") ||
+    source.includes("historical") ||
+    (!text.trim() && source.includes("log"));
+}
+
 function MessageContent({ event, properties }: { event: SheetRow; properties: SheetRow[] }) {
   const text = eventText(event);
+  if (isHistoricalEmailBodyUnavailable(event, text)) {
+    return (
+      <div className="message-text empty-message historical-email-missing">
+        <strong>Historical import, body unavailable</strong>
+        <span>This row came from an older log that did not preserve the full email body.</span>
+      </div>
+    );
+  }
   if (!text) {
     return <div className="message-text empty-message">No message text recorded</div>;
   }
@@ -223,6 +246,15 @@ function humanReviewThreads(threads: [string, SheetRow[]][]) {
   return threads.filter(([, events]) => threadNeedsHuman(events));
 }
 
+function parseDraftKey(key: string): { channel: Channel; threadRef: string } | null {
+  const separator = key.indexOf(":");
+  if (separator <= 0) return null;
+  const channel = key.slice(0, separator) as Channel;
+  const threadRef = key.slice(separator + 1);
+  if (!threadRef || !["email", "sms", "whatsapp", "messenger", "instagram", "website_chat"].includes(channel)) return null;
+  return { channel, threadRef };
+}
+
 function conversationKey(event: SheetRow, channel?: Channel | string) {
   const normalizedChannel = channel || eventChannel(event);
   if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(normalizedChannel)) {
@@ -265,7 +297,25 @@ function threadSubtitle(threadRef: string, events: SheetRow[], channel?: Channel
 }
 
 function gmailThreadIdForEmail(events: SheetRow[]) {
-  return events.map((event) => event.thread_ref).find((threadRef) => /^[a-f0-9]{8,}$/i.test(threadRef || ""));
+  return events.map((event) => event.gmail_thread_id || event.thread_ref).find((threadRef) => /^[a-f0-9]{8,}$/i.test(threadRef || ""));
+}
+
+function emailThreadNotice(events: SheetRow[]) {
+  if (!events.some((event) => eventChannel(event) === "email")) return "";
+  const latestFresh = [...events].reverse().find((event) => event.thread_status === "sent_fresh_from_current_mailbox" || event.status === "sent_fresh");
+  if (latestFresh?.mailbox_email) {
+    return `Last reply sent as a fresh email from ${latestFresh.mailbox_email} because the original Gmail thread was not in that mailbox.`;
+  }
+  const hasHistoricalMissingBody = events.some((event) => isHistoricalEmailBodyUnavailable(event, eventText(event)));
+  if (hasHistoricalMissingBody) {
+    return "Historical email import: older body content is unavailable. Replies still send from the active mailbox and may start a fresh email.";
+  }
+  const hasGmailThread = Boolean(gmailThreadIdForEmail(events));
+  const hasMailboxOwner = events.some((event) => event.mailbox_email);
+  if (hasGmailThread && !hasMailboxOwner) {
+    return "Imported Gmail thread without active mailbox ownership. If the current mailbox cannot find it, Iris will send a fresh email instead.";
+  }
+  return "";
 }
 
 function threadSearchText(threadRef: string, events: SheetRow[], channel?: Channel) {
@@ -607,6 +657,32 @@ function PropertyDetail({ property, onOpenCard }: { property: SheetRow; onOpenCa
   );
 }
 
+// Per-channel brand colors for activity rows
+const CH_COLORS: Record<string, string> = {
+  email: "#60A5FA", sms: "#2DD4BF", rcs: "#2DD4BF", voice: "#4ADE80",
+  instagram: "#F472B6", messenger: "#38BDF8", whatsapp: "#4ADE80",
+  web: "#FBBF24", website: "#FBBF24", website_chat: "#FBBF24",
+};
+
+function chColor(channel: string) { return CH_COLORS[channel.toLowerCase()] ?? "#94A3B8"; }
+
+function ChannelIconSmall({ channel }: { channel: string }) {
+  const ch = channel.toLowerCase();
+  if (ch === "email") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M1.5 5.5L8 9.5l6.5-4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>;
+  if (ch === "sms" || ch === "rcs") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2" width="13" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/><path d="M5 14l3-2h.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><circle cx="5.5" cy="7" r=".7" fill="currentColor"/><circle cx="8" cy="7" r=".7" fill="currentColor"/><circle cx="10.5" cy="7" r=".7" fill="currentColor"/></svg>;
+  if (ch === "voice") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M5.5 4.5v7M3 6.5v3M10.5 4.5v7M13 6.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>;
+  if (ch === "instagram") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="3.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/><circle cx="11.5" cy="4.5" r=".6" fill="currentColor"/></svg>;
+  if (ch === "messenger") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C4.13 1.5 1 4.3 1 7.75c0 2.07 1.1 3.9 2.8 5.05v2.2l2.4-1.32A8.2 8.2 0 008 14c3.87 0 7-2.8 7-6.25S11.87 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>;
+  if (ch === "whatsapp") return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5.5 7.5A2.5 2.5 0 018 5a2.5 2.5 0 012.5 2.5A2.5 2.5 0 018 10c-.55 0-1.06-.18-1.47-.48L5 10l.5-1.53A2.48 2.48 0 015.5 7.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>;
+  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/><path d="M1.5 8h13M8 1.5C6.34 3.5 5.5 5.64 5.5 8s.84 4.5 2.5 6.5M8 1.5C9.66 3.5 10.5 5.64 10.5 8s-.84 4.5-2.5 6.5" stroke="currentColor" strokeWidth="1.1"/></svg>;
+}
+
+function activityPillClass(event: SheetRow): { cls: string; label: string } {
+  if (eventNeedsHuman(event)) return { cls: "arv2-pill-review", label: "Review" };
+  if (event.direction === "outbound") return { cls: "arv2-pill-ai", label: "AI handled" };
+  return { cls: "arv2-pill-received", label: "Received" };
+}
+
 function TableRows({
   events,
   emptyLabel = "No conversations yet",
@@ -621,21 +697,35 @@ function TableRows({
   }
   return (
     <div className="row-stack">
-      {events.slice(-12).reverse().map((event, index) => {
+      {events.slice(-20).reverse().map((event, index) => {
+        const ch = eventChannel(event);
+        const color = chColor(ch);
+        const pill = activityPillClass(event);
+        const intent = event.intent || event.lead_role;
+        const chDisplayLabel = ch === "website_chat" || ch === "web" || ch === "website" ? "Website" : ch === "sms" ? "SMS" : ch.charAt(0).toUpperCase() + ch.slice(1);
         const rowContent = (
-          <>
-            <div className="row-title">{event.email || event.phone || event.thread_ref || "Unknown lead"}</div>
-            <div className="row-body">{eventSummaryText(event)}</div>
-            <div className="row-meta">
-              <StatusDot status={eventNeedsHuman(event) ? "needs_human" : (event.status || event.event_type || event.direction || "")} />
-              <time>{formatEventTime(event.event_at)}</time>
+          <div className="arv2-row" style={{ "--ch-color": color } as React.CSSProperties}>
+            <div className="arv2-icon-circle">
+              <ChannelIconSmall channel={ch} />
             </div>
-          </>
+            <div className="arv2-body">
+              <div className="arv2-top">
+                <span className="arv2-id">{event.email || event.phone || event.thread_ref || "Unknown"}</span>
+                <time className="arv2-time">{formatEventTime(event.event_at)}</time>
+              </div>
+              <span className="arv2-preview">{eventSummaryText(event)}</span>
+              <div className="arv2-pills">
+                <span className={`arv2-pill ${pill.cls}`}>{pill.label}</span>
+                <span className="arv2-pill arv2-pill-channel">{chDisplayLabel}</span>
+                {intent ? <span className="arv2-pill arv2-pill-intent">{intent}</span> : null}
+              </div>
+            </div>
+          </div>
         );
         if (onOpenEvent) {
           return (
             <button
-              className="table-row activity-row"
+              className="arv2-btn"
               key={`${event.thread_ref}-${event.event_at}-${index}`}
               onClick={() => onOpenEvent(event)}
               type="button"
@@ -645,7 +735,7 @@ function TableRows({
           );
         }
         return (
-          <div className="table-row" key={`${event.thread_ref}-${event.event_at}-${index}`}>
+          <div key={`${event.thread_ref}-${event.event_at}-${index}`}>
             {rowContent}
           </div>
         );
@@ -686,6 +776,11 @@ function ConversationThread({
           <span>{threadHandoffReason(events)}</span>
         </div>
       ) : null}
+      {channel === "email" && emailThreadNotice(events) ? (
+        <div className="thread-mailbox-note">
+          {emailThreadNotice(events)}
+        </div>
+      ) : null}
       <div className="thread-messages" aria-label={`${channelLabel} messages for ${threadIdentity(threadRef, events, channel)}`}>
         {events.map((event, index) => (
           <div
@@ -724,6 +819,9 @@ function ThreadViewer({
   channelLabel,
   channel,
   search,
+  categoryFilter,
+  categories,
+  threadCategories,
   selectedThreadKey,
   onSearchChange,
   onSelectThread,
@@ -733,6 +831,9 @@ function ThreadViewer({
   channelLabel: string;
   channel?: Channel;
   search: string;
+  categoryFilter: string;
+  categories: InboxCategory[];
+  threadCategories: Record<string, string>;
   selectedThreadKey: string;
   onSearchChange: (value: string) => void;
   onSelectThread: (threadRef: string) => void;
@@ -748,6 +849,7 @@ function ThreadViewer({
   }
   const normalizedSearch = search.trim().toLowerCase();
   const visibleThreads = threads.filter(([threadRef, events]) => {
+    if (categoryFilter && threadCategories[threadRef] !== categoryFilter) return false;
     if (!normalizedSearch) return true;
     return threadSearchText(threadRef, events, channel).includes(normalizedSearch);
   });
@@ -773,6 +875,7 @@ function ThreadViewer({
             const latest = latestEvent(events);
             const active = activeThread?.[0] === threadRef;
             const needsHuman = threadNeedsHuman(events);
+            const category = categoryBySlug(categories, threadCategories[threadRef] || "needs_reply");
             return (
               <button
                 className={active ? "conversation-list-item active" : "conversation-list-item"}
@@ -788,6 +891,7 @@ function ThreadViewer({
                 <span className="conversation-preview">{eventSummaryText(latest)}</span>
                 <span className="conversation-row-bottom">
                   <em>{events.length} messages</em>
+                  <span className="category-pill mini" style={{ ["--category-color" as string]: category.color }}>{category.name}</span>
                   {needsHuman ? <StatusDot status="needs_human" /> : null}
                 </span>
               </button>
@@ -998,6 +1102,155 @@ function LeadDetail({ leads }: { leads: SheetRow[] }) {
   );
 }
 
+type ReviewQueueItem = {
+  key: string;
+  threadRef: string;
+  channel: Channel;
+  identity: string;
+  receivedAt: string;
+  inboundText: string;
+  category: InboxCategory;
+  draft: AiDraft;
+};
+
+function buildReviewQueue(
+  currentEvents: SheetRow[],
+  drafts: Record<string, AiDraft>,
+  categories: InboxCategory[],
+  selectedChannel?: Channel,
+): ReviewQueueItem[] {
+  const items: ReviewQueueItem[] = [];
+  for (const [key, draft] of Object.entries(drafts)) {
+    const parsed = parseDraftKey(key);
+    if (!parsed || !draft.body.trim()) continue;
+    if (!["email", "sms", "whatsapp"].includes(parsed.channel)) continue;
+    if (selectedChannel && parsed.channel !== selectedChannel) continue;
+    const events = currentEvents.filter((event) =>
+      eventChannel(event) === parsed.channel &&
+      (conversationKey(event, parsed.channel) === parsed.threadRef || event.thread_ref === parsed.threadRef)
+    );
+    const latest = latestEvent(events);
+    const inbound = [...events].reverse().find((event) => event.direction === "inbound") || latest;
+    const category = categoryBySlug(categories, draft.category_slug || "needs_reply");
+    items.push({
+      key,
+      threadRef: parsed.threadRef,
+      channel: parsed.channel,
+      identity: threadIdentity(parsed.threadRef, events, parsed.channel),
+      receivedAt: inbound.event_at || draft.updated_at,
+      inboundText: eventText(inbound) || eventSummaryText(inbound, "No inbound text captured."),
+      category,
+      draft,
+    });
+  }
+  return items.sort((a, b) => new Date(b.receivedAt || b.draft.updated_at).getTime() - new Date(a.receivedAt || a.draft.updated_at).getTime());
+}
+
+function HumanReviewQueue({
+  items,
+  onChanged,
+}: {
+  items: ReviewQueueItem[];
+  onChanged: (key: string, next?: AiDraft) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const safeIndex = items.length ? Math.min(index, items.length - 1) : 0;
+  const item = items[safeIndex];
+
+  useEffect(() => {
+    setBody(item?.draft.body || "");
+    setEditing(false);
+    setError("");
+  }, [item?.key, item?.draft.body]);
+
+  if (!item) {
+    return (
+      <section className="context-card human-review-card review-queue-card">
+        <span className="rail-label">Human review queue</span>
+        <h3>Clear</h3>
+        <p>No active Iris drafts in this view.</p>
+      </section>
+    );
+  }
+
+  async function action(actionType: "approve_send" | "save_edit" | "dismiss") {
+    setBusy(actionType);
+    setError("");
+    const response = await fetch(`/api/threads/${encodeURIComponent(item.threadRef)}/draft/action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: actionType, channel: item.channel, body }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setBusy("");
+    if (!payload.ok) {
+      setError(payload.error || "Review action failed");
+      return;
+    }
+    if (actionType === "save_edit" && payload.draft) {
+      onChanged(item.key, payload.draft);
+      setEditing(false);
+      return;
+    }
+    onChanged(item.key);
+    setIndex((current) => Math.max(0, Math.min(current, items.length - 2)));
+  }
+
+  return (
+    <section className="context-card human-review-card review-queue-card">
+      <div className="review-queue-head">
+        <span className="rail-label">Human review queue</span>
+        <span className="review-count">{items.length} flagged</span>
+      </div>
+      <div className="review-lead-row">
+        <div>
+          <strong>{item.identity}</strong>
+          <span>{item.channel.toUpperCase()} · {formatEventTime(item.receivedAt)}</span>
+        </div>
+        <span className="category-pill mini" style={{ ["--category-color" as string]: item.category.color }}>{item.category.name}</span>
+      </div>
+      <div className="review-inbound">
+        <span>Inbound message</span>
+        <p>{item.inboundText}</p>
+      </div>
+      <div className="review-reason">
+        <span>{item.draft.reason || `${item.category.name} needs approval`}</span>
+      </div>
+      <div className="review-draft-head">
+        <strong>Iris's drafted reply</strong>
+        <span>Confidence {Math.round(item.draft.confidence * 100)}%</span>
+      </div>
+      <div className="review-confidence"><span style={{ width: `${Math.round(item.draft.confidence * 100)}%` }} /></div>
+      {editing ? (
+        <textarea className="review-draft-edit" value={body} onChange={(event) => setBody(event.target.value)} rows={5} />
+      ) : (
+        <p className="review-draft-body">{body}</p>
+      )}
+      {error ? <div className="human-compose-error">{error}</div> : null}
+      <div className="review-actions">
+        <button className="human-compose-send-btn review-approve" type="button" onClick={() => action("approve_send")} disabled={Boolean(busy)}>
+          {busy === "approve_send" ? "Sending..." : "Approve & send"}
+        </button>
+        <button className="review-icon-button" type="button" onClick={() => editing ? action("save_edit") : setEditing(true)} disabled={Boolean(busy)} title={editing ? "Save edit" : "Edit draft"}>
+          {editing ? "Save" : "Edit"}
+        </button>
+        <button className="review-icon-button" type="button" onClick={() => action("dismiss")} disabled={Boolean(busy)} title="Dismiss draft">
+          Dismiss
+        </button>
+      </div>
+      <div className="review-pager">
+        <button type="button" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={safeIndex === 0}>‹</button>
+        <span>{safeIndex + 1} of {items.length} flagged</span>
+        <button type="button" onClick={() => setIndex((current) => Math.min(items.length - 1, current + 1))} disabled={safeIndex >= items.length - 1}>›</button>
+      </div>
+    </section>
+  );
+}
+
 function ContextRail({
   currentEvents,
   latest,
@@ -1006,6 +1259,9 @@ function ContextRail({
   activeThreads,
   propertyHealthScore,
   propertiesNeedingReview,
+  drafts,
+  categories,
+  onDraftChanged,
 }: {
   currentEvents: SheetRow[];
   latest: SheetRow;
@@ -1014,12 +1270,16 @@ function ContextRail({
   activeThreads: number;
   propertyHealthScore: number;
   propertiesNeedingReview: number;
+  drafts: Record<string, AiDraft>;
+  categories: InboxCategory[];
+  onDraftChanged: (key: string, next?: AiDraft) => void;
 }) {
   const inbound = directionCount(currentEvents, "inbound");
   const outbound = directionCount(currentEvents, "outbound");
   const label = selectedChannel ? selectedChannelLabel : "All channels";
   const latestIdentity = latest.email || latest.phone || latest.full_name || "No lead selected";
   const reviewEvents = currentEvents.filter(eventNeedsHuman).slice(-5).reverse();
+  const reviewQueue = buildReviewQueue(currentEvents, drafts, categories, selectedChannel);
 
   return (
     <aside className="context-rail" aria-label="Conversation context">
@@ -1054,10 +1314,12 @@ function ContextRail({
         </dl>
       </section>
 
-      <section className="context-card human-review-card">
-        <span className="rail-label">Human review</span>
-        <h3>{reviewEvents.length ? `${reviewEvents.length} flagged` : "Clear"}</h3>
-        {reviewEvents.length ? (
+      <HumanReviewQueue items={reviewQueue} onChanged={onDraftChanged} />
+
+      {reviewEvents.length ? (
+        <section className="context-card human-review-card">
+          <span className="rail-label">Handoff flags</span>
+          <h3>{reviewEvents.length} flagged</h3>
           <div className="review-stack">
             {reviewEvents.map((event, index) => (
               <div className="review-item" key={`${event.thread_ref}-${event.event_at}-${index}`}>
@@ -1066,27 +1328,33 @@ function ContextRail({
               </div>
             ))}
           </div>
-        ) : (
-          <p>No handoffs in this view.</p>
-        )}
-      </section>
+        </section>
+      ) : null}
 
       <section className="context-card">
         <span className="rail-label">Flow balance</span>
-        <div className="flow-balance" aria-label={`${inbound} inbound and ${outbound} outbound messages`}>
-          <span style={{ width: `${currentEvents.length ? Math.max(12, (inbound / currentEvents.length) * 100) : 0}%` }} />
-          <span style={{ width: `${currentEvents.length ? Math.max(12, (outbound / currentEvents.length) * 100) : 0}%` }} />
+        <div className="flow-balance-rows">
+          <div>
+            <div className="flow-balance-row-top">
+              <span className="flow-dir inbound">↘</span>
+              <span className="flow-dir-label">Inbound</span>
+              <span className="flow-count">{inbound}</span>
+            </div>
+            <div className="flow-bar-track">
+              <div className="flow-bar-fill inbound" style={{ width: `${currentEvents.length ? Math.max(8, (inbound / currentEvents.length) * 100) : 0}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flow-balance-row-top">
+              <span className="flow-dir outbound">↗</span>
+              <span className="flow-dir-label">AI replies</span>
+              <span className="flow-count">{outbound}</span>
+            </div>
+            <div className="flow-bar-track">
+              <div className="flow-bar-fill outbound" style={{ width: `${currentEvents.length ? Math.max(8, (outbound / currentEvents.length) * 100) : 0}%` }} />
+            </div>
+          </div>
         </div>
-        <dl className="rail-facts compact">
-          <div>
-            <dt>Inbound</dt>
-            <dd>{inbound}</dd>
-          </div>
-          <div>
-            <dt>AI replies</dt>
-            <dd>{outbound}</dd>
-          </div>
-        </dl>
       </section>
 
       <section className="context-card">
@@ -1112,12 +1380,20 @@ function EmailAccountControl({
   status,
   loading,
   error,
+  autoSendEmail,
 }: {
   status: EmailAccountStatus | null;
   loading: boolean;
   error: string;
+  autoSendEmail: boolean;
 }) {
   const defaultAccount = status?.accounts.find((account) => account.is_default) || status?.accounts[0];
+  const missingCapabilities = status?.connected && defaultAccount?.scopes
+    ? [
+      !defaultAccount.scopes.includes("https://www.googleapis.com/auth/gmail.labels") && !defaultAccount.scopes.includes("https://www.googleapis.com/auth/gmail.modify") ? "labels" : "",
+      !defaultAccount.scopes.includes("https://www.googleapis.com/auth/gmail.send") ? "auto-send" : "",
+    ].filter(Boolean)
+    : [];
   const label = defaultAccount?.email
     ? `Email: ${defaultAccount.email}`
     : status?.legacy_configured
@@ -1129,8 +1405,10 @@ function EmailAccountControl({
       ? "checking"
       : defaultAccount?.status === "error"
         ? defaultAccount.last_error || "needs reconnect"
-        : status?.connected || status?.legacy_configured
-          ? "ready"
+        : missingCapabilities.length
+          ? `missing ${missingCapabilities.join(", ")} scope`
+          : status?.connected || status?.legacy_configured
+            ? "ready"
           : "connect mailbox";
 
   return (
@@ -1142,7 +1420,7 @@ function EmailAccountControl({
       <button
         className="email-account-button"
         onClick={() => {
-          window.location.href = "/api/settings/email-account/connect";
+          window.location.href = `/api/settings/email-account/connect${autoSendEmail ? "?mode=autosend" : ""}`;
         }}
         type="button"
       >
@@ -1152,16 +1430,132 @@ function EmailAccountControl({
   );
 }
 
+function InboxSettingsPanel({
+  categories,
+  settings,
+  onClose,
+  onSaved,
+}: {
+  categories: InboxCategory[];
+  settings: InboxSettings;
+  onClose: () => void;
+  onSaved: (next: { categories: InboxCategory[]; settings: InboxSettings }) => void;
+}) {
+  const [localCategories, setLocalCategories] = useState(categories);
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function updateCategory(index: number, patch: Partial<InboxCategory>) {
+    setLocalCategories((current) => current.map((category, i) => i === index ? { ...category, ...patch } : category));
+  }
+
+  function updateAutoSend(key: keyof InboxSettings["auto_send"], value: boolean) {
+    setLocalSettings((current) => ({ ...current, auto_send: { ...current.auto_send, [key]: value } }));
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    const response = await fetch("/api/settings/inbox", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: localSettings, categories: localCategories }),
+    });
+    const payload = await response.json();
+    setSaving(false);
+    if (!response.ok || !payload.ok) {
+      setError(payload.error || "Save failed");
+      return;
+    }
+    onSaved({ categories: payload.categories, settings: payload.settings });
+    onClose();
+  }
+
+  return (
+    <div className="settings-drawer" role="dialog" aria-modal="true" aria-label="Inbox settings">
+      <button className="settings-scrim" type="button" onClick={onClose} aria-label="Close inbox settings" />
+      <section className="settings-panel">
+        <div className="settings-head">
+          <div>
+            <span className="rail-label">Iris Inbox</span>
+            <h2>Settings</h2>
+          </div>
+          <button className="filter-clear" type="button" onClick={onClose}>Close</button>
+        </div>
+        <div className="settings-section">
+          <label className="settings-toggle">
+            <input
+              checked={localSettings.draft_first}
+              onChange={(event) => setLocalSettings((current) => ({ ...current, draft_first: event.target.checked }))}
+              type="checkbox"
+            />
+            <span>Draft first by default</span>
+          </label>
+          <div className="settings-toggle-grid">
+            {Object.entries(localSettings.auto_send).map(([key, value]) => (
+              <label className="settings-toggle compact" key={key}>
+                <input
+                  checked={value}
+                  onChange={(event) => updateAutoSend(key as keyof InboxSettings["auto_send"], event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{key.replace("_", " ")} auto-send</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="settings-section">
+          <span className="rail-label">Categories</span>
+          <div className="category-editor-list">
+            {localCategories.map((category, index) => (
+              <div className="category-editor-row" key={category.slug}>
+                <input
+                  aria-label={`${category.name} color`}
+                  className="category-color-input"
+                  type="color"
+                  value={category.color}
+                  onChange={(event) => updateCategory(index, { color: event.target.value })}
+                />
+                <input
+                  aria-label={`${category.name} name`}
+                  className="category-name-input"
+                  value={category.name}
+                  onChange={(event) => updateCategory(index, { name: event.target.value, gmail_label_name: `Iris/${event.target.value}` })}
+                />
+                <label className="settings-toggle mini">
+                  <input
+                    checked={category.enabled}
+                    onChange={(event) => updateCategory(index, { enabled: event.target.checked })}
+                    type="checkbox"
+                  />
+                  <span>on</span>
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+        {error ? <div className="human-compose-error">{error}</div> : null}
+        <button className="human-compose-send-btn settings-save" type="button" onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "Save settings"}
+        </button>
+      </section>
+    </div>
+  );
+}
+
 export function AgentInboxClient({
   data,
   initialRefreshedAt = "",
   loadError = "",
   sourceLabel = "Google Sheets",
+  userEmail = "",
 }: {
   data: AgentInboxData;
   initialRefreshedAt?: string;
   loadError?: string;
   sourceLabel?: string;
+  userEmail?: string;
 }) {
   const [dashboardData, setDashboardData] = useState<AgentInboxData>(data);
   const [refreshError, setRefreshError] = useState("");
@@ -1175,6 +1569,8 @@ export function AgentInboxClient({
   const [propertySearch, setPropertySearch] = useState("");
   const [selectedThreadKey, setSelectedThreadKey] = useState("");
   const [threadSearch, setThreadSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [emailAccountStatus, setEmailAccountStatus] = useState<EmailAccountStatus | null>(null);
   const [emailAccountLoading, setEmailAccountLoading] = useState(true);
   const [emailAccountError, setEmailAccountError] = useState("");
@@ -1224,6 +1620,7 @@ export function AgentInboxClient({
 
   useEffect(() => {
     setThreadSearch("");
+    setCategoryFilter("");
   }, [selectedChannel]);
 
   useEffect(() => {
@@ -1335,6 +1732,15 @@ export function AgentInboxClient({
     });
   };
 
+  function handleDraftChanged(key: string, next?: AiDraft) {
+    setDashboardData((current) => {
+      const drafts = { ...current.drafts };
+      if (next) drafts[key] = next;
+      else delete drafts[key];
+      return { ...current, drafts };
+    });
+  }
+
   return (
     <div className={`app-shell${darkMode ? " dark" : ""}`}>
       <Sidebar currentView={view} onViewChange={setView} data={dashboardData} darkMode={darkMode} onToggleDark={toggleDark} />
@@ -1344,11 +1750,22 @@ export function AgentInboxClient({
           <span className="inbox-topbar-title">{selectedChannel ? selectedChannelLabel : viewTitle(view)}</span>
           <div className="inbox-topbar-actions">
             <EmailAccountControl
+              autoSendEmail={dashboardData.inboxSettings.auto_send.email}
               error={emailAccountError}
               loading={emailAccountLoading}
               status={emailAccountStatus}
             />
+            <button className="topbar-login-btn settings-open-btn" type="button" onClick={() => setSettingsOpen(true)}>
+              Settings
+            </button>
             <SyncIndicator lastUpdated={lastRefreshedAt || null} isLive={!effectiveLoadError} />
+            {userEmail ? (
+              <a className="topbar-user-btn" href="/api/auth/signout" title={`Signed in as ${userEmail}`}>
+                <span className="topbar-user-initial">{userEmail[0].toUpperCase()}</span>
+              </a>
+            ) : (
+              <a className="topbar-login-btn" href="/login">Login</a>
+            )}
           </div>
         </header>
 
@@ -1446,6 +1863,31 @@ export function AgentInboxClient({
                 </div>
                 <span className="status">{selectedChannel === "voice" ? `${dashboardData.voiceCalls?.length || 0} calls` : `${currentEvents.length} events`}</span>
               </div>
+              {selectedChannel && selectedChannel !== "voice" ? (
+                <div className="category-filter-row" aria-label="Category filters">
+                  <button
+                    className={!categoryFilter ? "category-pill active" : "category-pill"}
+                    onClick={() => setCategoryFilter("")}
+                    type="button"
+                  >
+                    All
+                  </button>
+                  {dashboardData.inboxCategories.filter((category) => category.enabled).map((category) => {
+                    const count = channelThreads.filter(([threadRef]) => dashboardData.threadCategories[threadRef] === category.slug).length;
+                    return (
+                      <button
+                        className={categoryFilter === category.slug ? "category-pill active" : "category-pill"}
+                        key={category.slug}
+                        onClick={() => setCategoryFilter(category.slug)}
+                        style={{ ["--category-color" as string]: category.color }}
+                        type="button"
+                      >
+                        {category.name} <span>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
               {selectedHumanThreads.length ? (
                 <div className="handoff-summary">
                   <strong>{selectedHumanThreads.length} thread{selectedHumanThreads.length === 1 ? "" : "s"} need human review</strong>
@@ -1464,11 +1906,14 @@ export function AgentInboxClient({
                 <ThreadViewer
                   channel={selectedChannel}
                   channelLabel={selectedChannelLabel}
+                  categories={dashboardData.inboxCategories}
+                  categoryFilter={categoryFilter}
                   onSearchChange={setThreadSearch}
                   onSelectThread={setSelectedThreadKey}
                   properties={dashboardData.properties}
                   search={threadSearch}
                   selectedThreadKey={selectedThreadKey}
+                  threadCategories={dashboardData.threadCategories}
                   threads={channelThreads}
                 />
               ) : (
@@ -1483,8 +1928,11 @@ export function AgentInboxClient({
             </section>
             <ContextRail
               activeThreads={selectedChannel === "voice" ? voiceCallThreads.length : selectedChannel ? channelThreads.length : activeThreads}
+              categories={dashboardData.inboxCategories}
               currentEvents={currentEvents}
+              drafts={dashboardData.drafts}
               latest={latestCurrentEvent}
+              onDraftChanged={handleDraftChanged}
               propertiesNeedingReview={dashboardData.propertyHealth.missing_core}
               propertyHealthScore={propertyHealthScore}
               selectedChannel={selectedChannel}
@@ -1495,6 +1943,20 @@ export function AgentInboxClient({
       </main>
       {mobileCardProperty ? (
         <PropertyMobileCard property={mobileCardProperty} onClose={() => setMobileCardIndex(null)} />
+      ) : null}
+      {settingsOpen ? (
+        <InboxSettingsPanel
+          categories={dashboardData.inboxCategories}
+          settings={dashboardData.inboxSettings}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={(next) => {
+            setDashboardData((current) => ({
+              ...current,
+              inboxCategories: next.categories,
+              inboxSettings: next.settings,
+            }));
+          }}
+        />
       ) : null}
     </div>
   );

@@ -97,13 +97,14 @@ async function main() {
   };
 
   let placed = 0;
+  const voiceCompanyName = config.voiceClientName || config.clientName;
   for (const { lead } of voiceDue) {
     const callReason = lead.property_interest || lead.intent || lead.summary || "";
     const result = await placeOutboundCall(outboundConfig, {
       customerNumber: lead.phone,
       leadName: lead.full_name || "",
       leadEmail: lead.email || "",
-      companyName: config.clientName,
+      companyName: voiceCompanyName,
       agentName: config.agentNames.voice,
       callReason,
       leadContext: lead.summary || lead.property_interest || lead.intent || "",
@@ -116,7 +117,7 @@ async function main() {
       console.log(`  called ${lead.phone} -> ${result.id}`);
       const sms = await sendOutboundAttemptSms(lead.phone, {
         agentName: config.agentNames.voice,
-        companyName: config.clientName,
+        companyName: voiceCompanyName,
         context: callReason,
       }).catch((error) => ({ ok: false, error: error instanceof Error ? error.message : String(error) }));
       console.log(`    sms ${sms.ok ? "sent" : `skipped: ${sms.error || "unknown"}`}`);

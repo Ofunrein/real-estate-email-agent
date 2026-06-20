@@ -120,6 +120,46 @@ test("outboundFirstMessage: named and unknown lead openers", () => {
   );
 });
 
+test("outboundFirstMessage: defaults voice company to team name before client name", () => {
+  const priorTeam = process.env.TEAM_NAME;
+  const priorClient = process.env.CLIENT_NAME;
+  const priorAria = process.env.ARIA_CLIENT_NAME;
+  try {
+    delete process.env.ARIA_CLIENT_NAME;
+    process.env.TEAM_NAME = "Austin Realty";
+    process.env.CLIENT_NAME = "Ryse Realty";
+    assert.equal(
+      outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
+      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+    );
+  } finally {
+    if (priorTeam == null) delete process.env.TEAM_NAME;
+    else process.env.TEAM_NAME = priorTeam;
+    if (priorClient == null) delete process.env.CLIENT_NAME;
+    else process.env.CLIENT_NAME = priorClient;
+    if (priorAria == null) delete process.env.ARIA_CLIENT_NAME;
+    else process.env.ARIA_CLIENT_NAME = priorAria;
+  }
+});
+
+test("outboundFirstMessage: ARIA_CLIENT_NAME overrides team name", () => {
+  const priorTeam = process.env.TEAM_NAME;
+  const priorAria = process.env.ARIA_CLIENT_NAME;
+  try {
+    process.env.ARIA_CLIENT_NAME = "Austin Realty";
+    process.env.TEAM_NAME = "Ryse Realty";
+    assert.equal(
+      outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
+      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+    );
+  } finally {
+    if (priorTeam == null) delete process.env.TEAM_NAME;
+    else process.env.TEAM_NAME = priorTeam;
+    if (priorAria == null) delete process.env.ARIA_CLIENT_NAME;
+    else process.env.ARIA_CLIENT_NAME = priorAria;
+  }
+});
+
 test("outboundAttemptSmsBody: covers the text follow-up channel", () => {
   const body = outboundAttemptSmsBody({
     agentName: "Iris",

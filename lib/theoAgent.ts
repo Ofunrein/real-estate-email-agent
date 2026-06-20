@@ -199,6 +199,20 @@ function asksForPropertyDetails(message: string): boolean {
     && !asksForPropertyOptions(message);
 }
 
+function ordinalOnlyIndex(message: string): number | null {
+  const normalized = normalizeFollowupText(message).toLowerCase().replace(/[^\w# ]+/g, " ").replace(/\s+/g, " ").trim();
+  if (/^(?:1|#\s*1|first|1st|one)$/.test(normalized)) return 0;
+  if (/^(?:2|#\s*2|second|2nd|two)$/.test(normalized)) return 1;
+  if (/^(?:3|#\s*3|third|3rd|three)$/.test(normalized)) return 2;
+  return null;
+}
+
+function selectOrdinalProperties(message: string, properties: SheetRow[] = []): SheetRow[] {
+  const index = ordinalOnlyIndex(message);
+  if (index == null) return properties;
+  return properties[index] ? [properties[index]] : properties.slice(0, 1);
+}
+
 function asksForPropertyShowing(message: string): boolean {
   return /\b(tour|showing|show it|see it|view it|walk.?through|visit|come see|book|schedule|appointment)\b/i.test(normalizeFollowupText(message));
 }
@@ -675,6 +689,26 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       mediaUrls: [],
       shouldSend: true,
       aiAction: "property_options_no_match_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
+
+  const ordinalProperties = selectOrdinalProperties(context.message, context.properties);
+  if (ordinalOnlyIndex(context.message) != null && ordinalProperties.length && !latestMessageHasSensitiveTopic(context.message)) {
+    return {
+      classification: {
+        ...classification,
+        intent: "property_details",
+        status: "ready_to_reply",
+        handoffReason: "",
+        recommendedNextAction: "reply_and_qualify",
+      },
+      reply: truncateSms(formatTheoPropertyDetails(ordinalProperties), LINK_SMS_LIMIT),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "property_ordinal_reply_ready",
       handoffReason: "",
       status: "ready_to_reply",
       metrics,

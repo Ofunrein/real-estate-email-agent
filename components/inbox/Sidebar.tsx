@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import type { AgentInboxData } from "@/lib/inboxData";
 
 export type SidebarView =
@@ -14,103 +14,104 @@ export type SidebarView =
   | "website_chat"
   | "properties";
 
-type NavItem = {
-  view: SidebarView;
-  label: string;
-  icon: React.ReactNode;
+// Per-channel brand accent colors (matches Magic Patterns design)
+const CH_COLOR: Record<string, string> = {
+  overview: "#A78BFA",
+  email: "#60A5FA",
+  sms: "#2DD4BF",
+  voice: "#4ADE80",
+  instagram: "#F472B6",
+  messenger: "#38BDF8",
+  whatsapp: "#4ADE80",
+  website_chat: "#FBBF24",
+  properties: "#94A3B8",
 };
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    view: "overview",
-    label: "Overview",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-        <rect x="8.5" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-        <rect x="1" y="8.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-        <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-      </svg>
-    ),
-  },
-  {
-    view: "email",
-    label: "Email",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <rect x="1" y="2.5" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-        <path d="M1 5l6.5 4.5L14 5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "sms",
-    label: "SMS",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M13 1.5H2A1.5 1.5 0 00.5 3v7A1.5 1.5 0 002 11.5h3l2 2 2-2h4a1.5 1.5 0 001.5-1.5V3A1.5 1.5 0 0013 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "voice",
-    label: "Voice",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M9.5 1.5v12M7.5 3.5v8M5.5 5v5M11.5 4v7M3.5 6v3M1.5 7v1M13.5 6v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "instagram",
-    label: "Instagram",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <rect x="2" y="2" width="11" height="11" rx="3" stroke="currentColor" strokeWidth="1.2"/>
-        <circle cx="7.5" cy="7.5" r="2.4" stroke="currentColor" strokeWidth="1.2"/>
-        <circle cx="10.9" cy="4.2" r=".55" fill="currentColor"/>
-      </svg>
-    ),
-  },
-  {
-    view: "messenger",
-    label: "Messenger",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M7.5 1.5C3.9 1.5 1 4 1 7.1c0 1.75.95 3.31 2.44 4.34v2.06l2.05-1.13c.63.16 1.3.24 2.01.24 3.6 0 6.5-2.5 6.5-5.51S11.1 1.5 7.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-        <path d="M4.8 7.7l1.8-1.9 1.8 1.35 1.8-1.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "whatsapp",
-    label: "WhatsApp",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
-        <path d="M5 7.5c0-1.38 1.12-2.5 2.5-2.5S10 6.12 10 7.5 8.88 10 7.5 10c-.52 0-1-.16-1.4-.44L4.5 10l.44-1.6A2.49 2.49 0 015 7.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "website_chat",
-    label: "Website",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M7.5 1C3.91 1 1 3.69 1 7c0 1.19.37 2.3 1 3.22V13l2.5-1.5C5.54 11.82 6.49 12 7.5 12c3.59 0 6.5-2.24 6.5-5.5S11.09 1 7.5 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    view: "properties",
-    label: "Properties",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-        <path d="M1.5 7.5L7.5 2l6 5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M3 6.5V13h3.5V9.5h2V13H12V6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
+function OverviewIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1l1.2 3.7H13l-3.1 2.3 1.2 3.7L8 8.4l-3.1 2.3 1.2-3.7L3 5h3.8L8 1z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function EmailIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M1.5 5.5L8 9.5l6.5-4" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function SmsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1.5" y="2" width="13" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M5 14l3-2h.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="5.5" cy="7" r=".75" fill="currentColor"/>
+      <circle cx="8" cy="7" r=".75" fill="currentColor"/>
+      <circle cx="10.5" cy="7" r=".75" fill="currentColor"/>
+    </svg>
+  );
+}
+function VoiceIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2v12M5.5 4.5v7M3 6.5v3M10.5 4.5v7M13 6.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function InstagramIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="12" height="12" rx="3.5" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="11.5" cy="4.5" r=".7" fill="currentColor"/>
+    </svg>
+  );
+}
+function MessengerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1.5C4.13 1.5 1 4.3 1 7.75c0 2.07 1.1 3.9 2.8 5.05v2.2l2.4-1.32A8.2 8.2 0 008 14c3.87 0 7-2.8 7-6.25S11.87 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+      <path d="M5 8.5l2-2.5 1.8 1.4L11 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function WhatsAppIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M5.5 7.5A2.5 2.5 0 018 5a2.5 2.5 0 012.5 2.5A2.5 2.5 0 018 10c-.55 0-1.06-.18-1.47-.48L5 10l.5-1.53A2.48 2.48 0 015.5 7.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function WebsiteIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M1.5 8h13M8 1.5C6.34 3.5 5.5 5.64 5.5 8s.84 4.5 2.5 6.5M8 1.5C9.66 3.5 10.5 5.64 10.5 8s-.84 4.5-2.5 6.5" stroke="currentColor" strokeWidth="1.1"/>
+    </svg>
+  );
+}
+function PropertiesIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M1.5 8L8 2.5 14.5 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3.5 7V13h3V9.5h3V13h3V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+const NAV_ITEMS: { view: SidebarView; label: string; icon: React.ReactNode; channels: string[] }[] = [
+  { view: "overview", label: "Overview", icon: <OverviewIcon />, channels: [] },
+  { view: "email", label: "Email", icon: <EmailIcon />, channels: ["email"] },
+  { view: "sms", label: "SMS", icon: <SmsIcon />, channels: ["sms", "rcs"] },
+  { view: "voice", label: "Voice", icon: <VoiceIcon />, channels: ["voice"] },
+  { view: "instagram", label: "Instagram", icon: <InstagramIcon />, channels: ["instagram"] },
+  { view: "messenger", label: "Messenger", icon: <MessengerIcon />, channels: ["messenger"] },
+  { view: "whatsapp", label: "WhatsApp", icon: <WhatsAppIcon />, channels: ["whatsapp"] },
+  { view: "website_chat", label: "Website", icon: <WebsiteIcon />, channels: ["web", "website", "website_chat"] },
+  { view: "properties", label: "Properties", icon: <PropertiesIcon />, channels: [] },
 ];
 
 export function Sidebar({
@@ -129,6 +130,21 @@ export function Sidebar({
   const handoffs = data?.metrics.needs_human ?? 0;
   const leads = data?.metrics.lead_count ?? 0;
 
+  const channelCounts = useMemo(() => {
+    if (!data) return {} as Record<string, number>;
+    const counts: Record<string, number> = {};
+    for (const event of data.events ?? []) {
+      const ch = (event.channel || "").toLowerCase();
+      if (!ch) continue;
+      const navItem = NAV_ITEMS.find(item => item.channels.includes(ch));
+      if (navItem) {
+        counts[navItem.view] = (counts[navItem.view] ?? 0) + 1;
+      }
+    }
+    counts.voice = (data.voiceCalls ?? []).length;
+    return counts;
+  }, [data]);
+
   return (
     <nav className="sidebar" aria-label="Agent Inbox navigation">
       {/* Brand */}
@@ -146,22 +162,31 @@ export function Sidebar({
       {/* Nav */}
       <div className="sidebar-section-label">NAVIGATION</div>
       <ul className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
-          <li key={item.view}>
-            <button
-              className={`sidebar-nav-item${currentView === item.view ? " active" : ""}`}
-              onClick={() => onViewChange(item.view)}
-              type="button"
-              aria-current={currentView === item.view ? "page" : undefined}
-            >
-              <span className="sidebar-nav-icon">{item.icon}</span>
-              <span className="sidebar-nav-label">{item.label}</span>
-            </button>
-          </li>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const active = currentView === item.view;
+          const count = channelCounts[item.view];
+          const color = CH_COLOR[item.view] ?? "#94A3B8";
+          return (
+            <li key={item.view}>
+              <button
+                className={`sidebar-nav-item${active ? " active" : ""}`}
+                onClick={() => onViewChange(item.view)}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                style={{ "--ch-color": color } as React.CSSProperties}
+              >
+                <span className="sidebar-nav-icon-wrap">
+                  <span className="sidebar-nav-icon">{item.icon}</span>
+                </span>
+                <span className="sidebar-nav-label">{item.label}</span>
+                {count ? <span className="sidebar-nav-count">{count}</span> : null}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
-      {/* Recent activity section */}
+      {/* Recent */}
       {leads > 0 || handoffs > 0 ? (
         <>
           <div className="sidebar-section-label" style={{ marginTop: "var(--sp-4)" }}>RECENT</div>
@@ -180,7 +205,7 @@ export function Sidebar({
         </>
       ) : null}
 
-      {/* Bottom controls */}
+      {/* Bottom */}
       <div className="sidebar-footer">
         <button className="sidebar-mode-btn" onClick={onToggleDark} type="button">
           {darkMode ? (

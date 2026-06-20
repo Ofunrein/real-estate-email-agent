@@ -33,6 +33,10 @@ export type ChannelIngestInput = {
   callDurationSeconds?: number;
   appointmentId?: string;
   outcomeCode?: string;
+  mailboxEmail?: string;
+  gmailThreadId?: string;
+  gmailMessageId?: string;
+  threadStatus?: string;
 };
 
 const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
@@ -130,6 +134,10 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     call_duration_seconds: input.callDurationSeconds == null ? "" : String(input.callDurationSeconds),
     appointment_id: input.appointmentId || "",
     outcome_code: input.outcomeCode || "",
+    mailbox_email: input.mailboxEmail || "",
+    gmail_thread_id: input.gmailThreadId || "",
+    gmail_message_id: input.gmailMessageId || "",
+    thread_status: input.threadStatus || "",
   });
 
   return { event, lead };

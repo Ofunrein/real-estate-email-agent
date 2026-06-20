@@ -2,9 +2,10 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
+  upsertThreadLinkInDatabase,
   upsertLeadMemoryToDatabase,
 } from "@/lib/database";
-import { createIrisGmailClient, sendGmailReply, type GmailClient } from "@/lib/gmailConnection";
+import { createIrisGmailSession, sendGmailReply, type GmailClient } from "@/lib/gmailConnection";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -69,6 +70,7 @@ export type IrisEmailMessage = {
   messageId?: string;
   references?: string;
   receivedAt?: string;
+  mailboxEmail?: string;
 };
 
 export type IrisEmailExecution = {
@@ -491,6 +493,10 @@ export function buildIrisEmailConversationEventRow(
     ai_action: execution.aiAction,
     handoff_reason: execution.handoffReason,
     status: execution.status,
+    mailbox_email: message.mailboxEmail || "",
+    gmail_thread_id: message.threadId,
+    gmail_message_id: message.id,
+    thread_status: message.mailboxEmail ? "current_mailbox_thread" : "",
   };
 }
 
@@ -504,6 +510,14 @@ export async function recordIrisEmailInteraction(
   }
   await upsertLeadMemoryToDatabase(buildIrisEmailLeadMemoryRow(message, classification, execution));
   await appendConversationEventToDatabase(buildIrisEmailConversationEventRow(message, classification, execution));
+  await upsertThreadLinkInDatabase({
+    threadRef: message.threadId,
+    channel: "email",
+    mailboxEmail: message.mailboxEmail || "",
+    gmailThreadId: message.threadId,
+    gmailMessageId: message.id,
+    threadStatus: message.mailboxEmail ? "current_mailbox_thread" : "",
+  });
 }
 
 export async function processIrisEmailPoll(
@@ -582,7 +596,7 @@ function bodyFromPayload(payload: Record<string, unknown> | undefined): string {
   return bodyFromPayload(plain || parts[0]);
 }
 
-async function listUnreadMessages(gmail: GmailClient, limit: number): Promise<IrisEmailMessage[]> {
+async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmail = ""): Promise<IrisEmailMessage[]> {
   const listed = await gmail.users.messages.list({
     userId: "me",
     maxResults: limit,
@@ -606,6 +620,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number): Promise<Ir
       messageId: header(headers, "Message-ID"),
       references: header(headers, "References"),
       receivedAt: header(headers, "Date"),
+      mailboxEmail,
     });
   }
   return messages;
@@ -633,17 +648,20 @@ async function applyGmailLabels(gmail: GmailClient, messageId: string, labels: s
 }
 
 export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
-  const gmail = await createIrisGmailClient();
+  const session = await createIrisGmailSession();
+  const gmail = session.gmail;
   return {
-    listUnreadMessages: (limit) => listUnreadMessages(gmail, limit),
+    listUnreadMessages: (limit) => listUnreadMessages(gmail, limit, session.accountEmail),
     applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
-    sendReply: (message, body) => sendGmailReply(gmail, {
-      to: parseEmailContact(message.from).email,
-      subject: message.subject,
-      body,
-      threadId: message.threadId,
-      messageId: message.messageId,
-      references: message.references,
-    }),
+    sendReply: async (message, body) => {
+      await sendGmailReply(gmail, {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      });
+    },
   };
 }

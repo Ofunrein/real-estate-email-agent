@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { loadAgentInboxData } from "@/lib/dataSource";
+import {
+  databaseEnabled,
+  readActiveAiDraftsFromDatabase,
+  readDefaultEmailAccountFromDatabase,
+  readInboxCategoriesFromDatabase,
+  readInboxSettingsFromDatabase,
+} from "@/lib/database";
+import { emailCapabilitiesForScopes } from "@/lib/gmailConnection";
 import { composeInboxData } from "@/lib/inboxData";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +23,21 @@ export async function GET() {
 
   try {
     const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
-    return NextResponse.json(composeInboxData(leads, events, properties, voiceCalls));
+    if (!databaseEnabled()) {
+      return NextResponse.json(composeInboxData(leads, events, properties, voiceCalls));
+    }
+    const [inboxCategories, inboxSettings, drafts, defaultEmailAccount] = await Promise.all([
+      readInboxCategoriesFromDatabase(),
+      readInboxSettingsFromDatabase(),
+      readActiveAiDraftsFromDatabase(),
+      readDefaultEmailAccountFromDatabase(),
+    ]);
+    return NextResponse.json(composeInboxData(leads, events, properties, voiceCalls, {
+      inboxCategories,
+      inboxSettings,
+      drafts,
+      emailCapabilities: emailCapabilitiesForScopes(defaultEmailAccount?.scopes || []),
+    }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load Google Sheets data.";
     return NextResponse.json({ error: message }, { status: 503 });

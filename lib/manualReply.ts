@@ -1,4 +1,4 @@
-import { createIrisGmailClient, sendGmailReply } from "@/lib/gmailConnection";
+import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
 import { sendTheoSms } from "@/lib/twilioSms";
 
 export type EmailAttachment = { filename: string; contentType: string; path: string };
@@ -15,7 +15,14 @@ export type ManualReplyInput = {
   attachments?: EmailAttachment[]; // local file paths (from upload endpoint)
 };
 
-export type ManualReplyResult = { ok: true } | { ok: false; error: string };
+export type ManualReplyResult = {
+  ok: true;
+  threaded?: boolean;
+  mailboxEmail?: string;
+  fallbackReason?: string;
+  gmailThreadId?: string;
+  gmailMessageId?: string;
+} | { ok: false; error: string };
 
 export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
   try {
@@ -69,7 +76,17 @@ async function sendWhatsApp(input: ManualReplyInput): Promise<ManualReplyResult>
 }
 
 async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
-  const gmail = await createIrisGmailClient();
-  await sendGmailReply(gmail, input);
-  return { ok: true };
+  const session = await createIrisGmailSession();
+  const result = await sendGmailReplyWithOptions(session.gmail, input, {
+    mailboxEmail: session.accountEmail,
+    fallbackUnthreadedOnMissingThread: true,
+  });
+  return {
+    ok: true,
+    threaded: result.threaded,
+    mailboxEmail: result.mailboxEmail,
+    fallbackReason: result.fallbackReason,
+    gmailThreadId: result.threadId,
+    gmailMessageId: result.messageId,
+  };
 }
