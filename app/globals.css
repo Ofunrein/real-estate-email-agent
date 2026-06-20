@@ -225,8 +225,10 @@ button {
 }
 
 .workspace {
+  flex: 1;
+  min-height: 0;
   grid-template-columns: minmax(0, 1fr) var(--context-rail-width);
-  align-items: start;
+  align-items: stretch;
 }
 
 .property-layout {
@@ -243,6 +245,9 @@ button {
 }
 
 .conversation-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -365,11 +370,15 @@ button {
 .conversation-inbox {
   display: grid;
   grid-template-columns: var(--thread-list-width) minmax(0, 1fr);
-  min-height: 520px;
+  flex: 1;
+  min-height: 0;
 }
 
 .conversation-list-column {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid var(--line);
   background: #f7f8f4;
 }
@@ -412,8 +421,9 @@ button {
 
 .conversation-list {
   display: grid;
-  max-height: calc(100dvh - 404px);
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .conversation-list-item {
@@ -491,6 +501,9 @@ button {
 
 .conversation-thread-column {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #fffbf5;
 }
 
@@ -513,7 +526,11 @@ button {
 }
 
 .selected-thread {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -557,8 +574,9 @@ button {
   grid-auto-rows: max-content;
   align-content: start;
   gap: var(--sp-4);
-  max-height: calc(100dvh - 405px);
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--sp-4) clamp(var(--sp-3), 1.4vw, var(--sp-6)) var(--sp-6);
 }
 
@@ -1936,8 +1954,8 @@ time,
 }
 
 /* ============ APP SHELL + SIDEBAR ============ */
-.app-shell { display: flex; min-height: 100dvh; background: var(--bg); }
-.inbox-main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: clamp(var(--sp-3), 2vw, var(--sp-6)); }
+.app-shell { display: flex; height: 100dvh; overflow: hidden; background: var(--bg); }
+.inbox-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; padding: clamp(var(--sp-3), 2vw, var(--sp-6)); }
 .sidebar { background: var(--nav); display: flex; flex-direction: column; width: 220px; flex-shrink: 0; min-height: 100dvh; border-right: 1px solid rgba(255,255,255,0.06); }
 .sidebar-brand { padding: var(--sp-4); border-bottom: 1px solid rgba(255,255,255,0.06); }
 .sidebar-wordmark { font-family: var(--font-ui); font-size: var(--text-sm); font-weight: 600; color: var(--text-nav); letter-spacing: 0.02em; }
@@ -1987,6 +2005,10 @@ time,
 .channel-mix { display: flex; flex-direction: column; gap: var(--sp-2); }
 .channel-row { display: grid; grid-template-columns: minmax(72px, auto) 1fr auto; align-items: center; gap: var(--sp-3); }
 .channel-label { font-size: var(--text-sm); color: var(--text-secondary); white-space: nowrap; }
+/* Activity chart tooltip */
+.activity-chart-tooltip { background: var(--s-card); border: 1px solid var(--s-card-border); border-radius: 6px; padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; box-shadow: var(--s-shadow-sm); min-width: 56px; }
+.activity-chart-tooltip-date { font-size: 10px; color: var(--s-text-3); font-family: var(--font-ui); }
+.activity-chart-tooltip-val { font-size: 13px; font-weight: 700; color: var(--s-accent); font-family: var(--font-mono); }
 .channel-track { height: 8px; border-radius: 999px; background: var(--surface-raised); overflow: hidden; }
 .channel-bar { display: block; height: 100%; border-radius: 999px; background: var(--text-muted); transition: width var(--dur-base) var(--ease-out); }
 .channel-bar.is-top { background: var(--accent); }
@@ -2059,7 +2081,7 @@ time,
   /* Scroll heights relax when columns stack. */
   .conversation-list,
   .thread-messages {
-    max-height: 520px;
+    max-height: none;
   }
 
   .property-table-wrap {

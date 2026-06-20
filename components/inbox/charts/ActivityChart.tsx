@@ -1,11 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 const DAYS = 14;
-const VIEW_W = 320;
-const VIEW_H = 120;
-const PAD_X = 4;
-const PAD_TOP = 14;
-const PAD_BOTTOM = 16;
 
 function dayKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -24,11 +22,7 @@ function buildBins(events: SheetRow[]): { bins: Bin[]; total: number; max: numbe
     d.setDate(d.getDate() - i);
     const key = dayKey(d);
     index.set(key, bins.length);
-    bins.push({
-      key,
-      label: d.toLocaleDateString([], { month: "short", day: "numeric" }),
-      count: 0,
-    });
+    bins.push({ key, label: d.toLocaleDateString([], { month: "short", day: "numeric" }), count: 0 });
   }
 
   let total = 0;
@@ -47,92 +41,154 @@ function buildBins(events: SheetRow[]): { bins: Bin[]; total: number; max: numbe
   return { bins, total, max };
 }
 
+// Smooth cubic bezier path through points
+function smoothPath(pts: { x: number; y: number }[]) {
+  if (pts.length < 2) return "";
+  let d = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const curr = pts[i];
+    const cpx = (prev.x + curr.x) / 2;
+    d += ` C${cpx.toFixed(2)},${prev.y.toFixed(2)} ${cpx.toFixed(2)},${curr.y.toFixed(2)} ${curr.x.toFixed(2)},${curr.y.toFixed(2)}`;
+  }
+  return d;
+}
+
+const W = 360;
+const H = 100;
+const PAD_X = 8;
+const PAD_TOP = 8;
+const PAD_BOTTOM = 4;
+const GRAD_ID = "act-grad";
+
 export function ActivityChart({ events }: { events: SheetRow[] }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const { bins, total, max } = buildBins(events);
-  const plotW = VIEW_W - PAD_X * 2;
-  const plotH = VIEW_H - PAD_TOP - PAD_BOTTOM;
+
+  const plotW = W - PAD_X * 2;
+  const plotH = H - PAD_TOP - PAD_BOTTOM;
   const baselineY = PAD_TOP + plotH;
-  const step = plotW / DAYS;
+  const step = plotW / (DAYS - 1);
 
-  const points = bins.map((bin, i) => {
-    const x = PAD_X + step * i + step / 2;
-    const ratio = max ? bin.count / max : 0;
-    const y = baselineY - ratio * plotH;
-    return { x, y, bin };
-  });
+  const pts = bins.map((bin, i) => ({
+    x: PAD_X + step * i,
+    y: baselineY - (max ? (bin.count / max) * plotH * 0.9 : 0),
+    bin,
+    i,
+  }));
 
-  const linePath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(" ");
+  const linePath = smoothPath(pts);
   const areaPath = total
-    ? `${linePath} L${points[points.length - 1].x.toFixed(1)} ${baselineY} L${points[0].x.toFixed(1)} ${baselineY} Z`
+    ? `${linePath} L${pts[pts.length - 1].x.toFixed(2)},${baselineY} L${pts[0].x.toFixed(2)},${baselineY} Z`
     : "";
 
   const peak = bins.reduce<Bin | null>((best, bin) => (bin.count > (best?.count ?? 0) ? bin : best), null);
+  const hovered = hoveredIndex !== null ? pts[hoveredIndex] : null;
 
   return (
-    <div className="chart-card">
+    <div className="chart-card activity-chart-card">
       <div className="chart-title">
         <span>Activity · 14 days</span>
         <span className="chart-total">{total}</span>
       </div>
-      <svg
-        className="chart-svg"
-        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        width="100%"
-        height={VIEW_H}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`Events per day over the last ${DAYS} days, ${total} total`}
-      >
-        <line
-          x1={PAD_X}
-          y1={baselineY}
-          x2={VIEW_W - PAD_X}
-          y2={baselineY}
-          stroke="var(--border)"
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-        />
-        {total ? (
-          <>
-            <path d={areaPath} fill="rgba(184,92,56,0.12)" stroke="none" />
-            <path
-              d={linePath}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-              strokeLinecap="round"
+      <div style={{ position: "relative" }}>
+        <svg
+          className="chart-svg"
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          height={H}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`Events per day over the last ${DAYS} days, ${total} total`}
+          style={{ display: "block", overflow: "visible" }}
+        >
+          <defs>
+            <linearGradient id={GRAD_ID} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--s-accent)" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="var(--s-accent)" stopOpacity="0.01" />
+            </linearGradient>
+          </defs>
+          {/* Subtle grid lines */}
+          {[0.25, 0.5, 0.75, 1].map((t) => (
+            <line
+              key={t}
+              x1={PAD_X} y1={PAD_TOP + plotH * (1 - t * 0.9)}
+              x2={W - PAD_X} y2={PAD_TOP + plotH * (1 - t * 0.9)}
+              stroke="var(--s-divider)"
+              strokeWidth={0.5}
+              strokeDasharray="3 4"
+              opacity={0.5}
               vectorEffect="non-scaling-stroke"
             />
-            {peak && peak.count > 0
-              ? points
-                  .filter((p) => p.bin.key === peak.key)
-                  .map((p) => (
-                    <circle key={p.bin.key} cx={p.x} cy={p.y} r={2.5} fill="var(--accent)" />
-                  ))
-              : null}
-          </>
-        ) : (
-          <text
-            x={VIEW_W / 2}
-            y={baselineY - plotH / 2}
-            textAnchor="middle"
-            fill="var(--text-muted)"
-            fontSize={11}
-            fontFamily="var(--font-ui)"
+          ))}
+          {/* Baseline */}
+          <line x1={PAD_X} y1={baselineY} x2={W - PAD_X} y2={baselineY} stroke="var(--s-divider)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          {total ? (
+            <>
+              <path d={areaPath} fill={`url(#${GRAD_ID})`} stroke="none" />
+              <path d={linePath} fill="none" stroke="var(--s-accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              {/* Hover vertical line */}
+              {hovered ? (
+                <line
+                  x1={hovered.x} y1={PAD_TOP}
+                  x2={hovered.x} y2={baselineY}
+                  stroke="var(--s-accent)"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  opacity={0.5}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+              {/* Peak dot */}
+              {peak && peak.count > 0 ? pts.filter(p => p.bin.key === peak.key).map(p => (
+                <circle key={p.bin.key} cx={p.x} cy={p.y} r={hoveredIndex === p.i ? 5 : 3.5} fill="var(--s-accent)" stroke="var(--s-card)" strokeWidth={2} />
+              )) : null}
+              {/* Hover dot */}
+              {hovered && hovered.bin.key !== peak?.key ? (
+                <circle cx={hovered.x} cy={hovered.y} r={4} fill="var(--s-accent)" stroke="var(--s-card)" strokeWidth={2} />
+              ) : null}
+            </>
+          ) : (
+            <text x={W / 2} y={baselineY - plotH / 2} textAnchor="middle" fill="var(--s-text-3)" fontSize={11} fontFamily="var(--font-ui)">
+              No activity yet
+            </text>
+          )}
+          {/* Invisible hit areas */}
+          {pts.map((p) => (
+            <rect
+              key={p.i}
+              x={p.x - step / 2}
+              y={PAD_TOP}
+              width={step}
+              height={plotH}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIndex(p.i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{ cursor: "crosshair" }}
+            />
+          ))}
+        </svg>
+        {/* Tooltip */}
+        {hovered && hovered.bin.count > 0 ? (
+          <div
+            className="activity-chart-tooltip"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: `${(hovered.x / W) * 100}%`,
+              transform: hovered.i > DAYS * 0.6 ? "translate(-100%, 0)" : "translate(8px, 0)",
+              pointerEvents: "none",
+            }}
           >
-            No activity yet
-          </text>
-        )}
-      </svg>
-      {peak && peak.count > 0 ? (
-        <div className="chart-foot">
-          <span>Peak {peak.label}</span>
-          <span className="chart-foot-value">{peak.count}</span>
-        </div>
-      ) : null}
+            <span className="activity-chart-tooltip-date">{hovered.bin.label}</span>
+            <span className="activity-chart-tooltip-val">{hovered.bin.count}</span>
+          </div>
+        ) : null}
+      </div>
+      <div className="chart-foot">
+        <span>{peak?.count ? `Peak ${peak.label}` : ""}</span>
+        <span className="chart-foot-value">{peak?.count ?? ""}</span>
+      </div>
     </div>
   );
 }
