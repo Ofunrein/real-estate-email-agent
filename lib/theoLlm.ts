@@ -3,6 +3,7 @@ import type { SheetRow } from "@/lib/sheetSchema";
 import { AGENCY_KNOWLEDGE_CONTEXT } from "@/lib/agencyKnowledge";
 import { findUpcomingAppointmentByPhone, formatAppointmentForAgent } from "@/lib/appointmentStore";
 import type { TheoClassification } from "@/lib/theoAgent";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { claudeCostUsd, elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type AnthropicTextBlock = { type: "text"; text: string };
@@ -14,7 +15,7 @@ export type TheoLlmContext = {
   lead?: Partial<SheetRow>;
   properties?: SheetRow[];
   propertyInterest?: string;
-  source?: "sms" | "form" | "whatsapp";
+  source?: "sms" | "form" | "whatsapp" | "messenger" | "instagram";
   recentEvents?: SheetRow[];
   dataContext?: string;
   styleContext?: string;
@@ -109,7 +110,7 @@ function propertySummary(properties: SheetRow[] = []): string {
 function threadSummary(events: SheetRow[] = []): string {
   if (!events.length) return "No prior SMS context.";
   return events.slice(-10).map((event) => {
-    const who = event.direction === "outbound" ? event.agent_name || "Theo" : "Lead";
+    const who = event.direction === "outbound" ? event.agent_name || IRIS_AGENT_NAME : "Lead";
     return `${who}: ${clean(event.message_text || event.summary || event.ai_action).slice(0, 300)}`;
   }).join("\n");
 }
@@ -148,7 +149,7 @@ function stringArray(value: unknown): string[] {
 
 async function anthropicMessage(model: string, system: string, user: string, maxTokens: number, label: string): Promise<AnthropicMessageResult> {
   const key = anthropicKey();
-  if (!key) throw new Error("ANTHROPIC_API_KEY is required for Theo AI replies");
+  if (!key) throw new Error("ANTHROPIC_API_KEY is required for Iris replies");
 
   const started = nowMs();
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -172,7 +173,7 @@ async function anthropicMessage(model: string, system: string, user: string, max
     const message = typeof payload.error === "object" && payload.error && "message" in payload.error
       ? String((payload.error as Record<string, unknown>).message)
       : response.statusText;
-    throw new Error(`Theo Claude call failed: ${message}`);
+    throw new Error(`Iris Claude call failed: ${message}`);
   }
 
   const content = Array.isArray(payload.content) ? payload.content as AnthropicTextBlock[] : [];
@@ -196,12 +197,12 @@ async function anthropicMessage(model: string, system: string, user: string, max
 
 function parseJsonObject(value: string): Record<string, unknown> {
   const match = value.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Theo classification did not return JSON");
+  if (!match) throw new Error("Iris classification did not return JSON");
   return JSON.parse(match[0]) as Record<string, unknown>;
 }
 
 export async function classifyTheoWithLlm(context: TheoLlmContext): Promise<TheoClassification> {
-  const system = `You classify real estate SMS messages for Theo, a conversational SMS agent.
+  const system = `You classify real estate SMS messages for ${IRIS_AGENT_NAME}, the omnichannel real estate ISA.
 Return JSON only. No prose.
 Focus on hidden opportunity capture, emotional state, shared lead memory, and safe routing.
 Look for channel preference too: "email is best", "text me", "call me", "send it by email", or similar phrasing.
@@ -226,7 +227,7 @@ ${propertySummary(context.properties)}
 Live enrichment context:
 ${context.dataContext || "No live enrichment context."}
 
-Agency knowledge Theo can use:
+Agency knowledge ${IRIS_AGENT_NAME} can use:
 ${AGENCY_KNOWLEDGE_CONTEXT}
 
 Return:
@@ -265,7 +266,7 @@ export async function generateTheoSmsWithLlm(context: TheoLlmContext, classifica
   const appointmentContext = upcomingAppointment
     ? `\nUpcoming appointment: ${formatAppointmentForAgent(upcomingAppointment)}`
     : "";
-  const system = `You are Theo, the SMS personality for Austin Realty.
+  const system = `You are ${IRIS_AGENT_NAME}, the omnichannel real estate ISA for Austin Realty, replying by SMS.
 Write one natural SMS reply. Be concise, human, emotionally intelligent, and useful.
 Mirror the feel of a good human real estate assistant: casual, clear, not robotic, not pushy.
 Rules:
@@ -275,10 +276,10 @@ Rules:
 - Use a compact ISA cadence: acknowledge, answer the immediate ask, then ask the next missing mile-marker question.
 - Qualification mile markers, in order when missing: preferred channel, timeline, area, price range, bedroom/bathroom fit, and sell-before-buy.
 - Use prior thread context so short replies like "yes", "thanks", or "Wednesday works" make sense.
-- You share memory with Aria voice, Iris email, and Olivia web chat. If the lead has prior context from another channel, reference it briefly and skip re-asking known budget, area, timeline, beds, or appointment details.
+- You are the same Iris personality across voice, SMS, WhatsApp, email, social DM, and web chat. If the lead has prior context from another channel, reference it briefly and skip re-asking known budget, area, timeline, beds, or appointment details.
 - If lead memory or appointment context shows an upcoming appointment, reference it naturally when relevant. Do not re-book if one already exists unless they ask to reschedule.
 - Use only the property facts provided. Never invent listing facts, status, pricing, availability, schools, crime, or neighborhood claims.
-- Pull from the same context categories as Iris email: lead memory, prior thread, property sheet facts, and agency knowledge.
+- Pull from the shared Iris context categories: lead memory, prior thread, property sheet facts, and agency knowledge.
 - Use live enrichment context when available: Apify/Zillow, RentCast, FRED rates, Census ZIP data, and gated sold comps.
 - Treat the greater Austin / Central Texas metro as in-service when agency knowledge says it is covered. Austin neighborhoods, Round Rock, Pflugerville, Cedar Park, Georgetown, Leander, Buda, Kyle, San Marcos, New Braunfels, Bastrop, Manor, Elgin, Hutto, Taylor, Liberty Hill, Dripping Springs, Wimberley, Lakeway, Bee Cave, Marble Falls, Salado, Belton, Temple, Killeen, Waco, and nearby Central Texas towns are not outside-area handoffs.
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
@@ -307,13 +308,13 @@ ${appointmentContext}
 Recent SMS thread:
 ${threadSummary(context.recentEvents)}
 
-Property rows Theo can reference:
+Property rows ${IRIS_AGENT_NAME} can reference:
 ${propertySummary(context.properties)}
 
-Live enrichment context Theo can reference:
+Live enrichment context ${IRIS_AGENT_NAME} can reference:
 ${context.dataContext || "No live enrichment context."}
 
-Agency knowledge Theo can reference:
+Agency knowledge ${IRIS_AGENT_NAME} can reference:
 ${AGENCY_KNOWLEDGE_CONTEXT}
 
 Write only the SMS reply.`;

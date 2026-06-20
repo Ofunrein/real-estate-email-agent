@@ -4,10 +4,12 @@ type ChannelGroup = { key: string; label: string; raw: string[] };
 
 const GROUPS: ChannelGroup[] = [
   { key: "email", label: "Email · Iris", raw: ["email"] },
-  { key: "sms", label: "SMS · Theo", raw: ["sms", "rcs"] },
-  { key: "whatsapp", label: "WhatsApp · Theo", raw: ["whatsapp"] },
-  { key: "voice", label: "Voice · Aria", raw: ["voice"] },
-  { key: "web", label: "Web · Olivia", raw: ["web", "website", "website_chat"] },
+  { key: "sms", label: "SMS · Iris", raw: ["sms", "rcs"] },
+  { key: "whatsapp", label: "WhatsApp · Iris", raw: ["whatsapp"] },
+  { key: "messenger", label: "Messenger · Iris", raw: ["messenger"] },
+  { key: "instagram", label: "Instagram · Iris", raw: ["instagram"] },
+  { key: "voice", label: "Voice · Iris", raw: ["voice"] },
+  { key: "web", label: "Web · Iris", raw: ["web", "website", "website_chat"] },
 ];
 
 function buildCounts(events: SheetRow[]) {

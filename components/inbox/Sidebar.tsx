@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import type { AgentInboxData } from "@/lib/inboxData";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export type SidebarView =
   | "overview"
   | "email"
   | "sms"
   | "whatsapp"
+  | "messenger"
+  | "instagram"
   | "voice"
   | "website_chat"
   | "properties";
@@ -35,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     view: "email",
     label: "Email",
-    agent: "Iris",
+    agent: IRIS_AGENT_NAME,
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <rect x="1" y="2.5" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
@@ -46,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     view: "sms",
     label: "SMS",
-    agent: "Theo",
+    agent: IRIS_AGENT_NAME,
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M13 1.5H2A1.5 1.5 0 00.5 3v7A1.5 1.5 0 002 11.5h3l2 2 2-2h4a1.5 1.5 0 001.5-1.5V3A1.5 1.5 0 0013 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
@@ -56,7 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     view: "whatsapp",
     label: "WhatsApp",
-    agent: "Theo",
+    agent: IRIS_AGENT_NAME,
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
@@ -65,9 +68,32 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    view: "messenger",
+    label: "Messenger",
+    agent: IRIS_AGENT_NAME,
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M7.5 1.5C3.9 1.5 1 4 1 7.1c0 1.75.95 3.31 2.44 4.34v2.06l2.05-1.13c.63.16 1.3.24 2.01.24 3.6 0 6.5-2.5 6.5-5.51S11.1 1.5 7.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+        <path d="M4.8 7.7l1.8-1.9 1.8 1.35 1.8-1.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    view: "instagram",
+    label: "Instagram",
+    agent: IRIS_AGENT_NAME,
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="2" y="2" width="11" height="11" rx="3" stroke="currentColor" strokeWidth="1.2"/>
+        <circle cx="7.5" cy="7.5" r="2.4" stroke="currentColor" strokeWidth="1.2"/>
+        <circle cx="10.9" cy="4.2" r=".55" fill="currentColor"/>
+      </svg>
+    ),
+  },
+  {
     view: "voice",
     label: "Voice",
-    agent: "Aria",
+    agent: IRIS_AGENT_NAME,
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M9.5 1.5v12M7.5 3.5v8M5.5 5v5M11.5 4v7M3.5 6v3M1.5 7v1M13.5 6v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -77,7 +103,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     view: "website_chat",
     label: "Chat",
-    agent: "Olivia",
+    agent: IRIS_AGENT_NAME,
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
         <path d="M7.5 1C3.91 1 1 3.69 1 7c0 1.19.37 2.3 1 3.22V13l2.5-1.5C5.54 11.82 6.49 12 7.5 12c3.59 0 6.5-2.24 6.5-5.5S11.09 1 7.5 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
@@ -123,7 +149,7 @@ export function Sidebar({
             <path d="M6 11v7a1 1 0 001 1h3v-4h4v4h3a1 1 0 001-1v-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <span className="sidebar-wordmark">Agent Inbox</span>
+        <span className="sidebar-wordmark">Iris Inbox</span>
       </div>
 
       {/* Nav */}

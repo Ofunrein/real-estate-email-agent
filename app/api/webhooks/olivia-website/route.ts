@@ -8,6 +8,7 @@ import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ async function recordTheoFormSms(input: TheoFormSmsInput) {
     ...input,
     channel: "sms",
     direction: "outbound",
-    agentName: "Theo",
+    agentName: IRIS_AGENT_NAME,
     source: "website",
     sourceDetail: "form opt-in",
     preferredChannel: "sms",
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
           fullName,
           threadRef: `sms:${phone}`,
           messageText: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
-          summary: `Theo ${sendResult.sent ? "sent" : "prepared"} first SMS reply from website opt-in${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
+          summary: `Iris ${sendResult.sent ? "sent" : "prepared"} first SMS reply from website opt-in${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
           aiAction: smsAction,
           handoffReason: reply.handoffReason || sendResult.error,
           status: smsStatus,
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       sms_error: smsError || undefined,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process Olivia website webhook.";
+    const message = error instanceof Error ? error.message : "Unable to process Iris website webhook.";
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

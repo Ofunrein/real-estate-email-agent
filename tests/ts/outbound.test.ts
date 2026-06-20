@@ -71,7 +71,7 @@ test("placeOutboundCall: missing number fails", async () => {
 
 test("outboundAttemptSmsBody: covers the text follow-up channel", () => {
   const body = outboundAttemptSmsBody({
-    agentName: "Aria",
+    agentName: "Iris",
     companyName: "Austin Realty",
     callbackNumber: "+15128152032",
     context: "the Mueller listings",
@@ -84,12 +84,12 @@ test("outboundAttemptSmsBody: covers the text follow-up channel", () => {
 test("sendOutboundAttemptSms: uses injected sender", async () => {
   let sentTo = "";
   let sentBody = "";
-  const result = await sendOutboundAttemptSms("+15125550000", { agentName: "Aria" }, async (to, body) => {
+  const result = await sendOutboundAttemptSms("+15125550000", { agentName: "Iris" }, async (to, body) => {
     sentTo = to;
     sentBody = body;
     return { sent: true };
   });
   assert.equal(result.ok, true);
   assert.equal(sentTo, "+15125550000");
-  assert.match(sentBody, /Aria/);
+  assert.match(sentBody, /Iris/);
 });

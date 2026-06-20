@@ -24,22 +24,35 @@ import {
   rewriteEmailHtmlForInbox,
   unwrapMediaProxyUrl,
 } from "@/lib/mediaProxy";
+import {
+  IRIS_AGENT_AVATAR,
+  IRIS_AGENT_NAME,
+  normalizeLegacyAgentName,
+  normalizeLegacyAgentText,
+} from "@/lib/agentIdentity";
 import type { SheetRow } from "@/lib/sheetSchema";
 
-type View = "overview" | "email" | "sms" | "whatsapp" | "voice" | "website_chat" | "properties";
+type View = "overview" | "email" | "sms" | "whatsapp" | "messenger" | "instagram" | "voice" | "website_chat" | "properties";
 
 const DASHBOARD_REFRESH_MS = 5000;
 
 const channelViews: { key: View; label: string; agent: string; avatar: string; channel?: Channel }[] = [
-  { key: "email", label: "Email", agent: "Iris", avatar: "/images/agents/iris.png", channel: "email" },
-  { key: "sms", label: "SMS", agent: "Theo", avatar: "/images/agents/theo.png", channel: "sms" },
-  { key: "whatsapp", label: "WhatsApp", agent: "Theo", avatar: "/images/agents/theo.png", channel: "whatsapp" },
-  { key: "voice", label: "Voice", agent: "Aria", avatar: "/images/agents/aria.png", channel: "voice" },
-  { key: "website_chat", label: "Website", agent: "Olivia", avatar: "/images/agents/olivia.png", channel: "website_chat" },
+  { key: "email", label: "Email", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "email" },
+  { key: "sms", label: "SMS", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "sms" },
+  { key: "whatsapp", label: "WhatsApp", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "whatsapp" },
+  { key: "messenger", label: "Messenger", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "messenger" },
+  { key: "instagram", label: "Instagram", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "instagram" },
+  { key: "voice", label: "Voice", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "voice" },
+  { key: "website_chat", label: "Website", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "website_chat" },
 ];
 
 function eventText(event: SheetRow) {
-  return event.message_text || event.summary || event.ai_action || "";
+  const text = event.message_text || event.summary || event.ai_action || "";
+  return event.direction === "inbound" ? text : normalizeLegacyAgentText(text);
+}
+
+function eventSummaryText(event: SheetRow, fallback = "") {
+  return normalizeLegacyAgentText(event.summary || fallback || eventText(event));
 }
 
 function looksLikeHtml(value: string) {
@@ -179,7 +192,7 @@ function humanReviewThreads(threads: [string, SheetRow[]][]) {
 
 function conversationKey(event: SheetRow, channel?: Channel | string) {
   const normalizedChannel = channel || eventChannel(event);
-  if (["sms", "whatsapp", "voice"].includes(normalizedChannel)) {
+  if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(normalizedChannel)) {
     return event.phone || event.thread_ref || event.email || "unknown";
   }
   if (normalizedChannel === "email") {
@@ -207,14 +220,14 @@ function sortThreadEntries(entries: [string, SheetRow[]][]) {
 function threadIdentity(threadRef: string, events: SheetRow[], channel?: Channel) {
   const latest = latestEvent(events);
   if (channel === "email") return latest.email || threadRef;
-  if (["sms", "whatsapp", "voice"].includes(channel || "")) return latest.phone || threadRef;
+  if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(channel || "")) return latest.phone || latest.full_name || threadRef;
   return latest.email || latest.phone || latest.full_name || threadRef;
 }
 
 function threadSubtitle(threadRef: string, events: SheetRow[], channel?: Channel) {
   const latest = latestEvent(events);
   if (channel === "email") return latest.thread_ref || latest.source || threadRef;
-  if (["sms", "whatsapp", "voice"].includes(channel || "")) return latest.thread_ref || threadRef;
+  if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(channel || "")) return latest.thread_ref || threadRef;
   return latest.source || latest.thread_ref || "";
 }
 
@@ -235,7 +248,7 @@ function threadSearchText(threadRef: string, events: SheetRow[], channel?: Chann
 }
 
 function threadSearchPlaceholder(channelLabel: string, channel?: Channel) {
-  if (channel === "sms" || channel === "whatsapp" || channel === "voice") {
+  if (channel === "sms" || channel === "whatsapp" || channel === "messenger" || channel === "instagram" || channel === "voice") {
     return `Search ${channelLabel.toLowerCase()} by phone number`;
   }
   if (channel === "email") return "Search email conversations by email";
@@ -316,7 +329,7 @@ function formatCallDuration(value?: string) {
 }
 
 function messageSpeaker(event: SheetRow) {
-  if (event.direction === "outbound") return event.agent_name || "AI";
+  if (event.direction === "outbound") return normalizeLegacyAgentName(event.agent_name) || IRIS_AGENT_NAME;
   return event.full_name || event.email || event.phone || "Lead";
 }
 
@@ -575,7 +588,7 @@ function TableRows({
         const rowContent = (
           <>
             <div className="row-title">{event.email || event.phone || event.thread_ref || "Unknown lead"}</div>
-            <div className="row-body">{event.summary || eventText(event)}</div>
+            <div className="row-body">{eventSummaryText(event)}</div>
             <div className="row-meta">
               <StatusDot status={eventNeedsHuman(event) ? "needs_human" : (event.status || event.event_type || event.direction || "")} />
               <time>{formatEventTime(event.event_at)}</time>
@@ -656,12 +669,12 @@ function ConversationThread({
           </div>
         ))}
       </div>
-      {channel === "sms" || channel === "whatsapp" || channel === "email" ? (
+      {channel === "sms" || channel === "whatsapp" || channel === "messenger" || channel === "instagram" || channel === "email" ? (
         <HumanTakeover
           threadRef={threadRef}
           channel={channel}
           to={(channel === "email" ? latest.email : latest.phone) || ""}
-          subject={channel === "email" ? latest.summary || "" : undefined}
+          subject={channel === "email" ? eventSummaryText(latest) : undefined}
           gmailThreadId={channel === "email" ? threadRef : undefined}
         />
       ) : null}
@@ -735,7 +748,7 @@ function ThreadViewer({
                   <strong>{threadIdentity(threadRef, events, channel)}</strong>
                   <time>{formatEventTime(latest.event_at)}</time>
                 </span>
-                <span className="conversation-preview">{latest.summary || eventText(latest)}</span>
+                <span className="conversation-preview">{eventSummaryText(latest)}</span>
                 <span className="conversation-row-bottom">
                   <em>{events.length} messages</em>
                   {needsHuman ? <StatusDot status="needs_human" /> : null}
@@ -780,7 +793,7 @@ function VoiceCallCard({ call }: { call: SheetRow }) {
           <strong>{formatEventTime(call.ended_at || call.started_at)}</strong>
           <span>{[formatCallDuration(call.duration_sec), call.ended_reason || call.disposition].filter(Boolean).join(" · ")}</span>
         </div>
-        <span className="status">{call.agent_name || "Aria"}</span>
+        <span className="status">{normalizeLegacyAgentName(call.agent_name) || IRIS_AGENT_NAME}</span>
       </div>
       <div className="thread-messages voice-transcript" aria-label="Voice call transcript">
         {turns.length ? turns.map((turn, index) => (
@@ -801,7 +814,7 @@ function VoiceCallCard({ call }: { call: SheetRow }) {
       </div>
       <div className="voice-call-report">
         <strong>Call report</strong>
-        <p>{call.summary || "No call summary recorded yet."}</p>
+        <p>{normalizeLegacyAgentText(call.summary || "No call summary recorded yet.")}</p>
         {transcript ? (
           <details className="voice-raw-transcript">
             <summary>Raw transcript</summary>
@@ -883,7 +896,7 @@ function VoiceThreadViewer({
                   <strong>{voiceThreadIdentity(threadRef, calls)}</strong>
                   <time>{formatEventTime(latest.ended_at || latest.started_at)}</time>
                 </span>
-                <span className="conversation-preview">{latest.summary || "Voice call transcript"}</span>
+                <span className="conversation-preview">{normalizeLegacyAgentText(latest.summary || "Voice call transcript")}</span>
                 <span className="conversation-row-bottom">
                   <em>{calls.length} call{calls.length === 1 ? "" : "s"}</em>
                   {latest.recording_url ? <span className="status mini-status">Recording</span> : null}
@@ -991,7 +1004,7 @@ function ContextRail({
       <section className="context-card">
         <span className="rail-label">Last activity</span>
         <h3>{latestIdentity}</h3>
-        <p>{latest.summary || latest.ai_action || latest.event_type || "No conversation activity loaded yet."}</p>
+        <p>{normalizeLegacyAgentText(latest.summary || latest.ai_action || latest.event_type || "No conversation activity loaded yet.")}</p>
         <dl className="rail-facts">
           <div>
             <dt>Status</dt>
@@ -1012,7 +1025,7 @@ function ContextRail({
             {reviewEvents.map((event, index) => (
               <div className="review-item" key={`${event.thread_ref}-${event.event_at}-${index}`}>
                 <strong>{event.phone || event.email || event.thread_ref || "Unknown lead"}</strong>
-                <span>{event.handoff_reason || event.summary || "Review this conversation."}</span>
+                <span>{normalizeLegacyAgentText(event.handoff_reason || event.summary || "Review this conversation.")}</span>
               </div>
             ))}
           </div>
@@ -1054,6 +1067,7 @@ function ContextRail({
 function viewTitle(view: View) {
   if (view === "overview") return "Conversation Command";
   if (view === "website_chat") return "Website Chat";
+  if (view === "instagram") return "Instagram DMs";
   return view[0].toUpperCase() + view.slice(1);
 }
 

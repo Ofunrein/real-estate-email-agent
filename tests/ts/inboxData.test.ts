@@ -55,7 +55,7 @@ test("composeInboxData hides raw voice tool events and counts voice calls", () =
 test("parseVoiceTranscript: parses Vapi AI/User colon lines", () => {
   const turns = parseVoiceTranscript("AI: Hello there\nUser: 4309 Fairway Path");
   assert.equal(turns.length, 2);
-  assert.equal(turns[0].speaker, "Aria");
+  assert.equal(turns[0].speaker, "Iris");
   assert.equal(turns[0].direction, "outbound");
   assert.equal(turns[0].text, "Hello there");
   assert.equal(turns[1].speaker, "Lead");
@@ -75,7 +75,7 @@ test("parseVoiceTranscript: parses JSON message arrays", () => {
     { role: "user", message: "Tell me about 4309 Fairway Path." },
   ]));
   assert.equal(turns.length, 2);
-  assert.equal(turns[0].speaker, "Aria");
+  assert.equal(turns[0].speaker, "Iris");
   assert.equal(turns[1].speaker, "Lead");
   assert.match(turns[1].text, /Fairway Path/);
 });

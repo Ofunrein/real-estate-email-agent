@@ -1,3 +1,4 @@
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 
 export type TwilioSendResult = {
@@ -153,7 +154,7 @@ export async function sendTheoHandoffAlert(input: {
 
   const lead = input.leadName || input.leadPhone || "Unknown lead";
   const body = [
-    `Theo handoff: ${lead}`,
+    `${IRIS_AGENT_NAME} handoff: ${lead}`,
     `Reason: ${input.reason || "Needs human review"}`,
     `Lead phone: ${input.leadPhone || "unknown"}`,
     `Thread: ${input.threadRef || "sms thread"}`,

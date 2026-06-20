@@ -5,10 +5,9 @@ import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
 
-// Per-tool server endpoint for Aria's Vapi function calls. The assistant points
-// each server tool at /api/webhooks/aria-tools/<name>; the [tool] segment is
-// informational — the tool name comes from the Vapi payload itself, which
-// handleAriaToolCalls dispatches. Returns Vapi's `{ results: [...] }` body.
+// Aria tool endpoint for Vapi-hosted property search/lookup tools plus local
+// adapter tests and internal replay/runtime work. Returns Vapi's
+// `{ results: [...] }` body when explicitly called.
 export async function POST(request: NextRequest) {
   try {
     assertWebhookSecret(request);
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await handleAriaToolCalls(payload);
     return NextResponse.json(body);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process Aria tool call.";
+    const message = error instanceof Error ? error.message : "Unable to process Iris tool call.";
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

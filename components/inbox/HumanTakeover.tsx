@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Channel = "sms" | "whatsapp" | "email";
+type Channel = "sms" | "whatsapp" | "messenger" | "instagram" | "email";
 
 export function HumanTakeover({
   threadRef,
@@ -69,6 +69,10 @@ export function HumanTakeover({
   }
 
   async function send() {
+    if (channel === "messenger" || channel === "instagram") {
+      setError("Reply from the ManyChat inbox for this social DM.");
+      return;
+    }
     if (!body.trim() && mediaUrls.length === 0) return;
     setSending(true);
     setError("");
@@ -88,7 +92,8 @@ export function HumanTakeover({
     }
   }
 
-  const channelLabel = channel === "whatsapp" ? "WhatsApp" : channel === "sms" ? "SMS" : "Email";
+  const channelLabel = channel === "whatsapp" ? "WhatsApp" : channel === "sms" ? "SMS" : channel === "messenger" ? "Messenger" : channel === "instagram" ? "Instagram" : "Email";
+  const isSocialDm = channel === "messenger" || channel === "instagram";
 
   return (
     <div className="human-takeover-bar">
@@ -102,7 +107,13 @@ export function HumanTakeover({
         </button>
       </div>
 
-      {isActive && (
+      {isActive && isSocialDm ? (
+        <div className="human-compose">
+          <div className="human-compose-error">AI is paused. Reply from ManyChat so the social inbox stays the sender of record.</div>
+        </div>
+      ) : null}
+
+      {isActive && !isSocialDm && (
         <div className="human-compose">
           <textarea
             className="human-compose-textarea"
