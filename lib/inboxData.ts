@@ -1,6 +1,7 @@
 import type { SheetRow } from "@/lib/sheetSchema";
+import { IRIS_AGENT_NAME, normalizeLegacyAgentName, normalizeLegacyAgentText } from "@/lib/agentIdentity";
 
-export type Channel = "email" | "sms" | "whatsapp" | "voice" | "website_chat" | "unknown";
+export type Channel = "email" | "sms" | "whatsapp" | "messenger" | "instagram" | "voice" | "website_chat" | "unknown";
 
 export type AgentInboxData = {
   leads: SheetRow[];
@@ -14,7 +15,7 @@ export type AgentInboxData = {
 
 export function channelFor(event: SheetRow): Channel {
   const channel = (event.channel || "unknown").toLowerCase();
-  if (["email", "sms", "whatsapp", "voice", "website_chat"].includes(channel)) {
+  if (["email", "sms", "whatsapp", "messenger", "instagram", "voice", "website_chat"].includes(channel)) {
     return channel as Channel;
   }
   return "unknown";
@@ -82,6 +83,18 @@ function isInternalVoiceEvent(row: SheetRow) {
   return channelFor(row) === "voice";
 }
 
+function normalizeInboxRow(row: SheetRow): SheetRow {
+  return {
+    ...row,
+    agent_name: normalizeLegacyAgentName(row.agent_name) || row.agent_name,
+    ai_action: normalizeLegacyAgentText(row.ai_action),
+    handoff_reason: normalizeLegacyAgentText(row.handoff_reason),
+    message_text: row.direction === "inbound" ? row.message_text : normalizeLegacyAgentText(row.message_text),
+    summary: normalizeLegacyAgentText(row.summary),
+    transcript: normalizeLegacyAgentText(row.transcript),
+  };
+}
+
 export type VoiceTranscriptTurn = {
   speaker: string;
   direction: "inbound" | "outbound";
@@ -95,7 +108,7 @@ function voiceSpeakerFromLabel(label: string): Pick<VoiceTranscriptTurn, "speake
   const normalized = label.toLowerCase();
   const outbound = ["ai", "assistant", "aria", "bot"].includes(normalized);
   return {
-    speaker: outbound ? "Aria" : "Lead",
+    speaker: outbound ? IRIS_AGENT_NAME : "Lead",
     direction: outbound ? "outbound" : "inbound",
   };
 }
@@ -163,17 +176,18 @@ export function parseVoiceTranscript(transcript = ""): VoiceTranscriptTurn[] {
 }
 
 export function composeInboxData(leads: SheetRow[], events: SheetRow[], properties: SheetRow[], voiceCalls: SheetRow[] = []): AgentInboxData {
-  const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead));
-  const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event));
+  const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead)).map(normalizeInboxRow);
+  const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event)).map(normalizeInboxRow);
+  const visibleVoiceCalls = voiceCalls.filter((call) => !isReservedTestRow(call)).map(normalizeInboxRow);
   const metrics = buildMetrics(visibleLeads, visibleEvents);
-  if (voiceCalls.length) {
-    metrics.channels.voice = voiceCalls.length;
+  if (visibleVoiceCalls.length) {
+    metrics.channels.voice = visibleVoiceCalls.length;
   }
   metrics.property_count = properties.length;
   return {
     leads: visibleLeads,
     events: visibleEvents,
-    voiceCalls,
+    voiceCalls: visibleVoiceCalls,
     properties,
     metrics,
     threads: groupEventsByThread(visibleEvents),

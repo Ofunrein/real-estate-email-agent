@@ -10,6 +10,7 @@ import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type 
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export const dynamic = "force-dynamic";
 
@@ -200,7 +201,7 @@ async function recordTheoOutbound(input: TheoOutboundInput) {
     eventType: input.eventType || "sms_outbound",
     channel: "sms",
     direction: "outbound",
-    agentName: "Theo",
+    agentName: IRIS_AGENT_NAME,
     source: "twilio",
     preferredChannel: "sms",
   });
@@ -277,7 +278,7 @@ export async function POST(request: NextRequest) {
     if (controlAction === "start" || controlAction === "help") {
       const body = controlAction === "start"
         ? "You're opted back in. What home or area can I help with?"
-        : "Theo with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
+        : "Iris with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
       const controlSendStarted = nowMs();
       const sendResult = await sendTheoSms(payload.From || "", body);
       const controlSendMs = elapsedMs(controlSendStarted);
@@ -318,7 +319,7 @@ export async function POST(request: NextRequest) {
         sourceDetail: payload.To ? `to ${payload.To}` : "",
         threadRef: result.event.thread_ref,
         messageText: body,
-        summary: controlAction === "start" ? "Theo sent SMS opt-in confirmation." : "Theo sent SMS help response.",
+        summary: controlAction === "start" ? "Iris sent SMS opt-in confirmation." : "Iris sent SMS help response.",
         aiAction: sendResult.sent ? "control_reply_sent" : "control_reply_generated",
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
         handoffReason: sendResult.error,
@@ -604,7 +605,7 @@ export async function POST(request: NextRequest) {
       threadRef: result.event.thread_ref,
       eventType: reply.status === "needs_human" ? "sms_handoff_reply" : "sms_ai_reply",
       messageText: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
-      summary: `Theo ${sendResult.sent ? "sent" : "prepared"} SMS reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
+      summary: `Iris ${sendResult.sent ? "sent" : "prepared"} SMS reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
       aiAction: sendResult.sent ? "reply_sent" : "reply_generated",
       handoffReason: reply.handoffReason || sendResult.error,
       status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -638,7 +639,7 @@ export async function POST(request: NextRequest) {
       send_error: sendResult.error || undefined,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process Theo SMS webhook.";
+    const message = error instanceof Error ? error.message : "Unable to process Iris SMS webhook.";
     logTheo("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return webhookResponse(request, { ok: false, error: message }, { status });

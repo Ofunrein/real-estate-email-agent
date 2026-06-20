@@ -1,6 +1,8 @@
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+
 // Per-client customization layer. Resolved by client_id from env today;
 // a DB/file source can back this later without changing consumers.
-// Drives agent names, brand voice, custom Vapi voice, CRM/calendar wiring,
+// Drives the Iris brand voice, custom Vapi voice, CRM/calendar wiring,
 // cadence pacing, notify prefs, and few-shot style-training toggles.
 //
 // resolveClientConfig() takes an env record so it is pure and unit-testable.
@@ -73,10 +75,10 @@ export function resolveClientConfig(env: Env = process.env): ClientConfig {
     clientId,
     clientName,
     agentNames: {
-      email: str(env, "AGENT_NAME_EMAIL", "Iris"),
-      sms: str(env, "AGENT_NAME_SMS", "Theo"),
-      voice: str(env, "AGENT_NAME_VOICE", "Aria"),
-      chat: str(env, "AGENT_NAME_CHAT", "Olivia"),
+      email: str(env, "AGENT_NAME_EMAIL", IRIS_AGENT_NAME),
+      sms: str(env, "AGENT_NAME_SMS", IRIS_AGENT_NAME),
+      voice: str(env, "AGENT_NAME_VOICE", IRIS_AGENT_NAME),
+      chat: str(env, "AGENT_NAME_CHAT", IRIS_AGENT_NAME),
     },
     brandVoice: str(env, "BRAND_VOICE", `Warm, concise, professional. Represents ${teamName}.`),
     voiceId: str(env, "ARIA_VOICE_ID"),

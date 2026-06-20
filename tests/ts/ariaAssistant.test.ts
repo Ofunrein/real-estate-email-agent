@@ -85,7 +85,7 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   assert.match(messages[0].content, /notifySlackLeadIssue/);
   assert.match(messages[0].content, /getCallerContext/);
   assert.match(messages[0].content, /shared omnichannel brain/);
-  assert.match(messages[0].content, /recent Theo\/Iris\/Olivia\/Aria conversations/);
+  assert.match(messages[0].content, /recent Iris conversations across every channel/);
   assert.match(messages[0].content, /searchProperties/);
   assert.match(messages[0].content, /lookupProperty/);
   assert.match(messages[0].content, /sendPropertyDetailsSms/);

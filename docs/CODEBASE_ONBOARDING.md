@@ -24,7 +24,7 @@ The architecture is intentionally dual-stack: Python handles the long-running em
 ┌──────────────────┐ ┌─────────────────────────────────────────────────────────┐
 │  agent.py (Iris) │ │              Next.js API Layer (/app/api/)              │
 │  Python daemon   │ │  /webhooks/theo-sms     /webhooks/aria-voice            │
-│  60s poll loop   │ │  /webhooks/aria-tools/* /webhooks/olivia-website        │
+│  60s poll loop   │ │  Vapi platform tools    /webhooks/olivia-website        │
 │  Anthropic SDK   │ │  /webhooks/theo-whatsapp /media/proxy /media/audio      │
 └────────┬─────────┘ │  /api/data /api/leads /api/properties /api/metrics      │
          │           └──────────────────────┬──────────────────────────────────┘
@@ -562,8 +562,15 @@ All values strings. Keys are header strings lowercased + underscored via `_sheet
 
 ### Vapi (Aria)
 - Config: `lib/ariaAssistant.ts` → JSON posted to Vapi API via `npm run aria:provision`
-- Inbound lifecycle: POST `/api/webhooks/aria-voice` (`end-of-call-report`, `tool-calls`, `status-update`)
-- Tool dispatch: POST `/api/webhooks/aria-tools/[tool]` — returns `{ results: [...] }`
+- Live assistant tools: reusable Vapi-hosted platform tools attached by `scripts/aria-provision.mjs`
+  - `checkAvailability` — Google Calendar availability
+  - `bookConsultation` — Google Calendar event create
+  - `notifySlackLeadIssue` — Slack notification
+  - `sendBookingSmsConfirmation` — Vapi code tool that sends Twilio SMS confirmation to caller and agent
+  - `transferToHuman`, `endCall` — native Vapi call controls
+- No live repo tool server: `npm run aria:verify` fails if any attached Aria tool has `server.url`.
+- Inbound lifecycle: POST `/api/webhooks/aria-voice` (`end-of-call-report`, `status-update`, optional replay/test `tool-calls`)
+- Legacy/internal tool dispatch: POST `/api/webhooks/aria-tools/[tool]` — returns `{ results: [...] }`; keep for local adapter tests/replay, not for production Vapi assistant tools
 - Auth: `VAPI_API_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_PHONE_NUMBER_ID`
 
 ### HubSpot (optional)
@@ -605,6 +612,7 @@ TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM=+1...
 AGENT_PHONE=+1...
+ARIA_AGENT_CONFIRMATION_PHONE=+15128115302
 
 # Channel webhooks
 CHANNEL_WEBHOOK_SECRET=
@@ -704,7 +712,7 @@ python agent.py
 
 **`/api/media/proxy`** — Twilio MMS `mediaUrl` values in Theo point to this. If the proxy route URL structure changes, existing SMS photo links break. Route must remain at `/api/media/proxy?url=<...>`.
 
-**`lib/ariaAssistant.ts`** — Aria tool names in this file must exactly match the dynamic route segments in `/api/webhooks/aria-tools/[tool]/route.ts`. Adding a tool to the assistant without adding a route handler causes a 404 during live calls.
+**`lib/ariaAssistant.ts`** — Live Aria must stay Vapi-adapter first. Do not add repo webhook/server tools here. Reusable Vapi tools are created/updated in `scripts/aria-provision.mjs` and verified with `npm run aria:verify`.
 
 ---
 
@@ -722,7 +730,7 @@ python agent.py
 
 5. **`status === "needs_human"`** — Drives `needs-human` CSS class and human review queue. This string is a hard coupling.
 
-6. **Webhook URL paths** — `/api/webhooks/theo-sms`, `/api/webhooks/aria-voice`, `/api/webhooks/aria-tools/[tool]`, `/api/webhooks/olivia-website`, `/api/media/proxy` — all registered externally with Twilio/Vapi. Cannot change without updating those vendor configs.
+6. **Webhook URL paths** — `/api/webhooks/theo-sms`, `/api/webhooks/aria-voice`, `/api/webhooks/olivia-website`, `/api/media/proxy` — externally registered paths. `/api/webhooks/aria-tools/[tool]` is legacy/internal only and must not be attached to the production Vapi assistant.
 
 ### CSS classes referenced from TypeScript (dangerous to rename):
 

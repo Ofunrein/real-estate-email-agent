@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       action: result.event.ai_action,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to process Aria voice webhook.";
+    const message = error instanceof Error ? error.message : "Unable to process Iris voice webhook.";
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
