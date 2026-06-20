@@ -9,6 +9,7 @@
 // layer is injected so it is unit-testable.
 
 import { nextTouch, type TouchDecision } from "@/lib/cadence";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import type { CadenceConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { sendTheoSms } from "@/lib/twilioSms";
@@ -60,7 +61,7 @@ export async function placeOutboundCall(
 }
 
 export function outboundAttemptSmsBody(input: { agentName?: string; companyName?: string; callbackNumber?: string; context?: string } = {}): string {
-  const agentName = input.agentName || process.env.AGENT_NAME_VOICE || "Aria";
+  const agentName = input.agentName || process.env.AGENT_NAME_VOICE || IRIS_AGENT_NAME;
   const companyName = input.companyName || process.env.CLIENT_NAME || "Austin Realty";
   const callbackNumber = input.callbackNumber || process.env.ARIA_CALLBACK_NUMBER || process.env.TWILIO_FROM || "";
   const context = input.context?.trim();

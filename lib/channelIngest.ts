@@ -1,4 +1,5 @@
 import { appendConversationEventToDatabase, databaseEnabled, upsertLeadMemoryToDatabase } from "@/lib/database";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -54,7 +55,10 @@ export function normalizeTwilioContactAddress(value: string): string {
   return value.replace(/^(?:rcs|sms|whatsapp):/i, "").trim();
 }
 
-export function inferPreferredChannelFromText(message = "", fallback: Channel | "email" | "voice" | "sms" = "sms"): "email" | "sms" | "voice" | "whatsapp" | "website_chat" {
+export function inferPreferredChannelFromText(
+  message = "",
+  fallback: Channel | "email" | "voice" | "sms" = "sms",
+): "email" | "sms" | "voice" | "whatsapp" | "messenger" | "instagram" | "website_chat" {
   if (/\b(email|e-mail).{0,24}\b(best|better|preferred|works|send|reply|details|me)\b|\b(best|better|preferred|works|send).{0,24}\b(email|e-mail)\b/i.test(message)) {
     return "email";
   }
@@ -65,7 +69,9 @@ export function inferPreferredChannelFromText(message = "", fallback: Channel | 
     return "voice";
   }
   if (/\bwhatsapp\b/i.test(message)) return "whatsapp";
-  return fallback as "email" | "sms" | "voice" | "whatsapp" | "website_chat";
+  if (/\b(instagram|ig|dm)\b/i.test(message)) return "instagram";
+  if (/\b(messenger|facebook)\b/i.test(message)) return "messenger";
+  return fallback as "email" | "sms" | "voice" | "whatsapp" | "messenger" | "instagram" | "website_chat";
 }
 
 export function requireDatabaseForChannelWrites(): void {
@@ -159,7 +165,7 @@ export function metaWhatsAppIngestInput(payload: MetaWhatsAppIngestPayload): Cha
   ].filter(Boolean).join("; ");
   const base: ChannelIngestInput = {
     channel: "whatsapp",
-    agentName: "Theo",
+    agentName: IRIS_AGENT_NAME,
     phone: from,
     fullName: payload.profileName || "",
     source: "meta_whatsapp",
@@ -220,7 +226,7 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
   const preferredChannel = inferPreferredChannelFromText(body, channel);
   const base: ChannelIngestInput = {
     channel,
-    agentName: "Theo",
+    agentName: IRIS_AGENT_NAME,
     phone: from,
     fullName: payload.ProfileName || "",
     source: "twilio",
@@ -293,7 +299,7 @@ export function vapiVoiceIngestInput(payload: Record<string, unknown>): ChannelI
 
   return {
     channel: "voice",
-    agentName: "Aria",
+    agentName: IRIS_AGENT_NAME,
     phone,
     source: "vapi",
     sourceDetail: String(source.type || payload.type || payload.status || ""),
@@ -321,7 +327,7 @@ export function oliviaWebsiteIngestInput(payload: Record<string, unknown>): Chan
 
   return {
     channel: "website_chat",
-    agentName: "Olivia",
+    agentName: IRIS_AGENT_NAME,
     email,
     phone,
     fullName,

@@ -36,3 +36,4 @@ claude-md/
 .playwright-cli/
 .DS_Store
 public/uploads/
+.vercel

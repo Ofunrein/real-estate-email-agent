@@ -25,6 +25,14 @@ function property(partial: Partial<SheetRow>): SheetRow {
   } as SheetRow;
 }
 
+async function waitFor(check: () => boolean, timeoutMs = 500) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (check()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 test("speakProperty: natural spoken sentence, no markdown", () => {
   const spoken = speakProperty(property({ address: "123 Main St", price: "450000", beds: "3", baths: "2", sqft: "1800", neighborhood: "Mueller" }));
   assert.equal(spoken, "one two three Main St is listed at $450,000, 3 bed, 2 bath, 1,800 square feet, in Mueller.");
@@ -40,6 +48,37 @@ test("propertySmsBody: includes address, facts, link", () => {
   assert.match(body, /123 Main St/);
   assert.match(body, /\$450,000/);
   assert.match(body, /https:\/\/z\/123/);
+});
+
+test("propertySmsBody: uses configured AI search link when property id is available", () => {
+  const originalBase = process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL;
+  const originalTenant = process.env.AI_SEARCH_TENANT_ID;
+  const originalMls = process.env.AI_SEARCH_MLS_OSN;
+  process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL = "https://aisearch.rysehomes.com";
+  process.env.AI_SEARCH_TENANT_ID = "YQxX9erMaCPdeBOYthLK";
+  process.env.AI_SEARCH_MLS_OSN = "Austin";
+  try {
+    const body = propertySmsBody(property({
+      address: "3401 Neal ST B",
+      price: "599900",
+      beds: "2",
+      baths: "2",
+      property_id: "5013978221052957045",
+      listing_url: "https://www.zillow.com/homedetails/old",
+    }));
+
+    assert.match(body, /https:\/\/aisearch\.rysehomes\.com\/property\/5013978221052957045/);
+    assert.match(body, /tenant_id=YQxX9erMaCPdeBOYthLK/);
+    assert.match(body, /mls_osn=Austin/);
+    assert.doesNotMatch(body, /zillow\.com/);
+  } finally {
+    if (originalBase == null) delete process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL;
+    else process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL = originalBase;
+    if (originalTenant == null) delete process.env.AI_SEARCH_TENANT_ID;
+    else process.env.AI_SEARCH_TENANT_ID = originalTenant;
+    if (originalMls == null) delete process.env.AI_SEARCH_MLS_OSN;
+    else process.env.AI_SEARCH_MLS_OSN = originalMls;
+  }
 });
 
 function deps(overrides: Partial<AriaDataDeps>): AriaDataDeps {
@@ -145,8 +184,8 @@ test("lookupPropertyForVoice: timeout speaks cache + schedules SMS", async () =>
   assert.equal(result.timedOut, true);
   assert.equal(result.fromCache, true);
   assert.match(result.spoken, /text you the full details/);
-  // let the background enrichment + SMS resolve
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  // let the background enrichment + SMS resolve under the concurrent test runner
+  await waitFor(() => Boolean(smsBody));
   assert.equal(smsSentTo, "+15125550000");
   assert.match(smsBody, /455,000/);
 });
@@ -231,26 +270,37 @@ test("searchPropertiesForVoice: enrichment can win and be cached", async () => {
 
 test("searchPropertiesForVoice: timeout speaks cache and texts fresh results", async () => {
   let smsBody = "";
-  const result = await searchPropertiesForVoice(
-    { area: "Austin", beds: 4, phone: "+15125550000" },
-    {
-      findCandidates: async () => [property({ address: "1 Cached St", price: "500000", beds: "4", baths: "2" })],
-      enrich: () => new Promise((resolve) => setTimeout(() => resolve({
-        properties: [property({ address: "2 Fresh Ave", price: "540000", beds: "4", baths: "3", listing_url: "https://z/2" })],
-        context: "fresh",
-      }), 30)),
-      cacheProperty: async () => null,
-      sendSms: async (_to, body) => {
-        smsBody = body;
+  let resolveFresh!: (value: { properties: SheetRow[]; context: string }) => void;
+  const freshResults = new Promise<{ properties: SheetRow[]; context: string }>((resolve) => {
+    resolveFresh = resolve;
+  });
+  const keepAlive = setTimeout(() => undefined, 100);
+  let result: Awaited<ReturnType<typeof searchPropertiesForVoice>>;
+  try {
+    result = await searchPropertiesForVoice(
+      { area: "Austin", beds: 4, phone: "+15125550000" },
+      {
+        findCandidates: async () => [property({ address: "1 Cached St", price: "500000", beds: "4", baths: "2" })],
+        enrich: () => freshResults,
+        cacheProperty: async () => null,
+        sendSms: async (_to, body) => {
+          smsBody = body;
+        },
+        budgetMs: 1,
       },
-      budgetMs: 5,
-    },
-  );
+    );
+  } finally {
+    clearTimeout(keepAlive);
+  }
   assert.equal(result.timedOut, true);
   assert.equal(result.fromCache, true);
   assert.match(result.spoken, /one Cached St/);
   assert.match(result.spoken, /text the links/);
-  await new Promise((resolve) => setTimeout(resolve, 60));
+  resolveFresh({
+    properties: [property({ address: "2 Fresh Ave", price: "540000", beds: "4", baths: "3", listing_url: "https://z/2" })],
+    context: "fresh",
+  });
+  await waitFor(() => Boolean(smsBody));
   assert.match(smsBody, /2 Fresh Ave/);
   assert.match(smsBody, /https:\/\/z\/2/);
 });

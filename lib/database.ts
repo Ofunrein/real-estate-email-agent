@@ -6,6 +6,7 @@ import {
   PROPERTIES_HEADERS,
   type SheetRow,
 } from "@/lib/sheetSchema";
+import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mergeNonEmpty, normalizeEmail, normalizeName, normalizePhone } from "@/lib/leadIdentity";
 import {
   AUSTIN_NEIGHBORHOODS,
@@ -672,7 +673,7 @@ export async function upsertVoiceCallToDatabase(call: VoiceCallRecord): Promise<
       call.phone || "",
       call.full_name || "",
       call.lead_role || "",
-      call.agent_name || "Aria",
+      call.agent_name || IRIS_AGENT_NAME,
       call.started_at || "",
       call.ended_at || "",
       Math.max(0, Math.round(Number(call.duration_sec || 0))),

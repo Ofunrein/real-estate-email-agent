@@ -7,9 +7,9 @@ test("resolveClientConfig: defaults when env empty", () => {
   const config = resolveClientConfig({});
   assert.equal(config.clientId, "default");
   assert.equal(config.clientName, "default");
-  assert.equal(config.agentNames.voice, "Aria");
+  assert.equal(config.agentNames.voice, "Iris");
   assert.equal(config.agentNames.email, "Iris");
-  assert.equal(config.agentNames.sms, "Theo");
+  assert.equal(config.agentNames.sms, "Iris");
   assert.equal(config.crmProvider, "ghl");
   assert.equal(config.cadence.maxTouches, 14);
   assert.equal(config.cadence.minGapHours, 48);
