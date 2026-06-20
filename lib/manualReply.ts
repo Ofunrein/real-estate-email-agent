@@ -20,6 +20,10 @@ export type ManualReplyInput = {
 
 export type ManualReplyResult = { ok: true } | { ok: false; error: string };
 
+function validGmailThreadId(value?: string) {
+  return Boolean(value && /^[a-f0-9]{8,}$/i.test(value.trim()));
+}
+
 export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
   try {
     switch (input.channel) {
@@ -132,6 +136,8 @@ async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
     raw = Buffer.from(lines.join("\r\n")).toString("base64url");
   }
 
-  await gmail.users.messages.send({ userId: "me", requestBody: { raw, threadId: input.threadId } });
+  const requestBody: { raw: string; threadId?: string } = { raw };
+  if (validGmailThreadId(input.threadId)) requestBody.threadId = input.threadId?.trim();
+  await gmail.users.messages.send({ userId: "me", requestBody });
   return { ok: true };
 }
