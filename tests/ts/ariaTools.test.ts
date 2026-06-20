@@ -284,11 +284,11 @@ test("syncToCrm: skipped without CRM", async () => {
   assert.equal(out.ingest.aiAction, "crm_sync_skipped");
 });
 
-test("every tool tags channel voice + Aria", async () => {
+test("every tool tags channel voice + Iris", async () => {
   for (const [name, args] of [["getCallerContext", {}], ["lookupProperty", { address: "1 A St" }], ["sendPropertyDetailsSms", { address: "1 A St", query: "send details" }], ["qualifyLead", {}]] as const) {
     const out = await runAriaTool(name, args, ctx, deps());
     assert.equal(out.ingest.channel, "voice");
-    assert.equal(out.ingest.agentName, "Aria");
+    assert.equal(out.ingest.agentName, "Iris");
     assert.equal(out.ingest.phone, ctx.phone);
   }
 });
