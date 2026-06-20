@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "claude-md"
+    "claude-md",
+    "lumenosis-site"
   ]
 }

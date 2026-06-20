@@ -127,6 +127,33 @@ test("generateTheoReply: amenity question answers known and unknown listing fiel
   assert.match(result.reply, /pets/i);
 });
 
+test("generateTheoReply: generic amenity follow-up stays on the current listing", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Any other amenities?",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [property({
+      address: "610 Davis St #2508",
+      price: "875000",
+      beds: "2",
+      baths: "2",
+      sqft: "1174",
+      neighborhood: "Downtown Austin",
+      year_built: "2025",
+      property_type: "Condo",
+      features: "Central Air, Balcony, Parking, Modern Finishes",
+      listing_url: "https://www.zillow.com/homedetails/610-Davis-St-2508-Austin-TX-78701/458236974_zpid/",
+    })],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_safe_inquiry_reply_ready");
+  assert.equal(result.handoffReason, "");
+  assert.match(result.reply, /610 Davis St #2508/);
+  assert.match(result.reply, /Central Air, Balcony, Parking, Modern Finishes/i);
+  assert.doesNotMatch(result.reply, /Send me the area, budget, bedroom count/i);
+});
+
 test("generateTheoReply: showing request asks for timing instead of human handoff", async () => {
   const result = await withoutOpenAi(() => generateTheoReply({
     message: "Can I tour the first one?",
