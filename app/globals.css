@@ -2923,3 +2923,25 @@ time,
 .human-compose-attach-btn:hover { color: var(--s-text-1); }
 .human-compose-send-btn { border: 0; border-radius: var(--s-r-sm); background: var(--s-accent); color: #fff; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .human-compose-send-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* ── Dark mode: layout surfaces ── */
+.dark .conversation-thread-column { background: var(--s-bg) !important; }
+.dark .conversation-list-column { background: var(--s-sidebar-bg) !important; border-color: var(--s-sidebar-border) !important; }
+.dark .conversation-list-header strong { color: var(--s-text-1) !important; }
+.dark .conversation-list-header span { color: var(--s-text-3) !important; }
+.dark .thread-head { background: var(--s-card) !important; border-bottom: 1px solid var(--s-divider); }
+.dark .panel-header { background: var(--s-sidebar-bg) !important; }
+.dark .selected-thread { background: var(--s-bg) !important; }
+/* ── Dark mode: email rendered HTML ── */
+.dark .email-rendered { background: var(--s-card) !important; color: var(--s-text-1) !important; border-radius: 8px; padding: 4px; }
+.dark .email-rendered * { color: var(--s-text-1) !important; background-color: transparent !important; border-color: var(--s-divider) !important; }
+.dark .email-rendered a { color: var(--s-accent) !important; }
+.dark .email-rendered img { opacity: 0.9; }
+.dark .email-rendered table, .dark .email-rendered td, .dark .email-rendered th { background: transparent !important; }
+/* ── Dark mode: message bubbles in thread ── */
+.dark .message.outbound { background: var(--s-accent-soft) !important; border-color: rgba(124,106,245,0.2) !important; }
+.dark .message.inbound { background: var(--s-card) !important; border-color: var(--s-divider) !important; }
+.dark .message-text, .dark .message-meta span { color: var(--s-text-1) !important; }
+.dark .message-meta span:last-child { color: var(--s-text-3) !important; }
+.dark .overview-charts { border-color: var(--s-divider) !important; background: transparent; }
+.dark .chart-card { background: transparent; }
