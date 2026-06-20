@@ -15,6 +15,7 @@
     "aria:test": "node --import tsx scripts/test-aria-voice.mjs",
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "aria:backfill": "node --import tsx scripts/backfill-vapi-voice-calls.mjs",
+    "sms:backfill": "node scripts/backfill-twilio-sms-events.mjs",
     "import:zillow": "node scripts/import-zillow-apify-properties.mjs",
     "normalize:rental-prices": "node scripts/normalize-rental-prices.mjs",
     "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
