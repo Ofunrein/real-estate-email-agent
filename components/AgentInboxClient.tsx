@@ -217,6 +217,26 @@ function formatEventTime(value?: string) {
   });
 }
 
+function formatBubbleTime(value?: string) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function relativeTime(value?: string) {
+  if (!value) return "";
+  const ms = Date.now() - new Date(value).getTime();
+  if (isNaN(ms) || ms < 0) return "";
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 function directionCount(events: SheetRow[], direction: string) {
   return events.filter((event) => event.direction === direction).length;
 }
@@ -679,7 +699,9 @@ function ChannelIconSmall({ channel }: { channel: string }) {
 
 function activityPillClass(event: SheetRow): { cls: string; label: string } {
   if (eventNeedsHuman(event)) return { cls: "arv2-pill-review", label: "Review" };
-  if (event.direction === "outbound") return { cls: "arv2-pill-ai", label: "AI handled" };
+  if (event.direction === "outbound") return { cls: "arv2-pill-ai", label: "Sent" };
+  const ms = Date.now() - new Date(event.event_at || "").getTime();
+  if (!isNaN(ms) && ms < 3600000) return { cls: "arv2-pill-new", label: "New" };
   return { cls: "arv2-pill-received", label: "Received" };
 }
 
@@ -711,7 +733,7 @@ function TableRows({
             <div className="arv2-body">
               <div className="arv2-top">
                 <span className="arv2-id">{event.email || event.phone || event.thread_ref || "Unknown"}</span>
-                <time className="arv2-time">{formatEventTime(event.event_at)}</time>
+                <time className="arv2-time">{relativeTime(event.event_at)}</time>
               </div>
               <span className="arv2-preview">{eventSummaryText(event)}</span>
               <div className="arv2-pills">
@@ -782,24 +804,43 @@ function ConversationThread({
         </div>
       ) : null}
       <div className="thread-messages" aria-label={`${channelLabel} messages for ${threadIdentity(threadRef, events, channel)}`}>
-        {events.map((event, index) => (
-          <div
-            className={`message ${event.direction === "outbound" ? "outbound" : "inbound"}`}
-            key={`${event.event_at}-${index}`}
-          >
-            <div className="message-meta">
-              <span>{messageSpeaker(event)} {event.direction === "outbound" ? "sent" : "received"}</span>
-              <span>{formatEventTime(event.event_at)}</span>
-            </div>
-            <MessageContent event={event} properties={properties} />
-            {event.handoff_reason ? (
-              <div className="message-handoff">
-                <strong>Flag</strong>
-                <span>{event.handoff_reason}</span>
+        {events.map((event, index) => {
+          const isOut = event.direction === "outbound";
+          const speaker = messageSpeaker(event);
+          const t = formatBubbleTime(event.event_at);
+          return (
+            <div className={`msg-wrap ${isOut ? "msg-out" : "msg-in"}`} key={`${event.event_at}-${index}`}>
+              {!isOut && (
+                <div className="msg-avatar-lead" aria-hidden>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/>
+                  </svg>
+                </div>
+              )}
+              <div className="msg-col">
+                <div className="msg-meta">
+                  <span className="msg-speaker">{speaker}</span>
+                  <span className="msg-dir">{isOut ? "sent" : "received"}</span>
+                  {t ? <time className="msg-time">{t}</time> : null}
+                </div>
+                <div className={`msg-bubble ${isOut ? "msg-bubble-out" : "msg-bubble-in"}`}>
+                  <MessageContent event={event} properties={properties} />
+                </div>
+                {event.handoff_reason ? (
+                  <div className="msg-flag">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M3 1.5v13M3 1.5h9l-2 4 2 4H3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span>{event.handoff_reason}</span>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        ))}
+              {isOut && (
+                <div className="msg-avatar-iris" aria-hidden>
+                  <img src="/images/agents/iris.png" alt="Iris" width="28" height="28" />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       {channel === "sms" || channel === "whatsapp" || channel === "messenger" || channel === "instagram" || channel === "email" ? (
         <HumanTakeover
@@ -1550,12 +1591,14 @@ export function AgentInboxClient({
   loadError = "",
   sourceLabel = "Google Sheets",
   userEmail = "",
+  teamName = "",
 }: {
   data: AgentInboxData;
   initialRefreshedAt?: string;
   loadError?: string;
   sourceLabel?: string;
   userEmail?: string;
+  teamName?: string;
 }) {
   const [dashboardData, setDashboardData] = useState<AgentInboxData>(data);
   const [refreshError, setRefreshError] = useState("");
@@ -1747,7 +1790,15 @@ export function AgentInboxClient({
 
       <main className="inbox-main">
         <header className="inbox-topbar">
-          <span className="inbox-topbar-title">{selectedChannel ? selectedChannelLabel : viewTitle(view)}</span>
+          <div className="inbox-topbar-left">
+            <span className="inbox-topbar-title">{selectedChannel ? selectedChannelLabel : viewTitle(view)}</span>
+            {teamName && view === "overview" ? (
+              <div className="inbox-workspace-badge">
+                <span className="inbox-workspace-label">Workspace: {teamName}</span>
+                <span className="inbox-workspace-status">READY</span>
+              </div>
+            ) : null}
+          </div>
           <div className="inbox-topbar-actions">
             <EmailAccountControl
               autoSendEmail={dashboardData.inboxSettings.auto_send.email}
