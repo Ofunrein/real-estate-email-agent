@@ -134,6 +134,7 @@ export function ImportsView() {
   const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
   const [batchesError, setBatchesError] = useState('');
+  const [lastPreviewSource, setLastPreviewSource] = useState<'csv' | 'crm' | 'google_sheets' | 'composio' | null>(null);
 
   const topSegments = useMemo(() => {
     const counts = summary?.segmentCounts || {};
@@ -179,6 +180,7 @@ export function ImportsView() {
       if (!response.ok || !data.ok) throw new Error(data.error || 'Import failed');
       setSummary(data.summary);
       setPreview(data.preview || []);
+      setLastPreviewSource('csv');
       if (!nextDryRun) await loadBatches();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Import failed');
@@ -200,12 +202,101 @@ export function ImportsView() {
       if (!response.ok || !data.ok) throw new Error(data.error || 'CRM pull failed');
       setSummary(data.summary);
       setPreview(data.preview || []);
+      setLastPreviewSource('crm');
       if (!nextDryRun) await loadBatches();
     } catch (pullError) {
       setError(pullError instanceof Error ? pullError.message : 'CRM pull failed');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function pullSheets(nextDryRun = dryRun) {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/leads/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pullSheets: true, sourceType: 'google_sheets', dryRun: nextDryRun }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Google Sheets pull failed');
+      setSummary(data.summary);
+      setPreview(data.preview || []);
+      setLastPreviewSource('google_sheets');
+      if (!nextDryRun) await loadBatches();
+    } catch (pullError) {
+      setError(pullError instanceof Error ? pullError.message : 'Google Sheets pull failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function pullComposio(nextDryRun = dryRun) {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch('/api/leads/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pullComposio: true, sourceType: 'composio', dryRun: nextDryRun }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Composio pull failed');
+      setSummary(data.summary);
+      setPreview(data.preview || []);
+      setLastPreviewSource('composio');
+      if (!nextDryRun) await loadBatches();
+    } catch (pullError) {
+      setError(pullError instanceof Error ? pullError.message : 'Composio pull failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function connectorDisabled(connector: ConnectorStatus): boolean {
+    if (loading) return true;
+    if (connector.id === 'csv') return !file;
+    if (connector.id === 'composio') return connector.status !== 'ready';
+    if (connector.id === 'ghl' || connector.id === 'google_sheets') {
+      return connector.status !== 'ready' && connector.status !== 'configured';
+    }
+    return true;
+  }
+
+  function importLatestSource() {
+    if (lastPreviewSource === 'csv') {
+      void submitCsv(false);
+    } else if (lastPreviewSource === 'crm') {
+      void pullCrm(false);
+    } else if (lastPreviewSource === 'google_sheets') {
+      void pullSheets(false);
+    } else if (lastPreviewSource === 'composio') {
+      void pullComposio(false);
+    } else {
+      setError('Run a preview before importing.');
+    }
+  }
+
+  function connectorAction(connector: ConnectorStatus) {
+    if (connector.id === 'csv') {
+      void submitCsv(true);
+      return;
+    }
+    if (connector.id === 'ghl') {
+      void pullCrm(true);
+      return;
+    }
+    if (connector.id === 'google_sheets') {
+      void pullSheets(true);
+      return;
+    }
+    if (connector.id === 'composio') {
+      void pullComposio(true);
+      return;
+    }
+    setError(`${connector.label} is not directly connected yet. Export CSV from that CRM and use the CSV fallback.`);
   }
 
   return (
@@ -272,7 +363,14 @@ export function ImportsView() {
                         </Typography>
                         <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between">
                           <Chip size="small" variant="outlined" label={connector.path.replace(/_/g, ' ')} />
-                          <Typography variant="caption" color="primary" fontWeight={800}>{connector.action}</Typography>
+                          <Button
+                            size="small"
+                            variant="text"
+                            disabled={connectorDisabled(connector)}
+                            onClick={() => connectorAction(connector)}
+                            sx={{ minWidth: 0, px: 0.5, fontWeight: 800 }}>
+                            {connector.action}
+                          </Button>
                         </Stack>
                       </Stack>
                     </Card>
@@ -333,6 +431,31 @@ export function ImportsView() {
                   </Button>
                   <Button variant="contained" disabled={loading} onClick={() => pullCrm(false)}>
                     Pull into lead memory
+                  </Button>
+                </Stack>
+              </Stack>
+            </Card>
+
+            <Card sx={{ p: 2 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TableChartIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2">Sheets / Composio pulls</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Sheets imports the existing lead memory tab. Composio imports from the configured CRM tool slug and normalizes into the same batch flow.
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button variant="outlined" disabled={loading} onClick={() => pullSheets(true)}>
+                    Preview Sheets
+                  </Button>
+                  <Button variant="outlined" disabled={loading} onClick={() => pullComposio(true)}>
+                    Preview Composio
+                  </Button>
+                  <Button variant="contained" disabled={loading || !summary || !lastPreviewSource} onClick={importLatestSource}>
+                    Import latest source
                   </Button>
                 </Stack>
               </Stack>

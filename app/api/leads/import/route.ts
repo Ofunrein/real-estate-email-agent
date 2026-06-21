@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+import { composioEnabled } from "@/lib/composioConnection";
+import { composioImportConfig, pullComposioLeadRows } from "@/lib/composioLeadImport";
 import { resolveCrmAdapter } from "@/lib/crm";
 import { hasCrmImport } from "@/lib/crm/types";
 import { readLeadImportBatchesFromDatabase, readLeadImportItemsFromDatabase } from "@/lib/database";
+import { readSheet } from "@/lib/googleSheets";
 import {
   LEAD_IMPORT_SOURCE_TYPES,
   parseCsv,
   runLeadImport,
   type LeadImportSourceType,
 } from "@/lib/leadImport";
+import { LEAD_MEMORY_TAB } from "@/lib/sheetSchema";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +37,8 @@ function connectorStatuses() {
   const hasGhlCredentials = configured(process.env.GHL_PRIVATE_INTEGRATION_TOKEN || process.env.GHL_LOCATION_PIT)
     && configured(process.env.GHL_LOCATION_ID);
   const hasGoogleSheets = configured(process.env.GOOGLE_SHEET_ID);
-  const hasComposio = configured(process.env.COMPOSIO_API_KEY);
+  const hasComposio = composioEnabled();
+  const composioImport = composioImportConfig();
 
   return [
     {
@@ -52,16 +57,20 @@ function connectorStatuses() {
       path: "composio_or_direct",
       status: hasGoogleSheets ? "configured" : "needs_config",
       detail: hasGoogleSheets ? "Sheet source is configured." : "Needs GOOGLE_SHEET_ID before import.",
-      action: hasGoogleSheets ? "Preview sheet rows" : "Configure sheet",
+      action: hasGoogleSheets ? "Preview sheet leads" : "Configure sheet",
     },
     {
       id: "composio",
       label: "Composio connectors",
       provider: "composio",
       path: "preferred",
-      status: hasComposio ? "configured" : "needs_config",
-      detail: hasComposio ? "Composio API key is present for supported apps." : "Needs COMPOSIO_API_KEY and connected accounts.",
-      action: hasComposio ? "Add connector path" : "Connect Composio",
+      status: hasComposio && composioImport ? "ready" : hasComposio ? "configured" : "needs_config",
+      detail: hasComposio && composioImport
+        ? `Ready via ${composioImport.toolSlug}.`
+        : hasComposio
+          ? "Composio API key is present. Add COMPOSIO_IMPORT_TOOL_SLUG for CRM lead pulls."
+          : "Needs COMPOSIO_API_KEY and connected accounts.",
+      action: hasComposio && composioImport ? "Preview Composio leads" : "Configure import tool",
     },
     {
       id: "ghl",
@@ -185,6 +194,35 @@ async function payloadFromRequest(request: NextRequest): Promise<{
       filename: "",
       dryRun: Boolean(body.dryRun),
       metadata: { next_cursor: page.nextCursor || "", connector: adapter.provider },
+    };
+  }
+  if (body.pullSheets) {
+    const rows = await readSheet(LEAD_MEMORY_TAB);
+    return {
+      rows,
+      sourceType: "google_sheets",
+      sourceProvider: "google_sheets",
+      sourceName: String(body.sourceName || LEAD_MEMORY_TAB),
+      filename: "",
+      dryRun: Boolean(body.dryRun),
+      metadata: { tab: LEAD_MEMORY_TAB },
+    };
+  }
+  if (body.pullComposio) {
+    const { rows: composioRows, config } = await pullComposioLeadRows();
+    return {
+      rows: composioRows,
+      sourceType: "composio",
+      sourceProvider: String(body.sourceProvider || config.toolkit || "composio"),
+      sourceName: String(body.sourceName || config.toolSlug),
+      filename: "",
+      dryRun: Boolean(body.dryRun),
+      metadata: {
+        tool_slug: config.toolSlug,
+        toolkit: config.toolkit,
+        result_path: config.resultPath,
+        connected_account_id: config.connectedAccountId || "",
+      },
     };
   }
   const csvText = String(body.csvText || "");
