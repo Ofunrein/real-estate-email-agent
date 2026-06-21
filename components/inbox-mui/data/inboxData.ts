@@ -171,6 +171,7 @@ export interface Call {
 export interface VoiceContact {
   id: string;
   contact: string;
+  phone?: string;
   time: string;
   summary: string;
   callCount: number;
