@@ -143,7 +143,7 @@ export function VoiceView() {
             </Stack>
           </Box>
 
-          <ReaderFooter actionLabel="Take over call" />
+          <ReaderFooter />
         </Card>
       </Box>
     </Box>);

@@ -63,7 +63,7 @@ export function PropertyCardInline({ card, showSchedule, onOpenModal }: Property
             {card.address}
           </Typography>
           {(card.beds || card.baths || card.sqft) && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, noWrap: true }}>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>
               {[card.beds, card.baths, card.sqft].filter(Boolean).join(' · ')}
             </Typography>
           )}
