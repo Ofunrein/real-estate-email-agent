@@ -11,7 +11,7 @@ import { VoiceView } from './components/VoiceView';
 import { EmptyChannelView } from './components/EmptyChannelView';
 import { PropertiesView } from './components/PropertiesView';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { type ChannelId } from './data/inboxData';
+import { type ActivityEvent, type ChannelId } from './data/inboxData';
 import { usePersistedSelection } from './hooks/usePersistedSelection';
 
 const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties'];
@@ -27,6 +27,22 @@ export function InboxPage() {
   const handleSelect = (id: ChannelId) => {
     setChannel(id);
     setNavOpen(false);
+  };
+  const handleOpenActivityEvent = (event: ActivityEvent) => {
+    const targetChannel = event.channel;
+    if (typeof window !== 'undefined') {
+      if (targetChannel === 'email') {
+        window.localStorage.setItem('iris.inbox.email.category', 'all');
+        window.localStorage.setItem('iris.inbox.email.thread', event.threadId);
+      } else if (targetChannel === 'sms') {
+        window.localStorage.setItem('iris.inbox.sms.category', 'all');
+        window.localStorage.setItem('iris.inbox.sms.thread', event.threadId);
+      } else if (targetChannel === 'voice') {
+        window.localStorage.setItem('iris.inbox.voice.thread', event.threadId);
+      }
+      window.localStorage.setItem('iris.inbox.last.event', event.eventId || event.threadRef || event.id);
+    }
+    setChannel(targetChannel);
   };
   if (!channelReady) {
     return (
@@ -125,7 +141,7 @@ export function InboxPage() {
               overflow: { xs: 'visible', lg: 'hidden' }
             }}>
 
-            <ChannelContent channel={channel} />
+	            <ChannelContent channel={channel} onOpenActivityEvent={handleOpenActivityEvent} />
           </Box>
 
           {/* Inline context rail only at lg+ */}
@@ -165,10 +181,10 @@ export function InboxPage() {
     </Box>);
 
 }
-function ChannelContent({ channel }: {channel: ChannelId;}) {
+function ChannelContent({ channel, onOpenActivityEvent }: {channel: ChannelId;onOpenActivityEvent: (event: ActivityEvent) => void;}) {
   switch (channel) {
     case 'all':
-      return <OverviewView active={channel === 'all'} />;
+      return <OverviewView active={channel === 'all'} onOpenActivityEvent={onOpenActivityEvent} />;
     case 'email':
       return <EmailView />;
     case 'sms':

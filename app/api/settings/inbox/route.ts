@@ -9,6 +9,7 @@ import {
   upsertInboxSettingsInDatabase,
 } from "@/lib/database";
 import { DEFAULT_INBOX_CATEGORIES, DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
+import { syncInboxCategoriesWithGmail } from "@/lib/irisEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +40,18 @@ export async function PATCH(request: NextRequest) {
   if (!databaseEnabled()) {
     return NextResponse.json({ ok: false, error: "DATABASE_URL is required to save inbox settings" }, { status: 503 });
   }
-  const [settings, categories] = await Promise.all([
+  const [settings, savedCategories] = await Promise.all([
     body.settings ? upsertInboxSettingsInDatabase(body.settings) : readInboxSettingsFromDatabase(),
     body.categories ? upsertInboxCategoriesInDatabase(body.categories) : readInboxCategoriesFromDatabase(),
   ]);
-  return NextResponse.json({ ok: true, settings, categories });
+  let categories = savedCategories;
+  let gmail_label_sync_error = "";
+  if (body.categories) {
+    try {
+      categories = await syncInboxCategoriesWithGmail(savedCategories);
+    } catch (error) {
+      gmail_label_sync_error = error instanceof Error ? error.message : String(error);
+    }
+  }
+  return NextResponse.json({ ok: true, settings, categories, gmail_label_sync_error });
 }

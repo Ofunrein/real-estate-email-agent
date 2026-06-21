@@ -51,6 +51,9 @@ export interface LeadCategory {
   id: LeadCategoryId;
   label: string;
   color: string;
+  slug?: string;
+  enabled?: boolean;
+  gmailLabelName?: string;
 }
 
 export type EventKind = 'inbound' | 'ai_reply' | 'note' | 'voice';
@@ -58,6 +61,9 @@ export type EventKind = 'inbound' | 'ai_reply' | 'note' | 'voice';
 export interface ActivityEvent {
   id: string;
   channel: Exclude<ChannelId, 'all' | 'properties'>;
+  threadId: string;
+  threadRef: string;
+  eventId?: string;
   kind: EventKind;
   actor: string;
   intent?: string;

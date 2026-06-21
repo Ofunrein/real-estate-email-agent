@@ -8,8 +8,9 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { StatCard } from './StatCards';
 import { ActivityChart } from './ActivityChart';
 import { ActivityFeed } from './ActivityFeed';
+import { type ActivityEvent } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
-export function OverviewView({ active = true }: {active?: boolean;}) {
+export function OverviewView({ active = true, onOpenActivityEvent }: {active?: boolean;onOpenActivityEvent?: (event: ActivityEvent) => void;}) {
   const { metrics, statTrends } = useInboxModel();
   const aiRate = metrics.events ? Math.round(metrics.aiReplies / metrics.events * 100) : 0;
   return (
@@ -78,7 +79,7 @@ export function OverviewView({ active = true }: {active?: boolean;}) {
       </Grid>
 
       <ActivityChart active={active} />
-      <ActivityFeed channel="all" />
+      <ActivityFeed channel="all" onOpenEvent={onOpenActivityEvent} />
     </Box>);
 
 }

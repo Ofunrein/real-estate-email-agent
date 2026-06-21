@@ -16,6 +16,7 @@ import {
   latestEvent,
   parseDraftKey,
   threadIdentity,
+  voiceCallKey,
   voiceCallTimeValue,
   voiceThreadIdentity,
 } from "@/lib/inboxThreadUtils";
@@ -55,6 +56,9 @@ const HTML_TAG_RE = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li|strong|em)\b
 const MEDIA_URL_RE = /(https?:\/\/[^\s<>"')]+|\/api\/media\/proxy\?url=[^\s<>"')]+)/gi;
 const MEDIA_LABEL_RE = /^\s*(?:MMS|SMS)?\s*(?:image|photo|media|attachment|Social DM image)\s*:\s*(.+?)\s*$/i;
 const SYSTEM_PROMPT_RE = /\b(you are\s+(?:iris|arya|a real estate)|brand voice|assistant\s+(?:for|to)\s+(?:austin|the)|tool(?:s|ing)?|system prompt|developer instruction|never reveal|do not reveal|call script)\b/i;
+const NON_REAL_ESTATE_EMAIL_RE = /\b(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)\b/i;
+const REAL_ESTATE_EMAIL_RE = /\b(home|house|condo|property|listing|showing|tour|buy|buyer|sell|seller|rent|lease|realtor|real estate|bedroom|bath|mortgage|valuation|pre.?approved|appointment|zillow|mls)\b/i;
+const STREET_ADDRESS_RE = /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/i;
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -148,6 +152,12 @@ function emailSubject(event: SheetRow): string | undefined {
 function emailBodyPreview(event: SheetRow): string {
   const text = eventText(event) || event.summary || "";
   return looksLikeHtml(text) ? stripHtml(text) : text;
+}
+
+function isRealEstateEmailEvent(event: SheetRow): boolean {
+  const text = `${event.source_detail || ""}\n${event.event_type || ""}\n${event.summary || ""}\n${event.message_text || ""}`;
+  if (NON_REAL_ESTATE_EMAIL_RE.test(text)) return false;
+  return REAL_ESTATE_EMAIL_RE.test(text) || STREET_ADDRESS_RE.test(text);
 }
 
 function compactActivityText(value = "", limit = ACTIVITY_BODY_LIMIT): string {
@@ -329,7 +339,7 @@ function buildEmailMessages(events: SheetRow[], data: AgentInboxData): EmailMess
 }
 
 function buildEmailThreads(data: AgentInboxData): EmailThread[] {
-  const entries = buildChannelThreads(data.events, "email");
+  const entries = buildChannelThreads(data.events.filter(isRealEstateEmailEvent), "email");
   return entries.map(([key, events]) => {
     const latest = latestEvent(events);
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
@@ -460,18 +470,25 @@ function buildChannels(data: AgentInboxData): InboxModel["channels"] {
 }
 
 function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
-  const messageEvents = [...data.events].map((event, i) => {
+  const messageEvents = [...data.events]
+    .filter((event) => eventChannel(event) !== "email" || isRealEstateEmailEvent(event))
+    .map((event, i) => {
       const view = realChannelToView(event.channel || "");
+      const rawChannel = eventChannel(event);
       const isAi = event.direction !== "inbound";
       const kind: ActivityEvent["kind"] = view === "voice" ? "voice" : isAi ? "ai_reply" : "inbound";
       const status: ActivityEvent["status"] = eventNeedsHuman(event) ? "Review" : isAi ? "Sent" : "New";
       const body = eventText(event) || event.summary || "";
       const fallback = view === "voice" ? "Voice call recorded." : "";
+      const threadId = conversationKey(event, rawChannel);
       return {
         sortValue: eventTimeValue(event),
         event: {
-          id: event.thread_ref || `event-${i}`,
+          id: event.gmail_message_id || event.thread_ref || `event-${i}`,
           channel: view,
+          threadId,
+          threadRef: event.thread_ref || threadId,
+          eventId: event.gmail_message_id || event.appointment_id || undefined,
           kind,
           actor: event.email || event.phone || event.full_name || "unknown",
           intent: event.event_type || undefined,
@@ -495,6 +512,9 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
       event: {
         id: call.call_id || call.thread_ref || `voice-${i}`,
         channel: "voice",
+        threadId: voiceCallKey(call),
+        threadRef: call.thread_ref || call.call_id || voiceCallKey(call),
+        eventId: call.call_id || undefined,
         kind: "voice",
         actor: call.phone || call.full_name || identity,
         intent: `${outcome} · ${duration}`,
@@ -594,7 +614,14 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
     channelMeta,
     channelAccounts,
     leadCategories: data.inboxCategories.length
-      ? data.inboxCategories.map((c) => ({ id: categorySlugToId(c.slug), label: c.name, color: c.color || "#8b5cf6" }))
+      ? data.inboxCategories.map((c) => ({
+          id: categorySlugToId(c.slug),
+          label: c.name,
+          color: c.color || "#8b5cf6",
+          slug: c.slug,
+          enabled: c.enabled,
+          gmailLabelName: c.gmail_label_name,
+        }))
       : leadCategories,
     activityEvents: buildActivityEvents(data),
     reviewQueue: buildReviewQueue(data),

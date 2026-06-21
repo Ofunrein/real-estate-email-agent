@@ -154,10 +154,14 @@ test("irisEmailPollQuery: scopes default Gmail polling to configured inbound add
   delete process.env.IRIS_EMAIL_INBOUND_TO;
   process.env.TEAM_LEAD_EMAIL = "martin@lumenosis.com";
   try {
-    const query = irisEmailPollQuery();
-    assert.match(query, /is:unread/);
-    assert.match(query, /to:martin@lumenosis\.com/);
-    assert.match(query, /deliveredto:martin@lumenosis\.com/);
+	    const query = irisEmailPollQuery();
+	    assert.match(query, /in:inbox/);
+	    assert.match(query, /newer_than:14d/);
+	    assert.doesNotMatch(query, /is:unread/);
+	    assert.doesNotMatch(query, /AUTO_REPLIED/);
+	    assert.doesNotMatch(query, /NEEDS_HUMAN/);
+	    assert.match(query, /to:martin@lumenosis\.com/);
+	    assert.match(query, /deliveredto:martin@lumenosis\.com/);
   } finally {
     if (previousQuery === undefined) delete process.env.IRIS_EMAIL_POLL_QUERY;
     else process.env.IRIS_EMAIL_POLL_QUERY = previousQuery;
@@ -166,6 +170,29 @@ test("irisEmailPollQuery: scopes default Gmail polling to configured inbound add
     if (previousTeam === undefined) delete process.env.TEAM_LEAD_EMAIL;
     else process.env.TEAM_LEAD_EMAIL = previousTeam;
   }
+});
+
+test("processIrisEmailPoll: duplicate unread messages are labeled but not recorded or sent", async () => {
+  const calls = { labels: [] as string[][], sent: [] as string[] };
+  let recorded = 0;
+  const result = await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email()], calls),
+      duplicateExists: async () => true,
+      recordInteraction: async () => {
+        recorded += 1;
+      },
+    },
+  );
+
+  assert.equal(result.processed, 1);
+  assert.equal(result.recorded, 0);
+  assert.equal(result.sent, 0);
+  assert.equal(result.results[0].skippedDuplicate, true);
+  assert.deepEqual(calls.labels, [["AUTO_REPLIED"]]);
+  assert.deepEqual(calls.sent, []);
+  assert.equal(recorded, 0);
 });
 
 test("isIrisEligibleEmail: blocks system and no-reply senders before auto-send", () => {

@@ -2,10 +2,18 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
+  findCandidatePropertiesFromDatabase,
+  findPropertiesByAddressesFromDatabase,
+  findLeadInDatabase,
+  hasOutboundEmailReplyAfterEventInDatabase,
+  readConversationEventByGmailMessageId,
+  readInboxCategoriesFromDatabase,
+  updateInboxCategoryGmailLabelInDatabase,
   upsertThreadLinkInDatabase,
   upsertLeadMemoryToDatabase,
 } from "@/lib/database";
-import { createIrisGmailSession, sendGmailReply, type GmailClient } from "@/lib/gmailConnection";
+import { createIrisGmailSession, ensureGmailLabel, sendGmailReplyWithOptions, type GmailClient, type GmailReplyResult } from "@/lib/gmailConnection";
+import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -93,6 +101,7 @@ export type IrisEmailProcessResult = {
   recorded: boolean;
   labeled: boolean;
   sent: boolean;
+  skippedDuplicate: boolean;
   dryRun: boolean;
 };
 
@@ -109,7 +118,13 @@ export type IrisEmailPollResult = {
 export type IrisEmailClient = {
   listUnreadMessages(limit: number): Promise<IrisEmailMessage[]>;
   applyLabels(messageId: string, labels: string[]): Promise<void>;
-  sendReply?(message: IrisEmailMessage, body: string): Promise<void>;
+  syncCategoryLabels?(categories: InboxCategory[]): Promise<InboxCategory[]>;
+  sendReply?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailReplyResult | void>;
+};
+
+export type IrisEmailReplyDraft = {
+  text: string;
+  html?: string;
 };
 
 export type IrisEmailRecorder = (
@@ -129,7 +144,8 @@ export type IrisEmailPollDeps = {
   emailClient?: IrisEmailClient;
   recordInteraction?: IrisEmailRecorder;
   classify?: (message: IrisEmailMessage) => IrisEmailClassification;
-  generateReply?: (message: IrisEmailMessage, classification: IrisEmailClassification) => string | null;
+  generateReply?: (message: IrisEmailMessage, classification: IrisEmailClassification) => string | IrisEmailReplyDraft | null | Promise<string | IrisEmailReplyDraft | null>;
+  duplicateExists?: (gmailMessageId: string) => Promise<boolean>;
 };
 
 const SENSITIVE_FLAGS = new Set([
@@ -424,6 +440,141 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
   ].join("\n");
 }
 
+function htmlEscape(value = ""): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function plainToHtml(text: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p style="margin:0 0 14px;line-height:1.55">${htmlEscape(paragraph).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function formatCurrency(value = ""): string {
+  const cleaned = value.replace(/[^\d.]/g, "");
+  const amount = Number(cleaned);
+  if (!Number.isFinite(amount) || amount <= 0) return value;
+  return `$${Math.round(amount).toLocaleString()}`;
+}
+
+function propertyFacts(property: SheetRow): string {
+  const facts = [
+    property.beds ? `${property.beds} bed` : "",
+    property.baths ? `${property.baths} bath` : "",
+    property.sqft ? `${Number(property.sqft.replace(/[^\d]/g, "") || property.sqft).toLocaleString()} sqft` : "",
+    property.status || "",
+  ].filter(Boolean);
+  return facts.join(" &bull; ");
+}
+
+function propertyCardHtml(property: SheetRow, featured = false): string {
+  const address = property.address || [property.city, property.state].filter(Boolean).join(", ");
+  const price = formatCurrency(property.price || "");
+  const facts = propertyFacts(property);
+  const photo = property.photo_url || "";
+  const listingUrl = property.listing_url || "";
+  const description = (property.description || "").slice(0, featured ? 180 : 120);
+  const image = photo
+    ? `<img src="${htmlEscape(photo)}" alt="Property photo" style="display:block;width:100%;max-height:${featured ? 300 : 170}px;object-fit:cover;border-radius:8px;margin:0 0 12px" />`
+    : "";
+  const viewLink = listingUrl
+    ? `<a href="${htmlEscape(listingUrl)}" style="display:inline-block;margin-top:10px;color:#0f766e;font-size:13px;font-weight:700;text-decoration:none">View listing</a>`
+    : "";
+  return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:${featured ? 16 : 14}px;margin:0 0 14px;background:#ffffff">
+${image}
+<h3 style="margin:0 0 6px;font-size:${featured ? 18 : 15}px;line-height:1.25;color:#111827">${htmlEscape(address)}</h3>
+${price ? `<p style="margin:0 0 6px;font-size:${featured ? 17 : 14}px;font-weight:800;color:#111827">${htmlEscape(price)}</p>` : ""}
+${facts ? `<p style="margin:0 0 8px;font-size:13px;line-height:1.45;color:#4b5563">${facts}</p>` : ""}
+${description ? `<p style="margin:0;font-size:13px;line-height:1.45;color:#374151">${htmlEscape(description)}${property.description && property.description.length > description.length ? "..." : ""}</p>` : ""}
+${viewLink}
+</div>`;
+}
+
+function propertyPlain(property: SheetRow): string {
+  const address = property.address || [property.city, property.state].filter(Boolean).join(", ");
+  const facts = [
+    formatCurrency(property.price || ""),
+    property.beds ? `${property.beds}bd` : "",
+    property.baths ? `${property.baths}ba` : "",
+    property.sqft ? `${property.sqft.replace(/[^\d,]/g, "")} sqft` : "",
+  ].filter(Boolean).join(" | ");
+  return [address, facts, property.listing_url].filter(Boolean).join("\n");
+}
+
+function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], classification?: IrisEmailClassification): IrisEmailReplyDraft {
+  const featured = properties[0];
+  const rest = properties.slice(1, 4);
+  const subjectLine = classification?.intent === "property_search"
+    ? "I found the best matching options from our inventory."
+    : featured
+      ? "Here are the property details from our inventory."
+      : "";
+  const html = `<div style="font-family:Arial,sans-serif;max-width:620px;color:#111827;line-height:1.45">
+${subjectLine ? `<p style="margin:0 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
+${featured ? propertyCardHtml(featured, true) : ""}
+${rest.length ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
+${plainToHtml(text.replace(/\n*Best,\nIris\s*$/i, "").trim())}
+<p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
+</div>`;
+  const propertyText = properties.length
+    ? `\n\nProperty details:\n${properties.slice(0, 4).map(propertyPlain).join("\n\n")}`
+    : "";
+  return {
+    text: `${text}${propertyText}`,
+    html,
+  };
+}
+
+async function generateIrisEmailReplyRich(
+  message: IrisEmailMessage,
+  classification: IrisEmailClassification,
+): Promise<IrisEmailReplyDraft | null> {
+  const plain = generateIrisEmailReply(message, classification);
+  if (!plain) return null;
+  if (!databaseEnabled()) return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
+  const properties = classification.addresses.length
+    ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
+    : await findCandidatePropertiesFromDatabase({
+      query: cleanBody(message.body),
+      area: classification.lead_fields.area || cleanBody(message.body),
+      beds: classification.lead_fields.beds || undefined,
+      maxPrice: classification.lead_fields.budget || undefined,
+      mode: "general",
+    }, 4);
+  return buildHtmlEmailReply(plain, properties, classification);
+}
+
+function normalizeReplyDraft(reply: string | IrisEmailReplyDraft | null): IrisEmailReplyDraft | null {
+  if (!reply) return null;
+  if (typeof reply === "string") return { text: reply };
+  if (!reply.text.trim() && !reply.html?.trim()) return null;
+  return reply;
+}
+
+async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEmailMessage> {
+  if (!databaseEnabled()) return message;
+  const contact = parseEmailContact(message.from);
+  if (!contact.email) return message;
+  const lead = await findLeadInDatabase({ email: contact.email });
+  if (!lead?.property_interest && !lead?.budget && !lead?.area && !lead?.bedrooms && !lead?.summary) return message;
+  const context = [
+    lead.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
+    lead.budget ? `Known budget: ${lead.budget}` : "",
+    lead.area ? `Known area: ${lead.area}` : "",
+    lead.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
+    lead.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
+  ].filter(Boolean).join("\n");
+  return {
+    ...message,
+    body: `${message.body}\n\nThread context for classification only:\n${context}`,
+  };
+}
+
 function handoffSummary(message: IrisEmailMessage, classification: IrisEmailClassification, execution: IrisEmailExecution): string {
   const contact = parseEmailContact(message.from);
   const fields = classification.lead_fields;
@@ -500,6 +651,35 @@ export function buildIrisEmailConversationEventRow(
   };
 }
 
+export function buildIrisEmailOutboundEventRow(
+  message: IrisEmailMessage,
+  classification: IrisEmailClassification,
+  replyDraft: IrisEmailReplyDraft,
+  result?: GmailReplyResult | void,
+): Partial<SheetRow> {
+  const contact = parseEmailContact(message.from);
+  const gmailResult = result || {};
+  return {
+    event_at: new Date().toISOString(),
+    channel: "email",
+    direction: "outbound",
+    email: contact.email,
+    full_name: contact.name,
+    source: "gmail",
+    thread_ref: (gmailResult as GmailReplyResult).threadId || message.threadId,
+    agent_name: IRIS_AGENT_NAME,
+    event_type: "email_ai_reply",
+    message_text: replyDraft.html || replyDraft.text,
+    summary: `Iris replied to ${contact.name || contact.email || "the lead"} about ${classification.address || classification.intent}.`,
+    ai_action: "auto_reply_sent",
+    status: "sent",
+    mailbox_email: (gmailResult as GmailReplyResult).mailboxEmail || message.mailboxEmail || "",
+    gmail_thread_id: (gmailResult as GmailReplyResult).threadId || message.threadId,
+    gmail_message_id: (gmailResult as GmailReplyResult).messageId || "",
+    thread_status: (gmailResult as GmailReplyResult).threaded === false ? "sent_unthreaded" : "current_mailbox_thread",
+  };
+}
+
 export async function recordIrisEmailInteraction(
   message: IrisEmailMessage,
   classification: IrisEmailClassification,
@@ -529,25 +709,56 @@ export async function processIrisEmailPoll(
   const emailClient = deps.emailClient || await createGmailIrisEmailClient();
   const recordInteraction = deps.recordInteraction || recordIrisEmailInteraction;
   const classify = deps.classify || classifyIrisEmailText;
-  const generateReply = deps.generateReply || generateIrisEmailReply;
+  const generateReply = deps.generateReply || generateIrisEmailReplyRich;
+  const categories = databaseEnabled() ? await readInboxCategoriesFromDatabase() : [];
+  const syncedCategories = !dryRun && emailClient.syncCategoryLabels
+    ? await emailClient.syncCategoryLabels(categories)
+    : categories;
   const messages = await emailClient.listUnreadMessages(limit);
   const results: IrisEmailProcessResult[] = [];
 
   for (const message of messages) {
-    const classification = classify(message);
+    const classificationMessage = await messageWithLeadContext(message);
+    const classification = classify(classificationMessage);
     const execution = decideIrisEmailExecution(classification);
-    const replyDraft = generateReply(message, classification);
+    const replyDraft = normalizeReplyDraft(await generateReply(message, classification));
+    const categorySlug = syncedCategories.length
+      ? inferCategorySlug([buildIrisEmailConversationEventRow(message, classification, execution) as SheetRow], syncedCategories)
+      : "";
+    const categoryLabel = syncedCategories.find((category) => category.slug === categorySlug)?.gmail_label_name || "";
+    const labels = categoryLabel ? [...execution.labels, categoryLabel] : execution.labels;
     let recorded = false;
     let labeled = false;
     let sent = false;
+    let skippedDuplicate = false;
 
     if (!dryRun) {
-      await recordInteraction(message, classification, execution, replyDraft);
-      recorded = true;
-      await emailClient.applyLabels(message.id, execution.labels);
+      const existingEvent = deps.duplicateExists
+        ? ((await deps.duplicateExists(message.id)) ? ({ status: "processed" } as SheetRow) : null)
+        : databaseEnabled()
+          ? await readConversationEventByGmailMessageId(message.id)
+          : null;
+      const hasRecoveredReply = existingEvent?.thread_ref && existingEvent.event_at && databaseEnabled()
+        ? await hasOutboundEmailReplyAfterEventInDatabase({
+          threadRef: existingEvent.thread_ref,
+          eventAt: existingEvent.event_at,
+        })
+        : false;
+      const canRecoverNeedsHuman = Boolean(existingEvent && existingEvent.status === "needs_human" && execution.canReply && !hasRecoveredReply);
+      skippedDuplicate = Boolean(existingEvent && !canRecoverNeedsHuman);
+      if (!existingEvent) {
+        await recordInteraction(message, classification, execution, replyDraft?.text || null);
+        recorded = true;
+      }
+      await emailClient.applyLabels(message.id, labels);
       labeled = true;
-      if (options.sendReplies && execution.canReply && replyDraft && emailClient.sendReply) {
-        await emailClient.sendReply(message, replyDraft);
+      if (!skippedDuplicate && options.sendReplies && execution.canReply && replyDraft && emailClient.sendReply) {
+        const replyResult = await emailClient.sendReply(message, replyDraft.text, replyDraft.html);
+        if (!deps.recordInteraction && databaseEnabled()) {
+          await appendConversationEventToDatabase(
+            buildIrisEmailOutboundEventRow(message, classification, replyDraft, replyResult),
+          );
+        }
         sent = true;
       }
     }
@@ -559,10 +770,11 @@ export async function processIrisEmailPoll(
       subject: message.subject,
       classification,
       execution,
-      replyDraft,
+      replyDraft: replyDraft?.text || null,
       recorded,
       labeled,
       sent,
+      skippedDuplicate,
       dryRun,
     });
   }
@@ -603,13 +815,14 @@ function gmailSearchToken(value: string): string {
 export function irisEmailPollQuery(): string {
   const override = process.env.IRIS_EMAIL_POLL_QUERY?.trim();
   if (override) return override;
+  const lookback = (process.env.IRIS_EMAIL_LOOKBACK || "14d").trim();
   const inboundEmail = (
     process.env.IRIS_EMAIL_INBOUND_TO ||
     process.env.TEAM_LEAD_EMAIL ||
     process.env.GMAIL_INBOUND_EMAIL ||
     ""
   ).trim().toLowerCase();
-  const parts = ["is:unread", "-label:AUTO_REPLIED", "-label:NEEDS_HUMAN"];
+  const parts = ["in:inbox", `newer_than:${gmailSearchToken(lookback)}`];
   if (inboundEmail.includes("@")) {
     const token = gmailSearchToken(inboundEmail);
     parts.push(`{to:${token} deliveredto:${token}}`);
@@ -625,7 +838,7 @@ export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "su
   if (/@(?:.*\.)?(?:accounts\.google\.com|google\.com|gohighlevel\.com|github\.com|vercel\.com|calendly\.com|luckyfours\.com)$/i.test(sender)) return false;
   const text = `${message.subject || ""}\n${message.body || ""}`;
   if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run)/i.test(text)) return false;
-  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)/i.test(text)) return false;
+  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update)/i.test(text)) return false;
   return true;
 }
 
@@ -655,30 +868,44 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
       receivedAt: header(headers, "Date"),
       mailboxEmail,
     };
+    const sender = parseEmailContact(message.from).email;
+    if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;
     if (isIrisEligibleEmail(message)) messages.push(message);
   }
   return messages;
 }
 
-async function labelId(gmail: GmailClient, name: string): Promise<string> {
-  const labels = await gmail.users.labels.list({ userId: "me" });
-  const existing = labels.data.labels?.find((label) => label.name === name);
-  if (existing?.id) return existing.id;
-  const created = await gmail.users.labels.create({
-    userId: "me",
-    requestBody: { name, labelListVisibility: "labelShow", messageListVisibility: "show" },
-  });
-  if (!created.data.id) throw new Error(`Unable to create Gmail label ${name}`);
-  return created.data.id;
-}
-
 async function applyGmailLabels(gmail: GmailClient, messageId: string, labels: string[]): Promise<void> {
-  const addLabelIds = await Promise.all(labels.map((name) => labelId(gmail, name)));
+  const addLabelIds = await Promise.all(labels.map((name) => ensureGmailLabel(gmail, name)));
   await gmail.users.messages.modify({
     userId: "me",
     id: messageId,
-    requestBody: { addLabelIds },
+    requestBody: { addLabelIds, removeLabelIds: ["UNREAD"] },
   });
+}
+
+async function syncGmailCategoryLabels(gmail: GmailClient, categories: InboxCategory[]): Promise<InboxCategory[]> {
+  if (!categories.length) return categories;
+  const synced: InboxCategory[] = [];
+  for (const category of categories) {
+    const labelName = category.gmail_label_name || `Iris/${category.name}`;
+    const labelId = await ensureGmailLabel(gmail, labelName);
+    const next = { ...category, gmail_label_id: labelId, gmail_label_name: labelName };
+    synced.push(next);
+    if (databaseEnabled() && (category.gmail_label_id !== labelId || category.gmail_label_name !== labelName)) {
+      await updateInboxCategoryGmailLabelInDatabase({
+        slug: category.slug,
+        gmailLabelId: labelId,
+        gmailLabelName: labelName,
+      });
+    }
+  }
+  return synced;
+}
+
+export async function syncInboxCategoriesWithGmail(categories: InboxCategory[]): Promise<InboxCategory[]> {
+  const session = await createIrisGmailSession();
+  return syncGmailCategoryLabels(session.gmail, categories);
 }
 
 export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
@@ -687,15 +914,17 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
   return {
     listUnreadMessages: (limit) => listUnreadMessages(gmail, limit, session.accountEmail),
     applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
-    sendReply: async (message, body) => {
-      await sendGmailReply(gmail, {
+    syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
+    sendReply: (message, body, htmlBody) => {
+      return sendGmailReplyWithOptions(gmail, {
         to: parseEmailContact(message.from).email,
         subject: message.subject,
         body,
+        htmlBody,
         threadId: message.threadId,
         messageId: message.messageId,
         references: message.references,
-      });
+      }, { mailboxEmail: session.accountEmail });
     },
   };
 }

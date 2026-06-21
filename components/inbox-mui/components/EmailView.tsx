@@ -15,9 +15,11 @@ import {
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
+import { useCategoryColors } from '../theme/CategoryColorContext';
 
 export function EmailView() {
   const { emailThreads, leadCategories } = useInboxModel();
+  const { colors } = useCategoryColors();
   const categoryValues = useMemo(
     () => ['all', ...leadCategories.map((c) => c.id)] as CategoryFilterValue[],
     [leadCategories]
@@ -27,7 +29,7 @@ export function EmailView() {
     'all',
     categoryValues
   );
-  const counts = useMemo(() => {
+	  const counts = useMemo(() => {
     const base = Object.fromEntries(
       leadCategories.map((c) => [c.id, 0])
     ) as Record<LeadCategoryId, number>;
@@ -35,7 +37,11 @@ export function EmailView() {
       base[t.category] += 1;
     });
     return base;
-  }, [emailThreads, leadCategories]);
+	  }, [emailThreads, leadCategories]);
+  const categoryMeta = useMemo(
+    () => Object.fromEntries(leadCategories.map((category) => [category.id, category])),
+    [leadCategories]
+  ) as Record<LeadCategoryId, (typeof leadCategories)[number]>;
   const visibleThreads = useMemo(
     () =>
     category === 'all' ?
@@ -96,9 +102,11 @@ export function EmailView() {
             id: t.id,
             title: t.contact,
             time: t.time,
-            preview: t.preview,
-            meta: `${t.messageCount} messages`,
-            needsReview: t.needsReview
+	            preview: t.preview,
+	            meta: `${t.messageCount} messages`,
+	            categoryLabel: categoryMeta[t.category]?.label,
+	            categoryColor: colors[t.category],
+	            needsReview: t.needsReview
           }))}
           selectedId={thread?.id ?? ''}
           onSelect={setSelectedId} />

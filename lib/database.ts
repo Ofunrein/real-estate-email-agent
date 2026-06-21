@@ -512,6 +512,24 @@ export async function readInboxCategoriesFromDatabase(): Promise<InboxCategory[]
   return result.rows.length ? result.rows.map(inboxCategoryFromRow) : DEFAULT_INBOX_CATEGORIES;
 }
 
+export async function updateInboxCategoryGmailLabelInDatabase(input: {
+  slug: string;
+  gmailLabelId: string;
+  gmailLabelName: string;
+}): Promise<void> {
+  if (!await tableReady("inbox_categories")) return;
+  await ensureInboxDefaultsInDatabase();
+  await getPool().query(
+    `update inbox_categories
+        set gmail_label_id = $3,
+            gmail_label_name = $4,
+            updated_at = now()
+      where client_id = $1
+        and slug = $2`,
+    [clientId(), input.slug, input.gmailLabelId, input.gmailLabelName],
+  );
+}
+
 export async function upsertInboxCategoriesInDatabase(categories: Partial<InboxCategory>[]): Promise<InboxCategory[]> {
   if (!await tableReady("inbox_categories")) return categories.map((category, index) => normalizeInboxCategory(category, DEFAULT_INBOX_CATEGORIES[index]));
   await ensureInboxDefaultsInDatabase();
@@ -1031,6 +1049,60 @@ export async function findPropertiesByAddressesFromDatabase(addresses: string[],
     }
   }
   return rows;
+}
+
+export async function conversationEventExistsByGmailMessageId(gmailMessageId: string): Promise<boolean> {
+  const id = gmailMessageId.trim();
+  if (!id || !await tableReady("conversation_events")) return false;
+  const result = await getPool().query(
+    `select exists (
+       select 1
+         from conversation_events
+        where client_id = $1
+          and gmail_message_id = $2
+        limit 1
+     ) as exists`,
+    [clientId(), id],
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
+export async function readConversationEventByGmailMessageId(gmailMessageId: string): Promise<SheetRow | null> {
+  const id = gmailMessageId.trim();
+  if (!id || !await tableReady("conversation_events")) return null;
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
+  const result = await getPool().query(
+    `select ${columns}
+       from conversation_events
+      where client_id = $1
+        and gmail_message_id = $2
+      order by created_at desc, id desc
+      limit 1`,
+    [clientId(), id],
+  );
+  return result.rows[0] ? rowToStrings(CONVERSATION_EVENTS_HEADERS, result.rows[0]) : null;
+}
+
+export async function hasOutboundEmailReplyAfterEventInDatabase(input: {
+  threadRef: string;
+  eventAt: string;
+}): Promise<boolean> {
+  if (!input.threadRef || !input.eventAt || !await tableReady("conversation_events")) return false;
+  const result = await getPool().query(
+    `select exists (
+       select 1
+         from conversation_events
+        where client_id = $1
+          and channel = 'email'
+          and direction = 'outbound'
+          and thread_ref = $2
+          and event_type = 'email_ai_reply'
+          and coalesce(nullif(event_at, '')::timestamptz, created_at) > $3::timestamptz
+        limit 1
+     ) as exists`,
+    [clientId(), input.threadRef, input.eventAt],
+  );
+  return Boolean(result.rows[0]?.exists);
 }
 
 export async function upsertPropertyToDatabase(incoming: Partial<SheetRow>, source = "live_lookup"): Promise<SheetRow | null> {

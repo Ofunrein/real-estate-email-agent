@@ -140,8 +140,14 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     setDraftFirst(inboxSettings.draft_first);
     setAutoSend({ ...inboxSettings.auto_send });
     setChannelsEnabled({ ...inboxSettings.channels_enabled });
+    setCategoriesOn(
+      Object.fromEntries(leadCategories.map((c) => [c.id, c.enabled !== false])) as Record<
+        LeadCategoryId,
+        boolean
+      >
+    );
     setSaveStatus('idle');
-  }, [inboxSettings, open]);
+  }, [inboxSettings, leadCategories, open]);
 
   const saveSettings = async () => {
     setSaving(true);
@@ -156,6 +162,14 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             auto_send: autoSend,
             channels_enabled: channelsEnabled,
           },
+          categories: leadCategories.map((cat, index) => ({
+            slug: cat.slug || cat.id.replace(/-/g, '_'),
+            name: cat.label,
+            color: colors[cat.id],
+            sort_order: (index + 1) * 10,
+            enabled: categoriesOn[cat.id],
+            gmail_label_name: cat.gmailLabelName || `Iris/${cat.label}`,
+          })),
         }),
       });
       if (!res.ok) throw new Error(`settings save failed (${res.status})`);
@@ -334,13 +348,20 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         </Typography>
         <Stack spacing={1.25}>
           {leadCategories.map((cat) =>
-          <Stack
+          <Box
             key={cat.id}
-            direction="row"
-            alignItems="center"
-            spacing={1}
             sx={{
-              minWidth: 0
+              minWidth: 0,
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '28px minmax(0, 1fr) 28px',
+                sm: '34px minmax(0, 1fr) 44px'
+              },
+              alignItems: 'center',
+              gap: {
+                xs: 0.75,
+                sm: 1
+              }
             }}>
             
               <Tooltip title="Change category color">
@@ -391,19 +412,12 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 border: '1px solid',
                 borderColor: 'divider'
               }}>
-              
+
                 <Typography variant="body2" noWrap sx={{ fontSize: { xs: 12, sm: 13 } }}>{cat.label}</Typography>
               </Box>
-              <FormControlLabel
-              sx={{
-                m: 0,
-                flexShrink: 0,
-                '& .MuiFormControlLabel-label': {
-                  fontSize: { xs: 11, sm: 12 }
-                }
-              }}
-              control={
               <Checkbox
+                aria-label={`${cat.label} category enabled`}
+                size="small"
                 checked={categoriesOn[cat.id]}
                 onChange={(e) =>
                 setCategoriesOn((prev) => ({
@@ -412,10 +426,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 }))
                 } />
 
-              }
-              label="on" />
-            
-            </Stack>
+            </Box>
           )}
         </Stack>
       </Card>

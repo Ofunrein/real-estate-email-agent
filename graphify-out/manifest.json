@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782037412.3519719,
-    "ast_hash": "533a39ba0e7571e1eaad6ce9717bd539",
+    "mtime": 1782047687.6253242,
+    "ast_hash": "c3ae9499abddda0cb1f0b219447be69e",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782043641.7884564,
-    "ast_hash": "5ae62cd6ecc2d081515d2b2c89056943",
+    "mtime": 1782047700.3186917,
+    "ast_hash": "3435961ecab065ac64f5c9c01a4dc165",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "tests/ts/irisEmail.test.ts": {
-    "mtime": 1782043641.788889,
-    "ast_hash": "eaa813ab29876188cab83ba74c8ffe4d",
+    "mtime": 1782047529.442747,
+    "ast_hash": "551e1c9e331b16b4d588f2c787815983",
     "semantic_hash": ""
   },
   "tests/ts/irisRyseTranscript.test.ts": {
@@ -1935,8 +1935,8 @@
     "semantic_hash": ""
   },
   "lib/gmailConnection.ts": {
-    "mtime": 1781952749.2582839,
-    "ast_hash": "9f2e6a0583931174991ce143ec7ab31c",
+    "mtime": 1782046618.387152,
+    "ast_hash": "ae7b5205098e279a49421c68f10c685b",
     "semantic_hash": ""
   },
   "tests/ts/gmailConnection.test.ts": {
@@ -1955,8 +1955,8 @@
     "semantic_hash": ""
   },
   "app/api/settings/inbox/route.ts": {
-    "mtime": 1781950390.8577123,
-    "ast_hash": "a3948ab25114a0c55f8dbf3afd258141",
+    "mtime": 1782046849.0033846,
+    "ast_hash": "e09435e40eb31aeea45853ec3f6a52c2",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/category/route.ts": {
@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782041101.5149925,
-    "ast_hash": "a1931db2d9d6231598bf54ec70369d95",
+    "mtime": 1782046829.046583,
+    "ast_hash": "caf577c6b74e8a11978a067f0a1a62e7",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
@@ -2040,8 +2040,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityFeed.tsx": {
-    "mtime": 1782041643.760736,
-    "ast_hash": "d1b051b75043442d04834e8a78e674fb",
+    "mtime": 1782046807.9813921,
+    "ast_hash": "6e7627d5cbcef27d3340cded1a070028",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/CategoryFilter.tsx": {
@@ -2060,13 +2060,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ConversationList.tsx": {
-    "mtime": 1781994183.0202196,
-    "ast_hash": "7336adce2bde7d26d62628ae02ed771c",
+    "mtime": 1782046952.549237,
+    "ast_hash": "391583edba7363feac59da47fe01c953",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
-    "mtime": 1782040573.0925143,
-    "ast_hash": "e3bf63f360beecef2a075153f9bd9a20",
+    "mtime": 1782046961.3184676,
+    "ast_hash": "d77b2ccee24b773903fd5bc241c9a930",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmptyChannelView.tsx": {
@@ -2085,8 +2085,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
-    "mtime": 1782037510.3528192,
-    "ast_hash": "9bc9b177c97b59b9ba91d71c8b5742d5",
+    "mtime": 1782046815.8147075,
+    "ast_hash": "69b00fc828744c2ff14e743ef682425a",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/PropertiesView.tsx": {
@@ -2115,13 +2115,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SettingsDrawer.tsx": {
-    "mtime": 1782040639.0286438,
-    "ast_hash": "a87ecfcd7136f695da59cab56dda3e72",
+    "mtime": 1782047072.930705,
+    "ast_hash": "6fb9c65405b16fc7da5ec2b9d9a0eae2",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782040577.0550995,
-    "ast_hash": "a95363eb58359c1952a2ec72573fb823",
+    "mtime": 1782046971.00961,
+    "ast_hash": "53fe05b5edd82fe8a6c4c4ebbb45a384",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2145,8 +2145,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/data/inboxData.ts": {
-    "mtime": 1782036310.749511,
-    "ast_hash": "499bfd778cc20de485916ba8d89b5764",
+    "mtime": 1782046774.9204686,
+    "ast_hash": "8340dac8efeffd2c3c05e51373043cfb",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/CategoryColorContext.tsx": {
@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782041426.5497644,
-    "ast_hash": "bfdfaaa118521a76d8308fec14f4883e",
+    "mtime": 1782046905.7023966,
+    "ast_hash": "93f555b5bb8ff52c1ea9d4ca2584b15e",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
