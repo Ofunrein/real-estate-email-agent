@@ -2,10 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Stack, Typography, Chip } from '@mui/material';
 import TimelineIcon from '@mui/icons-material/InsightsOutlined';
-import { motion } from 'framer-motion';
 import { useInboxModel } from '../InboxDataContext';
-
-const MotionBox = motion(Box);
+import { useReplayKey } from '../hooks/useReplayKey';
 
 const dayLabels = [
 'M',
@@ -23,9 +21,10 @@ const dayLabels = [
 'S',
 'S'];
 
-export function ActivityChart() {
+export function ActivityChart({ active = true }: {active?: boolean;}) {
   const { sparkline, metrics } = useInboxModel();
   const max = Math.max(...sparkline);
+  const { ref, playKey } = useReplayKey(active);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [displayValue, setDisplayValue] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -104,6 +103,8 @@ export function ActivityChart() {
       </Typography>
 
       <Box
+        ref={ref}
+        key={playKey}
         sx={{
           mt: 2,
           display: 'flex',
@@ -158,32 +159,37 @@ export function ActivityChart() {
                 
                 {v} events
               </Box>
-              {/* Bar — mounts with a staggered scaleY rise, scaleX on hover */}
-              <MotionBox
-                initial={{ scaleY: 0, scaleX: 1 }}
-                animate={{
-                  scaleY: 1,
-                  scaleX: isHovered ? 1.12 : isNeighbor ? 1.04 : 1,
-                }}
-                transition={{
-                  scaleY: { delay: i * 0.04, duration: 0.5, ease: 'easeOut' },
-                  scaleX: { duration: 0.3, ease: 'easeOut' },
-                }}
+              {/* Outer wrapper replays grow-up; inner bar keeps hover scaleX separate. */}
+              <Box
                 sx={{
                   width: '100%',
                   height: `${v / max * 90}px`,
                   minHeight: 6,
-                  borderRadius: 1,
                   transformOrigin: 'bottom',
-                  transition: 'background-color .3s',
+                  animation: 'growBar .5s cubic-bezier(.22,1,.36,1) both',
+                  animationDelay: `${i * 35}ms`,
+                  '@keyframes growBar': {
+                    from: { transform: 'scaleY(0)', opacity: 0 },
+                    to: { transform: 'scaleY(1)', opacity: 1 },
+                  },
+                }}>
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                  borderRadius: 1,
+                    transform: `scaleX(${isHovered ? 1.12 : isNeighbor ? 1.04 : 1})`,
+                    transition: 'transform .3s ease-out, background-color .3s',
                   bgcolor: isHovered ?
                   'primary.main' :
                   isNeighbor ?
                   'primary.light' :
                   isAnyHovered ?
                   'action.selected' :
-                  'action.selected'
-                }} />
+                  'action.selected',
+                    transformOrigin: 'bottom center'
+                  }} />
+              </Box>
 
               {/* Label */}
               <Typography

@@ -128,6 +128,40 @@ test("adaptInboxData sorts voice contacts and calls by actual call time", () => 
   assert.equal(model.voiceContacts[1].calls[1].id, "older-call-inserted-last");
 });
 
+test("adaptInboxData merges recent voice calls into activity feed", () => {
+  const data = composeInboxData(
+    [],
+    Array.from({ length: 16 }, (_, i) => ({
+      channel: "sms",
+      direction: "outbound",
+      phone: "+15125712595",
+      thread_ref: `sms-${i}`,
+      message_text: `older sms ${i}`,
+      event_at: new Date(Date.UTC(2026, 5, 20, 10, i)).toISOString(),
+    } as SheetRow)),
+    [],
+    [
+      {
+        call_id: "newest-voice-call",
+        thread_ref: "voice:newest-voice-call",
+        phone: "+15125712595",
+        direction: "inbound",
+        started_at: "2026-06-21T08:52:51.050Z",
+        ended_at: "2026-06-21T08:54:35.863Z",
+        summary: "Latest voice call summary",
+        transcript: "AI: Hi\nUser: Need listings",
+        ended_reason: "assistant-forwarded-call",
+      } as SheetRow,
+    ],
+  );
+
+  const model = adaptInboxData(data);
+  assert.equal(model.activityEvents[0].id, "newest-voice-call");
+  assert.equal(model.activityEvents[0].channel, "voice");
+  assert.equal(model.activityEvents[0].body, "Latest voice call summary");
+  assert.equal(model.activityEvents.length, 17);
+});
+
 test("adaptInboxData calculates today's average response time from actual thread replies", () => {
   const base = new Date();
   base.setMilliseconds(0);
