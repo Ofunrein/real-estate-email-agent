@@ -265,6 +265,219 @@ async function tableReady(tableName: string, requiredColumn = "client_id"): Prom
   return (await tableColumns(tableName)).has(requiredColumn);
 }
 
+export type LeadImportBatchRecord = {
+  id: string;
+  client_id: string;
+  source_type: string;
+  source_name: string;
+  source_provider: string;
+  status: string;
+  filename: string;
+  total_rows: number;
+  imported_count: number;
+  merged_count: number;
+  duplicate_count: number;
+  invalid_count: number;
+  missing_contact_count: number;
+  campaign_eligible_count: number;
+  segment_counts: Record<string, number>;
+  unmapped_columns: string[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadImportItemInput = {
+  batchId: string;
+  rowIndex: number;
+  status: "validated" | "imported" | "merged" | "duplicate" | "invalid" | "skipped";
+  dedupeKey?: string;
+  email?: string;
+  phone?: string;
+  fullName?: string;
+  sourceId?: string;
+  segments?: string[];
+  campaignEligible?: boolean;
+  leadMemoryKey?: string;
+  rawData?: Record<string, unknown>;
+  normalizedData?: Record<string, unknown>;
+  error?: string;
+};
+
+function jsonRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function numberRecord(value: unknown): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(jsonRecord(value)).map(([key, count]) => [key, Number(count || 0)]),
+  );
+}
+
+function leadImportBatchFromRow(row: Record<string, unknown>): LeadImportBatchRecord {
+  return {
+    id: String(row.id || ""),
+    client_id: String(row.client_id || ""),
+    source_type: String(row.source_type || ""),
+    source_name: String(row.source_name || ""),
+    source_provider: String(row.source_provider || ""),
+    status: String(row.status || ""),
+    filename: String(row.filename || ""),
+    total_rows: Number(row.total_rows || 0),
+    imported_count: Number(row.imported_count || 0),
+    merged_count: Number(row.merged_count || 0),
+    duplicate_count: Number(row.duplicate_count || 0),
+    invalid_count: Number(row.invalid_count || 0),
+    missing_contact_count: Number(row.missing_contact_count || 0),
+    campaign_eligible_count: Number(row.campaign_eligible_count || 0),
+    segment_counts: numberRecord(row.segment_counts),
+    unmapped_columns: Array.isArray(row.unmapped_columns) ? row.unmapped_columns.map(String) : [],
+    metadata: jsonRecord(row.metadata),
+    created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
+    updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+async function leadImportTablesReady(): Promise<boolean> {
+  return (await tableColumns("lead_import_batches")).has("segment_counts")
+    && (await tableColumns("lead_import_items")).has("normalized_data");
+}
+
+export async function createLeadImportBatchInDatabase(input: {
+  id: string;
+  sourceType: string;
+  sourceName?: string;
+  sourceProvider?: string;
+  status?: string;
+  filename?: string;
+  totalRows?: number;
+  metadata?: Record<string, unknown>;
+}): Promise<LeadImportBatchRecord | null> {
+  if (!await leadImportTablesReady()) return null;
+  await ensureClientInDatabase();
+  const result = await getPool().query(
+    `insert into lead_import_batches (
+        id, client_id, source_type, source_name, source_provider, status,
+        filename, total_rows, metadata
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+      returning *`,
+    [
+      input.id,
+      clientId(),
+      input.sourceType,
+      input.sourceName || "",
+      input.sourceProvider || "",
+      input.status || "uploaded",
+      input.filename || "",
+      input.totalRows || 0,
+      JSON.stringify(input.metadata || {}),
+    ],
+  );
+  return leadImportBatchFromRow(result.rows[0]);
+}
+
+export async function appendLeadImportItemToDatabase(input: LeadImportItemInput): Promise<void> {
+  if (!await leadImportTablesReady()) return;
+  await getPool().query(
+    `insert into lead_import_items (
+        batch_id, client_id, row_index, status, dedupe_key, email, phone,
+        full_name, source_id, segments, campaign_eligible, lead_memory_key,
+        raw_data, normalized_data, error
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15)
+      on conflict (batch_id, row_index) do update set
+        status = excluded.status,
+        dedupe_key = excluded.dedupe_key,
+        email = excluded.email,
+        phone = excluded.phone,
+        full_name = excluded.full_name,
+        source_id = excluded.source_id,
+        segments = excluded.segments,
+        campaign_eligible = excluded.campaign_eligible,
+        lead_memory_key = excluded.lead_memory_key,
+        raw_data = excluded.raw_data,
+        normalized_data = excluded.normalized_data,
+        error = excluded.error`,
+    [
+      input.batchId,
+      clientId(),
+      input.rowIndex,
+      input.status,
+      input.dedupeKey || "",
+      input.email || "",
+      input.phone || "",
+      input.fullName || "",
+      input.sourceId || "",
+      input.segments || [],
+      Boolean(input.campaignEligible),
+      input.leadMemoryKey || "",
+      JSON.stringify(input.rawData || {}),
+      JSON.stringify(input.normalizedData || {}),
+      input.error || "",
+    ],
+  );
+}
+
+export async function updateLeadImportBatchInDatabase(input: {
+  id: string;
+  status: string;
+  importedCount: number;
+  mergedCount: number;
+  duplicateCount: number;
+  invalidCount: number;
+  missingContactCount: number;
+  campaignEligibleCount: number;
+  segmentCounts: Record<string, number>;
+  unmappedColumns: string[];
+  metadata?: Record<string, unknown>;
+}): Promise<LeadImportBatchRecord | null> {
+  if (!await leadImportTablesReady()) return null;
+  const result = await getPool().query(
+    `update lead_import_batches
+        set status = $3,
+            imported_count = $4,
+            merged_count = $5,
+            duplicate_count = $6,
+            invalid_count = $7,
+            missing_contact_count = $8,
+            campaign_eligible_count = $9,
+            segment_counts = $10::jsonb,
+            unmapped_columns = $11,
+            metadata = metadata || $12::jsonb,
+            updated_at = now()
+      where client_id = $1
+        and id = $2
+      returning *`,
+    [
+      clientId(),
+      input.id,
+      input.status,
+      input.importedCount,
+      input.mergedCount,
+      input.duplicateCount,
+      input.invalidCount,
+      input.missingContactCount,
+      input.campaignEligibleCount,
+      JSON.stringify(input.segmentCounts),
+      input.unmappedColumns,
+      JSON.stringify(input.metadata || {}),
+    ],
+  );
+  return result.rows[0] ? leadImportBatchFromRow(result.rows[0]) : null;
+}
+
+export async function readLeadImportBatchesFromDatabase(limit = 20): Promise<LeadImportBatchRecord[]> {
+  if (!await leadImportTablesReady()) return [];
+  const result = await getPool().query(
+    `select *
+       from lead_import_batches
+      where client_id = $1
+      order by created_at desc
+      limit $2`,
+    [clientId(), limit],
+  );
+  return result.rows.map(leadImportBatchFromRow);
+}
+
 export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
   if (!await emailAccountsTableReady()) return [];
   const result = await getPool().query(

@@ -142,10 +142,10 @@ export function LiveCallPanel({ callId, contactName, onClose }: LiveCallPanelPro
           borderBottom: '1px solid',
           borderColor: 'divider',
         }}>
-        <Avatar src={agentAvatar} alt="Arya AI" sx={{ width: 36, height: 36 }} />
+        <Avatar src={agentAvatar} alt="Iris AI" sx={{ width: 36, height: 36 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>
-            {live ? 'Arya is calling' : 'Call'} {contactName}
+            {live ? 'Iris is calling' : 'Call'} {contactName}
           </Typography>
           <Stack direction="row" spacing={0.75} alignItems="center">
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: sl.color, animation: live ? 'pulse 1.4s infinite' : 'none', '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } } }} />
@@ -206,7 +206,7 @@ export function LiveCallPanel({ callId, contactName, onClose }: LiveCallPanelPro
                 <Box key={i} sx={{ display: 'flex', justifyContent: isAI ? 'flex-end' : 'flex-start' }}>
                   <Box sx={{ maxWidth: '78%' }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: isAI ? 'primary.main' : 'text.secondary', display: 'block', mb: 0.25, textAlign: isAI ? 'right' : 'left' }}>
-                      {isAI ? 'Arya' : contactName}
+                      {isAI ? 'Iris' : contactName}
                     </Typography>
                     <Box
                       sx={{

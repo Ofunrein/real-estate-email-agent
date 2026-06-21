@@ -200,7 +200,7 @@ function SmsBubble({
 
       <Avatar
         src={isIris ? agentAvatar : undefined}
-        alt={isIris ? 'Arya, AI agent' : undefined}
+        alt={isIris ? 'Iris, AI agent' : undefined}
         sx={{
           width: 28,
           height: 28,
@@ -232,7 +232,7 @@ function SmsBubble({
               color: 'text.secondary'
             }}>
 
-            {isIris ? 'Arya sent' : `${contact} received`}
+            {isIris ? 'Iris sent' : `${contact} received`}
           </Typography>
           <Typography
             sx={{

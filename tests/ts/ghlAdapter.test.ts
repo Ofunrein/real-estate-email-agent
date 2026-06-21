@@ -90,3 +90,37 @@ test("logActivity: posts InternalComment by default", async () => {
   assert.equal(body.type, "InternalComment");
   assert.equal(body.contactId, "c1");
 });
+
+test("listImportableLeads: maps GHL contacts into import leads", async () => {
+  const { calls, request } = recorder({
+    "GET /contacts/": {
+      contacts: [
+        {
+          id: "c9",
+          firstName: "Nia",
+          lastName: "Patel",
+          email: "nia@example.com",
+          phone: "+15125550123",
+          tags: ["hot buyer"],
+          pipelineStage: "Showing",
+          assignedTo: "agent_1",
+          dateUpdated: "2026-06-20T12:00:00Z",
+        },
+      ],
+      startAfterId: "next_1",
+    },
+  });
+  const adapter = createGhlAdapter(config, request);
+  const page = await adapter.listImportableLeads({ limit: 25, cursor: "cursor_1", updatedAfter: "2026-06-01T00:00:00Z" });
+
+  assert.equal(calls[0].path, "/contacts/");
+  assert.equal(calls[0].query?.locationId, "loc_1");
+  assert.equal(calls[0].query?.limit, "25");
+  assert.equal(calls[0].query?.startAfterId, "cursor_1");
+  assert.equal(calls[0].query?.updatedAfter, "2026-06-01T00:00:00Z");
+  assert.equal(page.nextCursor, "next_1");
+  assert.equal(page.leads[0].sourceId, "c9");
+  assert.equal(page.leads[0].fullName, "Nia Patel");
+  assert.equal(page.leads[0].stage, "Showing");
+  assert.equal(page.leads[0].owner, "agent_1");
+});

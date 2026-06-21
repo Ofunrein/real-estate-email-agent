@@ -172,7 +172,7 @@ export function VoiceView() {
                 {contact.phone ? `${contact.phone} · ` : ''}{contact.callCount} calls · {contact.tag}
               </Typography>
             </Box>
-            <Tooltip title={contact.phone ? `Call ${contact.contact} with Arya` : 'No phone number on file'}>
+            <Tooltip title={contact.phone ? `Call ${contact.contact} with Iris` : 'No phone number on file'}>
               <span>
                 <Button
                   variant="contained"
@@ -276,7 +276,7 @@ function CallCard({ call }: {call: Call;}) {
               
               <Avatar
                 src={isAgent ? agentAvatar : undefined}
-                alt={isAgent ? 'Arya, AI agent' : undefined}
+                alt={isAgent ? 'Iris, AI agent' : undefined}
                 sx={{
                   width: 24,
                   height: 24,
