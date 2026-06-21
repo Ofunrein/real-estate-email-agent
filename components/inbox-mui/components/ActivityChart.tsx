@@ -220,7 +220,7 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
         
         <Chip
           size="small"
-          label="Email · Arya · 68"
+          label="Email · Iris · 68"
           sx={{
             bgcolor: 'action.selected',
             color: 'primary.main',
@@ -229,7 +229,7 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
         
         <Chip
           size="small"
-          label="SMS · Arya · 51"
+          label="SMS · Iris · 51"
           sx={{
             bgcolor: 'action.selected',
             color: 'secondary.main',

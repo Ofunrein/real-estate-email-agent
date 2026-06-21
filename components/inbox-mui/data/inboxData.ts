@@ -301,5 +301,5 @@ export const leadCategories: LeadCategory[] = [
   { id: 'closed', label: 'Closed / No Reply', color: '#475569' },
 ];
 
-// AI agent (Iris/Arya) profile picture used wherever the agent's avatar appears.
+// Iris profile picture used wherever the agent's avatar appears.
 export const agentAvatar = '/arya-avatar.png';
