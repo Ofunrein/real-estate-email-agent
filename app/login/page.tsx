@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
 
 import { auth, authEmailListLabel, hasGoogleAuthProvider, localAuthBypassEnabled, signIn } from "@/auth";
 import { passwordSignInEnabled } from "@/lib/dashboardPasswordAuth";
@@ -39,6 +40,18 @@ export default async function LoginPage({
     <main className="login-shell">
       <section className="login-panel login-panel-wide" aria-labelledby="login-title">
         <div className="login-brand-card" aria-hidden="true">
+          <div className="login-ripple-field">
+            {Array.from({ length: 9 }, (_, index) => (
+              <span key={index} style={{ "--i": index } as CSSProperties} />
+            ))}
+          </div>
+          <div className="login-tech-orbit">
+            <span className="login-orbit-word">Iris</span>
+            <span className="login-orbit-chip login-orbit-chip-one">CRM</span>
+            <span className="login-orbit-chip login-orbit-chip-two">SMS</span>
+            <span className="login-orbit-chip login-orbit-chip-three">Voice</span>
+            <span className="login-orbit-chip login-orbit-chip-four">Gmail</span>
+          </div>
           <div>
             <span className="login-eyebrow">Lumenosis AI</span>
             <h1>Iris lead desk</h1>
