@@ -31,14 +31,15 @@ export function ContextColumn({
   inDrawer = false
 }: ContextColumnProps) {
   const { channelStats, reviewQueue, channelMeta, metrics } = useInboxModel();
-  const statsKey = channel === 'properties' ? 'all' : channel;
-  const stats = channelStats[statsKey as Exclude<ChannelId, 'properties'>];
+  const statsKey: Exclude<ChannelId, 'properties' | 'imports'> =
+  channel === 'properties' || channel === 'imports' ? 'all' : channel;
+  const stats = channelStats[statsKey];
   const label =
   channel === 'all' ?
   'All channels' :
-  channel === 'properties' ?
+  channel === 'properties' || channel === 'imports' ?
   'All channels' :
-  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>]?.label ?? channel;
+  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>]?.label ?? channel;
   const total = stats.inbound + stats.aiReplies;
   const approvalRate = total > 0 ? Math.round((stats.aiReplies / total) * 100) : 0;
   const suggestions = reviewQueue.slice(0, 3);

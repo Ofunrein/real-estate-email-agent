@@ -12,7 +12,7 @@ import {
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import HomeOutlinedIcon from '@mui/icons-material/HomeWorkOutlined';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
-import { type ChannelId } from '../data/inboxData';
+import { importChannelMeta, type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 interface NavRailProps {
   active: ChannelId;
@@ -21,6 +21,7 @@ interface NavRailProps {
 }
 export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
   const { channels } = useInboxModel();
+  const ImportIcon = importChannelMeta.icon;
   return (
     <Box
       component="nav"
@@ -120,6 +121,12 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
           active={active === 'properties'}
           onClick={() => onSelect('properties')}
           accent="#94a3b8" />
+        <NavItem
+          label={importChannelMeta.label}
+          icon={<ImportIcon fontSize="small" />}
+          active={active === 'imports'}
+          onClick={() => onSelect('imports')}
+          accent={importChannelMeta.accent} />
         
       </Stack>
 
