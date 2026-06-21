@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildHtmlEmailReply,
   buildIrisEmailLeadMemoryRow,
   classifyIrisEmailText,
   decideIrisEmailExecution,
@@ -13,6 +14,7 @@ import {
   type IrisEmailMessage,
 } from "@/lib/irisEmail";
 import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
+import type { SheetRow } from "@/lib/sheetSchema";
 
 function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
   return {
@@ -154,14 +156,14 @@ test("irisEmailPollQuery: scopes default Gmail polling to configured inbound add
   delete process.env.IRIS_EMAIL_INBOUND_TO;
   process.env.TEAM_LEAD_EMAIL = "martin@lumenosis.com";
   try {
-	    const query = irisEmailPollQuery();
-	    assert.match(query, /in:inbox/);
-	    assert.match(query, /newer_than:14d/);
-	    assert.doesNotMatch(query, /is:unread/);
-	    assert.doesNotMatch(query, /AUTO_REPLIED/);
-	    assert.doesNotMatch(query, /NEEDS_HUMAN/);
-	    assert.match(query, /to:martin@lumenosis\.com/);
-	    assert.match(query, /deliveredto:martin@lumenosis\.com/);
+    const query = irisEmailPollQuery();
+    assert.match(query, /in:inbox/);
+    assert.match(query, /newer_than:14d/);
+    assert.doesNotMatch(query, /is:unread/);
+    assert.doesNotMatch(query, /AUTO_REPLIED/);
+    assert.doesNotMatch(query, /NEEDS_HUMAN/);
+    assert.match(query, /to:martin@lumenosis\.com/);
+    assert.match(query, /deliveredto:martin@lumenosis\.com/);
   } finally {
     if (previousQuery === undefined) delete process.env.IRIS_EMAIL_POLL_QUERY;
     else process.env.IRIS_EMAIL_POLL_QUERY = previousQuery;
@@ -211,4 +213,42 @@ test("isIrisEligibleEmail: blocks system and no-reply senders before auto-send",
     subject: "Tour request",
     body: "Can I tour 100 E 51st St #7 tomorrow?",
   })), true);
+});
+
+test("buildHtmlEmailReply: proxies usable photos and avoids duplicate property copy", () => {
+  const previousBase = process.env.PUBLIC_BASE_URL;
+  process.env.PUBLIC_BASE_URL = "https://app.example.com";
+  try {
+    const property = {
+      address: "100 E 51st St #7",
+      price: "843900",
+      beds: "3",
+      baths: "3",
+      sqft: "1902",
+      description: "3 beds, 3 baths, 1902 sqft Townhouse in Austin, TX 78751",
+      photo_url: "https://photos.zillowstatic.com/fp/abc123-p_e.jpg",
+      listing_url: "https://www.zillow.com/homedetails/100-E-51st-St-7-Austin-TX-78751/70353702_zpid/",
+    } as SheetRow;
+    const reply = buildHtmlEmailReply("Hello,\n\nI can help with details on 100 E 51st St.\n\nBest,\nIris", [property, { ...property }]);
+
+    assert.match(reply.html || "", /https:\/\/app\.example\.com\/api\/media\/proxy\?url=/);
+    assert.equal((reply.html || "").match(/<h3[^>]*>100 E 51st St #7<\/h3>/g)?.length, 1);
+    assert.equal((reply.html || "").match(/3 beds, 3 baths, 1902 sqft Townhouse/g)?.length || 0, 0);
+    assert.equal((reply.html || "").match(/View listing/g)?.length, 1);
+  } finally {
+    if (previousBase === undefined) delete process.env.PUBLIC_BASE_URL;
+    else process.env.PUBLIC_BASE_URL = previousBase;
+  }
+});
+
+test("buildHtmlEmailReply: skips Street View photos instead of rendering broken image blocks", () => {
+  const reply = buildHtmlEmailReply("Hello,\n\nBest,\nIris", [{
+    address: "100 E 51st St #7",
+    photo_url: "https://maps.googleapis.com/maps/api/streetview?location=100+E+51st",
+    listing_url: "https://www.zillow.com/homedetails/100-E-51st-St-7-Austin-TX-78751/70353702_zpid/",
+  } as SheetRow]);
+
+  assert.doesNotMatch(reply.html || "", /<img\b/i);
+  assert.doesNotMatch(reply.html || "", /maps\.googleapis\.com/);
+  assert.match(reply.html || "", /View listing/);
 });
