@@ -245,6 +245,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
     return {
       id: key,
       contact,
+      phone: latest.phone || calls.find((c) => c.phone)?.phone || undefined,
       time: formatEventTimeShort(latest.ended_at || latest.started_at || latest.event_at),
       summary: latest.summary || (allTurns[0]?.text ?? ""),
       callCount: calls.length,
@@ -280,10 +281,13 @@ function buildChannels(data: AgentInboxData): InboxModel["channels"] {
     const view = realChannelToView(event.channel || "");
     counts[view] = (counts[view] || 0) + 1;
   }
-  counts.all = data.events.length;
+  // Voice events are stripped from data.events into data.voiceCalls — count them here
+  // so the Voice channel shows its real volume instead of 0.
+  counts.voice = (counts.voice || 0) + (data.voiceCalls?.length || 0);
+  counts.all = data.events.length + (data.voiceCalls?.length || 0);
   const order: ChannelId[] = ["all", "email", "sms", "voice", "instagram", "messenger", "whatsapp", "website"];
+  // Show every channel in the rail (user wants the full nav present), not only ones with traffic.
   return order
-    .filter((id) => id === "all" || counts[id])
     .map((id) => ({
       id,
       label: id === "all" ? "All channels" : channelMeta[id as Exclude<ChannelId, "all" | "properties">].label,

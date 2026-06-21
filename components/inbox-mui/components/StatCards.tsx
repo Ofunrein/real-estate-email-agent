@@ -176,6 +176,9 @@ export function StatCard({
                 strokeWidth={2}
                 fill={`url(#${gradientId})`}
                 dot={false}
+                isAnimationActive={true}
+                animationDuration={900}
+                animationEasing="ease-out"
                 activeDot={{
                   r: 4,
                   fill: accent,

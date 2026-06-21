@@ -2,7 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Stack, Typography, Chip } from '@mui/material';
 import TimelineIcon from '@mui/icons-material/InsightsOutlined';
+import { motion } from 'framer-motion';
 import { useInboxModel } from '../InboxDataContext';
+
+const MotionBox = motion(Box);
+
 const dayLabels = [
 'M',
 'T',
@@ -154,20 +158,24 @@ export function ActivityChart() {
                 
                 {v} events
               </Box>
-              {/* Bar */}
-              <Box
+              {/* Bar — mounts with a staggered scaleY rise, scaleX on hover */}
+              <MotionBox
+                initial={{ scaleY: 0, scaleX: 1 }}
+                animate={{
+                  scaleY: 1,
+                  scaleX: isHovered ? 1.12 : isNeighbor ? 1.04 : 1,
+                }}
+                transition={{
+                  scaleY: { delay: i * 0.04, duration: 0.5, ease: 'easeOut' },
+                  scaleX: { duration: 0.3, ease: 'easeOut' },
+                }}
                 sx={{
                   width: '100%',
                   height: `${v / max * 90}px`,
                   minHeight: 6,
                   borderRadius: 1,
                   transformOrigin: 'bottom',
-                  transition: 'background-color .3s, transform .3s',
-                  transform: isHovered ?
-                  'scaleX(1.12)' :
-                  isNeighbor ?
-                  'scaleX(1.04)' :
-                  'scaleX(1)',
+                  transition: 'background-color .3s',
                   bgcolor: isHovered ?
                   'primary.main' :
                   isNeighbor ?
@@ -176,7 +184,7 @@ export function ActivityChart() {
                   'action.selected' :
                   'action.selected'
                 }} />
-              
+
               {/* Label */}
               <Typography
                 variant="caption"
