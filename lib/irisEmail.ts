@@ -14,6 +14,7 @@ import {
 } from "@/lib/database";
 import { createIrisGmailSession, ensureGmailLabel, sendGmailReplyWithOptions, type GmailClient, type GmailReplyResult } from "@/lib/gmailConnection";
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
+import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -472,15 +473,44 @@ function propertyFacts(property: SheetRow): string {
   return facts.join(" &bull; ");
 }
 
+function propertyHighlights(property: SheetRow): string {
+  const features = (property.features || "")
+    .split(/[,;|]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+  if (features.length) return features.join(" • ");
+
+  const description = (property.description || "").replace(/\s+/g, " ").trim();
+  if (!description) return "";
+  const duplicateFacts = [
+    property.address,
+    property.price,
+    property.beds && `${property.beds} bed`,
+    property.baths && `${property.baths} bath`,
+    property.sqft && `${property.sqft.replace(/[^\d]/g, "")} sqft`,
+  ].filter(Boolean).map((value) => String(value).toLowerCase());
+  const normalized = description.toLowerCase();
+  const duplicateSignals = duplicateFacts.filter((fact) => fact && normalized.includes(fact)).length;
+  if (duplicateSignals >= 2) return "";
+  return description.slice(0, 140);
+}
+
+function propertyPhotoSrc(property: SheetRow): string {
+  const photo = usableInboxPhotoUrl(property.photo_url);
+  if (!photo || !isProxiableImageUrl(photo)) return "";
+  return mediaProxyUrl(photo);
+}
+
 function propertyCardHtml(property: SheetRow, featured = false): string {
   const address = property.address || [property.city, property.state].filter(Boolean).join(", ");
   const price = formatCurrency(property.price || "");
   const facts = propertyFacts(property);
-  const photo = property.photo_url || "";
+  const photo = propertyPhotoSrc(property);
   const listingUrl = property.listing_url || "";
-  const description = (property.description || "").slice(0, featured ? 180 : 120);
+  const highlights = propertyHighlights(property);
   const image = photo
-    ? `<img src="${htmlEscape(photo)}" alt="Property photo" style="display:block;width:100%;max-height:${featured ? 300 : 170}px;object-fit:cover;border-radius:8px;margin:0 0 12px" />`
+    ? `<img src="${htmlEscape(photo)}" alt="${htmlEscape(address || "Property photo")}" style="display:block;width:100%;max-height:${featured ? 300 : 170}px;object-fit:cover;border-radius:8px;margin:0 0 12px" />`
     : "";
   const viewLink = listingUrl
     ? `<a href="${htmlEscape(listingUrl)}" style="display:inline-block;margin-top:10px;color:#0f766e;font-size:13px;font-weight:700;text-decoration:none">View listing</a>`
@@ -490,7 +520,7 @@ ${image}
 <h3 style="margin:0 0 6px;font-size:${featured ? 18 : 15}px;line-height:1.25;color:#111827">${htmlEscape(address)}</h3>
 ${price ? `<p style="margin:0 0 6px;font-size:${featured ? 17 : 14}px;font-weight:800;color:#111827">${htmlEscape(price)}</p>` : ""}
 ${facts ? `<p style="margin:0 0 8px;font-size:13px;line-height:1.45;color:#4b5563">${facts}</p>` : ""}
-${description ? `<p style="margin:0;font-size:13px;line-height:1.45;color:#374151">${htmlEscape(description)}${property.description && property.description.length > description.length ? "..." : ""}</p>` : ""}
+${highlights ? `<p style="margin:0;font-size:13px;line-height:1.45;color:#374151">${htmlEscape(highlights)}</p>` : ""}
 ${viewLink}
 </div>`;
 }
@@ -506,9 +536,26 @@ function propertyPlain(property: SheetRow): string {
   return [address, facts, property.listing_url].filter(Boolean).join("\n");
 }
 
-function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], classification?: IrisEmailClassification): IrisEmailReplyDraft {
-  const featured = properties[0];
-  const rest = properties.slice(1, 4);
+function dedupeProperties(properties: SheetRow[]): SheetRow[] {
+  const seen = new Set<string>();
+  const out: SheetRow[] = [];
+  for (const property of properties) {
+    const key = [
+      property.address,
+      property.listing_url,
+      property.property_id,
+    ].filter(Boolean).join("|").toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(property);
+  }
+  return out;
+}
+
+export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], classification?: IrisEmailClassification): IrisEmailReplyDraft {
+  const cleanProperties = dedupeProperties(properties);
+  const featured = cleanProperties[0];
+  const rest = cleanProperties.slice(1, 4);
   const subjectLine = classification?.intent === "property_search"
     ? "I found the best matching options from our inventory."
     : featured
@@ -521,8 +568,8 @@ ${rest.length ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08
 ${plainToHtml(text.replace(/\n*Best,\nIris\s*$/i, "").trim())}
 <p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
 </div>`;
-  const propertyText = properties.length
-    ? `\n\nProperty details:\n${properties.slice(0, 4).map(propertyPlain).join("\n\n")}`
+  const propertyText = cleanProperties.length
+    ? `\n\nProperty details:\n${cleanProperties.slice(0, 4).map(propertyPlain).join("\n\n")}`
     : "";
   return {
     text: `${text}${propertyText}`,
@@ -530,13 +577,88 @@ ${plainToHtml(text.replace(/\n*Best,\nIris\s*$/i, "").trim())}
   };
 }
 
+function irisEmailClaudeModel(): string {
+  return process.env.IRIS_EMAIL_RESPOND_MODEL || process.env.CLAUDE_RESPOND || "claude-sonnet-4-6";
+}
+
+function anthropicApiKey(): string {
+  return process.env.ANTHROPIC_API_KEY || "";
+}
+
+async function generateClaudeIrisEmailReplyText(
+  message: IrisEmailMessage,
+  classification: IrisEmailClassification,
+  properties: SheetRow[],
+): Promise<string | null> {
+  const key = anthropicApiKey();
+  if (!key) return null;
+  const propertyContext = dedupeProperties(properties).slice(0, 4).map((property, index) => ({
+    index: index + 1,
+    address: property.address,
+    price: formatCurrency(property.price || ""),
+    beds: property.beds,
+    baths: property.baths,
+    sqft: property.sqft,
+    property_type: property.property_type,
+    status: property.status,
+    features: property.features,
+    listing_url: property.listing_url,
+  }));
+  const system = `You are ${IRIS_AGENT_NAME}, the real estate email assistant. Claude is the reasoning brain for this email agent.
+Write only the email body, no markdown and no subject line.
+Rules:
+- Keep it concise and useful.
+- Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
+- The app will render property facts in an HTML property card above your body, so do not repeat the full price/beds/baths/sqft block in prose.
+- Mention the primary address at most once.
+- Ask at most one next-step question.
+- End exactly with:
+Best,
+${IRIS_AGENT_NAME}`;
+  const user = `Inbound email:
+From: ${message.from}
+Subject: ${message.subject}
+Body:
+${cleanBody(message.body)}
+
+Classification:
+${JSON.stringify(classification)}
+
+Property facts available to the HTML card:
+${JSON.stringify(propertyContext)}`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: irisEmailClaudeModel(),
+      max_tokens: 360,
+      temperature: 0.4,
+      system,
+      messages: [{ role: "user", content: user }],
+    }),
+  });
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) return null;
+  const content = Array.isArray(payload.content) ? payload.content as Array<{ type?: string; text?: string }> : [];
+  const text = content.find((block) => block.type === "text")?.text?.trim() || "";
+  return text && /Best,\s*\n\s*Iris\s*$/i.test(text) ? text : null;
+}
+
 async function generateIrisEmailReplyRich(
   message: IrisEmailMessage,
   classification: IrisEmailClassification,
 ): Promise<IrisEmailReplyDraft | null> {
-  const plain = generateIrisEmailReply(message, classification);
-  if (!plain) return null;
-  if (!databaseEnabled()) return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
+  const fallbackPlain = generateIrisEmailReply(message, classification);
+  if (!fallbackPlain) return null;
+  if (!databaseEnabled()) {
+    const plain = await generateClaudeIrisEmailReplyText(message, classification, []).catch(() => null) || fallbackPlain;
+    return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
+  }
   const properties = classification.addresses.length
     ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
     : await findCandidatePropertiesFromDatabase({
@@ -546,6 +668,7 @@ async function generateIrisEmailReplyRich(
       maxPrice: classification.lead_fields.budget || undefined,
       mode: "general",
     }, 4);
+  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties).catch(() => null) || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
 
