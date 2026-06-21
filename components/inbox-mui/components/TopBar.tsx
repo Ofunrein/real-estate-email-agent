@@ -23,7 +23,7 @@ import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { signOut } from 'next-auth/react';
 import { Moon, Sun } from 'lucide-react';
-import { type ChannelId } from '../data/inboxData';
+import { importChannelMeta, type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useColorMode } from '../theme/ColorModeContext';
 interface TopBarProps {
@@ -51,12 +51,14 @@ export function TopBar({
   'Overview' :
   channel === 'properties' ?
   'Properties' :
-  (channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>]?.label ?? channel);
+  channel === 'imports' ?
+  importChannelMeta.label :
+  (channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>]?.label ?? channel);
   const account = channelAccounts[channel];
   const accountMeta =
-  channel === 'all' || channel === 'properties' ?
+  channel === 'all' || channel === 'properties' || channel === 'imports' ?
   undefined :
-  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>];
+  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>];
   const AccountIcon = accountMeta?.icon;
   return (
     <Box

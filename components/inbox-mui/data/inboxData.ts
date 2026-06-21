@@ -5,6 +5,7 @@ import InstagramIcon from '@mui/icons-material/Instagram';
 import MessengerIcon from '@mui/icons-material/ChatBubbleOutline';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import WebsiteIcon from '@mui/icons-material/LanguageOutlined';
+import ReopenIcon from '@mui/icons-material/AutoAwesomeMotionOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { InboxSettings } from '@/lib/inboxSettings';
 
@@ -21,7 +22,8 @@ export type ChannelId =
   | 'messenger'
   | 'whatsapp'
   | 'website'
-  | 'properties';
+  | 'properties'
+  | 'imports';
 
 export interface Channel {
   id: ChannelId;
@@ -60,7 +62,7 @@ export type EventKind = 'inbound' | 'ai_reply' | 'note' | 'voice';
 
 export interface ActivityEvent {
   id: string;
-  channel: Exclude<ChannelId, 'all' | 'properties'>;
+  channel: Exclude<ChannelId, 'all' | 'properties' | 'imports'>;
   threadId: string;
   threadRef: string;
   eventId?: string;
@@ -76,7 +78,7 @@ export interface ActivityEvent {
 export interface ReviewItem {
   id: string;
   key: string;
-  channel: Exclude<ChannelId, 'all' | 'properties'>;
+  channel: Exclude<ChannelId, 'all' | 'properties' | 'imports'>;
   contact: string;
   reason: string;
   receivedAt: string;
@@ -239,12 +241,12 @@ export interface Metrics {
 
 export interface InboxModel {
   channels: Channel[];
-  channelMeta: Record<Exclude<ChannelId, 'all' | 'properties'>, { label: string; icon: SvgIconComponent; accent: string }>;
+  channelMeta: Record<Exclude<ChannelId, 'all' | 'properties' | 'imports'>, { label: string; icon: SvgIconComponent; accent: string }>;
   channelAccounts: Record<ChannelId, ConnectedAccount>;
   leadCategories: LeadCategory[];
   activityEvents: ActivityEvent[];
   reviewQueue: ReviewItem[];
-  channelStats: Record<Exclude<ChannelId, 'properties'>, ChannelStats>;
+  channelStats: Record<Exclude<ChannelId, 'properties' | 'imports'>, ChannelStats>;
   emailThreads: EmailThread[];
   smsThreads: SmsThread[];
   voiceContacts: VoiceContact[];
@@ -266,7 +268,7 @@ export interface InboxModel {
 /* ----------------------------- Static config ------------------------------- */
 
 export const channelMeta: Record<
-  Exclude<ChannelId, 'all' | 'properties'>,
+  Exclude<ChannelId, 'all' | 'properties' | 'imports'>,
   { label: string; icon: SvgIconComponent; accent: string }
 > = {
   email: { label: 'Email', icon: EmailIcon, accent: '#818cf8' },
@@ -288,7 +290,10 @@ export const channelAccounts: Record<ChannelId, ConnectedAccount> = {
   whatsapp: { label: 'WhatsApp', value: '+1 (512) 846-9460', status: 'READY' },
   website: { label: 'Website chat', value: 'austinrealty.com', status: 'READY' },
   properties: { label: 'Property data', value: 'Austin Realty sheet', status: 'SYNCED' },
+  imports: { label: 'Lead Reopen', value: 'Import queue', status: 'READY' },
 };
+
+export const importChannelMeta = { label: 'Lead Reopen', icon: ReopenIcon, accent: '#a855f7' };
 
 export const leadCategories: LeadCategory[] = [
   { id: 'needs-reply', label: 'Needs Reply', color: '#8b5cf6' },

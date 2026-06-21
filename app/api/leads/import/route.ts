@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { resolveCrmAdapter } from "@/lib/crm";
 import { hasCrmImport } from "@/lib/crm/types";
+import { readLeadImportBatchesFromDatabase, readLeadImportItemsFromDatabase } from "@/lib/database";
 import {
   LEAD_IMPORT_SOURCE_TYPES,
   parseCsv,
@@ -140,5 +141,22 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to import leads.";
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
+
+  try {
+    const batchId = request.nextUrl.searchParams.get("batchId") || "";
+    const limit = Number(request.nextUrl.searchParams.get("limit") || 20);
+    const itemsLimit = Number(request.nextUrl.searchParams.get("itemsLimit") || 50);
+    const batches = await readLeadImportBatchesFromDatabase(limit);
+    const items = batchId ? await readLeadImportItemsFromDatabase(batchId, itemsLimit) : [];
+    return NextResponse.json({ ok: true, batches, items });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load import batches.";
+    return NextResponse.json({ ok: false, error: message }, { status: 503 });
   }
 }

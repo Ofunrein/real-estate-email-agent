@@ -10,11 +10,12 @@ import { SmsView } from './components/SmsView';
 import { VoiceView } from './components/VoiceView';
 import { EmptyChannelView } from './components/EmptyChannelView';
 import { PropertiesView } from './components/PropertiesView';
+import { ImportsView } from './components/ImportsView';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { type ActivityEvent, type ChannelId } from './data/inboxData';
 import { usePersistedSelection } from './hooks/usePersistedSelection';
 
-const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties'];
+const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties', 'imports'];
 
 export function InboxPage() {
   const [channel, setChannel, channelReady] = usePersistedSelection<ChannelId>('iris.inbox.channel', 'all', CHANNEL_IDS);
@@ -23,7 +24,7 @@ export function InboxPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const theme = useTheme();
   const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
-  const showContextRail = channel !== 'properties';
+  const showContextRail = channel !== 'properties' && channel !== 'imports';
   const handleSelect = (id: ChannelId) => {
     setChannel(id);
     setNavOpen(false);
@@ -193,6 +194,8 @@ function ChannelContent({ channel, onOpenActivityEvent }: {channel: ChannelId;on
       return <VoiceView />;
     case 'properties':
       return <PropertiesView />;
+    case 'imports':
+      return <ImportsView />;
     default:
       return <EmptyChannelView channel={channel} />;
   }

@@ -304,6 +304,26 @@ export type LeadImportItemInput = {
   error?: string;
 };
 
+export type LeadImportItemRecord = {
+  id: number;
+  batch_id: string;
+  client_id: string;
+  row_index: number;
+  status: string;
+  dedupe_key: string;
+  email: string;
+  phone: string;
+  full_name: string;
+  source_id: string;
+  segments: string[];
+  campaign_eligible: boolean;
+  lead_memory_key: string;
+  raw_data: Record<string, unknown>;
+  normalized_data: Record<string, unknown>;
+  error: string;
+  created_at: string;
+};
+
 function jsonRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -335,6 +355,28 @@ function leadImportBatchFromRow(row: Record<string, unknown>): LeadImportBatchRe
     metadata: jsonRecord(row.metadata),
     created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
     updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+function leadImportItemFromRow(row: Record<string, unknown>): LeadImportItemRecord {
+  return {
+    id: Number(row.id || 0),
+    batch_id: String(row.batch_id || ""),
+    client_id: String(row.client_id || ""),
+    row_index: Number(row.row_index || 0),
+    status: String(row.status || ""),
+    dedupe_key: String(row.dedupe_key || ""),
+    email: String(row.email || ""),
+    phone: String(row.phone || ""),
+    full_name: String(row.full_name || ""),
+    source_id: String(row.source_id || ""),
+    segments: Array.isArray(row.segments) ? row.segments.map(String) : [],
+    campaign_eligible: Boolean(row.campaign_eligible),
+    lead_memory_key: String(row.lead_memory_key || ""),
+    raw_data: jsonRecord(row.raw_data),
+    normalized_data: jsonRecord(row.normalized_data),
+    error: String(row.error || ""),
+    created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
   };
 }
 
@@ -476,6 +518,20 @@ export async function readLeadImportBatchesFromDatabase(limit = 20): Promise<Lea
     [clientId(), limit],
   );
   return result.rows.map(leadImportBatchFromRow);
+}
+
+export async function readLeadImportItemsFromDatabase(batchId: string, limit = 50): Promise<LeadImportItemRecord[]> {
+  if (!batchId || !await leadImportTablesReady()) return [];
+  const result = await getPool().query(
+    `select *
+       from lead_import_items
+      where client_id = $1
+        and batch_id = $2
+      order by row_index asc
+      limit $3`,
+    [clientId(), batchId, limit],
+  );
+  return result.rows.map(leadImportItemFromRow);
 }
 
 export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
