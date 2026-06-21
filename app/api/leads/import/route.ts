@@ -39,6 +39,8 @@ function connectorStatuses() {
   const hasGoogleSheets = configured(process.env.GOOGLE_SHEET_ID);
   const hasComposio = composioEnabled();
   const composioImport = composioImportConfig();
+  const hasFollowUpBossAuthConfig = configured(process.env.COMPOSIO_FOLLOW_UP_BOSS_AUTH_CONFIG_ID);
+  const hasFollowUpBossConnection = configured(process.env.COMPOSIO_FOLLOW_UP_BOSS_CONNECTED_ACCOUNT_ID);
 
   return [
     {
@@ -89,10 +91,14 @@ function connectorStatuses() {
       id: "follow_up_boss",
       label: "Follow Up Boss",
       provider: "follow_up_boss",
-      path: "direct_adapter",
-      status: "planned",
-      detail: "Direct adapter needed for real estate contact/activity depth. CSV works now.",
-      action: "Use CSV fallback",
+      path: "composio_api_key",
+      status: hasFollowUpBossConnection && composioImport ? "ready" : hasFollowUpBossAuthConfig ? "configured" : "needs_config",
+      detail: hasFollowUpBossConnection && composioImport
+        ? "FUB connection and import tool are configured."
+        : hasFollowUpBossAuthConfig
+          ? "Composio FUB auth config exists. Add a FUB API key connection, then set the import tool slug/result path."
+          : "Needs a Follow Up Boss API-key auth config or CSV export.",
+      action: hasFollowUpBossConnection && composioImport ? "Preview FUB leads" : "Need FUB API key",
     },
     {
       id: "lofty_chime",

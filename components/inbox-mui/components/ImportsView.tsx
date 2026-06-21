@@ -262,6 +262,7 @@ export function ImportsView() {
     if (connector.id === 'ghl' || connector.id === 'google_sheets') {
       return connector.status !== 'ready' && connector.status !== 'configured';
     }
+    if (connector.id === 'follow_up_boss') return false;
     return true;
   }
 
@@ -294,6 +295,14 @@ export function ImportsView() {
     }
     if (connector.id === 'composio') {
       void pullComposio(true);
+      return;
+    }
+    if (connector.id === 'follow_up_boss') {
+      if (connector.status === 'ready') {
+        void pullComposio(true);
+      } else {
+        setError('Follow Up Boss Composio auth config is ready. To connect it, add a FUB API key starting with fka_ as a Composio connected account, then set COMPOSIO_IMPORT_TOOL_SLUG and COMPOSIO_IMPORT_RESULT_PATH.');
+      }
       return;
     }
     setError(`${connector.label} is not directly connected yet. Export CSV from that CRM and use the CSV fallback.`);

@@ -1,16 +1,16 @@
 # Graph Report - real-estate-email-agent  (2026-06-21)
 
 ## Corpus Check
-- 449 files · ~1,848,565 words
+- 449 files · ~1,848,678 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3703 nodes · 7040 edges · 280 communities (224 shown, 56 thin omitted)
+- 3703 nodes · 7040 edges · 278 communities (222 shown, 56 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ab4bf6b6`
+- Built from commit: `365ce3e9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -164,7 +164,6 @@
 - [[_COMMUNITY_Community 154|Community 154]]
 - [[_COMMUNITY_Community 155|Community 155]]
 - [[_COMMUNITY_Community 156|Community 156]]
-- [[_COMMUNITY_Community 157|Community 157]]
 - [[_COMMUNITY_Community 158|Community 158]]
 - [[_COMMUNITY_Community 159|Community 159]]
 - [[_COMMUNITY_Community 160|Community 160]]
@@ -209,7 +208,6 @@
 - [[_COMMUNITY_Community 202|Community 202]]
 - [[_COMMUNITY_Community 203|Community 203]]
 - [[_COMMUNITY_Community 204|Community 204]]
-- [[_COMMUNITY_Community 205|Community 205]]
 - [[_COMMUNITY_Community 206|Community 206]]
 - [[_COMMUNITY_Community 207|Community 207]]
 - [[_COMMUNITY_Community 209|Community 209]]
@@ -302,7 +300,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (280 total, 56 thin omitted)
+## Communities (278 total, 56 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.12
@@ -317,8 +315,8 @@ Cohesion: 0.04
 Nodes (50): dependencies, @emotion/react, @mui/icons-material, @mui/icons-material/ArrowOutward, @mui/icons-material/AutoAwesome, @mui/icons-material/ChatBubbleOutline, @mui/icons-material/CheckCircle, @mui/icons-material/CheckCircleOutline (+42 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.08
-Nodes (42): ensureGmailLabel(), anthropicApiKey(), applyGmailLabels(), bodyFromPayload(), buildHtmlEmailReply(), classifyIrisEmailText(), decideIrisEmailExecution(), decodeBase64Url() (+34 more)
+Cohesion: 0.06
+Nodes (55): ensureGmailLabel(), anthropicApiKey(), applyGmailLabels(), bodyFromPayload(), buildHtmlEmailReply(), buildIrisEmailConversationEventRow(), buildIrisEmailLeadMemoryRow(), buildIrisEmailOutboundEventRow() (+47 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
@@ -421,12 +419,12 @@ Cohesion: 0.27
 Nodes (13): activateTakeover(), clientId(), getPool(), getTakeover(), isTakeoverActive(), releaseTakeover(), TakeoverState, EmailAttachment (+5 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.07
-Nodes (53): hasCrmImport(), configured(), connectorStatuses(), GET(), payloadFromRequest(), sourceTypeFrom(), truthy(), composioApiKey() (+45 more)
+Cohesion: 0.08
+Nodes (51): hasCrmImport(), configured(), connectorStatuses(), GET(), payloadFromRequest(), POST(), sourceTypeFrom(), truthy() (+43 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.13
-Nodes (31): areaTerms(), boolDbValue(), EmailAccountRecord, eventDbValue(), hasHardStructuredCriteria(), inboxCategoryFromRow(), intDbValue(), jsonRecord() (+23 more)
+Cohesion: 0.38
+Nodes (12): areaTerms(), hasHardStructuredCriteria(), matchesArea(), normalizeSearchText(), numericValue(), propertyHaystack(), propertyLooksRental(), propertyMatchesCriteria() (+4 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.19
@@ -461,8 +459,8 @@ Cohesion: 0.19
 Nodes (18): AriaAssistantOptions, ariaVoiceWebhookUrl(), buildAriaAssistant(), buildFallbackVoice(), buildVoiceConfig(), modelProviderFor(), optionalBool(), optionalNumber() (+10 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.12
-Nodes (21): credentialPaths(), OAuthCredentials, readJson(), readJsonEnv(), readSheet(), readSheets(), sheetsClient(), spreadsheetId() (+13 more)
+Cohesion: 0.09
+Nodes (26): DraftActionBody, emailSubject(), gmailThreadIdForEmail(), latestEvent(), normalizedChannel(), POST(), credentialPaths(), OAuthCredentials (+18 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.10
@@ -497,8 +495,8 @@ Cohesion: 0.22
 Nodes (18): resolveCrmAdapter(), cancelAppointmentById(), rescheduleAppointmentById(), addMinutes(), AppointmentInput, AppointmentResult, bookAppointment(), bookGHL() (+10 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.11
-Nodes (51): GET(), PATCH(), aiDraftFromRow(), appendConversationEventToDatabase(), cleanRow(), clientId(), clientName(), conversationEventExistsByGmailMessageId() (+43 more)
+Cohesion: 0.08
+Nodes (75): GET(), PATCH(), aiDraftFromRow(), appendConversationEventToDatabase(), appendLeadImportItemToDatabase(), boolDbValue(), cleanRow(), clientId() (+67 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.09
@@ -816,10 +814,6 @@ Nodes (8): siteStructuredData, Aurora, AuroraBackground(), SpotlightButtonWrappe
 Cohesion: 0.18
 Nodes (5): assistantId, candidates, dryRun, limit, list
 
-### Community 157 - "Community 157"
-Cohesion: 0.18
-Nodes (13): buildIrisEmailConversationEventRow(), buildIrisEmailLeadMemoryRow(), buildIrisEmailOutboundEventRow(), cleanBody(), gmailSearchToken(), handoffSummary(), header(), IrisEmailClient (+5 more)
-
 ### Community 158 - "Community 158"
 Cohesion: 0.10
 Nodes (19): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+11 more)
@@ -842,7 +836,7 @@ Nodes (16): dependencies, date-fns, @emotion/react, @emotion/styled, framer-moti
 
 ### Community 163 - "Community 163"
 Cohesion: 0.12
-Nodes (37): GET(), Home(), localAuthBypassEnabled(), GET(), redirectHome(), POST(), callbackUrl(), GET() (+29 more)
+Nodes (36): GET(), Home(), localAuthBypassEnabled(), GET(), redirectHome(), POST(), callbackUrl(), GET() (+28 more)
 
 ### Community 164 - "Community 164"
 Cohesion: 0.15
@@ -963,10 +957,6 @@ Nodes (13): _clean_value(), find_similar_homes(), generate_lead_reply(), generat
 ### Community 204 - "Community 204"
 Cohesion: 0.14
 Nodes (13): Current Scope, Data Sources, Lead Reopen Workload, Next Execution Phases, Phase 1: Import Visibility, Phase 2: Field Mapping Control, Phase 3: Campaign Review Queue, Phase 4: Reactivation Campaigns (+5 more)
-
-### Community 205 - "Community 205"
-Cohesion: 0.33
-Nodes (7): DraftActionBody, emailSubject(), gmailThreadIdForEmail(), latestEvent(), normalizedChannel(), POST(), updateAiDraftStatusInDatabase()
 
 ### Community 206 - "Community 206"
 Cohesion: 0.25
@@ -1126,7 +1116,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AriaPhoneDemo()` connect `Community 182` to `Community 130`?**
   _High betweenness centrality (0.028) - this node is a cross-community bridge._
-- **Why does `SheetRow` connect `Community 40` to `Community 0`, `Community 3`, `Community 7`, `Community 12`, `Community 17`, `Community 274`, `Community 275`, `Community 21`, `Community 277`, `Community 22`, `Community 153`, `Community 157`, `Community 30`, `Community 31`, `Community 163`, `Community 54`, `Community 63`, `Community 199`, `Community 205`?**
+- **Why does `SheetRow` connect `Community 40` to `Community 0`, `Community 163`, `Community 3`, `Community 7`, `Community 199`, `Community 12`, `Community 17`, `Community 49`, `Community 274`, `Community 275`, `Community 21`, `Community 54`, `Community 277`, `Community 22`, `Community 153`, `Community 30`, `Community 63`?**
   _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **What connects `Response`, `Legacy Iris email daemon.  Keep this runtime intact while the Gmail polling, rep`, `Wrapper for all outbound HTTP calls — logs URL, status, elapsed ms.` to the rest of the system?**
   _1400 weakly-connected nodes found - possible documentation gaps or missing edges._
@@ -1137,4 +1127,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.07641196013289037 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06487434248977206 - nodes in this community are weakly interconnected._
