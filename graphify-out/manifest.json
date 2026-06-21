@@ -445,8 +445,8 @@
     "semantic_hash": ""
   },
   "lib/theoData.ts": {
-    "mtime": 1781905359.6253498,
-    "ast_hash": "332a59bec41f600b22ea831d8c0bb967",
+    "mtime": 1782050623.2813466,
+    "ast_hash": "bfd65b6ec1a8338baee9fab932ae39d5",
     "semantic_hash": ""
   },
   "lib/theoLlm.ts": {
@@ -2497,6 +2497,26 @@
   "lib/inngest/functions/irisEmailMinutePoll.ts": {
     "mtime": 1782048218.3181372,
     "ast_hash": "3c724671f4e396adc570e0669c87343e",
+    "semantic_hash": ""
+  },
+  "app/api/settings/email-account/composio-connect/route.ts": {
+    "mtime": 1782050707.4322248,
+    "ast_hash": "e649aff5dd976370e8e38a12ce2ee330",
+    "semantic_hash": ""
+  },
+  "lib/composioConnection.ts": {
+    "mtime": 1782050575.1304502,
+    "ast_hash": "933ee0cc34f5c9390ac4f81d1e42508d",
+    "semantic_hash": ""
+  },
+  "lib/publicPropertyData.ts": {
+    "mtime": 1782050838.265348,
+    "ast_hash": "8e4c9de7557cb42b9ac42635c5b57b52",
+    "semantic_hash": ""
+  },
+  "tests/ts/publicPropertyData.test.ts": {
+    "mtime": 1782050849.6506984,
+    "ast_hash": "419ff89032b5d63e88c85b2755aa3ffb",
     "semantic_hash": ""
   }
 }
