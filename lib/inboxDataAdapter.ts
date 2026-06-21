@@ -180,6 +180,31 @@ function usableActivityText(primary = "", fallback = "", limit = ACTIVITY_BODY_L
   return compactActivityText(preferred || fallback || (isSystemPrompt ? "Activity recorded." : primary), limit);
 }
 
+function stableEventHash(value: string): string {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+function messageEventId(event: SheetRow, fallback: string): string {
+  const direct = event.gmail_message_id || event.appointment_id || event.call_id;
+  if (direct) return direct;
+  const key = [
+    event.thread_ref,
+    event.email,
+    event.phone,
+    event.channel,
+    event.direction,
+    event.event_at,
+    event.event_type,
+    event.message_text,
+    event.summary,
+  ].join("\u001f");
+  return `${event.thread_ref || event.email || event.phone || "event"}-${stableEventHash(key || fallback)}`;
+}
+
 function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string }> } {
   const media: Array<{ url: string; alt: string }> = [];
   const seen = new Set<string>();
@@ -327,7 +352,8 @@ function buildEmailMessages(events: SheetRow[], data: AgentInboxData): EmailMess
     const rawMessage = event.message_text || "";
     const html = looksLikeHtml(rawMessage) ? rewriteEmailHtmlForInbox(rawMessage, data.properties) : undefined;
     return {
-      id: `${event.thread_ref || event.email || i}-${i}`,
+      id: messageEventId(event, `${event.thread_ref || event.email || i}-${i}`),
+      eventId: messageEventId(event, `${event.thread_ref || event.email || i}-${i}`),
       sender: direction === "iris" ? "Iris" : direction === "owner" ? "Owner" : (event.full_name || event.email || "Contact"),
       direction,
       time: formatEventTimeShort(event.event_at),
@@ -369,8 +395,10 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
     const messages: SmsMessage[] = events.map((event, i) => {
       const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
+      const id = messageEventId(event, `${key}-${i}`);
       return {
-        id: `${key}-${i}`,
+        id,
+        eventId: id,
         direction: event.direction === "inbound" ? "inbound" : "iris",
         time: formatEventTimeShort(event.event_at),
         body: parsed.body,
@@ -483,14 +511,15 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
       const body = eventText(event) || event.summary || "";
       const fallback = view === "voice" ? "Voice call recorded." : "";
       const threadId = conversationKey(event, rawChannel);
+      const eventId = messageEventId(event, `event-${i}`);
       return {
         sortValue: eventTimeValue(event),
         event: {
-          id: event.gmail_message_id || event.thread_ref || `event-${i}`,
+          id: eventId,
           channel: view,
           threadId,
           threadRef: event.thread_ref || threadId,
-          eventId: event.gmail_message_id || event.appointment_id || undefined,
+          eventId,
           kind,
           actor: event.email || event.phone || event.full_name || "unknown",
           intent: event.event_type || undefined,
