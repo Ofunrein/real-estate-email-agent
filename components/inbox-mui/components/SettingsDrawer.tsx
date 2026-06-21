@@ -13,6 +13,8 @@ import {
   Tooltip,
   Alert } from
 '@mui/material';
+import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import { signOut } from 'next-auth/react';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useCategoryColors } from '../theme/CategoryColorContext';
@@ -35,6 +37,62 @@ const channelAvailability = [
   ['messenger', 'Messenger'],
   ['instagram', 'Instagram DMs'],
 ] as const;
+
+function ToggleGrid({
+  items,
+  values,
+  onChange,
+  suffix
+}: {
+  items: readonly (readonly [keyof InboxSettings['auto_send'], string])[];
+  values: Record<string, boolean>;
+  onChange: (key: keyof InboxSettings['auto_send'], checked: boolean) => void;
+  suffix: string;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: 'repeat(2, minmax(0, 1fr))',
+          sm: 'repeat(2, minmax(0, 1fr))'
+        },
+        gap: 1
+      }}>
+      {items.map(([key, label]) =>
+      <Box
+        key={key}
+        component="label"
+        sx={{
+          minWidth: 0,
+          p: 1,
+          border: '1px solid',
+          borderColor: values[key] ? 'primary.main' : 'divider',
+          borderRadius: 1.25,
+          bgcolor: values[key] ? 'action.selected' : 'background.paper',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          alignItems: 'center',
+          gap: 0.5,
+          cursor: 'pointer'
+        }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 800, lineHeight: 1.15 }} noWrap>
+            {label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+            {suffix}
+          </Typography>
+        </Box>
+        <Checkbox
+          checked={values[key]}
+          onChange={(e) => onChange(key, e.target.checked)}
+          sx={{ p: 0.25 }} />
+      </Box>
+      )}
+    </Box>
+  );
+}
 export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const { leadCategories, inboxSettings } = useInboxModel();
   const { colors, setColor } = useCategoryColors();
@@ -97,12 +155,13 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       PaperProps={{
         sx: {
           width: {
-            xs: '92%',
+            xs: '100%',
             sm: 460
           },
           maxWidth: 480,
+          boxSizing: 'border-box',
           p: {
-            xs: 2.5,
+            xs: 2,
             sm: 3.5
           }
         }
@@ -154,34 +213,16 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             mb: 1.5
           }} />
         
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: '1fr 1fr'
-            },
-            columnGap: 2
-          }}>
-          
-          {autoSendChannels.map(([key, label]) =>
-          <FormControlLabel
-            key={key}
-            control={
-            <Checkbox
-              checked={autoSend[key]}
-              onChange={(e) =>
-              setAutoSend((prev) => ({
-                ...prev,
-                [key]: e.target.checked
-              }))
-              } />
-
-            }
-            label={`${label} auto-send`} />
-
-          )}
-        </Box>
+        <ToggleGrid
+          items={autoSendChannels}
+          values={autoSend}
+          suffix="Auto-send"
+          onChange={(key, checked) =>
+          setAutoSend((prev) => ({
+            ...prev,
+            [key]: checked
+          }))
+          } />
       </Card>
 
       <Card
@@ -203,23 +244,16 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           Turn off AI handling for channels that need a human-led inbox.
         </Typography>
-        <Stack spacing={0.5}>
-          {channelAvailability.map(([key, label]) =>
-          <FormControlLabel
-            key={key}
-            control={
-            <Checkbox
-              checked={channelsEnabled[key]}
-              onChange={(e) =>
-              setChannelsEnabled((prev) => ({
-                ...prev,
-                [key]: e.target.checked
-              }))
-              } />
-            }
-            label={`${label} enabled`} />
-          )}
-        </Stack>
+        <ToggleGrid
+          items={channelAvailability}
+          values={channelsEnabled}
+          suffix="Available"
+          onChange={(key, checked) =>
+          setChannelsEnabled((prev) => ({
+            ...prev,
+            [key]: checked
+          }))
+          } />
       </Card>
 
       <Card
@@ -316,6 +350,39 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             </Stack>
           )}
         </Stack>
+      </Card>
+
+      <Card
+        variant="outlined"
+        sx={{
+          p: 2,
+          mt: 2.5
+        }}>
+        <Typography
+          variant="overline"
+          color="text.secondary"
+          sx={{
+            display: 'block',
+            mb: 1
+          }}>
+          Account
+        </Typography>
+        <Button
+          fullWidth
+          variant="outlined"
+          color="inherit"
+          startIcon={<LogoutIcon fontSize="small" />}
+          onClick={() => {
+            onClose();
+            void signOut({ callbackUrl: '/login' });
+          }}
+          sx={{
+            justifyContent: 'center',
+            minHeight: 42,
+            fontWeight: 800
+          }}>
+          Log out
+        </Button>
       </Card>
 
       <Box

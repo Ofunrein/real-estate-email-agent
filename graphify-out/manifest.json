@@ -1360,13 +1360,13 @@
     "semantic_hash": ""
   },
   "lumenosis-site/app/layout.tsx": {
-    "mtime": 1782021988.7579286,
-    "ast_hash": "c4f645681263b7c107fb0ec639864ae7",
+    "mtime": 1782038539.6974578,
+    "ast_hash": "4db1e0bb5594e1317f039bb2a69d406e",
     "semantic_hash": ""
   },
   "lumenosis-site/app/page.tsx": {
-    "mtime": 1781935130.9457707,
-    "ast_hash": "f9a503e25e583f543ab46aeff62aac1c",
+    "mtime": 1782038544.2967157,
+    "ast_hash": "cf90596794922dc2e2318a4b8e2fb1ca",
     "semantic_hash": ""
   },
   "lumenosis-site/biome.json": {
@@ -1425,8 +1425,8 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/rotating-text.tsx": {
-    "mtime": 1782019851.6619108,
-    "ast_hash": "8c9203ca28b44a325d61ef059d36ca47",
+    "mtime": 1782038307.3676903,
+    "ast_hash": "6f54377752531cbd283fffe1a7b7877a",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/aria-deep-dive.tsx": {
@@ -2115,8 +2115,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SettingsDrawer.tsx": {
-    "mtime": 1782036408.6409323,
-    "ast_hash": "292a01efd545d07853652ef9ad7b3690",
+    "mtime": 1782038482.4038637,
+    "ast_hash": "82bd167e7ea7d98b8302c5f1d9b87ad1",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
@@ -2457,6 +2457,16 @@
   "components/inbox-mui/hooks/useReplayKey.ts": {
     "mtime": 1782037457.632601,
     "ast_hash": "53efa453f1f686d5a7388ff585c66374",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/robots.ts": {
+    "mtime": 1782038404.759171,
+    "ast_hash": "a6adf238f123bcb7d538d99b1282e1c3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/app/sitemap.ts": {
+    "mtime": 1782038411.9380867,
+    "ast_hash": "009be1b6749b6f7e2d02d573f0fd57b7",
     "semantic_hash": ""
   }
 }
