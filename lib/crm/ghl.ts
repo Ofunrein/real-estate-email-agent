@@ -18,6 +18,9 @@ import type {
   CrmAppointmentUpdate,
   CrmContact,
   CrmContactInput,
+  CrmImportedLead,
+  CrmImportAdapter,
+  CrmLeadImportCursor,
   CrmActivity,
 } from "@/lib/crm/types";
 
@@ -100,6 +103,24 @@ function toContact(raw: Record<string, unknown>): CrmContact {
   };
 }
 
+function toImportedLead(raw: Record<string, unknown>): CrmImportedLead {
+  const contact = asObject(raw.contact || raw);
+  const firstName = contact.firstName ? String(contact.firstName) : undefined;
+  const lastName = contact.lastName ? String(contact.lastName) : undefined;
+  return {
+    ...toContact(contact),
+    sourceId: contact.id ? String(contact.id) : undefined,
+    firstName,
+    lastName,
+    fullName: contact.contactName ? String(contact.contactName) : contact.name ? String(contact.name) : [firstName, lastName].filter(Boolean).join(" ") || undefined,
+    stage: contact.pipelineStage ? String(contact.pipelineStage) : contact.status ? String(contact.status) : undefined,
+    owner: contact.assignedTo ? String(contact.assignedTo) : contact.owner ? String(contact.owner) : undefined,
+    notes: contact.lastNote ? String(contact.lastNote) : undefined,
+    updatedAt: contact.dateUpdated ? String(contact.dateUpdated) : contact.updatedAt ? String(contact.updatedAt) : undefined,
+    raw: contact,
+  };
+}
+
 function toAppointment(raw: Record<string, unknown>): CrmAppointment {
   const event = asObject(raw.event || raw.appointment || raw);
   return {
@@ -115,7 +136,7 @@ function toAppointment(raw: Record<string, unknown>): CrmAppointment {
   };
 }
 
-export function createGhlAdapter(config: GhlConfig, request: GhlRequest = realRequest(config)): CrmAdapter {
+export function createGhlAdapter(config: GhlConfig, request: GhlRequest = realRequest(config)): CrmAdapter & CrmImportAdapter {
   const locationId = config.locationId;
 
   async function findDuplicate(params: { number?: string; email?: string }): Promise<CrmContact | null> {
@@ -149,6 +170,28 @@ export function createGhlAdapter(config: GhlConfig, request: GhlRequest = realRe
         tags: input.tags && input.tags.length ? input.tags : [config.contactTag || "lumenosis-agent-os"],
       });
       return toContact(raw);
+    },
+
+    async listImportableLeads(input: CrmLeadImportCursor = {}) {
+      const raw = await request("/contacts/", "GET", undefined, {
+        locationId,
+        limit: String(input.limit || 100),
+        startAfterId: input.cursor,
+        updatedAfter: input.updatedAfter,
+        query: undefined,
+      });
+      const contacts = Array.isArray(raw.contacts) ? raw.contacts : Array.isArray(raw.items) ? raw.items : [];
+      const nextCursor = raw.nextPageUrl
+        ? String(raw.nextPageUrl)
+        : raw.startAfterId
+          ? String(raw.startAfterId)
+          : raw.nextCursor
+            ? String(raw.nextCursor)
+            : undefined;
+      return {
+        leads: contacts.map((contact) => toImportedLead(asObject(contact))),
+        nextCursor,
+      };
     },
 
     async listAppointments(contactId) {

@@ -67,6 +67,30 @@ export type CrmActivity = {
   type?: string; // note | call | message ...
 };
 
+export type CrmLeadImportCursor = {
+  limit?: number;
+  cursor?: string;
+  updatedAfter?: string;
+};
+
+export type CrmImportedLead = CrmContact & {
+  sourceId?: string;
+  stage?: string;
+  owner?: string;
+  notes?: string;
+  raw?: Record<string, unknown>;
+  updatedAt?: string;
+};
+
+export type CrmLeadImportPage = {
+  leads: CrmImportedLead[];
+  nextCursor?: string;
+};
+
+export interface CrmImportAdapter {
+  listImportableLeads(input?: CrmLeadImportCursor): Promise<CrmLeadImportPage>;
+}
+
 export interface CrmAdapter {
   readonly provider: string;
 
@@ -80,4 +104,8 @@ export interface CrmAdapter {
   cancelAppointment(appointmentId: string): Promise<void>;
 
   logActivity(activity: CrmActivity): Promise<void>;
+}
+
+export function hasCrmImport(adapter: CrmAdapter | null): adapter is CrmAdapter & CrmImportAdapter {
+  return Boolean(adapter && "listImportableLeads" in adapter && typeof (adapter as Partial<CrmImportAdapter>).listImportableLeads === "function");
 }

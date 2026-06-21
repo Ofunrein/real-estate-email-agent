@@ -159,6 +159,21 @@ Run the email agent:
 python3 -m channels.iris_email
 ```
 
+## Lead Import Pipeline
+
+The managed implementation layer can import old and active leads without triggering outreach automatically.
+
+`POST /api/leads/import` accepts:
+
+- `multipart/form-data` with a CSV `file`
+- JSON `{ "csvText": "..." }`
+- JSON `{ "rows": [...] }` from Google Sheets exports, Composio connector actions, or manual import tools
+- JSON `{ "pullCrm": true, "sourceType": "crm" }` for the configured CRM adapter when it supports import, currently GHL first
+
+Every source is normalized into the same `lead_memory` shape, deduped by email, phone, CRM source id, or normalized name, then segmented for review. Default segments include hot buyer, seller/valuation, showing-ready, nurture, financing, renter, needs human, missing contact info, do not contact, duplicate/merged, and closed/no reply.
+
+Fresh imports only produce batch summaries and campaign candidates. Reactivation sending must be enabled from a separate reviewed campaign step.
+
 The legacy `python3 agent.py` entry point still works. Disable Iris with `ENABLE_EMAIL_AGENT=false`.
 
 Run the local Python Agent Inbox debug viewer:

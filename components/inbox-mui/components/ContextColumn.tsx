@@ -56,13 +56,13 @@ export function ContextColumn({
       component="aside"
       aria-label="Context">
 
-      {/* Arya header */}
+      {/* Iris status + today */}
       <Card sx={{ p: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1.25}>
-          <Avatar src={agentAvatar} alt="Arya AI agent" sx={{ width: 34, height: 34 }} />
+          <Avatar src={agentAvatar} alt="Iris AI agent" sx={{ width: 34, height: 34 }} />
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
-              Arya
+              Iris
             </Typography>
             <Stack direction="row" alignItems="center" spacing={0.5}>
               <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
@@ -77,11 +77,8 @@ export function ContextColumn({
           label="AI avg response"
           value={metrics.avgResponseLabel}
           color="#0ea5e9" />
-      </Card>
-
-      {/* TODAY */}
-      <Card sx={{ p: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+        <Divider sx={{ my: 1.25 }} />
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.25 }}>
           <TrendingUpIcon sx={{ fontSize: 15, color: '#6366f1' }} aria-hidden />
           <Typography sx={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'text.secondary' }}>
             Today

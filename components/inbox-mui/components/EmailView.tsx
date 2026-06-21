@@ -273,7 +273,7 @@ function EmailBubble({
             <Stack direction="row" spacing={0.75} alignItems="center">
               <Avatar
                 src={isIris ? agentAvatar : undefined}
-                alt={isIris ? 'Arya, AI agent' : undefined}
+                alt={isIris ? 'Iris, AI agent' : undefined}
                 sx={{
                   width: 32,
                   height: 32,
