@@ -22,6 +22,99 @@ function truthy(value: unknown): boolean {
   return ["1", "true", "yes", "on"].includes(String(value ?? "").trim().toLowerCase());
 }
 
+function configured(value: string | undefined): boolean {
+  return Boolean(value && value.trim());
+}
+
+function connectorStatuses() {
+  const adapter = resolveCrmAdapter();
+  const activeCrmProvider = adapter?.provider || process.env.CRM_PROVIDER || "ghl";
+  const activeCrmSupportsImport = hasCrmImport(adapter);
+  const hasGhlCredentials = configured(process.env.GHL_PRIVATE_INTEGRATION_TOKEN || process.env.GHL_LOCATION_PIT)
+    && configured(process.env.GHL_LOCATION_ID);
+  const hasGoogleSheets = configured(process.env.GOOGLE_SHEET_ID);
+  const hasComposio = configured(process.env.COMPOSIO_API_KEY);
+
+  return [
+    {
+      id: "csv",
+      label: "CSV / export",
+      provider: "csv_export",
+      path: "fallback",
+      status: "ready",
+      detail: "Works today for any CRM export.",
+      action: "Choose CSV file",
+    },
+    {
+      id: "google_sheets",
+      label: "Google Sheets",
+      provider: "google_sheets",
+      path: "composio_or_direct",
+      status: hasGoogleSheets ? "configured" : "needs_config",
+      detail: hasGoogleSheets ? "Sheet source is configured." : "Needs GOOGLE_SHEET_ID before import.",
+      action: hasGoogleSheets ? "Preview sheet rows" : "Configure sheet",
+    },
+    {
+      id: "composio",
+      label: "Composio connectors",
+      provider: "composio",
+      path: "preferred",
+      status: hasComposio ? "configured" : "needs_config",
+      detail: hasComposio ? "Composio API key is present for supported apps." : "Needs COMPOSIO_API_KEY and connected accounts.",
+      action: hasComposio ? "Add connector path" : "Connect Composio",
+    },
+    {
+      id: "ghl",
+      label: "GoHighLevel",
+      provider: "ghl",
+      path: "direct_adapter",
+      status: activeCrmProvider === "ghl" && activeCrmSupportsImport ? "ready" : hasGhlCredentials ? "configured" : "needs_config",
+      detail: activeCrmProvider === "ghl" && activeCrmSupportsImport
+        ? "Active CRM adapter supports lead import."
+        : hasGhlCredentials
+          ? "Credentials exist; activate CRM_PROVIDER=ghl for this client."
+          : "Needs GHL token and location ID.",
+      action: activeCrmProvider === "ghl" && activeCrmSupportsImport ? "Preview CRM leads" : "Configure GHL",
+    },
+    {
+      id: "follow_up_boss",
+      label: "Follow Up Boss",
+      provider: "follow_up_boss",
+      path: "direct_adapter",
+      status: "planned",
+      detail: "Direct adapter needed for real estate contact/activity depth. CSV works now.",
+      action: "Use CSV fallback",
+    },
+    {
+      id: "lofty_chime",
+      label: "Lofty / Chime",
+      provider: "lofty",
+      path: "direct_adapter",
+      status: "planned",
+      detail: "Direct adapter planned. CSV export import works now.",
+      action: "Use CSV fallback",
+    },
+    {
+      id: "kvcore",
+      label: "kvCORE",
+      provider: "kvcore",
+      path: "direct_adapter",
+      status: "planned",
+      detail: "Direct adapter planned. CSV export import works now.",
+      action: "Use CSV fallback",
+    },
+    {
+      id: "other_crm",
+      label: "Sierra / Real Geeks / BoomTown / CINC",
+      provider: "real_estate_crm_export",
+      path: "csv_first",
+      status: "fallback",
+      detail: "CSV first, direct adapter after client demand proves depth is needed.",
+      action: "Import CSV",
+    },
+  ];
+}
+
 async function payloadFromRequest(request: NextRequest): Promise<{
   rows: Record<string, unknown>[];
   sourceType: LeadImportSourceType;
@@ -152,11 +245,17 @@ export async function GET(request: NextRequest) {
     const batchId = request.nextUrl.searchParams.get("batchId") || "";
     const limit = Number(request.nextUrl.searchParams.get("limit") || 20);
     const itemsLimit = Number(request.nextUrl.searchParams.get("itemsLimit") || 50);
-    const batches = await readLeadImportBatchesFromDatabase(limit);
-    const items = batchId ? await readLeadImportItemsFromDatabase(batchId, itemsLimit) : [];
-    return NextResponse.json({ ok: true, batches, items });
+    const connectors = connectorStatuses();
+    try {
+      const batches = await readLeadImportBatchesFromDatabase(limit);
+      const items = batchId ? await readLeadImportItemsFromDatabase(batchId, itemsLimit) : [];
+      return NextResponse.json({ ok: true, connectors, batches, items });
+    } catch (error) {
+      const batchesError = error instanceof Error ? error.message : "Unable to load import batches.";
+      return NextResponse.json({ ok: true, connectors, batches: [], items: [], batchesError });
+    }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load import batches.";
+    const message = error instanceof Error ? error.message : "Unable to load import status.";
     return NextResponse.json({ ok: false, error: message }, { status: 503 });
   }
 }
