@@ -63,16 +63,16 @@ function connectorStatuses() {
     },
     {
       id: "composio",
-      label: "Composio connectors",
+      label: "CRM connections",
       provider: "composio",
       path: "preferred",
       status: hasComposio && composioImport ? "ready" : hasComposio ? "configured" : "needs_config",
       detail: hasComposio && composioImport
         ? `Ready via ${composioImport.toolSlug}.`
         : hasComposio
-          ? "Composio API key is present. Add COMPOSIO_IMPORT_TOOL_SLUG for CRM lead pulls."
+          ? "Powered by Composio. Good targets: Follow Up Boss, HubSpot, Salesforce, Pipedrive, and Close. Add COMPOSIO_IMPORT_TOOL_SLUG for live lead pulls."
           : "Needs COMPOSIO_API_KEY and connected accounts.",
-      action: hasComposio && composioImport ? "Preview Composio leads" : "Configure import tool",
+      action: hasComposio && composioImport ? "Preview CRM leads" : "Configure CRM import",
     },
     {
       id: "ghl",
