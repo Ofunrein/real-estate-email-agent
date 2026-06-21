@@ -18,6 +18,8 @@ export interface ConversationListItem {
   preview: string;
   meta: string;
   needsReview?: boolean;
+  categoryLabel?: string;
+  categoryColor?: string;
 }
 interface ConversationListProps {
   items: ConversationListItem[];
@@ -179,6 +181,20 @@ export function ConversationList({
                 <Typography variant="caption" color="text.secondary">
                   {it.meta}
                 </Typography>
+                {it.categoryLabel &&
+                <Chip
+                  size="small"
+                  label={it.categoryLabel}
+                  sx={{
+                    height: 17,
+                    fontSize: 10,
+                    color: it.categoryColor || 'text.primary',
+                    bgcolor: it.categoryColor ? `${it.categoryColor}22` : 'action.hover',
+                    border: '1px solid',
+                    borderColor: it.categoryColor || 'divider',
+                    '& .MuiChip-label': { px: 0.6 }
+                  }} />
+                }
                 {it.needsReview &&
                 <Chip
                   size="small"

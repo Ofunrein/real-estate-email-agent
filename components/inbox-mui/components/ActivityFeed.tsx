@@ -20,6 +20,7 @@ import {
 import { useInboxModel } from '../InboxDataContext';
 interface ActivityFeedProps {
   channel: ChannelId;
+  onOpenEvent?: (event: ActivityEvent) => void;
 }
 
 function activityPreviewBody(event: ActivityEvent) {
@@ -32,7 +33,7 @@ function activityPreviewBody(event: ActivityEvent) {
   return event.body;
 }
 
-export function ActivityFeed({ channel }: ActivityFeedProps) {
+export function ActivityFeed({ channel, onOpenEvent }: ActivityFeedProps) {
   const { activityEvents, channelMeta } = useInboxModel();
   const events =
   channel === 'all' ?
@@ -84,14 +85,14 @@ export function ActivityFeed({ channel }: ActivityFeedProps) {
         
         <Stack spacing={0}>
           {events.map((e, index) =>
-          <EventRow key={e.id} event={e} isLast={index === events.length - 1} />
+	          <EventRow key={e.id} event={e} isLast={index === events.length - 1} onOpen={onOpenEvent} />
           )}
         </Stack>
       </Box>
     </Card>);
 
 }
-function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
+function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boolean;onOpen?: (event: ActivityEvent) => void;}) {
   const { channelMeta } = useInboxModel();
   const meta = channelMeta[event.channel];
   const Icon = meta?.icon;
@@ -101,7 +102,16 @@ function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
   const body = activityPreviewBody(event);
   return (
     <Box
+      component={onOpen ? 'button' : 'div'}
+      type={onOpen ? 'button' : undefined}
+      onClick={() => onOpen?.(event)}
       sx={{
+        width: '100%',
+        textAlign: 'left',
+        border: 0,
+        bgcolor: 'transparent',
+        color: 'inherit',
+        font: 'inherit',
         display: 'flex',
         gap: 1.5,
         p: 1.25,
@@ -109,8 +119,14 @@ function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
         borderColor: 'divider',
         borderRadius: 0,
         transition: 'background-color .15s',
+        cursor: onOpen ? 'pointer' : 'default',
         '&:hover': {
           bgcolor: 'action.hover'
+        },
+        '&:focus-visible': {
+          outline: '2px solid',
+          outlineColor: 'primary.main',
+          outlineOffset: -2
         }
       }}>
       

@@ -72,6 +72,7 @@ export type GmailReplyInput = {
   to: string;
   subject?: string;
   body: string;
+  htmlBody?: string;
   threadId?: string;
   messageId?: string;
   references?: string;
@@ -345,7 +346,22 @@ export async function sendGmailReplyWithOptions(
   ];
 
   let raw: string;
-  if (!input.attachments?.length) {
+  if (!input.attachments?.length && input.htmlBody) {
+    raw = Buffer.from([
+      ...baseHeaders,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      "Content-Type: text/plain; charset=utf-8",
+      "",
+      input.body,
+      `--${boundary}`,
+      "Content-Type: text/html; charset=utf-8",
+      "",
+      input.htmlBody,
+      `--${boundary}--`,
+    ].join("\r\n")).toString("base64url");
+  } else if (!input.attachments?.length) {
     raw = Buffer.from([
       ...baseHeaders,
       "Content-Type: text/plain; charset=utf-8",
@@ -413,4 +429,16 @@ export async function sendGmailReplyWithOptions(
       fallbackReason: "Gmail thread was not found in the active sending mailbox, so Iris sent a fresh email.",
     };
   }
+}
+
+export async function ensureGmailLabel(gmail: GmailClient, name: string): Promise<string> {
+  const labels = await gmail.users.labels.list({ userId: "me" });
+  const existing = labels.data.labels?.find((label) => label.name === name);
+  if (existing?.id) return existing.id;
+  const created = await gmail.users.labels.create({
+    userId: "me",
+    requestBody: { name, labelListVisibility: "labelShow", messageListVisibility: "show" },
+  });
+  if (!created.data.id) throw new Error(`Unable to create Gmail label ${name}`);
+  return created.data.id;
 }
