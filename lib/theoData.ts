@@ -1,5 +1,6 @@
 import type { SheetRow } from "@/lib/sheetSchema";
 import { CENTRAL_TEXAS_SEARCH_AREAS } from "@/lib/serviceAreas";
+import { fetchPublicPropertyContext } from "@/lib/publicPropertyData";
 import { elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type TheoEnrichedData = {
@@ -338,34 +339,6 @@ function timeoutFallbackData(input: {
   };
 }
 
-async function fetchRentCast(address: string): Promise<{ property: Partial<SheetRow>; context: string }> {
-  const key = process.env.RENTCAST_API_KEY || "";
-  if (!key || !address) return { property: {}, context: "" };
-  const params = new URLSearchParams({ address, limit: "1" });
-  const data = await getJson(`https://api.rentcast.io/v1/properties?${params.toString()}`, {
-    headers: { "X-Api-Key": key },
-  }, 9000);
-  const item = Array.isArray(data) ? data[0] as Record<string, unknown> | undefined : undefined;
-  if (!item) return { property: {}, context: "" };
-  const property = {
-    address: String(item.addressLine1 || address),
-    city: String(item.city || ""),
-    state: String(item.state || ""),
-    zip: String(item.zipCode || ""),
-    price: String(item.price || ""),
-    beds: String(item.bedrooms || ""),
-    baths: String(item.bathrooms || ""),
-    sqft: String(item.squareFootage || item.livingArea || ""),
-    year_built: String(item.yearBuilt || ""),
-    photo_url: String(item.photoUrl || ""),
-    status: String(item.status || ""),
-  };
-  return {
-    property,
-    context: `RentCast property enrichment found: ${Object.entries(property).filter(([, value]) => truthy(value)).map(([key, value]) => `${key}=${value}`).join(", ")}`,
-  };
-}
-
 function apifyToken(): string {
   return process.env.APIFY_TOKEN || "";
 }
@@ -437,48 +410,6 @@ async function fetchApifyZillow(address: string): Promise<{ property: Partial<Sh
   };
 }
 
-async function fetchMortgageRates(): Promise<string> {
-  const key = process.env.FRED_API_KEY || "abcdefghijklmnopqrstuvwxyz012345";
-  const series = [
-    ["30yr fixed", "MORTGAGE30US"],
-    ["15yr fixed", "MORTGAGE15US"],
-  ];
-  const rates = await Promise.all(series.map(async ([label, seriesId]) => {
-    const params = new URLSearchParams({
-      series_id: seriesId,
-      api_key: key,
-      file_type: "json",
-      limit: "1",
-      sort_order: "desc",
-    });
-    const data = await getJson(`https://api.stlouisfed.org/fred/series/observations?${params.toString()}`, {}, 6000) as Record<string, unknown> | null;
-    const observations = Array.isArray(data?.observations) ? data.observations as Record<string, unknown>[] : [];
-    const value = observations[0]?.value;
-    return value ? `${label} ${value}%` : "";
-  }));
-  const cleanRates = rates.filter(Boolean);
-  return cleanRates.length ? `Current mortgage rate context from FRED: ${cleanRates.join(", ")}.` : "";
-}
-
-async function fetchCensusZip(zip?: string): Promise<string> {
-  const key = process.env.CENSUS_API_KEY || "";
-  if (!key || !zip) return "";
-  const params = new URLSearchParams({
-    get: "B19013_001E,B01003_001E",
-    for: `zip code tabulation area:${zip}`,
-    key,
-  });
-  const data = await getJson(`https://api.census.gov/data/2022/acs/acs5?${params.toString()}`, {}, 6000);
-  if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) return "";
-  const [income, population] = data[1] as string[];
-  const incomeText = income && income !== "-666666666" ? `$${Number(income).toLocaleString("en-US")}` : "";
-  const populationText = population ? Number(population).toLocaleString("en-US") : "";
-  return [incomeText ? `median_income=${incomeText}` : "", populationText ? `population=${populationText}` : ""]
-    .filter(Boolean)
-    .join(", ")
-    .replace(/^/, `Census ZIP ${zip} context: `);
-}
-
 async function fetchSoldComps(property: SheetRow, message: string): Promise<string> {
   const actorId = process.env.APIFY_SOLD_COMPS_ACTOR_ID || "";
   const maxResults = Math.max(0, Math.min(2, Number(process.env.SOLD_COMPS_MAX_RESULTS || "2")));
@@ -532,17 +463,13 @@ async function runTheoDataEnrichment(input: {
   const emptyEnrichment = { property: {}, context: "" };
 
   if (address && !cachedPhotoReady && (!properties.length || needsPropertyEnrichment(first))) {
-    const [apify, rentcast] = await Promise.allSettled([
+    const [apify] = await Promise.allSettled([
       measuredDataCall("apify_zillow_lookup", "apify", () => fetchApifyZillow(address), 0.003),
-      measuredDataCall("rentcast_property_lookup", "rentcast", () => fetchRentCast(address)),
     ]);
     const apifyValue = apify.status === "fulfilled" ? apify.value.value : emptyEnrichment;
-    const rentcastValue = rentcast.status === "fulfilled" ? rentcast.value.value : emptyEnrichment;
     const apifyData = typeof apifyValue === "object" && apifyValue && "property" in apifyValue ? apifyValue : emptyEnrichment;
-    const rentcastData = typeof rentcastValue === "object" && rentcastValue && "property" in rentcastValue ? rentcastValue : emptyEnrichment;
     if (apify.status === "fulfilled") metrics.push(apify.value.metric);
-    if (rentcast.status === "fulfilled") metrics.push(rentcast.value.metric);
-    const merged = mergeProperty(mergeProperty(first, rentcastData.property), apifyData.property);
+    const merged = mergeProperty(first, apifyData.property);
     const streetViewData = !truthy(merged.photo_url) ? googleStreetViewProperty(address) : emptyEnrichment;
     const mergedWithFallback = mergeProperty(merged, streetViewData.property);
     if (Object.keys(mergedWithFallback).length) {
@@ -550,7 +477,6 @@ async function runTheoDataEnrichment(input: {
       else properties.push(mergedWithFallback);
     }
     if (apifyData.context) context.push(apifyData.context);
-    if (rentcastData.context) context.push(rentcastData.context);
     if (streetViewData.context) context.push(streetViewData.context);
   }
 
@@ -566,16 +492,19 @@ async function runTheoDataEnrichment(input: {
     };
   }
 
-  const [rates, census, comps] = await Promise.allSettled([
-    measuredDataCall("fred_mortgage_rates", "fred", () => fetchMortgageRates()),
-    measuredDataCall("census_zip_stats", "census", () => fetchCensusZip(enrichedFirst.zip)),
+  const [publicContext, comps] = await Promise.allSettled([
+    fetchPublicPropertyContext(enrichedFirst),
     measuredDataCall("apify_sold_comps", "apify", () => fetchSoldComps(enrichedFirst, input.message), 0.003),
   ]);
-  for (const result of [rates, census, comps]) {
-    if (result.status === "fulfilled") {
-      metrics.push(result.value.metric);
-      if (result.value.value) context.push(result.value.value);
+  if (publicContext.status === "fulfilled") {
+    for (const metric of publicContext.value.metrics) {
+      metrics.push({ ...metric, costUsd: 0 });
     }
+    if (publicContext.value.context) context.push(publicContext.value.context);
+  }
+  if (comps.status === "fulfilled") {
+    metrics.push(comps.value.metric);
+    if (comps.value.value) context.push(comps.value.value);
   }
 
   const costUsd = metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
