@@ -50,9 +50,11 @@ import {
 
 const DAYS = 14;
 const RECENT_ACTIVITY_LIMIT = 30;
+const ACTIVITY_BODY_LIMIT = 180;
 const HTML_TAG_RE = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li|strong|em)\b/i;
 const MEDIA_URL_RE = /(https?:\/\/[^\s<>"')]+|\/api\/media\/proxy\?url=[^\s<>"')]+)/gi;
 const MEDIA_LABEL_RE = /^\s*(?:MMS|SMS)?\s*(?:image|photo|media|attachment|Social DM image)\s*:\s*(.+?)\s*$/i;
+const SYSTEM_PROMPT_RE = /\b(you are\s+(?:iris|arya|a real estate)|brand voice|assistant\s+(?:for|to)\s+(?:austin|the)|tool(?:s|ing)?|system prompt|developer instruction|never reveal|do not reveal|call script)\b/i;
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -146,6 +148,26 @@ function emailSubject(event: SheetRow): string | undefined {
 function emailBodyPreview(event: SheetRow): string {
   const text = eventText(event) || event.summary || "";
   return looksLikeHtml(text) ? stripHtml(text) : text;
+}
+
+function compactActivityText(value = "", limit = ACTIVITY_BODY_LIMIT): string {
+  const compact = stripHtml(value)
+    .replace(/\s+/g, " ")
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, "")
+    .trim();
+  if (!compact) return "";
+  if (compact.length <= limit) return compact;
+  const slice = compact.slice(0, limit + 1);
+  const sentenceEnd = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("? "), slice.lastIndexOf("! "));
+  const wordEnd = slice.lastIndexOf(" ");
+  const end = sentenceEnd > 80 ? sentenceEnd + 1 : wordEnd > 80 ? wordEnd : limit;
+  return `${slice.slice(0, end).trim()}...`;
+}
+
+function usableActivityText(primary = "", fallback = "", limit = ACTIVITY_BODY_LIMIT): string {
+  const isSystemPrompt = SYSTEM_PROMPT_RE.test(primary);
+  const preferred = isSystemPrompt ? fallback : primary;
+  return compactActivityText(preferred || fallback || (isSystemPrompt ? "Activity recorded." : primary), limit);
 }
 
 function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string }> } {
@@ -370,6 +392,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
         speaker: t.direction === "outbound" ? "Iris" : "Lead",
         text: t.text,
       }));
+      const firstLeadTurn = turns.find((turn) => turn.speaker === "Lead");
       allTurns.push(...turns);
       return {
         id: call.call_id || `${key}-${i}`,
@@ -377,7 +400,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
         duration: formatCallDuration(callDurationSeconds(call)),
         outcome: callOutcome(call),
         turns,
-        report: call.summary || "",
+        report: usableActivityText(call.summary || "", firstLeadTurn?.text || "Voice call recorded.", 320),
         recordingUrl: call.recording_url || undefined,
       };
     });
@@ -386,7 +409,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
       contact,
       phone: latest.phone || calls.find((c) => c.phone)?.phone || undefined,
       time: formatEventTimeShort(latest.ended_at || latest.started_at || latest.event_at || latest.created_at),
-      summary: latest.summary || (allTurns[0]?.text ?? ""),
+      summary: usableActivityText(latest.summary || "", allTurns.find((turn) => turn.speaker === "Lead")?.text || allTurns[0]?.text || "Voice call recorded."),
       callCount: calls.length,
       tag: callOutcome(latest),
       calls: callsOut,
@@ -442,6 +465,8 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
       const isAi = event.direction !== "inbound";
       const kind: ActivityEvent["kind"] = view === "voice" ? "voice" : isAi ? "ai_reply" : "inbound";
       const status: ActivityEvent["status"] = eventNeedsHuman(event) ? "Review" : isAi ? "Sent" : "New";
+      const body = eventText(event) || event.summary || "";
+      const fallback = view === "voice" ? "Voice call recorded." : "";
       return {
         sortValue: eventTimeValue(event),
         event: {
@@ -450,7 +475,7 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
           kind,
           actor: event.email || event.phone || event.full_name || "unknown",
           intent: event.event_type || undefined,
-          body: eventText(event) || event.summary || "",
+          body: usableActivityText(body, fallback),
           time: formatEventTimeShort(event.event_at),
           status,
           isHuman: !isAi,
@@ -463,7 +488,7 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
     const outcome = callOutcome(call);
     const transcript = parseVoiceTranscript(voiceCallTranscriptSource(call));
     const firstLeadTurn = transcript.find((turn) => turn.direction === "inbound");
-    const body = call.summary || firstLeadTurn?.text || "Voice call recorded.";
+    const body = usableActivityText(call.summary || "", firstLeadTurn?.text || "Voice call recorded.");
     const time = call.ended_at || call.started_at || call.event_at || call.created_at;
     return {
       sortValue: voiceCallTimeValue(call),

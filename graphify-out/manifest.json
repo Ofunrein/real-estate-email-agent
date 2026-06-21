@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "app/layout.tsx": {
-    "mtime": 1781404375.9725935,
-    "ast_hash": "1dfae7195acdad09e5d51d2f2624bb70",
+    "mtime": 1782040673.3625135,
+    "ast_hash": "babfdebaacb6fe77bfa887cf2afdff07",
     "semantic_hash": ""
   },
   "app/page.tsx": {
@@ -1320,8 +1320,8 @@
     "semantic_hash": ""
   },
   "app/login/page.tsx": {
-    "mtime": 1782035213.7761474,
-    "ast_hash": "19dc844276043295bee5d4ee473e165f",
+    "mtime": 1782040701.5542216,
+    "ast_hash": "e89d9ac784e813d484bc2df023f2c0ae",
     "semantic_hash": ""
   },
   "auth.ts": {
@@ -1425,88 +1425,88 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/rotating-text.tsx": {
-    "mtime": 1782038307.3676903,
-    "ast_hash": "6f54377752531cbd283fffe1a7b7877a",
+    "mtime": 1782041063.232312,
+    "ast_hash": "5cf616770da935dad7a93ebb4d31d486",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/aria-deep-dive.tsx": {
-    "mtime": 1782022117.1139247,
-    "ast_hash": "9691d4aec2b7c1f6ed658b3823bfcd28",
+    "mtime": 1782041052.4454093,
+    "ast_hash": "d22ad1c5300c189504ec2892a7a7f16e",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/calendar-cta.tsx": {
-    "mtime": 1782021549.1006398,
-    "ast_hash": "e8045e7760a85471cd3f169919fdf3a2",
+    "mtime": 1782041052.4461854,
+    "ast_hash": "3556f64e3c792fd44c98ddded2544963",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/case-study-wall.tsx": {
-    "mtime": 1782022072.7051995,
-    "ast_hash": "0e7585254eb0529d4fa8b28a585bafbe",
+    "mtime": 1782041052.447011,
+    "ast_hash": "362461df3c01e30830163012dca9b836",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/faq.tsx": {
-    "mtime": 1782016621.772262,
-    "ast_hash": "f0d9508f1e69d6c1df9032190aa54da4",
+    "mtime": 1782041052.4478188,
+    "ast_hash": "19039996c06881e6bf86e58e4db24ce6",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/final-cta.tsx": {
-    "mtime": 1782021558.1871247,
-    "ast_hash": "ae4b42f831f24a5277451f34b280eb52",
+    "mtime": 1782041052.4483478,
+    "ast_hash": "1961db7517f215aa1df008717cb08267",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/footer.tsx": {
-    "mtime": 1782017971.8430173,
-    "ast_hash": "7719ca3457a8e9bb544aa0d23a0c28bc",
+    "mtime": 1782041052.4489326,
+    "ast_hash": "6472b3c2bd6d03d1fc68ae8f5b61a961",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/founder-vsl.tsx": {
-    "mtime": 1782021589.411872,
-    "ast_hash": "1e20443984c7bac70cf910ff19c9c9be",
+    "mtime": 1782041052.4497,
+    "ast_hash": "248053cbd1427bce8424d6449a7312f5",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/hero.tsx": {
-    "mtime": 1782021988.756951,
-    "ast_hash": "31756abcb3ec539dc9de065db3c0aff2",
+    "mtime": 1782041277.0797808,
+    "ast_hash": "e6efbdf6fc82f6cacc64bce62b1065f5",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/meet-the-team.tsx": {
-    "mtime": 1782021988.7592669,
-    "ast_hash": "61d8ddcf6a5887ecfd2b0e8988d5734e",
+    "mtime": 1782041052.4514556,
+    "ast_hash": "6972d6da4c930afcdb4bad06f8e3351f",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/problem-agitation.tsx": {
-    "mtime": 1782021988.7584171,
-    "ast_hash": "8197062821086d3d145e91fa308b0575",
+    "mtime": 1782041052.4522219,
+    "ast_hash": "58362ebeda8b1931ef8ac04fcb941165",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/pull-quote.tsx": {
-    "mtime": 1782021988.7602208,
-    "ast_hash": "4fd73d86727b37be87b62440bf6151bb",
+    "mtime": 1782041052.4528522,
+    "ast_hash": "7f0c2cfd4a25a4b603dc0023d90b1cfc",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/sticky-cta-bar.tsx": {
-    "mtime": 1782021564.8284478,
+    "mtime": 1782041052.4534533,
     "ast_hash": "bba797e79013fb15b8cf8fb50c17b25c",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/timeline-30day.tsx": {
-    "mtime": 1782019657.8476126,
-    "ast_hash": "816a02b1ed9ed225c12691db550a8331",
+    "mtime": 1782041052.4541037,
+    "ast_hash": "f2f8679950e49dae19e4db949a8cb126",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/topbar.tsx": {
-    "mtime": 1782017926.789875,
-    "ast_hash": "c89aee029df32147618b62b6d71f5a4b",
+    "mtime": 1782041052.4547348,
+    "ast_hash": "1182e0c28b01965cd1567d9900d3fbec",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/trust-strip.tsx": {
-    "mtime": 1782021574.7388916,
+    "mtime": 1782041052.4554038,
     "ast_hash": "4598e0e89ded98413246e04e556db368",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/two-ways-in.tsx": {
-    "mtime": 1782022137.9236357,
-    "ast_hash": "ca9f6a26dd96b80320e9cc63dc2871a6",
+    "mtime": 1782041052.455992,
+    "ast_hash": "85b3f986cf9a10357e686702587dea5c",
     "semantic_hash": ""
   },
   "lumenosis-site/components/spotlight-button.tsx": {
@@ -1680,13 +1680,13 @@
     "semantic_hash": ""
   },
   "lumenosis-site/app/privacy/page.mdx": {
-    "mtime": 1782022189.5523472,
-    "ast_hash": "83c3dae52f1e287b7c6752c141c45a13",
+    "mtime": 1782041052.456722,
+    "ast_hash": "e9667d811befa67e3332966861842731",
     "semantic_hash": ""
   },
   "lumenosis-site/app/terms/page.mdx": {
-    "mtime": 1782017997.361366,
-    "ast_hash": "b6b49d7131acb91400b7be20fe532592",
+    "mtime": 1782041052.4574172,
+    "ast_hash": "3c95235bcfb53b3fd43dbc8bb0958584",
     "semantic_hash": ""
   },
   "lumenosis-site/docs/brand-kit.md": {
@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782037516.1116188,
-    "ast_hash": "33eec47faec0de71ce894d4fd4572344",
+    "mtime": 1782041101.5149925,
+    "ast_hash": "a1931db2d9d6231598bf54ec70369d95",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
@@ -2040,8 +2040,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityFeed.tsx": {
-    "mtime": 1782036036.4517884,
-    "ast_hash": "e3efec132f182e02e82b7b5e99b8b0c4",
+    "mtime": 1782041643.760736,
+    "ast_hash": "d1b051b75043442d04834e8a78e674fb",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/CategoryFilter.tsx": {
@@ -2065,8 +2065,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
-    "mtime": 1782024452.1194618,
-    "ast_hash": "3661088440af56a75109351a8f2aa1c0",
+    "mtime": 1782040573.0925143,
+    "ast_hash": "e3bf63f360beecef2a075153f9bd9a20",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmptyChannelView.tsx": {
@@ -2115,13 +2115,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SettingsDrawer.tsx": {
-    "mtime": 1782038482.4038637,
-    "ast_hash": "82bd167e7ea7d98b8302c5f1d9b87ad1",
+    "mtime": 1782040639.0286438,
+    "ast_hash": "a87ecfcd7136f695da59cab56dda3e72",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782036603.9117184,
-    "ast_hash": "fd404acd8c8f128f6dbeec29db3645d6",
+    "mtime": 1782040577.0550995,
+    "ast_hash": "a95363eb58359c1952a2ec72573fb823",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2135,8 +2135,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/VoiceView.tsx": {
-    "mtime": 1782032962.5986488,
-    "ast_hash": "059fc8ee99840867beb9f8ce8fa4dd4b",
+    "mtime": 1782040564.7321687,
+    "ast_hash": "03ca396e86195a74deec1cf4f5b1ea32",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/WorkspaceHeader.tsx": {
@@ -2155,8 +2155,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/ColorModeContext.tsx": {
-    "mtime": 1781994230.1199958,
-    "ast_hash": "c17c48757ccfe619f2a8d54088c20722",
+    "mtime": 1782040682.105349,
+    "ast_hash": "f0dcbceadf82e6dac40a66aa2dcd4086",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/theme.ts": {
@@ -2340,13 +2340,13 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782037436.2455716,
-    "ast_hash": "acdbfc18dbac31112b8e32ef5f610453",
+    "mtime": 1782041426.5497644,
+    "ast_hash": "bfdfaaa118521a76d8308fec14f4883e",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
-    "mtime": 1782032962.5947297,
-    "ast_hash": "e0528fd7e7715778440842023e072928",
+    "mtime": 1782041572.984089,
+    "ast_hash": "b1baad0cafd3aca8435764732248ac56",
     "semantic_hash": ""
   },
   "lumenosis-site/components/theme-provider.tsx": {
@@ -2355,7 +2355,7 @@
     "semantic_hash": ""
   },
   "lumenosis-site/next-env.d.ts": {
-    "mtime": 1782018073.926222,
+    "mtime": 1782041751.360125,
     "ast_hash": "2a74d3909800ca5467fa83b0ab4a4890",
     "semantic_hash": ""
   },
@@ -2467,6 +2467,11 @@
   "lumenosis-site/app/sitemap.ts": {
     "mtime": 1782038411.9380867,
     "ast_hash": "009be1b6749b6f7e2d02d573f0fd57b7",
+    "semantic_hash": ""
+  },
+  "components/inbox-mui/hooks/usePersistedSelection.ts": {
+    "mtime": 1782041095.1242707,
+    "ast_hash": "943d639ea268ecb92e9bccc2e95c608c",
     "semantic_hash": ""
   }
 }

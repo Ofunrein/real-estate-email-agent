@@ -129,11 +129,17 @@ function stripEmailMetadata(text: string): string {
 
 export function eventText(event: SheetRow): string {
   const isInboundEmail = event.direction === "inbound" && (event.channel || "").toLowerCase() === "email";
+  const isVoice = (event.channel || "").toLowerCase() === "voice";
   const text = isInboundEmail
     ? (event.message_text || "")
     : (event.message_text || event.summary || event.ai_action || "");
   const raw = event.direction === "inbound" ? text : normalizeLegacyAgentText(text);
   if (isInboundEmail) return stripEmailMetadata(raw);
+  if (isVoice && /\b(you are\s+(?:iris|arya|a real estate)|brand voice|system prompt|developer instruction|never reveal|do not reveal|call script)\b/i.test(raw)) {
+    return event.summary && !/\b(you are\s+(?:iris|arya|a real estate)|brand voice|system prompt|developer instruction)\b/i.test(event.summary)
+      ? event.summary
+      : "Voice call recorded.";
+  }
   return raw;
 }
 

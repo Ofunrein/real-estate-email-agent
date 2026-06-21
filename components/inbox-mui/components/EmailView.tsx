@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
@@ -14,10 +14,19 @@ import {
   type LeadCategoryId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { usePersistedSelection } from '../hooks/usePersistedSelection';
+
 export function EmailView() {
   const { emailThreads, leadCategories } = useInboxModel();
-  const [selectedId, setSelectedId] = useState(emailThreads[0]?.id ?? '');
-  const [category, setCategory] = useState<CategoryFilterValue>('all');
+  const categoryValues = useMemo(
+    () => ['all', ...leadCategories.map((c) => c.id)] as CategoryFilterValue[],
+    [leadCategories]
+  );
+  const [category, setCategory] = usePersistedSelection<CategoryFilterValue>(
+    'iris.inbox.email.category',
+    'all',
+    categoryValues
+  );
   const counts = useMemo(() => {
     const base = Object.fromEntries(
       leadCategories.map((c) => [c.id, 0])
@@ -26,18 +35,26 @@ export function EmailView() {
       base[t.category] += 1;
     });
     return base;
-  }, []);
+  }, [emailThreads, leadCategories]);
   const visibleThreads = useMemo(
     () =>
     category === 'all' ?
     emailThreads :
     emailThreads.filter((t) => t.category === category),
-    [category]
+    [category, emailThreads]
+  );
+  const visibleThreadIds = useMemo(
+    () => visibleThreads.map((t) => t.id),
+    [visibleThreads]
+  );
+  const [selectedId, setSelectedId] = usePersistedSelection(
+    'iris.inbox.email.thread',
+    visibleThreadIds[0] ?? '',
+    visibleThreadIds
   );
   const thread =
   visibleThreads.find((t) => t.id === selectedId) ??
-  visibleThreads[0] ??
-  emailThreads[0];
+  visibleThreads[0];
   return (
     <Box
       sx={{

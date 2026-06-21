@@ -37,26 +37,25 @@ export default async function LoginPage({
 
   return (
     <main className="login-shell">
-      <section className="login-panel login-panel-wide" aria-labelledby="login-title">
-        <div className="login-brand-card">
-          <span className="login-eyebrow">Lumenosis AI</span>
-          <h1 id="login-title">Iris command center</h1>
-          <p>
-            Unified operator access for live email, SMS, voice, and lead memory.
-            Approved workspace users can sign in with Google or a dashboard password.
-          </p>
-          <div className="login-signal-grid" aria-label="Workspace signals">
-            <span>Live inbox</span>
-            <span>Lead memory</span>
-            <span>Voice events</span>
+      <section className="login-panel login-panel-auth" aria-labelledby="login-title">
+        <div className="login-form-card login-auth-card">
+          <div className="login-orbit" aria-hidden="true">
+            <span className="login-ripple login-ripple-one" />
+            <span className="login-ripple login-ripple-two" />
+            <span className="login-orbit-ring login-orbit-ring-one">
+              <span />
+            </span>
+            <span className="login-orbit-ring login-orbit-ring-two">
+              <span />
+            </span>
+            <div className="login-iris-mark">Iris</div>
           </div>
-        </div>
-
-        <div className="login-form-card">
           <div>
-            <span className="login-eyebrow">Authorized access</span>
-            <h2>Sign in</h2>
-            <p>Only allowlisted emails can enter this workspace.</p>
+            <span className="login-eyebrow login-box-reveal">Lumenosis AI</span>
+            <h1 id="login-title" className="login-box-reveal login-box-reveal-delay">Iris command center</h1>
+            <p className="login-box-reveal login-box-reveal-late">
+              Authorized operators can sign in with Google or email password.
+            </p>
           </div>
 
           {error ? (
