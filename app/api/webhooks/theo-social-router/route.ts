@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
+import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import {
   buildSocialRouterResult,
   formatManyChatDynamicBlock,
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
 
     const inboundInput = socialDmIngestInput(input, guard);
     const result = await recordChannelInteraction(inboundInput);
+    const settings = await readInboxSettingsFromDatabase();
 
     if (!guard.allowed) {
       return routerResponse(request, buildSocialRouterResult({
@@ -211,6 +213,21 @@ export async function POST(request: NextRequest) {
     }
 
     const socialChannel = input.channel as SocialDmChannel;
+    if (!channelEnabled(settings, socialChannel)) {
+      return routerResponse(request, {
+        ok: true,
+        channel: socialChannel,
+        thread_ref: result.event.thread_ref,
+        should_send: false,
+        needs_human: false,
+        status: "skipped",
+        intent: guard.intent,
+        reply: "",
+        media_urls: [],
+        media_count: 0,
+        reason: `${socialChannel} channel disabled in inbox settings`,
+      });
+    }
     if (await isTakeoverActive(result.event.thread_ref)) {
       const takeoverGuard = { allowed: false, needsHuman: true, reason: "Human takeover active", intent: guard.intent };
       return routerResponse(request, buildSocialRouterResult({
@@ -253,6 +270,13 @@ export async function POST(request: NextRequest) {
       reply,
       reason: reply.handoffReason,
     });
+    if (routeResult.should_send && !shouldAutoSendForChannel(settings, socialChannel)) {
+      routeResult.should_send = false;
+      routeResult.status = "review_ready";
+      routeResult.reason = `${socialChannel} auto-send disabled in inbox settings`;
+      routeResult.media_urls = [];
+      routeResult.media_count = 0;
+    }
 
     let handoffAlertSent = false;
     let handoffAlertError = "";

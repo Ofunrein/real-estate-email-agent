@@ -152,6 +152,18 @@ function SmsBubble({
 
 }: {message: SmsMessage;contact: string;}) {
   const isIris = message.direction === 'iris';
+  const cleanHtml =
+    message.html && typeof window !== 'undefined'
+      ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const DOMPurify = require('dompurify');
+          return DOMPurify.sanitize(message.html, {
+            USE_PROFILES: { html: true },
+            FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+          });
+        })()
+      : message.html;
   return (
     <Box
       sx={{
@@ -206,6 +218,7 @@ function SmsBubble({
             {message.time}
           </Typography>
         </Stack>
+        {(message.body || cleanHtml) &&
         <Box
           sx={{
             py: 1,
@@ -219,17 +232,118 @@ function SmsBubble({
             borderColor: 'divider'
           }}>
 
+          {cleanHtml ?
+          <Box
+            sx={{
+              fontSize: '0.875rem',
+              lineHeight: 1.5,
+              color: isIris ? '#fff' : 'text.secondary',
+              wordBreak: 'break-word',
+              '& a': { color: isIris ? '#fff' : 'primary.main' },
+              '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
+              '& p': { m: 0, mb: 0.75 }
+            }}
+            dangerouslySetInnerHTML={{ __html: cleanHtml }} /> :
           <Typography
             variant="body2"
             sx={{
               lineHeight: 1.5,
+              whiteSpace: 'pre-wrap',
               wordBreak: 'break-word'
             }}>
 
             {message.body}
           </Typography>
+          }
         </Box>
+        }
+        {!!message.media?.length &&
+        <SmsMediaGallery
+          media={message.media}
+          isIris={isIris}
+          hasText={Boolean(message.body || cleanHtml)} />
+        }
       </Box>
     </Box>);
 
+}
+
+function SmsMediaGallery({
+  media,
+  isIris,
+  hasText
+}: {
+  media: NonNullable<SmsMessage['media']>;
+  isIris: boolean;
+  hasText: boolean;
+}) {
+  const visible = media.slice(0, Math.min(media.length, 4));
+  const count = media.length;
+  const cardHeight = count === 1 ? 220 : 118;
+  const cardWidth = count === 1 ? 288 : 176;
+  const stackHeight = count === 1 ? 224 : count === 2 ? 182 : count === 3 ? 254 : 238;
+  const offsets = [
+    { top: 0, left: count >= 4 ? 48 : count === 1 ? 0 : 34, rotate: count >= 4 ? 0 : 0, z: 4 },
+    { top: count >= 4 ? 10 : 78, left: count >= 4 ? 66 : 0, rotate: count >= 4 ? 7 : 0, z: count >= 4 ? 3 : 5 },
+    { top: count >= 4 ? 20 : 150, left: count >= 4 ? 84 : 26, rotate: count >= 4 ? 13 : 0, z: count >= 4 ? 2 : 6 },
+    { top: count >= 4 ? 30 : 170, left: count >= 4 ? 102 : 52, rotate: count >= 4 ? 19 : 0, z: 1 },
+  ];
+  return (
+    <Box
+      sx={{
+        mt: hasText ? 0.75 : 0,
+        width: count === 1 ? cardWidth : 240,
+        height: stackHeight,
+        position: 'relative',
+        alignSelf: isIris ? 'flex-end' : 'flex-start'
+      }}>
+      {count > 4 &&
+      <Typography
+        variant="caption"
+        sx={{
+          position: 'absolute',
+          top: -18,
+          right: isIris ? 2 : 'auto',
+          left: isIris ? 'auto' : 2,
+          color: isIris ? 'primary.main' : 'text.secondary',
+          fontWeight: 800,
+          fontSize: 11
+        }}>
+        
+        {count} Photos
+      </Typography>
+      }
+      {visible.map((item, index) =>
+      <Box
+        key={`${item.url}-${index}`}
+        sx={{
+          position: 'absolute',
+          top: offsets[index].top,
+          left: offsets[index].left,
+          width: cardWidth,
+          height: cardHeight,
+          borderRadius: 3.5,
+          overflow: 'hidden',
+          bgcolor: 'background.default',
+          border: '1px solid',
+          borderColor: isIris ? 'rgba(99,102,241,0.28)' : 'rgba(15,23,42,0.14)',
+          boxShadow: '0 10px 28px rgba(15,23,42,0.22)',
+          transform: `rotate(${offsets[index].rotate}deg)`,
+          transformOrigin: 'center center',
+          zIndex: offsets[index].z
+        }}>
+        <Box
+          component="img"
+          src={item.url}
+          alt={item.alt}
+          loading="lazy"
+          sx={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }} />
+      </Box>
+      )}
+    </Box>);
 }

@@ -103,7 +103,7 @@ export function PropertiesView() {
             size="small"
             color="success"
             variant="outlined"
-            label={propertyHealth.clean}
+            label={`${propertyHealth.clean} · ${propertyHealth.rows} rows`}
             sx={{
               mb: 1.5
             }} />
@@ -503,6 +503,16 @@ function PropertyRow({
 
 }
 function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenModal: () => void;}) {
+  const previewFeatures = [
+    property.neighborhood && property.neighborhood !== 'Blank' ? property.neighborhood : '',
+    property.type && property.type !== 'Blank' ? property.type : '',
+    property.beds && property.baths ? `${property.beds} bd / ${property.baths} ba` : '',
+    property.sqft && property.sqft !== 'Blank' ? `${property.sqft} sqft` : '',
+  ].filter(Boolean).slice(0, 4);
+  const description =
+  property.broker && property.broker !== 'Blank' ?
+  property.broker :
+  `${property.beds || '0'} bedroom ${property.type || 'property'} in ${property.city.split(' · ')[0] || 'Austin'} with ${property.sqft || 'unknown'} sqft.`;
   return (
     <Card
       sx={{
@@ -615,57 +625,67 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
           <DetailCell label="AGENT" value="Blank" muted />
         </Box>
 
-        <Typography variant="overline" color="text.secondary">
-          Description
-        </Typography>
-        <Typography
-          variant="body2"
+        <Box
           sx={{
-            mb: 1.5
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            pt: 1.5
           }}>
-          
-          {property.broker}
-        </Typography>
+          <Typography variant="overline" color="text.secondary">
+            Description
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 1.5,
+              color: 'text.primary',
+              lineHeight: 1.45
+            }}>
+            
+            {description}
+          </Typography>
 
-        <Typography variant="overline" color="text.secondary">
-          Features
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            mb: 1.5
-          }}>
-          
-          {property.sqft} sqft
-        </Typography>
+          <Typography variant="overline" color="text.secondary">
+            Features
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            useFlexGap
+            flexWrap="wrap"
+            sx={{
+              mb: 1.5
+            }}>
+            
+            {previewFeatures.map((feature) =>
+            <Chip
+              key={feature}
+              label={feature}
+              size="small"
+              sx={{
+                height: 22,
+                bgcolor: 'rgba(99,102,241,0.12)',
+                color: 'text.primary',
+                border: '1px solid rgba(99,102,241,0.22)',
+                '& .MuiChip-label': {
+                  px: 0.75,
+                  fontSize: 11,
+                  fontWeight: 700
+                }
+              }} />
+            )}
+          </Stack>
+        </Box>
 
         <Stack
           direction="row"
-          spacing={1}
+          spacing={0.75}
+          alignItems="center"
           sx={{
-            mb: 2
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            pt: 1.25
           }}>
-          
-          <Chip
-            label="Listing"
-            color="warning"
-            variant="outlined"
-            size="small"
-            clickable />
-          
-          <Chip
-            label="Photo URL"
-            color="warning"
-            variant="outlined"
-            size="small"
-            clickable />
-          
-        </Stack>
-
-        <Typography variant="overline" color="text.secondary">
-          Missing fields
-        </Typography>
-        <Stack direction="row" spacing={0.75} alignItems="center">
           <CheckCircleIcon
             fontSize="small"
             sx={{

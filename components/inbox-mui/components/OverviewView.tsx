@@ -4,7 +4,7 @@ import { Box, Grid } from '@mui/material';
 import ReviewsIcon from '@mui/icons-material/RateReviewOutlined';
 import GroupsIcon from '@mui/icons-material/GroupsOutlined';
 import ForumIcon from '@mui/icons-material/ForumOutlined';
-import HubIcon from '@mui/icons-material/HubOutlined';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { StatCard } from './StatCards';
 import { ActivityChart } from './ActivityChart';
 import { ActivityFeed } from './ActivityFeed';
@@ -59,9 +59,9 @@ export function OverviewView() {
           <StatCard
             label="AI reply rate"
             value={`${aiRate}%`}
-            hint={`${metrics.aiReplies} of ${metrics.events} handled`}
+            hint={`${metrics.aiReplies} AI replies`}
             accent="#6366f1"
-            icon={<HubIcon fontSize="small" />}
+            icon={<AutoAwesomeIcon fontSize="small" />}
             progress={aiRate}
             trend={statTrends.aiRate}
             trendSuffix="%" />

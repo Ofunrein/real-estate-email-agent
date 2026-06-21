@@ -1,5 +1,5 @@
 import { InboxApp } from "@/components/inbox-mui/InboxApp";
-import { auth, isAllowedAuthEmail } from "@/auth";
+import { auth, isAllowedAuthEmail, localAuthBypassEnabled } from "@/auth";
 import { loadAgentInboxData } from "@/lib/dataSource";
 import { composeInboxData } from "@/lib/inboxData";
 import { redirect } from "next/navigation";
@@ -10,8 +10,9 @@ const TEAM_NAME = process.env.TEAM_NAME || process.env.CLIENT_NAME || "";
 
 export default async function Home() {
   const session = await auth();
+  const localBypass = localAuthBypassEnabled();
 
-  if (!isAllowedAuthEmail(session?.user?.email)) {
+  if (!localBypass && !isAllowedAuthEmail(session?.user?.email)) {
     redirect("/login");
   }
 
@@ -21,7 +22,7 @@ export default async function Home() {
       <InboxApp
         data={composeInboxData(leads, events, properties, voiceCalls)}
         teamName={TEAM_NAME}
-        userEmail={session?.user?.email ?? ""}
+        userEmail={session?.user?.email ?? (localBypass ? "local-dev@lumenosis.test" : "")}
       />
     );
   } catch (error) {
@@ -31,7 +32,7 @@ export default async function Home() {
         data={composeInboxData([], [], [])}
         loadError={message}
         teamName={TEAM_NAME}
-        userEmail={session?.user?.email ?? ""}
+        userEmail={session?.user?.email ?? (localBypass ? "local-dev@lumenosis.test" : "")}
       />
     );
   }

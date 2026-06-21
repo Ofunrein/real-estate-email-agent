@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { metaWhatsAppIngestInput, normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { extractMetaWhatsAppMessages, sendMetaWhatsApp, verifyMetaSignature, whatsAppMessageWithMediaLog } from "@/lib/metaWhatsapp";
@@ -11,6 +11,7 @@ import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoProperty
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -311,6 +312,31 @@ export async function POST(request: NextRequest) {
 
       if (!reply.shouldSend) {
         results.push({ message_id: inbound.messageId, status: reply.status, action: reply.aiAction, reply_sent: false });
+        continue;
+      }
+
+      const settings = await readInboxSettingsFromDatabase();
+      if (!shouldAutoSendForChannel(settings, "whatsapp")) {
+        await upsertAiDraftInDatabase({
+          thread_ref: result.event.thread_ref,
+          channel: "whatsapp",
+          body: whatsAppMessageWithMediaLog(reply.reply, reply.mediaUrls),
+          category_slug: reply.classification.intent || "needs_reply",
+          confidence: 0.82,
+          reason: settings.draft_first ? "Draft first is enabled." : "WhatsApp auto-send is disabled.",
+          next_action: "review_send",
+          safe_to_auto_send: true,
+          needs_human: reply.status === "needs_human",
+          model: "theo_whatsapp",
+          fingerprint: `whatsapp:${result.event.thread_ref}:${Date.now()}`,
+        });
+        results.push({
+          message_id: inbound.messageId,
+          status: "review_ready",
+          action: "reply_drafted",
+          reply_sent: false,
+          media_count: reply.mediaUrls.length,
+        });
         continue;
       }
 
