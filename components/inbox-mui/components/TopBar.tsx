@@ -14,8 +14,7 @@ import {
 import CircleIcon from '@mui/icons-material/Circle';
 import MenuIcon from '@mui/icons-material/Menu';
 import InsightsIcon from '@mui/icons-material/InsightsOutlined';
-import LightModeIcon from '@mui/icons-material/WbSunnyOutlined';
-import DarkModeIcon from '@mui/icons-material/NightlightRound';
+import { Moon, Sun } from 'lucide-react';
 import { type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useColorMode } from '../theme/ColorModeContext';
@@ -197,19 +196,8 @@ export function TopBar({
             }}>
             
             {mode === 'dark' ?
-            <LightModeIcon
-              fontSize="small"
-              sx={{
-                color: 'warning.main'
-              }} /> :
-
-
-            <DarkModeIcon
-              fontSize="small"
-              sx={{
-                color: 'primary.main'
-              }} />
-
+            <Sun size={16} color="#fbbf24" /> :
+            <Moon size={16} color="#6366f1" />
             }
           </IconButton>
         </Tooltip>
