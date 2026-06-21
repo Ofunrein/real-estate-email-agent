@@ -9,6 +9,7 @@ import {
   runLeadImport,
   segmentImportedLead,
 } from "@/lib/leadImport";
+import { composioImportConfig, rowsFromComposioResult } from "@/lib/composioLeadImport";
 
 test("CSV import maps common CRM export fields and reports unmapped columns", () => {
   const parsed = parseCsv(`Full Name,Email Address,Mobile,Tags,Property Interest,Random Column
@@ -91,4 +92,29 @@ test("Composio-supported rows ingest into the normalized lead shape", async () =
   assert.equal(results[0].normalized.sourceId, "hub_1");
   assert.equal(results[0].normalized.leadRole, "seller");
   assert.ok(results[0].segments.includes("seller_valuation"));
+});
+
+test("Composio import config and result path normalize CRM rows", () => {
+  const config = composioImportConfig({
+    COMPOSIO_IMPORT_TOOL_SLUG: "FOLLOW_UP_BOSS_LIST_PEOPLE",
+    COMPOSIO_IMPORT_TOOLKIT: "follow_up_boss",
+    COMPOSIO_IMPORT_USER_EMAIL: "Client@Example.com",
+    COMPOSIO_IMPORT_ARGUMENTS_JSON: "{\"limit\":25}",
+    COMPOSIO_IMPORT_RESULT_PATH: "data.people",
+  });
+
+  assert.equal(config?.toolSlug, "FOLLOW_UP_BOSS_LIST_PEOPLE");
+  assert.equal(config?.toolkit, "follow_up_boss");
+  assert.equal(config?.userId, "client@example.com");
+  assert.deepEqual(config?.arguments, { limit: 25 });
+
+  const rows = rowsFromComposioResult({
+    data: {
+      people: [
+        { id: "fub_1", name: "Maya Buyer", emails: ["maya@example.com"] },
+        "bad row",
+      ],
+    },
+  }, "data.people");
+  assert.deepEqual(rows, [{ id: "fub_1", name: "Maya Buyer", emails: ["maya@example.com"] }]);
 });
