@@ -165,7 +165,6 @@ export function speakProperty(property: SheetRow): string {
 // Concise SMS body for the timeout fallback (full details, links allowed).
 export function propertySmsBody(property: SheetRow): string {
   const bits = [
-    clean(property.address),
     formatPrice(property.price),
     property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
     formatSqft(property.sqft),

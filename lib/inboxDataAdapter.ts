@@ -59,6 +59,7 @@ const SYSTEM_PROMPT_RE = /\b(you are\s+(?:iris|arya|a real estate)|brand voice|a
 const NON_REAL_ESTATE_EMAIL_RE = /\b(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)\b/i;
 const REAL_ESTATE_EMAIL_RE = /\b(home|house|condo|property|listing|showing|tour|buy|buyer|sell|seller|rent|lease|realtor|real estate|bedroom|bath|mortgage|valuation|pre.?approved|appointment|zillow|mls)\b/i;
 const STREET_ADDRESS_RE = /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/i;
+const PROPERTY_DETAILS_RE = /^Here are the full details on (.+):$/i;
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -235,12 +236,47 @@ function smsTextAndMedia(raw: string): { body: string; html?: string; media: Arr
     textLines.push(nextLine);
   }
 
-  const body = textLines.join("\n").replace(/\n{3,}$/g, "\n\n").trim();
+  const body = cleanSmsDisplayText(textLines.join("\n").replace(/\n{3,}$/g, "\n\n").trim());
   return {
     body,
     html: looksLikeHtml(body) ? rewriteEmailHtmlForInbox(body) : undefined,
     media,
   };
+}
+
+function cleanSmsDisplayText(text: string): string {
+  const lines = text.split("\n");
+  const cleaned: string[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const match = line.trim().match(PROPERTY_DETAILS_RE);
+    const nextLine = lines[i + 1] || "";
+    if (match && nextLine.trim()) {
+      const address = normalizeSmsAddress(match[1]);
+      const next = nextLine.trim();
+      const nextNormalized = normalizeSmsAddress(next.split("•")[0] || next);
+      if (address && nextNormalized.startsWith(address)) {
+        const factText = next.includes("•")
+          ? next.slice(next.indexOf("•") + 1).trim()
+          : "";
+        cleaned.push(line);
+        if (factText) cleaned.push(factText);
+        i += 1;
+        continue;
+      }
+    }
+    cleaned.push(line);
+  }
+  return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizeSmsAddress(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[^a-z0-9#]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 type MessageChannelId = Exclude<ChannelId, "all" | "properties" | "imports">;

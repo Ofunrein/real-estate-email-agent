@@ -227,6 +227,8 @@ export function metaWhatsAppIngestInput(payload: MetaWhatsAppIngestPayload): Cha
 
 function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" | "whatsapp"): ChannelIngestInput {
   const body = payload.Body || "";
+  const mediaLines = twilioMediaLogLines(payload);
+  const messageText = [body, mediaLines.join("\n")].filter((part) => part.trim()).join("\n\n");
   const action = smsControlAction(body);
   const from = normalizeTwilioContactAddress(payload.From || "");
   const threadRef = from ? `${channel}:${from}` : payload.MessageSid || `${channel}:unknown`;
@@ -241,7 +243,7 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
     sourceDetail: payload.To ? `to ${payload.To}` : "",
     threadRef,
     eventType: action ? `${channel}_${action}` : `${channel}_inbound`,
-    messageText: body,
+    messageText,
     preferredChannel,
     status: action ? "processed" : "received",
   };
@@ -283,8 +285,25 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
     ...base,
     smsConsent: channel === "sms" ? "inbound_text" : "",
     nextAction: "review_or_reply",
-    summary: body ? `Inbound ${channelLabel}: ${body}` : `Inbound ${channelLabel} received.`,
+    summary: body
+      ? `Inbound ${channelLabel}: ${body}`
+      : mediaLines.length
+        ? `Inbound ${channelLabel}: ${mediaLines.length} media attachment${mediaLines.length === 1 ? "" : "s"}`
+        : `Inbound ${channelLabel} received.`,
   };
+}
+
+function twilioMediaLogLines(payload: Record<string, string>): string[] {
+  const count = Math.max(0, Number(payload.NumMedia || "0") || 0);
+  const lines: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const url = (payload[`MediaUrl${i}`] || "").trim();
+    if (!url) continue;
+    const contentType = (payload[`MediaContentType${i}`] || "").toLowerCase();
+    const label = contentType.startsWith("image/") || !contentType ? "MMS image" : "MMS media";
+    lines.push(`${label}: ${url}`);
+  }
+  return lines;
 }
 
 export function vapiVoiceIngestInput(payload: Record<string, unknown>): ChannelIngestInput {

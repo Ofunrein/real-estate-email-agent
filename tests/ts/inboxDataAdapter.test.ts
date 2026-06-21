@@ -84,6 +84,38 @@ test("adaptInboxData splits SMS MMS image logs from visible body and preserves s
   assert.match(message.media?.[0].url || "", /\/api\/media\/proxy\?url=/);
 });
 
+test("adaptInboxData removes duplicated SMS property detail address lines", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "sms",
+        direction: "outbound",
+        phone: "+15128469460",
+        thread_ref: "sms:+15128469460",
+        message_text: [
+          "Here are the full details on 6828 Walkup Ln, Austin, Texas 78747:",
+          "6828 Walkup Ln, Austin, Texas 78747 • $319,500 • 4bd/3ba • 2,068 square feet",
+          "https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/",
+        ].join("\n"),
+        event_at: "2026-06-20T23:28:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const body = model.smsThreads[0].messages[0].body;
+  assert.equal(
+    body,
+    [
+      "Here are the full details on 6828 Walkup Ln, Austin, Texas 78747:",
+      "$319,500 • 4bd/3ba • 2,068 square feet",
+      "https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/",
+    ].join("\n"),
+  );
+});
+
 test("adaptInboxData aligns activity event ids with rendered message ids", () => {
   const data = composeInboxData(
     [],

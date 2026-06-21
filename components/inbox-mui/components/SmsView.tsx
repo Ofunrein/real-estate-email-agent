@@ -153,7 +153,7 @@ export function SmsView() {
             role="log"
             aria-label="SMS conversation">
             
-              <Stack spacing={1.25}>
+              <Stack spacing={0.9}>
                 {thread.messages.map((m) =>
               <SmsBubble
                 key={m.id}
@@ -238,7 +238,10 @@ function SmsBubble({
 
       <Box
         sx={{
-          maxWidth: { xs: '80%', md: '66%' }
+          maxWidth: { xs: '84%', md: '68%' },
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isIris ? 'flex-end' : 'flex-start'
         }}>
 
         <Stack
@@ -268,9 +271,16 @@ function SmsBubble({
             {message.time}
           </Typography>
         </Stack>
+        {!!message.media?.length &&
+        <SmsMediaGallery
+          media={message.media}
+          isIris={isIris}
+          hasText={Boolean(message.body || cleanHtml)} />
+        }
         {(message.body || cleanHtml) &&
         <Box
           sx={{
+            mt: message.media?.length ? 0.7 : 0,
             py: 1,
             px: 1.75,
             borderRadius: '16px',
@@ -289,7 +299,7 @@ function SmsBubble({
               fontSize: '0.875rem',
               lineHeight: 1.5,
               color: isIris ? '#fff' : 'text.secondary',
-              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
               '& a': { color: isIris ? '#fff' : 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
               '& p': { m: 0, mb: 0.75 }
@@ -300,19 +310,13 @@ function SmsBubble({
             sx={{
               lineHeight: 1.5,
               whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
+              overflowWrap: 'anywhere'
             }}>
 
             {message.body}
           </Typography>
           }
         </Box>
-        }
-        {!!message.media?.length &&
-        <SmsMediaGallery
-          media={message.media}
-          isIris={isIris}
-          hasText={Boolean(message.body || cleanHtml)} />
         }
       </Box>
     </Box>);
@@ -342,11 +346,12 @@ function SmsMediaGallery({
   return (
     <Box
       sx={{
-        mt: hasText ? 0.75 : 0,
+        mb: hasText ? 0.1 : 0,
         width: count === 1 ? cardWidth : 240,
         height: stackHeight,
         position: 'relative',
-        alignSelf: isIris ? 'flex-end' : 'flex-start'
+        alignSelf: isIris ? 'flex-end' : 'flex-start',
+        flexShrink: 0
       }}>
       {count > 4 &&
       <Typography
