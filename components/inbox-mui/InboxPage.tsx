@@ -110,7 +110,7 @@ export function InboxPage() {
               overflow: { xs: 'visible', lg: 'hidden' }
             }}>
 
-            <ChannelContent channel={channel} />
+            <ChannelContent key={channel} channel={channel} />
           </Box>
 
           {/* Inline context rail only at lg+ */}

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
+import DOMPurify from 'isomorphic-dompurify';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
@@ -298,17 +299,42 @@ function EmailBubble({
               Subject: {message.subject}
             </Typography>
           }
-          {message.body &&
-          <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: 'pre-line',
-              lineHeight: 1.6,
-              mt: message.subject ? 0.5 : 0
-            }}>
-            
-              {message.body}
-            </Typography>
+          {(message.html || message.body) &&
+          (() => {
+            const raw = message.html || '';
+            if (raw) {
+              const clean = DOMPurify.sanitize(raw, {
+                USE_PROFILES: { html: true },
+                FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+                FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+              });
+              return (
+                <Box
+                  sx={{
+                    mt: message.subject ? 0.5 : 0,
+                    fontSize: '0.875rem',
+                    lineHeight: 1.6,
+                    color: 'text.secondary',
+                    '& a': { color: 'primary.main' },
+                    '& img': { maxWidth: '100%', borderRadius: 1 },
+                    '& p': { m: 0, mb: 0.75 },
+                    '& ul, & ol': { pl: 2.5, my: 0.5 },
+                    '& table': { borderCollapse: 'collapse', width: '100%', fontSize: '0.8125rem' },
+                    '& td, & th': { border: '1px solid', borderColor: 'divider', p: 0.75 },
+                  }}
+                  dangerouslySetInnerHTML={{ __html: clean }}
+                />
+              );
+            }
+            return (
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: 'pre-line', lineHeight: 1.6, mt: message.subject ? 0.5 : 0 }}
+              >
+                {message.body}
+              </Typography>
+            );
+          })()
           }
           {message.cards?.map((c, i) =>
           <PropertyCardInline

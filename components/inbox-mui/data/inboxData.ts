@@ -1,6 +1,6 @@
 import EmailIcon from '@mui/icons-material/MailOutline';
 import SmsIcon from '@mui/icons-material/SmsOutlined';
-import VoiceIcon from '@mui/icons-material/GraphicEqOutlined';
+import VoiceIcon from '@mui/icons-material/PhoneOutlined';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import MessengerIcon from '@mui/icons-material/ChatBubbleOutline';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
@@ -286,5 +286,4 @@ export const leadCategories: LeadCategory[] = [
 ];
 
 // AI agent (Iris/Arya) profile picture used wherever the agent's avatar appears.
-export const agentAvatar =
-  'https://cdn.magicpatterns.com/uploads/7QxpkcuxVQs7UM7EkHtKRK/pasted-image.png';
+export const agentAvatar = '/arya-avatar.png';

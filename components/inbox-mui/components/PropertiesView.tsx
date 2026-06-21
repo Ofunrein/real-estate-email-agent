@@ -18,6 +18,7 @@ import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { type Property } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { PropertyModal } from './PropertyModal';
 
 const emptyProperty: Property = {
   id: '', address: '', city: '', price: 'Blank', priceNum: '', beds: '', baths: '',
@@ -27,6 +28,7 @@ export function PropertiesView() {
   const { properties, propertyHealth } = useInboxModel();
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(properties[0]?.id ?? '');
+  const [modalProperty, setModalProperty] = useState<Property | null>(null);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return properties;
@@ -350,9 +352,16 @@ export function PropertiesView() {
         </Card>
 
         {/* Selected detail */}
-        <PropertyDetail property={selected} />
+        <PropertyDetail property={selected} onOpenModal={() => setModalProperty(selected)} />
       </Box>
-    </Box>);
+
+      <PropertyModal
+        property={modalProperty}
+        open={modalProperty !== null}
+        onClose={() => setModalProperty(null)}
+      />
+    </Box>
+    );
 
 }
 function PropertyRow({
@@ -493,7 +502,7 @@ function PropertyRow({
     </ListItemButton>);
 
 }
-function PropertyDetail({ property }: {property: Property;}) {
+function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenModal: () => void;}) {
   return (
     <Card
       sx={{
@@ -523,10 +532,14 @@ function PropertyDetail({ property }: {property: Property;}) {
           component="img"
           src={property.photo}
           alt={property.address}
+          onClick={onOpenModal}
           sx={{
             width: '100%',
             height: 180,
-            objectFit: 'cover'
+            objectFit: 'cover',
+            cursor: 'pointer',
+            '&:hover': { opacity: 0.9 },
+            transition: 'opacity .2s',
           }} /> :
 
 
@@ -548,6 +561,7 @@ function PropertyDetail({ property }: {property: Property;}) {
           size="small"
           variant="contained"
           startIcon={<PhoneIphoneIcon />}
+          onClick={onOpenModal}
           sx={{
             position: 'absolute',
             bottom: 10,
