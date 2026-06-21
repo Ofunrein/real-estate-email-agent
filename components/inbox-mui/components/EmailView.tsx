@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
-import DOMPurify from 'isomorphic-dompurify';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
@@ -303,11 +302,18 @@ function EmailBubble({
           (() => {
             const raw = message.html || '';
             if (raw) {
-              const clean = DOMPurify.sanitize(raw, {
-                USE_PROFILES: { html: true },
-                FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
-                FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
-              });
+              const clean =
+                typeof window !== 'undefined'
+                  ? (function () {
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
+                      const DOMPurify = require('isomorphic-dompurify');
+                      return DOMPurify.sanitize(raw, {
+                        USE_PROFILES: { html: true },
+                        FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+                        FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+                      });
+                    })()
+                  : raw;
               return (
                 <Box
                   sx={{
