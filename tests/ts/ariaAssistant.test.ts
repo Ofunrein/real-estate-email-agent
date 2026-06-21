@@ -119,6 +119,8 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
   assert.match(messages[0].content, /confirm fit, confirm contact details/);
   assert.match(messages[0].content, /what properties do you have available/i);
   assert.match(messages[0].content, /never use SMS or email as the substitute/i);
+  assert.match(messages[0].content, /call searchProperties in that same turn/i);
+  assert.match(messages[0].content, /never address or refer to the caller by their phone number/i);
   assert.match(messages[0].content, /Critical-info confirmation/);
   assert.match(messages[0].content, /spell it back letter by letter/);
   assert.match(messages[0].content, /B as in Bravo/);

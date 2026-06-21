@@ -410,7 +410,7 @@ export function ReviewPanel() {
             startIcon={<SendIcon />}
             onClick={() => {
               setEditing(false);
-              submitAction('save_edit', drafts[item.id]);
+              submitAction('approve_send', draftValue);
             }}>
 
                 Send edited reply

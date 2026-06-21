@@ -82,11 +82,13 @@ export function voiceCallKey(call: SheetRow): string {
 }
 
 function latestVoiceCall(calls: SheetRow[]): SheetRow {
-  return calls[calls.length - 1] || {};
+  return calls.reduce<SheetRow>((latest, call) => {
+    return voiceCallTimeValue(call) >= voiceCallTimeValue(latest) ? call : latest;
+  }, calls[0] || {});
 }
 
 export function voiceCallTimeValue(call: SheetRow): number {
-  const parsed = new Date(call.ended_at || call.started_at || "");
+  const parsed = new Date(call.ended_at || call.started_at || call.event_at || call.created_at || "");
   return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
 }
 
@@ -97,14 +99,18 @@ export function buildVoiceCallThreads(calls: SheetRow[]): [string, SheetRow[]][]
     acc[key].push(call);
     return acc;
   }, {});
-  return [...Object.entries(groups)].sort((a, b) => {
+  const sortedGroups = Object.entries(groups).map(([key, threadCalls]) => [
+    key,
+    [...threadCalls].sort((a, b) => voiceCallTimeValue(b) - voiceCallTimeValue(a)),
+  ] as [string, SheetRow[]]);
+  return sortedGroups.sort((a, b) => {
     return voiceCallTimeValue(latestVoiceCall(b[1])) - voiceCallTimeValue(latestVoiceCall(a[1]));
   });
 }
 
 export function voiceThreadIdentity(threadRef: string, calls: SheetRow[]): string {
   const latest = latestVoiceCall(calls);
-  return latest.phone || latest.full_name || threadRef;
+  return latest.full_name || "Unknown caller";
 }
 
 // Strip AI extraction metadata lines from inbound email bodies.

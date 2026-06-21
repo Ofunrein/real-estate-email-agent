@@ -11,9 +11,9 @@ import {
 '@mui/material';
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
 import SouthEastIcon from '@mui/icons-material/SouthEast';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import GraphicEqIcon from '@mui/icons-material/GraphicEqOutlined';
 import {
+  agentAvatar,
   type ChannelId,
   type ActivityEvent } from
 '../data/inboxData';
@@ -71,27 +71,31 @@ export function ActivityFeed({ channel }: ActivityFeedProps) {
         role="feed"
         aria-label="Activity feed">
         
-        <Stack spacing={0.5}>
-          {events.map((e) =>
-          <EventRow key={e.id} event={e} />
+        <Stack spacing={0}>
+          {events.map((e, index) =>
+          <EventRow key={e.id} event={e} isLast={index === events.length - 1} />
           )}
         </Stack>
       </Box>
     </Card>);
 
 }
-function EventRow({ event }: {event: ActivityEvent;}) {
+function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
   const { channelMeta } = useInboxModel();
   const meta = channelMeta[event.channel];
   const Icon = meta?.icon;
   const isAi = event.kind === 'ai_reply' || event.kind === 'voice';
+  const status = event.status ?? (isAi ? 'Sent' : 'New');
+  const statusSx = activityStatusSx(status);
   return (
     <Box
       sx={{
         display: 'flex',
         gap: 1.5,
         p: 1.25,
-        borderRadius: 2,
+        borderBottom: isLast ? '0' : '1px solid',
+        borderColor: 'divider',
+        borderRadius: 0,
         transition: 'background-color .15s',
         '&:hover': {
           bgcolor: 'action.hover'
@@ -104,24 +108,27 @@ function EventRow({ event }: {event: ActivityEvent;}) {
           pt: 0.25
         }}>
         
-        <Avatar
-          variant="rounded"
-          sx={{
-            width: 34,
-            height: 34,
-            bgcolor: isAi ? 'action.selected' : 'action.hover',
-            color: isAi ? 'primary.main' : 'text.secondary'
+          <Avatar
+            variant="rounded"
+            src={isAi && event.kind !== 'voice' ? agentAvatar : undefined}
+            alt={isAi && event.kind !== 'voice' ? 'Iris AI agent' : undefined}
+            sx={{
+              width: 34,
+              height: 34,
+            bgcolor: isAi ? 'rgba(99,102,241,0.14)' : 'action.hover',
+            color: isAi ? 'primary.dark' : 'text.secondary',
+            border: '1px solid',
+            borderColor: isAi ? 'rgba(99,102,241,0.28)' : 'divider'
           }}>
           
           {isAi ?
           event.kind === 'voice' ?
           <GraphicEqIcon fontSize="small" /> :
-
-          <AutoAwesomeIcon fontSize="small" /> :
+          null :
 
           Icon ?
           <Icon fontSize="small" /> :
-          null
+            null
           }
         </Avatar>
       </Box>
@@ -132,58 +139,116 @@ function EventRow({ event }: {event: ActivityEvent;}) {
           flex: 1
         }}>
         
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
+        <Box
           sx={{
-            mb: 0.25
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) auto',
+            gap: 1,
+            alignItems: 'start'
           }}>
           
-          <Typography
-            variant="body2"
+          <Box sx={{ minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{
+                mb: 0.25,
+                minWidth: 0
+              }}>
+              
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  minWidth: 0
+                }}
+                noWrap>
+                
+                {event.actor}
+              </Typography>
+              <Chip
+                size="small"
+                icon={isAi ? <ArrowOutwardIcon /> : <SouthEastIcon />}
+                label={isAi ? 'Iris' : 'Inbound'}
+                sx={{
+                  height: 20,
+                  '& .MuiChip-icon': {
+                    fontSize: 13,
+                    ml: 0.5
+                  },
+                  fontSize: 11,
+                  bgcolor: isAi ? 'rgba(99,102,241,0.14)' : 'rgba(4,120,87,0.12)',
+                  color: isAi ? 'primary.dark' : 'success.main',
+                  border: '1px solid',
+                  borderColor: isAi ? 'rgba(99,102,241,0.26)' : 'rgba(4,120,87,0.25)',
+                  flexShrink: 0
+                }} />
+              
+              <Chip
+                size="small"
+                label={meta?.label ?? event.channel}
+                sx={{
+                  height: 20,
+                  fontSize: 11,
+                  bgcolor: 'background.paper',
+                  color: 'text.primary',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  flexShrink: 0
+                }} />
+              
+            </Stack>
+          </Box>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            alignItems="center"
+            justifyContent="flex-end"
             sx={{
-              fontWeight: 600
-            }}
-            noWrap>
+              minWidth: 70,
+              pt: 0.1,
+              flexShrink: 0
+            }}>
             
-            {event.actor}
-          </Typography>
-          <Chip
-            size="small"
-            icon={isAi ? <ArrowOutwardIcon /> : <SouthEastIcon />}
-            label={isAi ? 'Iris' : 'Inbound'}
-            sx={{
-              height: 20,
-              '& .MuiChip-icon': {
-                fontSize: 13,
-                ml: 0.5
-              },
-              fontSize: 11,
-              bgcolor: 'action.selected',
-              color: isAi ? 'primary.main' : 'success.main'
-            }} />
-          
-          <Chip
-            size="small"
-            label={meta?.label ?? event.channel}
-            sx={{
-              height: 20,
-              fontSize: 11,
-              bgcolor: 'action.hover',
-              color: 'text.secondary'
-            }} />
-          
-        </Stack>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontSize: 10,
+                lineHeight: '17px',
+                whiteSpace: 'nowrap'
+              }}>
+              
+              {event.time}
+            </Typography>
+            <Chip
+              size="small"
+              label={status}
+              sx={{
+                height: 17,
+                fontSize: 10,
+                px: 0.25,
+                '& .MuiChip-label': {
+                  px: 0.5
+                },
+                ...statusSx
+              }} />
+            
+          </Stack>
+        </Box>
         <Typography
           variant="body2"
           color="text.secondary"
           sx={{
-            lineHeight: 1.4
+            lineHeight: 1.45,
+            whiteSpace: event.channel === 'sms' ? 'pre-wrap' : 'normal',
+            wordBreak: 'break-word'
           }}>
           
           {event.body}
         </Typography>
+        {event.intent &&
         <Stack
           direction="row"
           spacing={1}
@@ -192,15 +257,12 @@ function EventRow({ event }: {event: ActivityEvent;}) {
             mt: 0.5
           }}>
           
-          <Typography variant="caption" color="text.secondary">
-            {event.time}
-          </Typography>
-          {event.intent &&
           <Typography
             variant="caption"
             sx={{
-              color: 'primary.main',
-              bgcolor: 'action.selected',
+              color: 'primary.dark',
+              bgcolor: 'rgba(99,102,241,0.14)',
+              border: '1px solid rgba(99,102,241,0.25)',
               px: 0.75,
               borderRadius: 1,
               fontWeight: 600
@@ -208,9 +270,32 @@ function EventRow({ event }: {event: ActivityEvent;}) {
             
               {event.intent}
             </Typography>
-          }
         </Stack>
+        }
       </Box>
     </Box>);
 
+}
+
+function activityStatusSx(status: ActivityEvent['status']) {
+  switch (status) {
+    case 'Review':
+      return {
+        bgcolor: 'rgba(180,83,9,0.13)',
+        color: '#92400e',
+        border: '1px solid rgba(180,83,9,0.25)'
+      };
+    case 'Sent':
+      return {
+        bgcolor: 'rgba(4,120,87,0.13)',
+        color: '#065f46',
+        border: '1px solid rgba(4,120,87,0.25)'
+      };
+    default:
+      return {
+        bgcolor: 'rgba(2,132,199,0.13)',
+        color: '#075985',
+        border: '1px solid rgba(2,132,199,0.25)'
+      };
+  }
 }

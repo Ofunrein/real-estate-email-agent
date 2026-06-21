@@ -130,7 +130,7 @@ export function VoiceView() {
             title: c.contact,
             time: c.time,
             preview: c.summary,
-            meta: `${c.callCount} call${c.callCount > 1 ? 's' : ''} · Recording`
+            meta: `${c.phone ? `${c.phone} · ` : ''}${c.callCount} call${c.callCount > 1 ? 's' : ''} · Recording`
           }))}
           selectedId={selectedId}
           onSelect={handleSelect} />
@@ -160,7 +160,7 @@ export function VoiceView() {
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle1">{contact.contact}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {contact.callCount} calls · {contact.tag}
+                {contact.phone ? `${contact.phone} · ` : ''}{contact.callCount} calls · {contact.tag}
               </Typography>
             </Box>
             <Tooltip title={contact.phone ? `Call ${contact.contact} with Arya` : 'No phone number on file'}>
@@ -433,6 +433,7 @@ function RecordingPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasRecording = Boolean(recordingUrl);
+  const proxiedRecordingUrl = recordingUrl ? `/api/media/audio?url=${encodeURIComponent(recordingUrl)}` : '';
   const total = hasRecording ? audioTotal || fallbackTotal : fallbackTotal;
 
   // Real audio playback when a recording URL exists.
@@ -482,13 +483,13 @@ function RecordingPlayer({
     if (hasRecording && el) {
       if (finished) {
         el.currentTime = 0;
-        el.play();
+        void el.play().catch(() => setPlaying(false));
         setPlaying(true);
       } else if (playing) {
         el.pause();
         setPlaying(false);
       } else {
-        el.play();
+        void el.play().catch(() => setPlaying(false));
         setPlaying(true);
       }
       return;
@@ -513,7 +514,7 @@ function RecordingPlayer({
       }}>
 
       {hasRecording &&
-      <audio ref={audioRef} src={recordingUrl} preload="metadata" />
+      <audio ref={audioRef} src={proxiedRecordingUrl} preload="metadata" />
       }
       <Typography
         variant="caption"

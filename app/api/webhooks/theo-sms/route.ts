@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { isTakeoverActive } from "@/lib/humanTakeover";
@@ -11,6 +11,7 @@ import { isUnsafeSmsRecipient, sendTheoHandoffAlert, sendTheoSms, smsMessageWith
 import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -543,6 +544,35 @@ export async function POST(request: NextRequest) {
         channel: result.event.channel,
         status: reply.status,
         action: reply.aiAction,
+        reply_sent: false,
+      });
+    }
+
+    const settings = await readInboxSettingsFromDatabase();
+    if (!shouldAutoSendForChannel(settings, "sms")) {
+      await upsertAiDraftInDatabase({
+        thread_ref: result.event.thread_ref,
+        channel: "sms",
+        body: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
+        category_slug: reply.classification.intent || "needs_reply",
+        confidence: 0.82,
+        reason: settings.draft_first ? "Draft first is enabled." : "SMS auto-send is disabled.",
+        next_action: "review_send",
+        safe_to_auto_send: true,
+        needs_human: reply.status === "needs_human",
+        model: "theo_sms",
+        fingerprint: `sms:${result.event.thread_ref}:${Date.now()}`,
+      });
+      logTheo("reply drafted", {
+        leadPhone: payload.From,
+        reason: settings.draft_first ? "draft_first" : "auto_send_disabled",
+        totalMs: elapsedMs(requestStarted),
+      });
+      return webhookResponse(request, {
+        ok: true,
+        channel: result.event.channel,
+        status: "review_ready",
+        action: "reply_drafted",
         reply_sent: false,
       });
     }

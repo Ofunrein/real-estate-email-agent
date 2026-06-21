@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
     const config = clientConfig();
     const voiceCompanyName = config.voiceClientName || config.clientName;
-    const callReason = String(body.callReason || body.summary || "Following up on your real estate inquiry");
+    const callReason = String(body.callReason || body.reason || "your real estate request");
     const leadContext = String(body.leadContext || body.context || body.summary || "");
 
     const result = await placeOutboundCall(outboundConfig(), {

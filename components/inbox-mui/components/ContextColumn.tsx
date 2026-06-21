@@ -57,20 +57,27 @@ export function ContextColumn({
       aria-label="Context">
 
       {/* Arya header */}
-      <Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 0.5 }}>
-        <Avatar src={agentAvatar} alt="Arya AI agent" sx={{ width: 32, height: 32 }} />
-        <Box>
-          <Typography sx={{ fontSize: '14px', fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
-            Arya
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={0.5}>
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
-            <Typography sx={{ fontSize: '11px', color: 'text.secondary' }}>
-              Handling leads
+      <Card sx={{ p: 1.5 }}>
+        <Stack direction="row" alignItems="center" spacing={1.25}>
+          <Avatar src={agentAvatar} alt="Arya AI agent" sx={{ width: 34, height: 34 }} />
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography sx={{ fontSize: '14px', fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+              Arya
             </Typography>
-          </Stack>
-        </Box>
-      </Stack>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
+              <Typography sx={{ fontSize: '11px', color: 'text.secondary' }}>
+                Handling leads
+              </Typography>
+            </Stack>
+          </Box>
+        </Stack>
+        <Divider sx={{ my: 1.25 }} />
+        <TodayRow
+          label="AI avg response"
+          value={metrics.avgResponseLabel}
+          color="#0ea5e9" />
+      </Card>
 
       {/* TODAY */}
       <Card sx={{ p: 2 }}>

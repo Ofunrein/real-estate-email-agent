@@ -120,6 +120,19 @@ test("outboundFirstMessage: named and unknown lead openers", () => {
   );
 });
 
+test("outboundFirstMessage: never uses phone-like leadName or long context as opener", () => {
+  assert.equal(
+    outboundFirstMessage({
+      customerNumber: "+15125712595",
+      leadName: "+15125712595",
+      agentName: "Iris",
+      companyName: "Austin Realty",
+      callReason: "A user called Austin Realty seeking a three-bedroom home in South Austin and became frustrated because the assistant could not pull listings immediately over the phone.",
+    }),
+    "Hi, this is Iris with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+  );
+});
+
 test("outboundFirstMessage: defaults voice company to team name before client name", () => {
   const priorTeam = process.env.TEAM_NAME;
   const priorClient = process.env.CLIENT_NAME;
