@@ -1,11 +1,13 @@
 "use client";
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Box, Card, Stack, Typography, Avatar } from '@mui/material';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar } from '@mui/material';
+import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
 import { CategoryFilter, type CategoryFilterValue } from './CategoryFilter';
+import { LiveCallPanel } from './LiveCallPanel';
 import {
   agentAvatar,
   type SmsMessage,
@@ -16,7 +18,11 @@ import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 
-export function SmsView() {
+type SmsViewProps = {
+  onOpenVoice?: (threadId?: string) => void;
+};
+
+export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
   const { smsThreads, leadCategories } = useInboxModel();
   const { colors } = useCategoryColors();
   const categoryValues = useMemo(
@@ -63,6 +69,9 @@ export function SmsView() {
   const targetEventId = useActivityEventTarget('sms', thread?.id);
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
   const scrolledTargetRef = useRef<string | null>(null);
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [dialing, setDialing] = useState(false);
+  const [dialError, setDialError] = useState<string | null>(null);
   useEffect(() => {
     if (!targetEventId || scrolledTargetRef.current === targetEventId) return;
     const target = messageRefs.current.get(targetEventId);
@@ -72,6 +81,45 @@ export function SmsView() {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }, [targetEventId, thread?.id]);
+  const handleCallLead = async () => {
+    if (!thread?.contact || dialing) return;
+    setDialing(true);
+    setDialError(null);
+    try {
+      const recentContext = thread.messages
+        .slice(-6)
+        .map((message) => `${message.direction === 'iris' ? 'Iris' : thread.contact}: ${message.body || (message.media?.length ? `${message.media.length} MMS image${message.media.length === 1 ? '' : 's'}` : '')}`)
+        .filter((line) => line.trim())
+        .join('\n');
+      const res = await fetch('/api/voice/call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: thread.contact,
+          leadName: thread.contact,
+          callReason: 'follow up on the active SMS conversation',
+          leadContext: recentContext,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && data.callId) {
+        setActiveCallId(data.callId);
+      } else {
+        setDialError(data.error || 'Could not start call');
+      }
+    } catch {
+      setDialError('Could not reach the call service');
+    } finally {
+      setDialing(false);
+    }
+  };
+  const handleCloseCall = () => {
+    setActiveCallId(null);
+    if (typeof window !== 'undefined' && thread?.id) {
+      window.localStorage.setItem('iris.inbox.voice.thread', thread.id);
+    }
+    onOpenVoice?.(thread?.id);
+  };
   return (
     <Box
       sx={{
@@ -135,14 +183,38 @@ export function SmsView() {
             sx={{
               p: 1.75,
               borderBottom: '1px solid',
-              borderColor: 'divider'
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
             }}>
-            
-              <Typography variant="subtitle1">{thread.contact}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                sms:{thread.contact}
-              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle1">{thread.contact}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  sms:{thread.contact}
+                </Typography>
+              </Box>
+              <Tooltip title={thread.contact ? `Call ${thread.contact} with Iris` : 'No phone number on file'}>
+                <span>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={dialing ? <CircularProgress size={14} color="inherit" /> : <PhoneIcon fontSize="small" />}
+                    onClick={handleCallLead}
+                    disabled={!thread.contact || dialing || Boolean(activeCallId)}
+                    disableElevation
+                    sx={{ flexShrink: 0 }}>
+                    {dialing ? 'Calling…' : 'Call lead'}
+                  </Button>
+                </span>
+              </Tooltip>
             </Box>
+
+            {dialError &&
+            <Box sx={{ px: 1.75, py: 1, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>
+              <Typography variant="caption" color="error.main">{dialError}</Typography>
+            </Box>
+            }
 
             <Box
             sx={{
@@ -153,6 +225,12 @@ export function SmsView() {
             role="log"
             aria-label="SMS conversation">
             
+              {activeCallId &&
+              <LiveCallPanel
+                callId={activeCallId}
+                contactName={thread.contact}
+                onClose={handleCloseCall} />
+              }
               <Stack spacing={0.9}>
                 {thread.messages.map((m) =>
               <SmsBubble

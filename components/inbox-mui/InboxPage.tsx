@@ -143,7 +143,15 @@ export function InboxPage() {
               overflow: { xs: 'visible', lg: 'hidden' }
             }}>
 
-	            <ChannelContent channel={channel} onOpenActivityEvent={handleOpenActivityEvent} />
+	            <ChannelContent
+	              channel={channel}
+	              onOpenActivityEvent={handleOpenActivityEvent}
+	              onOpenVoice={(threadId) => {
+	                if (threadId && typeof window !== 'undefined') {
+	                  window.localStorage.setItem('iris.inbox.voice.thread', threadId);
+	                }
+	                setChannel('voice');
+	              }} />
           </Box>
 
           {/* Inline context rail only at lg+ */}
@@ -183,14 +191,22 @@ export function InboxPage() {
     </Box>);
 
 }
-function ChannelContent({ channel, onOpenActivityEvent }: {channel: ChannelId;onOpenActivityEvent: (event: ActivityEvent) => void;}) {
+function ChannelContent({
+  channel,
+  onOpenActivityEvent,
+  onOpenVoice,
+}: {
+  channel: ChannelId;
+  onOpenActivityEvent: (event: ActivityEvent) => void;
+  onOpenVoice: (threadId?: string) => void;
+}) {
   switch (channel) {
     case 'all':
       return <OverviewView active={channel === 'all'} onOpenActivityEvent={onOpenActivityEvent} />;
     case 'email':
       return <EmailView />;
     case 'sms':
-      return <SmsView />;
+      return <SmsView onOpenVoice={onOpenVoice} />;
     case 'voice':
       return <VoiceView />;
     case 'properties':
