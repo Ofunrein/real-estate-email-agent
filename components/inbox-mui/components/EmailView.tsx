@@ -306,7 +306,7 @@ function EmailBubble({
                 typeof window !== 'undefined'
                   ? (function () {
                       // eslint-disable-next-line @typescript-eslint/no-var-requires
-                      const DOMPurify = require('isomorphic-dompurify');
+                      const DOMPurify = require('dompurify');
                       return DOMPurify.sanitize(raw, {
                         USE_PROFILES: { html: true },
                         FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
