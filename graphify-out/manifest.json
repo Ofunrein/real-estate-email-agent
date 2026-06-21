@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782035616.5731878,
-    "ast_hash": "5e7bb36a2a8ac2da0fe76b7f21140891",
+    "mtime": 1782037412.3519719,
+    "ast_hash": "533a39ba0e7571e1eaad6ce9717bd539",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -2030,13 +2030,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782003324.9944372,
-    "ast_hash": "b8226c8dfb1cf28548d992c570a7afbc",
+    "mtime": 1782037516.1116188,
+    "ast_hash": "33eec47faec0de71ce894d4fd4572344",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
-    "mtime": 1782023212.1732059,
-    "ast_hash": "e91b8a349aae9db4648ad7391204c53c",
+    "mtime": 1782037475.799914,
+    "ast_hash": "a9669faeb0db90476c8227a60acc7563",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityFeed.tsx": {
@@ -2085,8 +2085,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
-    "mtime": 1782036080.721299,
-    "ast_hash": "cc1a340f4333e016b60a36f4a0141f17",
+    "mtime": 1782037510.3528192,
+    "ast_hash": "9bc9b177c97b59b9ba91d71c8b5742d5",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/PropertiesView.tsx": {
@@ -2125,8 +2125,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
-    "mtime": 1782023273.1809447,
-    "ast_hash": "ec8d9f33e19b6ef4e8348820fcd15b19",
+    "mtime": 1782037498.3840895,
+    "ast_hash": "aeca843486292962bd0deb77be8ff10f",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/TopBar.tsx": {
@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782036318.6851997,
-    "ast_hash": "5645caf8afd9e8ccf23213e42b4efd42",
+    "mtime": 1782037436.2455716,
+    "ast_hash": "acdbfc18dbac31112b8e32ef5f610453",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
@@ -2360,8 +2360,8 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782035153.2793102,
-    "ast_hash": "ecff3784cbdafc4030be7f734009776a",
+    "mtime": 1782037449.2516732,
+    "ast_hash": "5c77591367def6234fdf73e968667bc9",
     "semantic_hash": ""
   },
   ".github/workflows/build-check.yml": {
@@ -2452,6 +2452,11 @@
   "db/migrations/011_inbox_settings_autosend_defaults.sql": {
     "mtime": 1782036519.35583,
     "ast_hash": "9fb3d6d63c8aba2b1228bcfb3d20444e",
+    "semantic_hash": ""
+  },
+  "components/inbox-mui/hooks/useReplayKey.ts": {
+    "mtime": 1782037457.632601,
+    "ast_hash": "53efa453f1f686d5a7388ff585c66374",
     "semantic_hash": ""
   }
 }

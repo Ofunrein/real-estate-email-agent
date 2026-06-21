@@ -3,6 +3,7 @@ import React, { useId } from 'react';
 import { Box, Card, Stack, Typography, LinearProgress } from '@mui/material';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { TrendPoint } from '../data/inboxData';
+import { useReplayKey } from '../hooks/useReplayKey';
 interface StatCardProps {
   label: string;
   value: React.ReactNode;
@@ -12,6 +13,8 @@ interface StatCardProps {
   progress?: number;
   trend?: TrendPoint[];
   trendSuffix?: string;
+  active?: boolean;
+  replayDelay?: number;
 }
 export function StatCard({
   label,
@@ -21,9 +24,12 @@ export function StatCard({
   icon,
   progress,
   trend,
-  trendSuffix = ''
+  trendSuffix = '',
+  active = true,
+  replayDelay = 0
 }: StatCardProps) {
   const gradientId = useId().replace(/:/g, '');
+  const { ref, playKey } = useReplayKey(active);
   return (
     <Card
       sx={{
@@ -112,14 +118,16 @@ export function StatCard({
 
         {trend && trend.length > 0 &&
         <Box
+          ref={ref}
           sx={{
             width: 96,
             height: 44,
             flexShrink: 0
           }}>
           
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer key={playKey} width="100%" height="100%">
               <AreaChart
+              key={playKey}
               data={trend}
               margin={{
                 top: 4,
@@ -177,6 +185,7 @@ export function StatCard({
                 fill={`url(#${gradientId})`}
                 dot={false}
                 isAnimationActive={true}
+                animationBegin={replayDelay}
                 animationDuration={900}
                 animationEasing="ease-out"
                 activeDot={{
