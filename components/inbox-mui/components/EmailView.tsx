@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
@@ -14,6 +14,7 @@ import {
   type LeadCategoryId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 
@@ -61,6 +62,18 @@ export function EmailView() {
   const thread =
   visibleThreads.find((t) => t.id === selectedId) ??
   visibleThreads[0];
+  const targetEventId = useActivityEventTarget('email', thread?.id);
+  const messageRefs = useRef(new Map<string, HTMLDivElement>());
+  const scrolledTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetEventId || scrolledTargetRef.current === targetEventId) return;
+    const target = messageRefs.current.get(targetEventId);
+    if (!target) return;
+    scrolledTargetRef.current = targetEventId;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [targetEventId, thread?.id]);
   return (
     <Box
       sx={{
@@ -181,7 +194,12 @@ export function EmailView() {
               <EmailBubble
                 key={m.id}
                 message={m}
-                senderName={thread.name} />
+                senderName={thread.name}
+                highlighted={m.eventId === targetEventId}
+                registerTarget={(node) => {
+                  if (node) messageRefs.current.set(m.eventId, node);
+                  else messageRefs.current.delete(m.eventId);
+                }} />
 
               )}
               </Stack>
@@ -216,11 +234,13 @@ function EmptyThreadCard() {
 }
 function EmailBubble({
   message,
-  senderName
+  senderName,
+  highlighted,
+  registerTarget
 
 
 
-}: {message: EmailMessage;senderName: string;}) {
+}: {message: EmailMessage;senderName: string;highlighted?: boolean;registerTarget?: (node: HTMLDivElement | null) => void;}) {
   const isIris = message.direction === 'iris';
   const isOwner = message.direction === 'owner';
   const alignRight = isIris || isOwner;
@@ -231,9 +251,11 @@ function EmailBubble({
   `${senderName} received`;
   return (
     <Box
+      ref={registerTarget}
       sx={{
         display: 'flex',
-        justifyContent: alignRight ? 'flex-end' : 'flex-start'
+        justifyContent: alignRight ? 'flex-end' : 'flex-start',
+        scrollMargin: '24px'
       }}>
       
       <Box
@@ -253,7 +275,8 @@ function EmailBubble({
             p: 1.75,
             borderRadius: 2.5,
             border: '1px solid',
-            borderColor: isIris ? 'transparent' : 'divider',
+            borderColor: highlighted ? 'primary.main' : isIris ? 'transparent' : 'divider',
+            boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none',
             bgcolor: isIris ?
             'action.selected' :
             isOwner ?

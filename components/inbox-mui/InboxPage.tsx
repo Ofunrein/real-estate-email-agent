@@ -13,6 +13,7 @@ import { PropertiesView } from './components/PropertiesView';
 import { ImportsView } from './components/ImportsView';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { type ActivityEvent, type ChannelId } from './data/inboxData';
+import { persistActivityEventTarget } from './hooks/useActivityEventTarget';
 import { usePersistedSelection } from './hooks/usePersistedSelection';
 
 const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties', 'imports'];
@@ -41,7 +42,7 @@ export function InboxPage() {
       } else if (targetChannel === 'voice') {
         window.localStorage.setItem('iris.inbox.voice.thread', event.threadId);
       }
-      window.localStorage.setItem('iris.inbox.last.event', event.eventId || event.threadRef || event.id);
+      persistActivityEventTarget(event);
     }
     setChannel(targetChannel);
   };

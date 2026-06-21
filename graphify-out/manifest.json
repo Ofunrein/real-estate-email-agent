@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "lib/crm/ghl.ts": {
-    "mtime": 1781218676.1245146,
-    "ast_hash": "18a707d7e90bff06f2b26e98e7df6126",
+    "mtime": 1782072754.0072212,
+    "ast_hash": "5228defa24291efde7867ca39074c902",
     "semantic_hash": ""
   },
   "lib/crm/index.ts": {
@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "lib/crm/types.ts": {
-    "mtime": 1781218676.1255312,
-    "ast_hash": "ed1fbfef9c935b78a1a540ccfe88141f",
+    "mtime": 1782072489.0067697,
+    "ast_hash": "e1127e3f18eb70516a9e571bf6e21463",
     "semantic_hash": ""
   },
   "lib/dataSource.ts": {
@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782047687.6253242,
-    "ast_hash": "c3ae9499abddda0cb1f0b219447be69e",
+    "mtime": 1782078674.585735,
+    "ast_hash": "c3a4011d5cdcef7fd116836f9407f8ec",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -975,8 +975,8 @@
     "semantic_hash": ""
   },
   "tests/ts/ghlAdapter.test.ts": {
-    "mtime": 1781218676.2039158,
-    "ast_hash": "b0d9438b335f7f66b3df1ad31f0f2205",
+    "mtime": 1782072762.7883637,
+    "ast_hash": "4ba88f9d852ade86ec07728865622894",
     "semantic_hash": ""
   },
   "tests/ts/identity.test.ts": {
@@ -1115,8 +1115,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1781940489.0727994,
-    "ast_hash": "e2afc66de37712d8ea99d8095d0b0f04",
+    "mtime": 1782072657.0679882,
+    "ast_hash": "80d4667ae4f1de78659d58bb5ef8a55e",
     "semantic_hash": ""
   },
   "docs/CODEBASE_ONBOARDING.md": {
@@ -1320,8 +1320,8 @@
     "semantic_hash": ""
   },
   "app/login/page.tsx": {
-    "mtime": 1782040701.5542216,
-    "ast_hash": "e89d9ac784e813d484bc2df023f2c0ae",
+    "mtime": 1782076552.2164533,
+    "ast_hash": "940e8ab1635ae54888ba34f295a8f4d2",
     "semantic_hash": ""
   },
   "auth.ts": {
@@ -2030,13 +2030,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782046829.046583,
-    "ast_hash": "caf577c6b74e8a11978a067f0a1a62e7",
+    "mtime": 1782079065.0374775,
+    "ast_hash": "b845395106372eb855ee85ce2b9e9f87",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
-    "mtime": 1782037475.799914,
-    "ast_hash": "a9669faeb0db90476c8227a60acc7563",
+    "mtime": 1782075494.18396,
+    "ast_hash": "bce3a71622d56d4d680f8e3897fc4d4c",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityFeed.tsx": {
@@ -2055,8 +2055,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ContextColumn.tsx": {
-    "mtime": 1782036095.2637632,
-    "ast_hash": "ac36bb1a70138ad3b2a94a98fdd30857",
+    "mtime": 1782078759.6706972,
+    "ast_hash": "45365429e49f22fe1ee6607f38768574",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ConversationList.tsx": {
@@ -2065,23 +2065,23 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
-    "mtime": 1782046961.3184676,
-    "ast_hash": "d77b2ccee24b773903fd5bc241c9a930",
+    "mtime": 1782079065.037949,
+    "ast_hash": "57309f6dc2e466aa41f1f951ac8f31a1",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmptyChannelView.tsx": {
-    "mtime": 1781993687.2773743,
-    "ast_hash": "b20d002f78d6ac3d1144f16773a9934b",
+    "mtime": 1782078461.6358912,
+    "ast_hash": "1de1263cf7218b975eeabb6850e8301d",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/LiveCallPanel.tsx": {
-    "mtime": 1782023498.8277016,
-    "ast_hash": "6c922e467e22d5f9697a05a6c756b2e9",
+    "mtime": 1782075500.510362,
+    "ast_hash": "02d1ba35c9587415ed3d7894dbf30120",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/NavRail.tsx": {
-    "mtime": 1781993364.3509135,
-    "ast_hash": "147738cdece959ae41b54809bd8a263d",
+    "mtime": 1782078420.39758,
+    "ast_hash": "5463b3f65b010b73b43cf18f72166272",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
@@ -2120,8 +2120,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782046971.00961,
-    "ast_hash": "53fe05b5edd82fe8a6c4c4ebbb45a384",
+    "mtime": 1782079065.0383377,
+    "ast_hash": "2cfda1fafdefc0f4d54510b51843f115",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2130,13 +2130,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/TopBar.tsx": {
-    "mtime": 1782036294.2128644,
-    "ast_hash": "5de197d3e5cbde6460ad42a6e74488fa",
+    "mtime": 1782078439.7808406,
+    "ast_hash": "09c2a65579ca715c9272ab23f21a9e3a",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/VoiceView.tsx": {
-    "mtime": 1782040564.7321687,
-    "ast_hash": "03ca396e86195a74deec1cf4f5b1ea32",
+    "mtime": 1782079065.0390403,
+    "ast_hash": "59b3eb00a30c83650afe2aa645f5dc3b",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/WorkspaceHeader.tsx": {
@@ -2145,8 +2145,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/data/inboxData.ts": {
-    "mtime": 1782046774.9204686,
-    "ast_hash": "8340dac8efeffd2c3c05e51373043cfb",
+    "mtime": 1782079065.0359674,
+    "ast_hash": "4fef628b29ad034c7afd99fc73d2f752",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/CategoryColorContext.tsx": {
@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782046905.7023966,
-    "ast_hash": "93f555b5bb8ff52c1ea9d4ca2584b15e",
+    "mtime": 1782079065.0370443,
+    "ast_hash": "70109652ffd0b2126bc0dbe7152d1e78",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
@@ -2360,8 +2360,8 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782037449.2516732,
-    "ast_hash": "5c77591367def6234fdf73e968667bc9",
+    "mtime": 1782079095.9865937,
+    "ast_hash": "f9acbb8b5e70a9047bbcef30a05e628a",
     "semantic_hash": ""
   },
   ".github/workflows/build-check.yml": {
@@ -2517,6 +2517,41 @@
   "tests/ts/publicPropertyData.test.ts": {
     "mtime": 1782050849.6506984,
     "ast_hash": "419ff89032b5d63e88c85b2755aa3ffb",
+    "semantic_hash": ""
+  },
+  "app/api/leads/import/route.ts": {
+    "mtime": 1782078685.201567,
+    "ast_hash": "567fcb5e12cf722f28d2596702030165",
+    "semantic_hash": ""
+  },
+  "components/inbox-mui/components/ImportsView.tsx": {
+    "mtime": 1782078628.5501442,
+    "ast_hash": "29473284394b1296ce9a7fb4d63acd4c",
+    "semantic_hash": ""
+  },
+  "components/inbox-mui/hooks/useActivityEventTarget.ts": {
+    "mtime": 1782079065.0362911,
+    "ast_hash": "599f92538b7e6c42321953bc931017e1",
+    "semantic_hash": ""
+  },
+  "db/migrations/012_lead_imports.sql": {
+    "mtime": 1782072295.3699865,
+    "ast_hash": "005590cca0e76cc2f72381acefc7fec9",
+    "semantic_hash": ""
+  },
+  "lib/leadImport.ts": {
+    "mtime": 1782072438.0927792,
+    "ast_hash": "8572c2d71f991b7ec3ea925079b15701",
+    "semantic_hash": ""
+  },
+  "tests/ts/leadImport.test.ts": {
+    "mtime": 1782072668.364574,
+    "ast_hash": "ddffdf62805c78ad0064003289fe07d9",
+    "semantic_hash": ""
+  },
+  "docs/LEAD_REOPEN_WORKLOAD.md": {
+    "mtime": 1782078574.149911,
+    "ast_hash": "7eb4d48f7c0fa18f5f073ecf5c079fe1",
     "semantic_hash": ""
   }
 }

@@ -116,6 +116,7 @@ export interface PropertyCard {
 
 export interface EmailMessage {
   id: string;
+  eventId: string;
   sender: string;
   direction: 'inbound' | 'iris' | 'owner';
   time: string;
@@ -142,6 +143,7 @@ export interface EmailThread {
 
 export interface SmsMessage {
   id: string;
+  eventId: string;
   direction: 'inbound' | 'iris';
   time: string;
   body: string;
