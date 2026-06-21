@@ -49,6 +49,7 @@ import {
 } from "@/components/inbox-mui/data/inboxData";
 
 const DAYS = 14;
+const RECENT_ACTIVITY_LIMIT = 30;
 const HTML_TAG_RE = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li|strong|em)\b/i;
 const MEDIA_URL_RE = /(https?:\/\/[^\s<>"')]+|\/api\/media\/proxy\?url=[^\s<>"')]+)/gi;
 const MEDIA_LABEL_RE = /^\s*(?:MMS|SMS)?\s*(?:image|photo|media|attachment|Social DM image)\s*:\s*(.+?)\s*$/i;
@@ -436,26 +437,54 @@ function buildChannels(data: AgentInboxData): InboxModel["channels"] {
 }
 
 function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
-  return [...data.events]
-    .sort((a, b) => eventTimeValue(b) - eventTimeValue(a))
-    .slice(0, 12)
-    .map((event, i) => {
+  const messageEvents = [...data.events].map((event, i) => {
       const view = realChannelToView(event.channel || "");
       const isAi = event.direction !== "inbound";
       const kind: ActivityEvent["kind"] = view === "voice" ? "voice" : isAi ? "ai_reply" : "inbound";
       const status: ActivityEvent["status"] = eventNeedsHuman(event) ? "Review" : isAi ? "Sent" : "New";
       return {
-        id: event.thread_ref || `${i}`,
-        channel: view,
-        kind,
-        actor: event.email || event.phone || event.full_name || "unknown",
-        intent: event.event_type || undefined,
-        body: eventText(event) || event.summary || "",
-        time: formatEventTimeShort(event.event_at),
-        status,
-        isHuman: !isAi,
+        sortValue: eventTimeValue(event),
+        event: {
+          id: event.thread_ref || `event-${i}`,
+          channel: view,
+          kind,
+          actor: event.email || event.phone || event.full_name || "unknown",
+          intent: event.event_type || undefined,
+          body: eventText(event) || event.summary || "",
+          time: formatEventTimeShort(event.event_at),
+          status,
+          isHuman: !isAi,
+        } satisfies ActivityEvent,
       };
     });
+  const voiceEvents = [...data.voiceCalls].map((call, i) => {
+    const identity = voiceThreadIdentity(call.thread_ref || call.call_id || `voice-${i}`, [call]);
+    const duration = formatCallDuration(callDurationSeconds(call));
+    const outcome = callOutcome(call);
+    const transcript = parseVoiceTranscript(voiceCallTranscriptSource(call));
+    const firstLeadTurn = transcript.find((turn) => turn.direction === "inbound");
+    const body = call.summary || firstLeadTurn?.text || "Voice call recorded.";
+    const time = call.ended_at || call.started_at || call.event_at || call.created_at;
+    return {
+      sortValue: voiceCallTimeValue(call),
+      event: {
+        id: call.call_id || call.thread_ref || `voice-${i}`,
+        channel: "voice",
+        kind: "voice",
+        actor: call.phone || call.full_name || identity,
+        intent: `${outcome} · ${duration}`,
+        body,
+        time: formatEventTimeShort(time),
+        status: outcome === "assistant-forwarded-call" ? "Review" : "New",
+        isHuman: true,
+      } satisfies ActivityEvent,
+    };
+  });
+
+  return [...messageEvents, ...voiceEvents]
+    .sort((a, b) => b.sortValue - a.sortValue)
+    .slice(0, RECENT_ACTIVITY_LIMIT)
+    .map((entry) => entry.event);
 }
 
 function buildChannelStats(data: AgentInboxData): Record<Exclude<ChannelId, "properties">, ChannelStats> {

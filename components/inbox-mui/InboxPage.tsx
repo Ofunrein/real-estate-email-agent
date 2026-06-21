@@ -153,7 +153,7 @@ export function InboxPage() {
 function ChannelContent({ channel }: {channel: ChannelId;}) {
   switch (channel) {
     case 'all':
-      return <OverviewView />;
+      return <OverviewView active={channel === 'all'} />;
     case 'email':
       return <EmailView />;
     case 'sms':

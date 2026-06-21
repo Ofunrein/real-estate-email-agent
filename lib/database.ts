@@ -164,7 +164,11 @@ export async function readEventsFromDatabase(): Promise<SheetRow[]> {
     `select ${columns}
        from conversation_events
       where client_id = $1
-      order by id asc`,
+      order by coalesce(
+          nullif(event_at, '')::timestamptz,
+          created_at
+        ) asc,
+        id asc`,
     [clientId()],
   );
   return result.rows.map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
@@ -677,7 +681,11 @@ export async function readEventsForThreadFromDatabase(threadRef: string, limit =
        from conversation_events
       where client_id = $1
         and thread_ref = $2
-      order by id desc
+      order by coalesce(
+          nullif(event_at, '')::timestamptz,
+          created_at
+        ) desc,
+        id desc
       limit $3`,
     [clientId(), threadRef, limit],
   );
@@ -733,7 +741,11 @@ export async function readEventsForLeadFromDatabase(
           ))
           or ($3 <> '' and lower(email) = $3)
         )
-      order by id desc
+      order by coalesce(
+          nullif(event_at, '')::timestamptz,
+          created_at
+        ) desc,
+        id desc
       limit $4`,
     [clientId(), phone, email, limit],
   );

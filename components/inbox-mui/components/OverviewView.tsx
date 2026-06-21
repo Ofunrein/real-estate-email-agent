@@ -9,7 +9,7 @@ import { StatCard } from './StatCards';
 import { ActivityChart } from './ActivityChart';
 import { ActivityFeed } from './ActivityFeed';
 import { useInboxModel } from '../InboxDataContext';
-export function OverviewView() {
+export function OverviewView({ active = true }: {active?: boolean;}) {
   const { metrics, statTrends } = useInboxModel();
   const aiRate = metrics.events ? Math.round(metrics.aiReplies / metrics.events * 100) : 0;
   return (
@@ -32,7 +32,9 @@ export function OverviewView() {
             hint="Flagged for human approval"
             accent="#f59e0b"
             icon={<ReviewsIcon fontSize="small" />}
-            trend={statTrends.needReview} />
+            trend={statTrends.needReview}
+            active={active}
+            replayDelay={0} />
           
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -42,7 +44,9 @@ export function OverviewView() {
             hint="Active buyer leads"
             accent="#10b981"
             icon={<GroupsIcon fontSize="small" />}
-            trend={statTrends.leadsTotal} />
+            trend={statTrends.leadsTotal}
+            active={active}
+            replayDelay={120} />
           
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -52,7 +56,9 @@ export function OverviewView() {
             hint={`${metrics.threads} threads tracked`}
             accent="#06b6d4"
             icon={<ForumIcon fontSize="small" />}
-            trend={statTrends.events} />
+            trend={statTrends.events}
+            active={active}
+            replayDelay={240} />
           
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -64,12 +70,14 @@ export function OverviewView() {
             icon={<AutoAwesomeIcon fontSize="small" />}
             progress={aiRate}
             trend={statTrends.aiRate}
-            trendSuffix="%" />
+            trendSuffix="%"
+            active={active}
+            replayDelay={360} />
           
         </Grid>
       </Grid>
 
-      <ActivityChart />
+      <ActivityChart active={active} />
       <ActivityFeed channel="all" />
     </Box>);
 
