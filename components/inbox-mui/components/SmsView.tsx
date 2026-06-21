@@ -1,11 +1,13 @@
 "use client";
 import React, { useMemo, useState } from 'react';
-import { Box, Card, Stack, Typography } from '@mui/material';
+import { Box, Card, Stack, Typography, Avatar } from '@mui/material';
+import PersonIcon from '@mui/icons-material/PersonOutline';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
 import { CategoryFilter, type CategoryFilterValue } from './CategoryFilter';
 import {
+  agentAvatar,
   type SmsMessage,
   type LeadCategoryId } from
 '../data/inboxData';
@@ -154,14 +156,29 @@ function SmsBubble({
     <Box
       sx={{
         display: 'flex',
-        justifyContent: isIris ? 'flex-end' : 'flex-start'
+        flexDirection: isIris ? 'row-reverse' : 'row',
+        alignItems: 'flex-end',
+        gap: 1
       }}>
-      
+
+      <Avatar
+        src={isIris ? agentAvatar : undefined}
+        alt={isIris ? 'Arya, AI agent' : undefined}
+        sx={{
+          width: 28,
+          height: 28,
+          flexShrink: 0,
+          bgcolor: isIris ? 'primary.main' : 'action.selected',
+          color: 'text.secondary'
+        }}>
+        {!isIris && <PersonIcon sx={{ fontSize: 16, color: '#64748b' }} aria-hidden />}
+      </Avatar>
+
       <Box
         sx={{
-          maxWidth: '74%'
+          maxWidth: { xs: '80%', md: '66%' }
         }}>
-        
+
         <Stack
           direction="row"
           spacing={1}
@@ -170,44 +187,45 @@ function SmsBubble({
           sx={{
             mb: 0.25
           }}>
-          
+
           <Typography
-            variant="caption"
             sx={{
+              fontSize: '11px',
               fontWeight: 700,
-              color: isIris ? 'primary.main' : 'text.primary'
+              color: 'text.secondary'
             }}>
-            
-            {isIris ? 'Iris sent' : `${contact} received`}
+
+            {isIris ? 'Arya sent' : `${contact} received`}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            sx={{
+              fontSize: '10px',
+              fontFamily: 'monospace',
+              color: 'text.secondary'
+            }}>
             {message.time}
           </Typography>
         </Stack>
         <Box
           sx={{
-            p: 1.25,
-            px: 1.5,
-            borderRadius: 2.5,
-            borderTopRightRadius: isIris ? 4 : 20,
-            borderTopLeftRadius: isIris ? 20 : 4,
-            bgcolor: isIris ?
-            (t) =>
-            t.palette.mode === 'dark' ?
-            'rgba(99,102,241,0.16)' :
-            'rgba(99,102,241,0.1)' :
-            'action.selected',
-            border: '1px solid',
-            borderColor: isIris ? 'primary.main' : 'divider'
+            py: 1,
+            px: 1.75,
+            borderRadius: '16px',
+            borderBottomRightRadius: isIris ? '4px' : '16px',
+            borderBottomLeftRadius: isIris ? '16px' : '4px',
+            bgcolor: isIris ? 'primary.main' : 'background.default',
+            color: isIris ? '#fff' : 'text.secondary',
+            border: isIris ? 'none' : '1px solid',
+            borderColor: 'divider'
           }}>
-          
+
           <Typography
             variant="body2"
             sx={{
               lineHeight: 1.5,
               wordBreak: 'break-word'
             }}>
-            
+
             {message.body}
           </Typography>
         </Box>

@@ -15,7 +15,10 @@ import SouthEastIcon from '@mui/icons-material/SouthEast';
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import {
+  agentAvatar,
   type ChannelId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
@@ -27,7 +30,7 @@ export function ContextColumn({
   channel,
   inDrawer = false
 }: ContextColumnProps) {
-  const { channelStats, reviewQueue, channelMeta } = useInboxModel();
+  const { channelStats, reviewQueue, channelMeta, metrics } = useInboxModel();
   const statsKey = channel === 'properties' ? 'all' : channel;
   const stats = channelStats[statsKey as Exclude<ChannelId, 'properties'>];
   const label =
@@ -37,6 +40,8 @@ export function ContextColumn({
   'All channels' :
   channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>]?.label ?? channel;
   const total = stats.inbound + stats.aiReplies;
+  const approvalRate = total > 0 ? Math.round((stats.aiReplies / total) * 100) : 0;
+  const suggestions = reviewQueue.slice(0, 3);
   return (
     <Stack
       spacing={2}
@@ -50,13 +55,71 @@ export function ContextColumn({
       }}
       component="aside"
       aria-label="Context">
-      
+
+      {/* Arya header */}
+      <Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 0.5 }}>
+        <Avatar src={agentAvatar} alt="Arya AI agent" sx={{ width: 32, height: 32 }} />
+        <Box>
+          <Typography sx={{ fontSize: '14px', fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+            Arya
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
+            <Typography sx={{ fontSize: '11px', color: 'text.secondary' }}>
+              Handling leads
+            </Typography>
+          </Stack>
+        </Box>
+      </Stack>
+
+      {/* TODAY */}
+      <Card sx={{ p: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+          <TrendingUpIcon sx={{ fontSize: 15, color: '#6366f1' }} aria-hidden />
+          <Typography sx={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'text.secondary' }}>
+            Today
+          </Typography>
+        </Stack>
+        <Stack spacing={1.25}>
+          <TodayRow label="Active threads" value={`${stats.threads}`} color="#6366f1" />
+          <TodayRow label="Approval rate" value={`${approvalRate}%`} color="#10b981" />
+          <TodayRow label="Open leads" value={`${metrics.leadsTotal}`} color="#f59e0b" />
+        </Stack>
+      </Card>
+
+      {/* SUGGESTIONS */}
+      {suggestions.length > 0 &&
+      <Card sx={{ p: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          <AutoAwesomeIcon sx={{ fontSize: 15, color: '#22d3ee' }} aria-hidden />
+          <Typography sx={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'text.secondary' }}>
+            Suggestions
+          </Typography>
+        </Stack>
+        <Stack spacing={0}>
+          {suggestions.map((s, i) =>
+          <Box
+            key={s.id}
+            sx={{
+              py: 1.25,
+              borderTop: i === 0 ? 'none' : '1px solid',
+              borderColor: 'divider'
+            }}>
+            <Typography sx={{ fontSize: '14px', color: 'text.secondary', lineHeight: 1.5 }}>
+              Follow up with {s.contact} — {s.reason}
+            </Typography>
+          </Box>
+          )}
+        </Stack>
+      </Card>
+      }
+
       {/* Watching */}
       <Card
         sx={{
           p: 2
         }}>
-        
+
         <Typography
           variant="subtitle2"
           sx={{
@@ -373,6 +436,18 @@ export function ContextColumn({
           Property rows are ready for agent use.
         </Typography>
       </Card>
+    </Stack>);
+
+}
+function TodayRow({ label, value, color }: {label: string;value: string;color: string;}) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: '14px', fontWeight: 800, color }}>
+        {value}
+      </Typography>
     </Stack>);
 
 }
