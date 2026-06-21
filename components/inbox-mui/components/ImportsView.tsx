@@ -24,6 +24,10 @@ import CloudSyncIcon from '@mui/icons-material/CloudSyncOutlined';
 import SafetyIcon from '@mui/icons-material/VerifiedUserOutlined';
 import SegmentIcon from '@mui/icons-material/AccountTreeOutlined';
 import WarningIcon from '@mui/icons-material/ReportProblemOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
+import LinkIcon from '@mui/icons-material/AddLinkOutlined';
+import TableChartIcon from '@mui/icons-material/TableChartOutlined';
+import StorageIcon from '@mui/icons-material/StorageOutlined';
 
 type ImportPreviewRow = {
   rowIndex: number;
@@ -68,6 +72,16 @@ type ImportBatch = {
   created_at: string;
 };
 
+type ConnectorStatus = {
+  id: string;
+  label: string;
+  provider: string;
+  path: string;
+  status: 'ready' | 'configured' | 'needs_config' | 'planned' | 'fallback';
+  detail: string;
+  action: string;
+};
+
 const segmentLabels: Record<string, string> = {
   hot_buyer: 'Hot buyer',
   seller_valuation: 'Seller / valuation',
@@ -94,6 +108,21 @@ function statusColor(status: string): 'default' | 'success' | 'warning' | 'error
   return 'default';
 }
 
+function connectorColor(status: ConnectorStatus['status']): 'default' | 'success' | 'warning' | 'info' {
+  if (status === 'ready' || status === 'configured') return 'success';
+  if (status === 'fallback') return 'info';
+  if (status === 'needs_config') return 'warning';
+  return 'default';
+}
+
+function connectorIcon(id: string) {
+  if (id === 'csv') return <UploadFileIcon color="primary" />;
+  if (id === 'google_sheets') return <TableChartIcon color="primary" />;
+  if (id === 'composio') return <LinkIcon color="primary" />;
+  if (id === 'ghl') return <CloudSyncIcon color="primary" />;
+  return <StorageIcon color="primary" />;
+}
+
 export function ImportsView() {
   const [file, setFile] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(true);
@@ -103,6 +132,8 @@ export function ImportsView() {
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [preview, setPreview] = useState<ImportPreviewRow[]>([]);
   const [batches, setBatches] = useState<ImportBatch[]>([]);
+  const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
+  const [batchesError, setBatchesError] = useState('');
 
   const topSegments = useMemo(() => {
     const counts = summary?.segmentCounts || {};
@@ -116,6 +147,8 @@ export function ImportsView() {
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'Unable to load batches');
       setBatches(data.batches || []);
+      setConnectors(data.connectors || []);
+      setBatchesError(data.batchesError || '');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Unable to load batches');
     } finally {
@@ -199,6 +232,58 @@ export function ImportsView() {
             <Card sx={{ p: 2 }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
+                  <CheckCircleIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2">Source connections</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Composio first where coverage is deep enough. Direct adapters for real-estate CRMs. CSV remains the always-on fallback.
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                    gap: 1,
+                  }}>
+                  {(connectors.length ? connectors : [
+                    { id: 'csv', label: 'CSV / export', provider: 'csv_export', path: 'fallback', status: 'ready', detail: 'Works today for any CRM export.', action: 'Choose CSV file' },
+                    { id: 'ghl', label: 'GoHighLevel', provider: 'ghl', path: 'direct_adapter', status: 'needs_config', detail: 'Status loads from the import API.', action: 'Configure GHL' },
+                    { id: 'composio', label: 'Composio connectors', provider: 'composio', path: 'preferred', status: 'needs_config', detail: 'Status loads from the import API.', action: 'Connect Composio' },
+                    { id: 'other_crm', label: 'Other CRM export', provider: 'real_estate_crm_export', path: 'csv_first', status: 'fallback', detail: 'CSV fallback works now.', action: 'Import CSV' },
+                  ] as ConnectorStatus[]).map((connector) => (
+                    <Card key={connector.id} variant="outlined" sx={{ p: 1.25, minHeight: 132 }}>
+                      <Stack spacing={1} sx={{ height: '100%' }}>
+                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                          {connectorIcon(connector.id)}
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography variant="body2" fontWeight={800}>{connector.label}</Typography>
+                            <Typography variant="caption" color="text.secondary">{connector.provider}</Typography>
+                          </Box>
+                          <Chip
+                            size="small"
+                            color={connectorColor(connector.status)}
+                            variant={connector.status === 'planned' ? 'outlined' : 'filled'}
+                            label={connector.status.replace(/_/g, ' ')}
+                          />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                          {connector.detail}
+                        </Typography>
+                        <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between">
+                          <Chip size="small" variant="outlined" label={connector.path.replace(/_/g, ' ')} />
+                          <Typography variant="caption" color="primary" fontWeight={800}>{connector.action}</Typography>
+                        </Stack>
+                      </Stack>
+                    </Card>
+                  ))}
+                </Box>
+              </Stack>
+            </Card>
+
+            <Card sx={{ p: 2 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
                   <UploadFileIcon color="primary" />
                   <Box>
                     <Typography variant="subtitle2">CSV / export import</Typography>
@@ -238,7 +323,7 @@ export function ImportsView() {
                   <Box>
                     <Typography variant="subtitle2">Connected CRM pull</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Uses the active CRM adapter. GHL is wired now; Composio and direct real-estate CRM adapters plug into this same path.
+                      Uses the active direct CRM adapter. GHL is wired now; FUB, Lofty, kvCORE, Sierra, Real Geeks, BoomTown, and CINC plug into this same path.
                     </Typography>
                   </Box>
                 </Stack>
@@ -274,6 +359,7 @@ export function ImportsView() {
           <Stack spacing={2}>
             {loading && <LinearProgress />}
             {error && <Alert severity="error" icon={<WarningIcon />}>{error}</Alert>}
+            {batchesError && <Alert severity="warning" icon={<WarningIcon />}>{batchesError}</Alert>}
 
             <Card sx={{ p: 2 }}>
               <Stack spacing={1.5}>
