@@ -34,6 +34,7 @@ import {
   type CallOutcome } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 const outcomeColor: Record<CallOutcome, string> = {
   voicemail: '#fbbf24',
@@ -59,6 +60,18 @@ export function VoiceView() {
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [dialing, setDialing] = useState(false);
   const [dialError, setDialError] = useState<string | null>(null);
+  const targetEventId = useActivityEventTarget('voice', contact?.id);
+  const callRefs = useRef(new Map<string, HTMLDivElement>());
+  const scrolledTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetEventId || scrolledTargetRef.current === targetEventId) return;
+    const target = callRefs.current.get(targetEventId);
+    if (!target) return;
+    scrolledTargetRef.current = targetEventId;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [targetEventId, contact?.id]);
   const handleSelect = (id: string) => {
     setSelectedId(id);
     // Jump to the conversation thread when a voice contact is opened.
@@ -210,7 +223,14 @@ export function VoiceView() {
             }
             <Stack spacing={2}>
               {contact.calls.map((call) =>
-              <CallCard key={call.id} call={call} />
+              <CallCard
+                key={call.id}
+                call={call}
+                highlighted={call.id === targetEventId}
+                registerTarget={(node) => {
+                  if (node) callRefs.current.set(call.id, node);
+                  else callRefs.current.delete(call.id);
+                }} />
               )}
             </Stack>
           </Box>
@@ -221,14 +241,18 @@ export function VoiceView() {
     </Box>);
 
 }
-function CallCard({ call }: {call: Call;}) {
+function CallCard({ call, highlighted, registerTarget }: {call: Call;highlighted?: boolean;registerTarget?: (node: HTMLDivElement | null) => void;}) {
   const [rawOpen, setRawOpen] = useState(false);
   const accent = outcomeColor[call.outcome];
   return (
     <Card
+      ref={registerTarget}
       variant="outlined"
       sx={{
-        p: 1.75
+        p: 1.75,
+        scrollMargin: '24px',
+        borderColor: highlighted ? 'primary.main' : undefined,
+        boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
       }}>
       
       <Stack

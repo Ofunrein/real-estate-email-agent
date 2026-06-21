@@ -84,6 +84,39 @@ test("adaptInboxData splits SMS MMS image logs from visible body and preserves s
   assert.match(message.media?.[0].url || "", /\/api\/media\/proxy\?url=/);
 });
 
+test("adaptInboxData aligns activity event ids with rendered message ids", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "email",
+        direction: "inbound",
+        email: "lead@example.com",
+        thread_ref: "gmail-thread-3",
+        gmail_message_id: "gmail-msg-3",
+        message_text: "Can I tour the 4309 Fairway Path home?",
+        event_at: "2026-06-19T15:06:00.000Z",
+      } as SheetRow,
+      {
+        channel: "sms",
+        direction: "inbound",
+        phone: "+15125550123",
+        thread_ref: "sms:+15125550123",
+        message_text: "Can you text the address?",
+        event_at: "2026-06-19T15:07:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const emailActivity = model.activityEvents.find((event) => event.channel === "email");
+  const smsActivity = model.activityEvents.find((event) => event.channel === "sms");
+  assert.equal(emailActivity?.eventId, model.emailThreads[0].messages[0].eventId);
+  assert.equal(smsActivity?.eventId, model.smsThreads[0].messages[0].eventId);
+  assert.notEqual(smsActivity?.eventId, "sms:+15125550123");
+});
+
 test("adaptInboxData sorts voice contacts and calls by actual call time", () => {
   const data = composeInboxData(
     [],

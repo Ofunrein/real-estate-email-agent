@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Box, Card, Stack, Typography, Avatar } from '@mui/material';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import { ConversationList } from './ConversationList';
@@ -12,6 +12,7 @@ import {
   type LeadCategoryId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 
@@ -59,6 +60,18 @@ export function SmsView() {
   const thread =
   visibleThreads.find((t) => t.id === selectedId) ??
   visibleThreads[0];
+  const targetEventId = useActivityEventTarget('sms', thread?.id);
+  const messageRefs = useRef(new Map<string, HTMLDivElement>());
+  const scrolledTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetEventId || scrolledTargetRef.current === targetEventId) return;
+    const target = messageRefs.current.get(targetEventId);
+    if (!target) return;
+    scrolledTargetRef.current = targetEventId;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [targetEventId, thread?.id]);
   return (
     <Box
       sx={{
@@ -142,7 +155,15 @@ export function SmsView() {
             
               <Stack spacing={1.25}>
                 {thread.messages.map((m) =>
-              <SmsBubble key={m.id} message={m} contact={thread.contact} />
+              <SmsBubble
+                key={m.id}
+                message={m}
+                contact={thread.contact}
+                highlighted={m.eventId === targetEventId}
+                registerTarget={(node) => {
+                  if (node) messageRefs.current.set(m.eventId, node);
+                  else messageRefs.current.delete(m.eventId);
+                }} />
               )}
               </Stack>
             </Box>
@@ -171,11 +192,13 @@ export function SmsView() {
 }
 function SmsBubble({
   message,
-  contact
+  contact,
+  highlighted,
+  registerTarget
 
 
 
-}: {message: SmsMessage;contact: string;}) {
+}: {message: SmsMessage;contact: string;highlighted?: boolean;registerTarget?: (node: HTMLDivElement | null) => void;}) {
   const isIris = message.direction === 'iris';
   const cleanHtml =
     message.html && typeof window !== 'undefined'
@@ -191,11 +214,13 @@ function SmsBubble({
       : message.html;
   return (
     <Box
+      ref={registerTarget}
       sx={{
         display: 'flex',
         flexDirection: isIris ? 'row-reverse' : 'row',
         alignItems: 'flex-end',
-        gap: 1
+        gap: 1,
+        scrollMargin: '24px'
       }}>
 
       <Avatar
@@ -253,8 +278,9 @@ function SmsBubble({
             borderBottomLeftRadius: isIris ? '16px' : '4px',
             bgcolor: isIris ? 'primary.main' : 'background.default',
             color: isIris ? '#fff' : 'text.secondary',
-            border: isIris ? 'none' : '1px solid',
-            borderColor: 'divider'
+            border: highlighted ? '1px solid' : isIris ? 'none' : '1px solid',
+            borderColor: highlighted ? 'primary.main' : 'divider',
+            boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
           }}>
 
           {cleanHtml ?
