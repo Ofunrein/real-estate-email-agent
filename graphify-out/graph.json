@@ -1180,7 +1180,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "outbound_route",
-      "community": 220,
+      "community": 277,
       "norm_label": "route.ts"
     },
     {
@@ -1190,7 +1190,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "outbound_route_outboundconfig",
-      "community": 220,
+      "community": 277,
       "norm_label": "outboundconfig()"
     },
     {
@@ -1200,7 +1200,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "outbound_route_post",
-      "community": 220,
+      "community": 277,
       "norm_label": "post()"
     },
     {
@@ -1370,7 +1370,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "sync_sheets_route",
-      "community": 40,
+      "community": 288,
       "norm_label": "route.ts"
     },
     {
@@ -1380,7 +1380,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "sync_sheets_route_authorized",
-      "community": 40,
+      "community": 288,
       "norm_label": "authorized()"
     },
     {
@@ -1390,7 +1390,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "sync_sheets_route_get",
-      "community": 40,
+      "community": 288,
       "norm_label": "get()"
     },
     {
@@ -1520,7 +1520,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "import_route",
-      "community": 30,
+      "community": 157,
       "norm_label": "route.ts"
     },
     {
@@ -1530,7 +1530,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "import_route_sourcetypefrom",
-      "community": 30,
+      "community": 157,
       "norm_label": "sourcetypefrom()"
     },
     {
@@ -1540,7 +1540,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "import_route_truthy",
-      "community": 30,
+      "community": 157,
       "norm_label": "truthy()"
     },
     {
@@ -1550,7 +1550,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "import_route_configured",
-      "community": 30,
+      "community": 157,
       "norm_label": "configured()"
     },
     {
@@ -1560,7 +1560,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "import_route_connectorstatuses",
-      "community": 30,
+      "community": 157,
       "norm_label": "connectorstatuses()"
     },
     {
@@ -1570,7 +1570,7 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "import_route_payloadfromrequest",
-      "community": 30,
+      "community": 157,
       "norm_label": "payloadfromrequest()"
     },
     {
@@ -1580,7 +1580,7 @@
       "source_location": "L248",
       "_origin": "ast",
       "id": "import_route_post",
-      "community": 30,
+      "community": 157,
       "norm_label": "post()"
     },
     {
@@ -1590,7 +1590,7 @@
       "source_location": "L284",
       "_origin": "ast",
       "id": "import_route_get",
-      "community": 30,
+      "community": 163,
       "norm_label": "get()"
     },
     {
@@ -1770,7 +1770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "callback_route",
-      "community": 163,
+      "community": 27,
       "norm_label": "route.ts"
     },
     {
@@ -1780,7 +1780,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "callback_route_redirecthome",
-      "community": 163,
+      "community": 27,
       "norm_label": "redirecthome()"
     },
     {
@@ -1790,7 +1790,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "callback_route_get",
-      "community": 163,
+      "community": 27,
       "norm_label": "get()"
     },
     {
@@ -1890,7 +1890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_api_settings_inbox_route_ts_inbox_route",
-      "community": 49,
+      "community": 220,
       "norm_label": "route.ts"
     },
     {
@@ -1900,7 +1900,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_api_settings_inbox_route_ts_inbox_route_get",
-      "community": 49,
+      "community": 220,
       "norm_label": "get()"
     },
     {
@@ -1910,7 +1910,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "inbox_route_patch",
-      "community": 49,
+      "community": 220,
       "norm_label": "patch()"
     },
     {
@@ -2100,7 +2100,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "reply_route",
-      "community": 28,
+      "community": 40,
       "norm_label": "route.ts"
     },
     {
@@ -2110,7 +2110,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "reply_route_replybody",
-      "community": 28,
+      "community": 40,
       "norm_label": "replybody"
     },
     {
@@ -2120,7 +2120,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "reply_route_resolveattachments",
-      "community": 28,
+      "community": 40,
       "norm_label": "resolveattachments()"
     },
     {
@@ -2130,7 +2130,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "reply_route_post",
-      "community": 28,
+      "community": 40,
       "norm_label": "post()"
     },
     {
@@ -2320,7 +2320,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tool_route",
-      "community": 220,
+      "community": 277,
       "norm_label": "route.ts"
     },
     {
@@ -2330,7 +2330,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tool_route_post",
-      "community": 220,
+      "community": 277,
       "norm_label": "post()"
     },
     {
@@ -2340,7 +2340,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aria_voice_route",
-      "community": 220,
+      "community": 10,
       "norm_label": "route.ts"
     },
     {
@@ -2350,7 +2350,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "aria_voice_route_post",
-      "community": 220,
+      "community": 10,
       "norm_label": "post()"
     },
     {
@@ -2630,7 +2630,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "theo_sms_route_cachetheoproperties",
-      "community": 16,
+      "community": 172,
       "norm_label": "cachetheoproperties()"
     },
     {
@@ -2760,7 +2760,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "theo_social_router_route_cachetheoproperties",
-      "community": 16,
+      "community": 11,
       "norm_label": "cachetheoproperties()"
     },
     {
@@ -2770,7 +2770,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "theo_social_router_route_recordtheosocialoutbound",
-      "community": 277,
+      "community": 11,
       "norm_label": "recordtheosocialoutbound()"
     },
     {
@@ -3020,7 +3020,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_page_tsx_app_page",
-      "community": 163,
+      "community": 170,
       "norm_label": "page.tsx"
     },
     {
@@ -3030,7 +3030,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "app_page_home",
-      "community": 163,
+      "community": 170,
       "norm_label": "home()"
     },
     {
@@ -3120,7 +3120,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "auth_localauthbypassenabled",
-      "community": 163,
+      "community": 170,
       "norm_label": "localauthbypassenabled()"
     },
     {
@@ -3210,7 +3210,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp",
-      "community": 279,
+      "community": 199,
       "norm_label": "inboxapp.tsx"
     },
     {
@@ -3220,7 +3220,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp_inboxappprops",
-      "community": 279,
+      "community": 199,
       "norm_label": "inboxappprops"
     },
     {
@@ -3230,7 +3230,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp_inboxapp",
-      "community": 279,
+      "community": 199,
       "norm_label": "inboxapp()"
     },
     {
@@ -3240,7 +3240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext",
-      "community": 77,
+      "community": 105,
       "norm_label": "inboxdatacontext.tsx"
     },
     {
@@ -3250,7 +3250,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_emptymodel",
-      "community": 77,
+      "community": 105,
       "norm_label": "emptymodel"
     },
     {
@@ -3260,7 +3260,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_inboxdatacontextvalue",
-      "community": 77,
+      "community": 105,
       "norm_label": "inboxdatacontextvalue"
     },
     {
@@ -3270,7 +3270,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_inboxdatacontext",
-      "community": 77,
+      "community": 105,
       "norm_label": "inboxdatacontext"
     },
     {
@@ -3280,7 +3280,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_inboxdataprovider",
-      "community": 279,
+      "community": 199,
       "norm_label": "inboxdataprovider()"
     },
     {
@@ -3290,7 +3290,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_useinboxdata",
-      "community": 77,
+      "community": 105,
       "norm_label": "useinboxdata()"
     },
     {
@@ -3310,7 +3310,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage",
-      "community": 279,
+      "community": 35,
       "norm_label": "inboxpage.tsx"
     },
     {
@@ -3320,7 +3320,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_channel_ids",
-      "community": 279,
+      "community": 35,
       "norm_label": "channel_ids"
     },
     {
@@ -3330,7 +3330,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_inboxpage",
-      "community": 279,
+      "community": 35,
       "norm_label": "inboxpage()"
     },
     {
@@ -3340,7 +3340,7 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_channelcontent",
-      "community": 279,
+      "community": 35,
       "norm_label": "channelcontent()"
     },
     {
@@ -3800,7 +3800,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "components_importsview_importsview",
-      "community": 279,
+      "community": 35,
       "norm_label": "importsview()"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_inbox_mui_components_navrail_tsx_components_navrail",
-      "community": 77,
+      "community": 283,
       "norm_label": "navrail.tsx"
     },
     {
@@ -3880,7 +3880,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "components_inbox_mui_components_navrail_tsx_components_navrail_navrailprops",
-      "community": 77,
+      "community": 283,
       "norm_label": "navrailprops"
     },
     {
@@ -3890,7 +3890,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "components_inbox_mui_components_navrail_tsx_components_navrail_navrail",
-      "community": 77,
+      "community": 283,
       "norm_label": "navrail()"
     },
     {
@@ -3900,7 +3900,7 @@
       "source_location": "L185",
       "_origin": "ast",
       "id": "components_inbox_mui_components_navrail_tsx_components_navrail_navitemprops",
-      "community": 77,
+      "community": 283,
       "norm_label": "navitemprops"
     },
     {
@@ -3910,7 +3910,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "components_inbox_mui_components_navrail_tsx_components_navrail_navitem",
-      "community": 77,
+      "community": 283,
       "norm_label": "navitem()"
     },
     {
@@ -4090,7 +4090,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_inbox_mui_components_reviewpanel_tsx_components_reviewpanel",
-      "community": 77,
+      "community": 105,
       "norm_label": "reviewpanel.tsx"
     },
     {
@@ -4100,7 +4100,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "components_inbox_mui_components_reviewpanel_tsx_components_reviewpanel_reviewpanel",
-      "community": 77,
+      "community": 105,
       "norm_label": "reviewpanel()"
     },
     {
@@ -4110,7 +4110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_inbox_mui_components_settingsdrawer_tsx_components_settingsdrawer",
-      "community": 197,
+      "community": 77,
       "norm_label": "settingsdrawer.tsx"
     },
     {
@@ -4120,7 +4120,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "components_inbox_mui_components_settingsdrawer_tsx_components_settingsdrawer_settingsdrawerprops",
-      "community": 197,
+      "community": 77,
       "norm_label": "settingsdrawerprops"
     },
     {
@@ -4130,7 +4130,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "components_inbox_mui_components_settingsdrawer_tsx_components_settingsdrawer_autosendchannels",
-      "community": 197,
+      "community": 77,
       "norm_label": "autosendchannels"
     },
     {
@@ -4140,7 +4140,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "components_settingsdrawer_channelavailability",
-      "community": 197,
+      "community": 77,
       "norm_label": "channelavailability"
     },
     {
@@ -4150,7 +4150,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "components_settingsdrawer_togglegrid",
-      "community": 197,
+      "community": 77,
       "norm_label": "togglegrid()"
     },
     {
@@ -4160,7 +4160,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "components_inbox_mui_components_settingsdrawer_tsx_components_settingsdrawer_settingsdrawer",
-      "community": 197,
+      "community": 77,
       "norm_label": "settingsdrawer()"
     },
     {
@@ -4197,7 +4197,7 @@
       "label": "SmsMediaGallery()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L322",
+      "source_location": "L326",
       "_origin": "ast",
       "id": "components_smsview_smsmediagallery",
       "community": 35,
@@ -4240,7 +4240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_inbox_mui_components_topbar_tsx_components_topbar",
-      "community": 77,
+      "community": 283,
       "norm_label": "topbar.tsx"
     },
     {
@@ -4250,7 +4250,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "components_inbox_mui_components_topbar_tsx_components_topbar_topbarprops",
-      "community": 77,
+      "community": 283,
       "norm_label": "topbarprops"
     },
     {
@@ -4260,7 +4260,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "components_inbox_mui_components_topbar_tsx_components_topbar_topbar",
-      "community": 77,
+      "community": 283,
       "norm_label": "topbar()"
     },
     {
@@ -4270,7 +4270,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview",
-      "community": 35,
+      "community": 182,
       "norm_label": "voiceview.tsx"
     },
     {
@@ -4280,7 +4280,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview_outcomecolor",
-      "community": 35,
+      "community": 182,
       "norm_label": "outcomecolor"
     },
     {
@@ -4300,7 +4300,7 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview_callcard",
-      "community": 35,
+      "community": 182,
       "norm_label": "callcard()"
     },
     {
@@ -4310,7 +4310,7 @@
       "source_location": "L432",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview_parseduration",
-      "community": 35,
+      "community": 182,
       "norm_label": "parseduration()"
     },
     {
@@ -4320,7 +4320,7 @@
       "source_location": "L449",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview_formattime",
-      "community": 35,
+      "community": 182,
       "norm_label": "formattime()"
     },
     {
@@ -4330,7 +4330,7 @@
       "source_location": "L454",
       "_origin": "ast",
       "id": "components_inbox_mui_components_voiceview_tsx_components_voiceview_recordingplayer",
-      "community": 35,
+      "community": 182,
       "norm_label": "recordingplayer()"
     },
     {
@@ -4600,7 +4600,7 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "data_inboxdata_inboxmodel",
-      "community": 77,
+      "community": 105,
       "norm_label": "inboxmodel"
     },
     {
@@ -4630,7 +4630,7 @@
       "source_location": "L298",
       "_origin": "ast",
       "id": "data_inboxdata_importchannelmeta",
-      "community": 77,
+      "community": 283,
       "norm_label": "importchannelmeta"
     },
     {
@@ -8830,7 +8830,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_agentidentity",
-      "community": 277,
+      "community": 286,
       "norm_label": "agentidentity.ts"
     },
     {
@@ -8840,7 +8840,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "lib_agentidentity_agentnameforchannel",
-      "community": 277,
+      "community": 286,
       "norm_label": "agentnameforchannel()"
     },
     {
@@ -8850,7 +8850,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "lib_agentidentity_normalizelegacyagentname",
-      "community": 274,
+      "community": 286,
       "norm_label": "normalizelegacyagentname()"
     },
     {
@@ -8860,7 +8860,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_agentidentity_normalizelegacyagenttext",
-      "community": 199,
+      "community": 286,
       "norm_label": "normalizelegacyagenttext()"
     },
     {
@@ -9527,7 +9527,7 @@
       "label": "VoiceLookupResult",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L180",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "lib_ariadata_voicelookupresult",
       "community": 7,
@@ -9537,7 +9537,7 @@
       "label": "delay()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L187",
+      "source_location": "L186",
       "_origin": "ast",
       "id": "lib_ariadata_delay",
       "community": 7,
@@ -9547,7 +9547,7 @@
       "label": "lookupPropertyForVoice()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L196",
+      "source_location": "L195",
       "_origin": "ast",
       "id": "lib_ariadata_lookuppropertyforvoice",
       "community": 7,
@@ -9557,7 +9557,7 @@
       "label": "speakSearchOption()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L280",
+      "source_location": "L279",
       "_origin": "ast",
       "id": "lib_ariadata_speaksearchoption",
       "community": 7,
@@ -9567,7 +9567,7 @@
       "label": "speakSearchResults()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L288",
+      "source_location": "L287",
       "_origin": "ast",
       "id": "lib_ariadata_speaksearchresults",
       "community": 7,
@@ -9577,7 +9577,7 @@
       "label": "AriaSearchDeps",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L298",
+      "source_location": "L297",
       "_origin": "ast",
       "id": "lib_ariadata_ariasearchdeps",
       "community": 7,
@@ -9587,7 +9587,7 @@
       "label": "defaultSearchDeps",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L311",
+      "source_location": "L310",
       "_origin": "ast",
       "id": "lib_ariadata_defaultsearchdeps",
       "community": 7,
@@ -9597,7 +9597,7 @@
       "label": "VoiceSearchResult",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L319",
+      "source_location": "L318",
       "_origin": "ast",
       "id": "lib_ariadata_voicesearchresult",
       "community": 7,
@@ -9607,7 +9607,7 @@
       "label": "searchSmsBody()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L326",
+      "source_location": "L325",
       "_origin": "ast",
       "id": "lib_ariadata_searchsmsbody",
       "community": 7,
@@ -9617,7 +9617,7 @@
       "label": "searchPropertiesForVoice()",
       "file_type": "code",
       "source_file": "lib/ariaData.ts",
-      "source_location": "L346",
+      "source_location": "L345",
       "_origin": "ast",
       "id": "lib_ariadata_searchpropertiesforvoice",
       "community": 7,
@@ -10540,7 +10540,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "lib_cadencequeue_addressable",
-      "community": 21,
+      "community": 197,
       "norm_label": "addressable()"
     },
     {
@@ -10730,7 +10730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_channelingest",
-      "community": 277,
+      "community": 16,
       "norm_label": "channelingest.ts"
     },
     {
@@ -10750,7 +10750,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "lib_channelingest_stop_words",
-      "community": 277,
+      "community": 16,
       "norm_label": "stop_words"
     },
     {
@@ -10760,7 +10760,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "lib_channelingest_start_words",
-      "community": 277,
+      "community": 16,
       "norm_label": "start_words"
     },
     {
@@ -10770,7 +10770,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_channelingest_help_words",
-      "community": 277,
+      "community": 16,
       "norm_label": "help_words"
     },
     {
@@ -10780,7 +10780,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "lib_channelingest_isonow",
-      "community": 277,
+      "community": 16,
       "norm_label": "isonow()"
     },
     {
@@ -10810,7 +10810,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "lib_channelingest_inferpreferredchannelfromtext",
-      "community": 277,
+      "community": 16,
       "norm_label": "inferpreferredchannelfromtext()"
     },
     {
@@ -10820,7 +10820,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "lib_channelingest_requiredatabaseforchannelwrites",
-      "community": 277,
+      "community": 16,
       "norm_label": "requiredatabaseforchannelwrites()"
     },
     {
@@ -10830,7 +10830,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "lib_channelingest_recordchannelinteraction",
-      "community": 277,
+      "community": 16,
       "norm_label": "recordchannelinteraction()"
     },
     {
@@ -10840,7 +10840,7 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "lib_channelingest_twiliosmsingestinput",
-      "community": 277,
+      "community": 16,
       "norm_label": "twiliosmsingestinput()"
     },
     {
@@ -10850,7 +10850,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_channelingest_twiliowhatsappingestinput",
-      "community": 277,
+      "community": 16,
       "norm_label": "twiliowhatsappingestinput()"
     },
     {
@@ -10860,7 +10860,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "lib_channelingest_metawhatsappingestpayload",
-      "community": 277,
+      "community": 16,
       "norm_label": "metawhatsappingestpayload"
     },
     {
@@ -10880,24 +10880,34 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "lib_channelingest_twiliotextingestinput",
-      "community": 277,
+      "community": 16,
       "norm_label": "twiliotextingestinput()"
+    },
+    {
+      "label": "twilioMediaLogLines()",
+      "file_type": "code",
+      "source_file": "lib/channelIngest.ts",
+      "source_location": "L296",
+      "_origin": "ast",
+      "id": "lib_channelingest_twiliomedialoglines",
+      "community": 16,
+      "norm_label": "twiliomedialoglines()"
     },
     {
       "label": "vapiVoiceIngestInput()",
       "file_type": "code",
       "source_file": "lib/channelIngest.ts",
-      "source_location": "L290",
+      "source_location": "L309",
       "_origin": "ast",
       "id": "lib_channelingest_vapivoiceingestinput",
-      "community": 277,
+      "community": 16,
       "norm_label": "vapivoiceingestinput()"
     },
     {
       "label": "oliviaWebsiteIngestInput()",
       "file_type": "code",
       "source_file": "lib/channelIngest.ts",
-      "source_location": "L327",
+      "source_location": "L346",
       "_origin": "ast",
       "id": "lib_channelingest_oliviawebsiteingestinput",
       "community": 277,
@@ -10930,7 +10940,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_clientconfig_notifyconfig",
-      "community": 75,
+      "community": 47,
       "norm_label": "notifyconfig"
     },
     {
@@ -11020,7 +11030,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_composioconnection",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioconnection.ts"
     },
     {
@@ -11030,7 +11040,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_composioconnection_composioapikey",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioapikey()"
     },
     {
@@ -11040,7 +11050,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "lib_composioconnection_composioenabled",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioenabled()"
     },
     {
@@ -11050,7 +11060,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "lib_composioconnection_composiogmailauthconfigid",
-      "community": 30,
+      "community": 157,
       "norm_label": "composiogmailauthconfigid()"
     },
     {
@@ -11060,7 +11070,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_composioconnection_composioexternaluserid",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioexternaluserid()"
     },
     {
@@ -11070,7 +11080,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "lib_composioconnection_createcomposioclient",
-      "community": 30,
+      "community": 157,
       "norm_label": "createcomposioclient()"
     },
     {
@@ -11080,7 +11090,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "lib_composioconnection_createcomposiogmailconnectlink",
-      "community": 30,
+      "community": 157,
       "norm_label": "createcomposiogmailconnectlink()"
     },
     {
@@ -11090,7 +11100,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_composioleadimport",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioleadimport.ts"
     },
     {
@@ -11100,7 +11110,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_composioleadimport_composioimportconfig",
-      "community": 30,
+      "community": 157,
       "norm_label": "composioimportconfig"
     },
     {
@@ -11110,7 +11120,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_composioleadimport_parsejsonobject",
-      "community": 30,
+      "community": 157,
       "norm_label": "parsejsonobject()"
     },
     {
@@ -11120,7 +11130,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "lib_composioleadimport_valueatpath",
-      "community": 30,
+      "community": 157,
       "norm_label": "valueatpath()"
     },
     {
@@ -11130,7 +11140,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "lib_composioleadimport_normalizerows",
-      "community": 30,
+      "community": 157,
       "norm_label": "normalizerows()"
     },
     {
@@ -11140,7 +11150,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "lib_composioleadimport_rowsfromcomposioresult",
-      "community": 30,
+      "community": 157,
       "norm_label": "rowsfromcomposioresult()"
     },
     {
@@ -11150,7 +11160,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "lib_composioleadimport_pullcomposioleadrows",
-      "community": 30,
+      "community": 157,
       "norm_label": "pullcomposioleadrows()"
     },
     {
@@ -11410,7 +11420,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "crm_types_hascrmimport",
-      "community": 30,
+      "community": 157,
       "norm_label": "hascrmimport()"
     },
     {
@@ -11890,7 +11900,7 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "lib_database_tableready",
-      "community": 49,
+      "community": 220,
       "norm_label": "tableready()"
     },
     {
@@ -12040,7 +12050,7 @@
       "source_location": "L550",
       "_origin": "ast",
       "id": "lib_database_readdefaultemailaccountfromdatabase",
-      "community": 49,
+      "community": 27,
       "norm_label": "readdefaultemailaccountfromdatabase()"
     },
     {
@@ -12080,7 +12090,7 @@
       "source_location": "L644",
       "_origin": "ast",
       "id": "lib_database_inboxcategoryfromrow",
-      "community": 49,
+      "community": 220,
       "norm_label": "inboxcategoryfromrow()"
     },
     {
@@ -12090,7 +12100,7 @@
       "source_location": "L657",
       "_origin": "ast",
       "id": "lib_database_aidraftfromrow",
-      "community": 49,
+      "community": 40,
       "norm_label": "aidraftfromrow()"
     },
     {
@@ -12100,7 +12110,7 @@
       "source_location": "L675",
       "_origin": "ast",
       "id": "lib_database_ensureinboxdefaultsindatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "ensureinboxdefaultsindatabase()"
     },
     {
@@ -12110,7 +12120,7 @@
       "source_location": "L705",
       "_origin": "ast",
       "id": "lib_database_readinboxsettingsfromdatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "readinboxsettingsfromdatabase()"
     },
     {
@@ -12120,7 +12130,7 @@
       "source_location": "L734",
       "_origin": "ast",
       "id": "lib_database_upsertinboxsettingsindatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "upsertinboxsettingsindatabase()"
     },
     {
@@ -12130,7 +12140,7 @@
       "source_location": "L771",
       "_origin": "ast",
       "id": "lib_database_readinboxcategoriesfromdatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "readinboxcategoriesfromdatabase()"
     },
     {
@@ -12140,7 +12150,7 @@
       "source_location": "L784",
       "_origin": "ast",
       "id": "lib_database_updateinboxcategorygmaillabelindatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "updateinboxcategorygmaillabelindatabase()"
     },
     {
@@ -12150,7 +12160,7 @@
       "source_location": "L802",
       "_origin": "ast",
       "id": "lib_database_upsertinboxcategoriesindatabase",
-      "community": 49,
+      "community": 220,
       "norm_label": "upsertinboxcategoriesindatabase()"
     },
     {
@@ -12170,7 +12180,7 @@
       "source_location": "L853",
       "_origin": "ast",
       "id": "lib_database_readaidraftfromdatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "readaidraftfromdatabase()"
     },
     {
@@ -12180,7 +12190,7 @@
       "source_location": "L870",
       "_origin": "ast",
       "id": "lib_database_upsertaidraftindatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "upsertaidraftindatabase()"
     },
     {
@@ -12190,7 +12200,7 @@
       "source_location": "L913",
       "_origin": "ast",
       "id": "lib_database_updateaidraftstatusindatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "updateaidraftstatusindatabase()"
     },
     {
@@ -12280,7 +12290,7 @@
       "source_location": "L1098",
       "_origin": "ast",
       "id": "lib_database_criteriafromquery",
-      "community": 277,
+      "community": 16,
       "norm_label": "criteriafromquery()"
     },
     {
@@ -12390,7 +12400,7 @@
       "source_location": "L1259",
       "_origin": "ast",
       "id": "lib_database_findcandidatepropertiesfromdatabase",
-      "community": 277,
+      "community": 16,
       "norm_label": "findcandidatepropertiesfromdatabase()"
     },
     {
@@ -12400,7 +12410,7 @@
       "source_location": "L1280",
       "_origin": "ast",
       "id": "lib_database_propertyaddressstem",
-      "community": 11,
+      "community": 49,
       "norm_label": "propertyaddressstem()"
     },
     {
@@ -12410,7 +12420,7 @@
       "source_location": "L1292",
       "_origin": "ast",
       "id": "lib_database_findpropertiesbyaddressesfromdatabase",
-      "community": 11,
+      "community": 49,
       "norm_label": "findpropertiesbyaddressesfromdatabase()"
     },
     {
@@ -12450,7 +12460,7 @@
       "source_location": "L1377",
       "_origin": "ast",
       "id": "lib_database_upsertpropertytodatabase",
-      "community": 16,
+      "community": 49,
       "norm_label": "upsertpropertytodatabase()"
     },
     {
@@ -12530,7 +12540,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_emailaccountcrypto",
-      "community": 198,
+      "community": 27,
       "norm_label": "emailaccountcrypto.ts"
     },
     {
@@ -12540,7 +12550,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_emailaccountcrypto_encryptionsecret",
-      "community": 198,
+      "community": 27,
       "norm_label": "encryptionsecret()"
     },
     {
@@ -12550,7 +12560,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "lib_emailaccountcrypto_encryptionkey",
-      "community": 198,
+      "community": 27,
       "norm_label": "encryptionkey()"
     },
     {
@@ -12560,7 +12570,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "lib_emailaccountcrypto_encryptemailaccounttoken",
-      "community": 198,
+      "community": 27,
       "norm_label": "encryptemailaccounttoken()"
     },
     {
@@ -12570,7 +12580,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "lib_emailaccountcrypto_decryptemailaccounttoken",
-      "community": 198,
+      "community": 27,
       "norm_label": "decryptemailaccounttoken()"
     },
     {
@@ -12580,7 +12590,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_format",
-      "community": 199,
+      "community": 287,
       "norm_label": "format.ts"
     },
     {
@@ -12600,7 +12610,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_format_formatsqft",
-      "community": 199,
+      "community": 287,
       "norm_label": "formatsqft()"
     },
     {
@@ -12610,7 +12620,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "lib_format_displayvalue",
-      "community": 199,
+      "community": 287,
       "norm_label": "displayvalue()"
     },
     {
@@ -12620,7 +12630,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "lib_format_corepropertyfields",
-      "community": 199,
+      "community": 287,
       "norm_label": "corepropertyfields"
     },
     {
@@ -12630,7 +12640,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "lib_format_missingpropertyfields",
-      "community": 199,
+      "community": 287,
       "norm_label": "missingpropertyfields()"
     },
     {
@@ -12660,7 +12670,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailclient",
-      "community": 27,
+      "community": 3,
       "norm_label": "gmailclient"
     },
     {
@@ -12730,7 +12740,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailreplyresult",
-      "community": 27,
+      "community": 3,
       "norm_label": "gmailreplyresult"
     },
     {
@@ -13000,7 +13010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_googlesheets",
-      "community": 40,
+      "community": 281,
       "norm_label": "googlesheets.ts"
     },
     {
@@ -13010,7 +13020,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_googlesheets_oauthcredentials",
-      "community": 40,
+      "community": 281,
       "norm_label": "oauthcredentials"
     },
     {
@@ -13020,7 +13030,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_googlesheets_readjson",
-      "community": 40,
+      "community": 281,
       "norm_label": "readjson()"
     },
     {
@@ -13030,7 +13040,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "lib_googlesheets_readjsonenv",
-      "community": 40,
+      "community": 281,
       "norm_label": "readjsonenv()"
     },
     {
@@ -13040,7 +13050,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "lib_googlesheets_credentialpaths",
-      "community": 40,
+      "community": 281,
       "norm_label": "credentialpaths()"
     },
     {
@@ -13050,7 +13060,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "lib_googlesheets_spreadsheetid",
-      "community": 40,
+      "community": 281,
       "norm_label": "spreadsheetid()"
     },
     {
@@ -13060,7 +13070,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "lib_googlesheets_sheetsclient",
-      "community": 40,
+      "community": 281,
       "norm_label": "sheetsclient()"
     },
     {
@@ -13070,7 +13080,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "lib_googlesheets_rowtoobject",
-      "community": 40,
+      "community": 281,
       "norm_label": "rowtoobject()"
     },
     {
@@ -13080,7 +13090,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "lib_googlesheets_readsheet",
-      "community": 30,
+      "community": 281,
       "norm_label": "readsheet()"
     },
     {
@@ -13090,7 +13100,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "lib_googlesheets_readsheets",
-      "community": 40,
+      "community": 281,
       "norm_label": "readsheets()"
     },
     {
@@ -13100,7 +13110,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "lib_googlesheets_loadagentinboxdatafromsheets",
-      "community": 163,
+      "community": 281,
       "norm_label": "loadagentinboxdatafromsheets()"
     },
     {
@@ -13200,7 +13210,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_identity",
-      "community": 21,
+      "community": 197,
       "norm_label": "identity.ts"
     },
     {
@@ -13210,7 +13220,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "lib_identity_identitydeps",
-      "community": 21,
+      "community": 197,
       "norm_label": "identitydeps"
     },
     {
@@ -13220,7 +13230,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_identity_defaultdeps",
-      "community": 21,
+      "community": 197,
       "norm_label": "defaultdeps"
     },
     {
@@ -13240,7 +13250,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "lib_identity_summarizechannels",
-      "community": 21,
+      "community": 197,
       "norm_label": "summarizechannels()"
     },
     {
@@ -13250,7 +13260,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "lib_identity_lasttouchat",
-      "community": 21,
+      "community": 197,
       "norm_label": "lasttouchat()"
     },
     {
@@ -13260,7 +13270,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "lib_identity_buildconfirmation",
-      "community": 21,
+      "community": 197,
       "norm_label": "buildconfirmation()"
     },
     {
@@ -13270,7 +13280,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "lib_identity_confirmationmatches",
-      "community": 21,
+      "community": 197,
       "norm_label": "confirmationmatches()"
     },
     {
@@ -13280,7 +13290,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "lib_identity_choosestitchcandidate",
-      "community": 21,
+      "community": 197,
       "norm_label": "choosestitchcandidate()"
     },
     {
@@ -13290,7 +13300,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "lib_identity_resolvecaller",
-      "community": 21,
+      "community": 197,
       "norm_label": "resolvecaller()"
     },
     {
@@ -13300,7 +13310,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "lib_identity_stitchresult",
-      "community": 21,
+      "community": 197,
       "norm_label": "stitchresult"
     },
     {
@@ -13310,7 +13320,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "lib_identity_stitchbyemailorname",
-      "community": 21,
+      "community": 197,
       "norm_label": "stitchbyemailorname()"
     },
     {
@@ -13340,7 +13350,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_inboxdata_agentinboxdata",
-      "community": 279,
+      "community": 199,
       "norm_label": "agentinboxdata"
     },
     {
@@ -13360,7 +13370,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "lib_inboxdata_groupeventsbythread",
-      "community": 163,
+      "community": 274,
       "norm_label": "groupeventsbythread()"
     },
     {
@@ -13370,7 +13380,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "lib_inboxdata_buildmetrics",
-      "community": 163,
+      "community": 274,
       "norm_label": "buildmetrics()"
     },
     {
@@ -13420,7 +13430,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "lib_inboxdata_normalizeinboxrow",
-      "community": 274,
+      "community": 286,
       "norm_label": "normalizeinboxrow()"
     },
     {
@@ -13440,7 +13450,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "lib_inboxdata_voicespeakerfromlabel",
-      "community": 199,
+      "community": 274,
       "norm_label": "voicespeakerfromlabel()"
     },
     {
@@ -13450,7 +13460,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "lib_inboxdata_parsevoicemessagesjson",
-      "community": 199,
+      "community": 274,
       "norm_label": "parsevoicemessagesjson()"
     },
     {
@@ -13460,7 +13470,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_inboxdata_voicecalltranscriptsource",
-      "community": 199,
+      "community": 274,
       "norm_label": "voicecalltranscriptsource()"
     },
     {
@@ -13470,7 +13480,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "lib_inboxdata_parsevoicetranscript",
-      "community": 199,
+      "community": 274,
       "norm_label": "parsevoicetranscript()"
     },
     {
@@ -13480,7 +13490,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "lib_inboxdata_composeinboxdata",
-      "community": 163,
+      "community": 274,
       "norm_label": "composeinboxdata()"
     },
     {
@@ -13497,7 +13507,7 @@
       "label": "dayKey()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L63",
+      "source_location": "L64",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_daykey",
       "community": 199,
@@ -13507,7 +13517,7 @@
       "label": "categorySlugToId()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L67",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_categoryslugtoid",
       "community": 199,
@@ -13517,7 +13527,7 @@
       "label": "leadCategoryFor()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L82",
+      "source_location": "L83",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_leadcategoryfor",
       "community": 199,
@@ -13527,7 +13537,7 @@
       "label": "formatCallDuration()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L88",
+      "source_location": "L89",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_formatcallduration",
       "community": 199,
@@ -13537,7 +13547,7 @@
       "label": "callOutcome()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L96",
+      "source_location": "L97",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_calloutcome",
       "community": 199,
@@ -13547,7 +13557,7 @@
       "label": "callDurationSeconds()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L104",
+      "source_location": "L105",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_calldurationseconds",
       "community": 199,
@@ -13557,17 +13567,17 @@
       "label": "formatEventTimeShort()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L110",
+      "source_location": "L111",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_formateventtimeshort",
-      "community": 199,
+      "community": 156,
       "norm_label": "formateventtimeshort()"
     },
     {
       "label": "formatResponseDuration()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L117",
+      "source_location": "L118",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_formatresponseduration",
       "community": 199,
@@ -13577,7 +13587,7 @@
       "label": "looksLikeHtml()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L128",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_lookslikehtml",
       "community": 199,
@@ -13587,7 +13597,7 @@
       "label": "stripHtml()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L132",
+      "source_location": "L133",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_striphtml",
       "community": 199,
@@ -13597,7 +13607,7 @@
       "label": "emailSubject()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L144",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_emailsubject",
       "community": 199,
@@ -13607,7 +13617,7 @@
       "label": "emailBodyPreview()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L152",
+      "source_location": "L153",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_emailbodypreview",
       "community": 199,
@@ -13617,7 +13627,7 @@
       "label": "isRealEstateEmailEvent()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L157",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_isrealestateemailevent",
       "community": 199,
@@ -13627,7 +13637,7 @@
       "label": "compactActivityText()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L163",
+      "source_location": "L164",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_compactactivitytext",
       "community": 199,
@@ -13637,7 +13647,7 @@
       "label": "usableActivityText()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L177",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_usableactivitytext",
       "community": 199,
@@ -13647,7 +13657,7 @@
       "label": "stableEventHash()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L183",
+      "source_location": "L184",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_stableeventhash",
       "community": 199,
@@ -13657,7 +13667,7 @@
       "label": "messageEventId()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L191",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_messageeventid",
       "community": 199,
@@ -13667,17 +13677,37 @@
       "label": "smsTextAndMedia()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L208",
+      "source_location": "L209",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_smstextandmedia",
-      "community": 199,
+      "community": 198,
       "norm_label": "smstextandmedia()"
+    },
+    {
+      "label": "cleanSmsDisplayText()",
+      "file_type": "code",
+      "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L247",
+      "_origin": "ast",
+      "id": "lib_inboxdataadapter_cleansmsdisplaytext",
+      "community": 199,
+      "norm_label": "cleansmsdisplaytext()"
+    },
+    {
+      "label": "normalizeSmsAddress()",
+      "file_type": "code",
+      "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L273",
+      "_origin": "ast",
+      "id": "lib_inboxdataadapter_normalizesmsaddress",
+      "community": 199,
+      "norm_label": "normalizesmsaddress()"
     },
     {
       "label": "MessageChannelId",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L246",
+      "source_location": "L282",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_messagechannelid",
       "community": 199,
@@ -13687,7 +13717,7 @@
       "label": "realChannelToView()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L248",
+      "source_location": "L284",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_realchanneltoview",
       "community": 199,
@@ -13697,7 +13727,7 @@
       "label": "buildDayBins()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L260",
+      "source_location": "L296",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_builddaybins",
       "community": 199,
@@ -13707,7 +13737,7 @@
       "label": "buildSparkline()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L295",
+      "source_location": "L331",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildsparkline",
       "community": 199,
@@ -13717,17 +13747,17 @@
       "label": "responseSamplesByDay()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L302",
+      "source_location": "L338",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_responsesamplesbyday",
-      "community": 199,
+      "community": 156,
       "norm_label": "responsesamplesbyday()"
     },
     {
       "label": "average()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L336",
+      "source_location": "L372",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_average",
       "community": 199,
@@ -13737,37 +13767,37 @@
       "label": "buildEmailMessages()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L341",
+      "source_location": "L377",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildemailmessages",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildemailmessages()"
     },
     {
       "label": "buildEmailThreads()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L369",
+      "source_location": "L405",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildemailthreads",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildemailthreads()"
     },
     {
       "label": "buildSmsThreads()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L391",
+      "source_location": "L427",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildsmsthreads",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildsmsthreads()"
     },
     {
       "label": "buildVoiceContacts()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L422",
+      "source_location": "L458",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildvoicecontacts",
       "community": 199,
@@ -13777,7 +13807,7 @@
       "label": "buildProperties()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L460",
+      "source_location": "L496",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildproperties",
       "community": 199,
@@ -13787,7 +13817,7 @@
       "label": "buildChannels()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L480",
+      "source_location": "L516",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildchannels",
       "community": 199,
@@ -13797,27 +13827,27 @@
       "label": "buildActivityEvents()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L502",
+      "source_location": "L538",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildactivityevents",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildactivityevents()"
     },
     {
       "label": "buildChannelStats()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L566",
+      "source_location": "L602",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildchannelstats",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildchannelstats()"
     },
     {
       "label": "realChannelToViewRaw()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L595",
+      "source_location": "L631",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_realchanneltoviewraw",
       "community": 199,
@@ -13827,17 +13857,17 @@
       "label": "buildReviewQueue()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L601",
+      "source_location": "L637",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildreviewqueue",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildreviewqueue()"
     },
     {
       "label": "adaptInboxData()",
       "file_type": "code",
       "source_file": "lib/inboxDataAdapter.ts",
-      "source_location": "L632",
+      "source_location": "L668",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_adaptinboxdata",
       "community": 199,
@@ -13920,7 +13950,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "lib_inboxsettings_normalizeinboxcategory",
-      "community": 49,
+      "community": 220,
       "norm_label": "normalizeinboxcategory()"
     },
     {
@@ -13930,7 +13960,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "lib_inboxsettings_normalizeinboxsettings",
-      "community": 49,
+      "community": 220,
       "norm_label": "normalizeinboxsettings()"
     },
     {
@@ -13960,7 +13990,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "lib_inboxsettings_infercategoryslug",
-      "community": 274,
+      "community": 282,
       "norm_label": "infercategoryslug()"
     },
     {
@@ -13980,7 +14010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_inboxthreadutils",
-      "community": 199,
+      "community": 156,
       "norm_label": "inboxthreadutils.ts"
     },
     {
@@ -13990,7 +14020,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventchannel",
-      "community": 199,
+      "community": 156,
       "norm_label": "eventchannel()"
     },
     {
@@ -14000,7 +14030,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_latestevent",
-      "community": 199,
+      "community": 156,
       "norm_label": "latestevent()"
     },
     {
@@ -14010,7 +14040,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventtimevalue",
-      "community": 199,
+      "community": 156,
       "norm_label": "eventtimevalue()"
     },
     {
@@ -14030,7 +14060,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_threadneedshuman",
-      "community": 199,
+      "community": 156,
       "norm_label": "threadneedshuman()"
     },
     {
@@ -14040,7 +14070,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_parsedraftkey",
-      "community": 199,
+      "community": 156,
       "norm_label": "parsedraftkey()"
     },
     {
@@ -14050,7 +14080,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_conversationkey",
-      "community": 199,
+      "community": 156,
       "norm_label": "conversationkey()"
     },
     {
@@ -14060,7 +14090,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_sortthreadentries",
-      "community": 199,
+      "community": 156,
       "norm_label": "sortthreadentries()"
     },
     {
@@ -14070,54 +14100,54 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_buildchannelthreads",
-      "community": 199,
+      "community": 156,
       "norm_label": "buildchannelthreads()"
     },
     {
       "label": "threadIdentity()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L71",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_threadidentity",
-      "community": 199,
+      "community": 156,
       "norm_label": "threadidentity()"
     },
     {
       "label": "voiceCallKey()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L80",
+      "source_location": "L84",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicecallkey",
-      "community": 199,
+      "community": 156,
       "norm_label": "voicecallkey()"
     },
     {
       "label": "latestVoiceCall()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L84",
+      "source_location": "L88",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_latestvoicecall",
-      "community": 199,
+      "community": 156,
       "norm_label": "latestvoicecall()"
     },
     {
       "label": "voiceCallTimeValue()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L90",
+      "source_location": "L94",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicecalltimevalue",
-      "community": 199,
+      "community": 156,
       "norm_label": "voicecalltimevalue()"
     },
     {
       "label": "buildVoiceCallThreads()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L95",
+      "source_location": "L99",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_buildvoicecallthreads",
       "community": 199,
@@ -14127,57 +14157,57 @@
       "label": "voiceThreadIdentity()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L111",
+      "source_location": "L115",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicethreadidentity",
-      "community": 199,
+      "community": 156,
       "norm_label": "voicethreadidentity()"
     },
     {
       "label": "stripEmailMetadata()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L117",
+      "source_location": "L121",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_stripemailmetadata",
-      "community": 199,
+      "community": 156,
       "norm_label": "stripemailmetadata()"
     },
     {
       "label": "eventText()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L130",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventtext",
-      "community": 199,
+      "community": 156,
       "norm_label": "eventtext()"
     },
     {
       "label": "eventSummaryText()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L146",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventsummarytext",
-      "community": 199,
+      "community": 286,
       "norm_label": "eventsummarytext()"
     },
     {
       "label": "formatEventTime()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L150",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_formateventtime",
-      "community": 199,
+      "community": 156,
       "norm_label": "formateventtime()"
     },
     {
       "label": "adaptChannelId()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L159",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_adaptchannelid",
       "community": 199,
@@ -14187,10 +14217,10 @@
       "label": "draftChannelToViewId()",
       "file_type": "code",
       "source_file": "lib/inboxThreadUtils.ts",
-      "source_location": "L167",
+      "source_location": "L171",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_draftchanneltoviewid",
-      "community": 199,
+      "community": 156,
       "norm_label": "draftchanneltoviewid()"
     },
     {
@@ -14260,7 +14290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_irisconversationbrain",
-      "community": 274,
+      "community": 282,
       "norm_label": "irisconversationbrain.ts"
     },
     {
@@ -14270,7 +14300,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_irisbraininput",
-      "community": 274,
+      "community": 282,
       "norm_label": "irisbraininput"
     },
     {
@@ -14280,7 +14310,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_irisbrainoutput",
-      "community": 274,
+      "community": 282,
       "norm_label": "irisbrainoutput"
     },
     {
@@ -14290,7 +14320,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_clean",
-      "community": 274,
+      "community": 282,
       "norm_label": "clean()"
     },
     {
@@ -14300,7 +14330,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_facts",
-      "community": 274,
+      "community": 282,
       "norm_label": "facts()"
     },
     {
@@ -14310,7 +14340,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_latestleadname",
-      "community": 274,
+      "community": 282,
       "norm_label": "latestleadname()"
     },
     {
@@ -14320,7 +14350,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_humanrisk",
-      "community": 274,
+      "community": 282,
       "norm_label": "humanrisk()"
     },
     {
@@ -14330,7 +14360,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_draftforproperty",
-      "community": 274,
+      "community": 282,
       "norm_label": "draftforproperty()"
     },
     {
@@ -14340,7 +14370,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_draftforgeneral",
-      "community": 274,
+      "community": 282,
       "norm_label": "draftforgeneral()"
     },
     {
@@ -14350,7 +14380,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "lib_irisconversationbrain_runirisconversationbrain",
-      "community": 274,
+      "community": 282,
       "norm_label": "runirisconversationbrain()"
     },
     {
@@ -14410,7 +14440,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailmessage",
-      "community": 3,
+      "community": 278,
       "norm_label": "irisemailmessage"
     },
     {
@@ -14450,7 +14480,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailclient",
-      "community": 3,
+      "community": 278,
       "norm_label": "irisemailclient"
     },
     {
@@ -14520,7 +14550,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "lib_irisemail_cleanbody",
-      "community": 3,
+      "community": 278,
       "norm_label": "cleanbody()"
     },
     {
@@ -14530,7 +14560,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "lib_irisemail_parseemailcontact",
-      "community": 3,
+      "community": 278,
       "norm_label": "parseemailcontact()"
     },
     {
@@ -14670,7 +14700,7 @@
       "source_location": "L444",
       "_origin": "ast",
       "id": "lib_irisemail_htmlescape",
-      "community": 3,
+      "community": 284,
       "norm_label": "htmlescape()"
     },
     {
@@ -14680,7 +14710,7 @@
       "source_location": "L452",
       "_origin": "ast",
       "id": "lib_irisemail_plaintohtml",
-      "community": 3,
+      "community": 284,
       "norm_label": "plaintohtml()"
     },
     {
@@ -14690,7 +14720,7 @@
       "source_location": "L459",
       "_origin": "ast",
       "id": "lib_irisemail_formatcurrency",
-      "community": 3,
+      "community": 284,
       "norm_label": "formatcurrency()"
     },
     {
@@ -14700,7 +14730,7 @@
       "source_location": "L466",
       "_origin": "ast",
       "id": "lib_irisemail_propertyfacts",
-      "community": 3,
+      "community": 284,
       "norm_label": "propertyfacts()"
     },
     {
@@ -14710,7 +14740,7 @@
       "source_location": "L476",
       "_origin": "ast",
       "id": "lib_irisemail_propertyhighlights",
-      "community": 3,
+      "community": 284,
       "norm_label": "propertyhighlights()"
     },
     {
@@ -14720,7 +14750,7 @@
       "source_location": "L499",
       "_origin": "ast",
       "id": "lib_irisemail_propertyphotosrc",
-      "community": 199,
+      "community": 198,
       "norm_label": "propertyphotosrc()"
     },
     {
@@ -14730,7 +14760,7 @@
       "source_location": "L505",
       "_origin": "ast",
       "id": "lib_irisemail_propertycardhtml",
-      "community": 3,
+      "community": 284,
       "norm_label": "propertycardhtml()"
     },
     {
@@ -14740,7 +14770,7 @@
       "source_location": "L528",
       "_origin": "ast",
       "id": "lib_irisemail_propertyplain",
-      "community": 3,
+      "community": 284,
       "norm_label": "propertyplain()"
     },
     {
@@ -14760,7 +14790,7 @@
       "source_location": "L555",
       "_origin": "ast",
       "id": "lib_irisemail_buildhtmlemailreply",
-      "community": 3,
+      "community": 284,
       "norm_label": "buildhtmlemailreply()"
     },
     {
@@ -14800,7 +14830,7 @@
       "source_location": "L652",
       "_origin": "ast",
       "id": "lib_irisemail_generateirisemailreplyrich",
-      "community": 11,
+      "community": 163,
       "norm_label": "generateirisemailreplyrich()"
     },
     {
@@ -14820,7 +14850,7 @@
       "source_location": "L682",
       "_origin": "ast",
       "id": "lib_irisemail_messagewithleadcontext",
-      "community": 163,
+      "community": 220,
       "norm_label": "messagewithleadcontext()"
     },
     {
@@ -14830,7 +14860,7 @@
       "source_location": "L701",
       "_origin": "ast",
       "id": "lib_irisemail_handoffsummary",
-      "community": 3,
+      "community": 278,
       "norm_label": "handoffsummary()"
     },
     {
@@ -14840,7 +14870,7 @@
       "source_location": "L719",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailleadmemoryrow",
-      "community": 3,
+      "community": 278,
       "norm_label": "buildirisemailleadmemoryrow()"
     },
     {
@@ -14850,7 +14880,7 @@
       "source_location": "L749",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailconversationeventrow",
-      "community": 3,
+      "community": 278,
       "norm_label": "buildirisemailconversationeventrow()"
     },
     {
@@ -14860,7 +14890,7 @@
       "source_location": "L777",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailoutboundeventrow",
-      "community": 3,
+      "community": 278,
       "norm_label": "buildirisemailoutboundeventrow()"
     },
     {
@@ -14880,7 +14910,7 @@
       "source_location": "L826",
       "_origin": "ast",
       "id": "lib_irisemail_processirisemailpoll",
-      "community": 49,
+      "community": 220,
       "norm_label": "processirisemailpoll()"
     },
     {
@@ -14890,7 +14920,7 @@
       "source_location": "L916",
       "_origin": "ast",
       "id": "lib_irisemail_header",
-      "community": 3,
+      "community": 278,
       "norm_label": "header()"
     },
     {
@@ -14920,7 +14950,7 @@
       "source_location": "L934",
       "_origin": "ast",
       "id": "lib_irisemail_gmailsearchtoken",
-      "community": 3,
+      "community": 278,
       "norm_label": "gmailsearchtoken()"
     },
     {
@@ -14930,7 +14960,7 @@
       "source_location": "L938",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailpollquery",
-      "community": 3,
+      "community": 278,
       "norm_label": "irisemailpollquery()"
     },
     {
@@ -14940,7 +14970,7 @@
       "source_location": "L956",
       "_origin": "ast",
       "id": "lib_irisemail_isiriseligibleemail",
-      "community": 3,
+      "community": 278,
       "norm_label": "isiriseligibleemail()"
     },
     {
@@ -14950,7 +14980,7 @@
       "source_location": "L968",
       "_origin": "ast",
       "id": "lib_irisemail_listunreadmessages",
-      "community": 3,
+      "community": 278,
       "norm_label": "listunreadmessages()"
     },
     {
@@ -14970,7 +15000,7 @@
       "source_location": "L1010",
       "_origin": "ast",
       "id": "lib_irisemail_syncgmailcategorylabels",
-      "community": 49,
+      "community": 220,
       "norm_label": "syncgmailcategorylabels()"
     },
     {
@@ -14980,7 +15010,7 @@
       "source_location": "L1029",
       "_origin": "ast",
       "id": "lib_irisemail_syncinboxcategorieswithgmail",
-      "community": 49,
+      "community": 220,
       "norm_label": "syncinboxcategorieswithgmail()"
     },
     {
@@ -15030,7 +15060,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_leadidentity",
-      "community": 21,
+      "community": 197,
       "norm_label": "leadidentity.ts"
     },
     {
@@ -15040,7 +15070,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizeemail",
-      "community": 21,
+      "community": 197,
       "norm_label": "normalizeemail()"
     },
     {
@@ -15050,7 +15080,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizephone",
-      "community": 21,
+      "community": 197,
       "norm_label": "normalizephone()"
     },
     {
@@ -15060,7 +15090,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizename",
-      "community": 21,
+      "community": 197,
       "norm_label": "normalizename()"
     },
     {
@@ -15130,7 +15160,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "lib_leadimport_leadimportsourcetype",
-      "community": 30,
+      "community": 157,
       "norm_label": "leadimportsourcetype"
     },
     {
@@ -15250,7 +15280,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "lib_leadimport_parsecsv",
-      "community": 30,
+      "community": 157,
       "norm_label": "parsecsv()"
     },
     {
@@ -15390,7 +15420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_manualreply",
-      "community": 27,
+      "community": 40,
       "norm_label": "manualreply.ts"
     },
     {
@@ -15400,7 +15430,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "lib_manualreply_emailattachment",
-      "community": 28,
+      "community": 40,
       "norm_label": "emailattachment"
     },
     {
@@ -15410,7 +15440,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_manualreply_manualreplyinput",
-      "community": 27,
+      "community": 40,
       "norm_label": "manualreplyinput"
     },
     {
@@ -15420,7 +15450,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "lib_manualreply_manualreplyresult",
-      "community": 27,
+      "community": 40,
       "norm_label": "manualreplyresult"
     },
     {
@@ -15430,7 +15460,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "lib_manualreply_sendmanualreply",
-      "community": 27,
+      "community": 40,
       "norm_label": "sendmanualreply()"
     },
     {
@@ -15440,7 +15470,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "lib_manualreply_sendwhatsapp",
-      "community": 27,
+      "community": 40,
       "norm_label": "sendwhatsapp()"
     },
     {
@@ -15860,7 +15890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_mediaproxy",
-      "community": 199,
+      "community": 198,
       "norm_label": "mediaproxy.ts"
     },
     {
@@ -15870,7 +15900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_mediaproxy_proxiable_image_hosts",
-      "community": 199,
+      "community": 198,
       "norm_label": "proxiable_image_hosts"
     },
     {
@@ -15880,7 +15910,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_mediaproxy_isgooglestreetviewurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "isgooglestreetviewurl()"
     },
     {
@@ -15890,7 +15920,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_mediaproxy_unwrapmediaproxyurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "unwrapmediaproxyurl()"
     },
     {
@@ -15900,7 +15930,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lib_mediaproxy_isproxiableimageurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "isproxiableimageurl()"
     },
     {
@@ -15910,7 +15940,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "lib_mediaproxy_mediaproxypath",
-      "community": 199,
+      "community": 198,
       "norm_label": "mediaproxypath()"
     },
     {
@@ -15920,7 +15950,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_mediaproxy_mediaproxyurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "mediaproxyurl()"
     },
     {
@@ -15930,7 +15960,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "lib_mediaproxy_usableinboxphotourl",
-      "community": 199,
+      "community": 198,
       "norm_label": "usableinboxphotourl()"
     },
     {
@@ -15940,7 +15970,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "lib_mediaproxy_addressstem",
-      "community": 199,
+      "community": 198,
       "norm_label": "addressstem()"
     },
     {
@@ -15950,7 +15980,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "lib_mediaproxy_extractpropertyaddressfromemailhtml",
-      "community": 199,
+      "community": 198,
       "norm_label": "extractpropertyaddressfromemailhtml()"
     },
     {
@@ -15960,7 +15990,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "lib_mediaproxy_resolvepropertyphotofromsheet",
-      "community": 199,
+      "community": 198,
       "norm_label": "resolvepropertyphotofromsheet()"
     },
     {
@@ -15970,7 +16000,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "lib_mediaproxy_sanitizeemailhtml",
-      "community": 199,
+      "community": 198,
       "norm_label": "sanitizeemailhtml()"
     },
     {
@@ -15980,7 +16010,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "lib_mediaproxy_rewriteemailhtmlforinbox",
-      "community": 199,
+      "community": 198,
       "norm_label": "rewriteemailhtmlforinbox()"
     },
     {
@@ -15990,7 +16020,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "lib_mediaproxy_isdisplayableimageurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "isdisplayableimageurl()"
     },
     {
@@ -16000,7 +16030,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "lib_mediaproxy_inboximagepreviewurl",
-      "community": 199,
+      "community": 198,
       "norm_label": "inboximagepreviewurl()"
     },
     {
@@ -16010,7 +16040,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_metawhatsapp",
-      "community": 16,
+      "community": 205,
       "norm_label": "metawhatsapp.ts"
     },
     {
@@ -16020,7 +16050,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "lib_metawhatsapp_metawhatsappsendresult",
-      "community": 16,
+      "community": 205,
       "norm_label": "metawhatsappsendresult"
     },
     {
@@ -16030,7 +16060,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_metawhatsapp_metawhatsappinboundmessage",
-      "community": 16,
+      "community": 205,
       "norm_label": "metawhatsappinboundmessage"
     },
     {
@@ -16040,7 +16070,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "lib_metawhatsapp_envflag",
-      "community": 16,
+      "community": 205,
       "norm_label": "envflag()"
     },
     {
@@ -16050,7 +16080,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "lib_metawhatsapp_whatsappagentenabled",
-      "community": 16,
+      "community": 205,
       "norm_label": "whatsappagentenabled()"
     },
     {
@@ -16060,7 +16090,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "lib_metawhatsapp_missingconfig",
-      "community": 16,
+      "community": 205,
       "norm_label": "missingconfig()"
     },
     {
@@ -16070,7 +16100,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "lib_metawhatsapp_cleanrecipient",
-      "community": 16,
+      "community": 205,
       "norm_label": "cleanrecipient()"
     },
     {
@@ -16080,7 +16110,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "lib_metawhatsapp_maxwhatsappimages",
-      "community": 16,
+      "community": 205,
       "norm_label": "maxwhatsappimages()"
     },
     {
@@ -16090,7 +16120,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "lib_metawhatsapp_cleanmediaurls",
-      "community": 16,
+      "community": 205,
       "norm_label": "cleanmediaurls()"
     },
     {
@@ -16100,7 +16130,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "lib_metawhatsapp_graphversion",
-      "community": 16,
+      "community": 205,
       "norm_label": "graphversion()"
     },
     {
@@ -16110,7 +16140,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "lib_metawhatsapp_messagesurl",
-      "community": 16,
+      "community": 205,
       "norm_label": "messagesurl()"
     },
     {
@@ -16120,7 +16150,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "lib_metawhatsapp_postmetamessage",
-      "community": 16,
+      "community": 205,
       "norm_label": "postmetamessage()"
     },
     {
@@ -16130,7 +16160,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "lib_metawhatsapp_whatsappmessagewithmedialog",
-      "community": 16,
+      "community": 205,
       "norm_label": "whatsappmessagewithmedialog()"
     },
     {
@@ -16140,7 +16170,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "lib_metawhatsapp_sendmetawhatsapp",
-      "community": 16,
+      "community": 205,
       "norm_label": "sendmetawhatsapp()"
     },
     {
@@ -16150,7 +16180,7 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "lib_metawhatsapp_verifymetasignature",
-      "community": 16,
+      "community": 205,
       "norm_label": "verifymetasignature()"
     },
     {
@@ -16160,7 +16190,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_metawhatsapp_textfrommessage",
-      "community": 16,
+      "community": 205,
       "norm_label": "textfrommessage()"
     },
     {
@@ -16170,7 +16200,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "lib_metawhatsapp_extractmetawhatsappmessages",
-      "community": 16,
+      "community": 205,
       "norm_label": "extractmetawhatsappmessages()"
     },
     {
@@ -16470,7 +16500,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "lib_outbound_sendoutboundattemptsms",
-      "community": 22,
+      "community": 280,
       "norm_label": "sendoutboundattemptsms()"
     },
     {
@@ -16480,7 +16510,7 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "lib_outbound_leadwithevents",
-      "community": 22,
+      "community": 280,
       "norm_label": "leadwithevents"
     },
     {
@@ -16500,7 +16530,7 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "lib_outbound_evaluatefollowups",
-      "community": 22,
+      "community": 280,
       "norm_label": "evaluatefollowups()"
     },
     {
@@ -16510,7 +16540,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "lib_outbound_selectvoicefollowups",
-      "community": 22,
+      "community": 280,
       "norm_label": "selectvoicefollowups()"
     },
     {
@@ -16730,7 +16760,7 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "lib_publicpropertydata_fetchpublicpropertycontext",
-      "community": 275,
+      "community": 12,
       "norm_label": "fetchpublicpropertycontext()"
     },
     {
@@ -16840,7 +16870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_sheetschema",
-      "community": 40,
+      "community": 274,
       "norm_label": "sheetschema.ts"
     },
     {
@@ -16850,7 +16880,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_sheetschema_properties_headers",
-      "community": 40,
+      "community": 49,
       "norm_label": "properties_headers"
     },
     {
@@ -16860,7 +16890,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "lib_sheetschema_lead_memory_headers",
-      "community": 40,
+      "community": 274,
       "norm_label": "lead_memory_headers"
     },
     {
@@ -16870,7 +16900,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "lib_sheetschema_conversation_events_headers",
-      "community": 40,
+      "community": 274,
       "norm_label": "conversation_events_headers"
     },
     {
@@ -16880,7 +16910,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "lib_sheetschema_sheetrow",
-      "community": 40,
+      "community": 274,
       "norm_label": "sheetrow"
     },
     {
@@ -16890,7 +16920,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_sheetssync",
-      "community": 40,
+      "community": 49,
       "norm_label": "sheetssync.ts"
     },
     {
@@ -16900,7 +16930,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_sheetssync_getsyncpool",
-      "community": 40,
+      "community": 49,
       "norm_label": "getsyncpool()"
     },
     {
@@ -16910,7 +16940,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "lib_sheetssync_clean",
-      "community": 40,
+      "community": 49,
       "norm_label": "clean()"
     },
     {
@@ -16920,7 +16950,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "lib_sheetssync_eventkey",
-      "community": 40,
+      "community": 49,
       "norm_label": "eventkey()"
     },
     {
@@ -16930,7 +16960,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "lib_sheetssync_chunks",
-      "community": 40,
+      "community": 49,
       "norm_label": "chunks()"
     },
     {
@@ -16940,7 +16970,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "lib_sheetssync_bulkupsertproperties",
-      "community": 40,
+      "community": 49,
       "norm_label": "bulkupsertproperties()"
     },
     {
@@ -16950,7 +16980,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "lib_sheetssync_sheetstoneonsyncresult",
-      "community": 40,
+      "community": 49,
       "norm_label": "sheetstoneonsyncresult"
     },
     {
@@ -16960,7 +16990,7 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "lib_sheetssync_syncsheetstoneon",
-      "community": 40,
+      "community": 49,
       "norm_label": "syncsheetstoneon()"
     },
     {
@@ -17160,7 +17190,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "lib_theoagent_envflag",
-      "community": 278,
+      "community": 0,
       "norm_label": "envflag()"
     },
     {
@@ -17170,7 +17200,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "lib_theoagent_smsimagesenabled",
-      "community": 278,
+      "community": 0,
       "norm_label": "smsimagesenabled()"
     },
     {
@@ -17180,7 +17210,7 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "lib_theoagent_whatsappimagesenabled",
-      "community": 278,
+      "community": 0,
       "norm_label": "whatsappimagesenabled()"
     },
     {
@@ -17190,7 +17220,7 @@
       "source_location": "L129",
       "_origin": "ast",
       "id": "lib_theoagent_socialdmimagesenabled",
-      "community": 278,
+      "community": 0,
       "norm_label": "socialdmimagesenabled()"
     },
     {
@@ -17200,7 +17230,7 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "lib_theoagent_mediaimagesenabled",
-      "community": 278,
+      "community": 0,
       "norm_label": "mediaimagesenabled()"
     },
     {
@@ -17240,7 +17270,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "lib_theoagent_wantspropertylinks",
-      "community": 0,
+      "community": 202,
       "norm_label": "wantspropertylinks()"
     },
     {
@@ -17540,7 +17570,7 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "lib_theoagent_requestedamenitylabels",
-      "community": 234,
+      "community": 202,
       "norm_label": "requestedamenitylabels()"
     },
     {
@@ -17550,7 +17580,7 @@
       "source_location": "L404",
       "_origin": "ast",
       "id": "lib_theoagent_formattheoavailabilityanswer",
-      "community": 234,
+      "community": 202,
       "norm_label": "formattheoavailabilityanswer()"
     },
     {
@@ -17610,7 +17640,7 @@
       "source_location": "L519",
       "_origin": "ast",
       "id": "lib_theoagent_formattheonopropertyoptions",
-      "community": 0,
+      "community": 202,
       "norm_label": "formattheonopropertyoptions()"
     },
     {
@@ -17960,7 +17990,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "lib_theodata_extracttheolistedpropertyaddresses",
-      "community": 11,
+      "community": 172,
       "norm_label": "extracttheolistedpropertyaddresses()"
     },
     {
@@ -18110,7 +18140,7 @@
       "source_location": "L434",
       "_origin": "ast",
       "id": "lib_theodata_enrichtheodata",
-      "community": 277,
+      "community": 11,
       "norm_label": "enrichtheodata()"
     },
     {
@@ -18360,7 +18390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_theotelemetry",
-      "community": 172,
+      "community": 11,
       "norm_label": "theotelemetry.ts"
     },
     {
@@ -18370,7 +18400,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_theotelemetry_theometric",
-      "community": 172,
+      "community": 11,
       "norm_label": "theometric"
     },
     {
@@ -18380,7 +18410,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_theotelemetry_claude_pricing",
-      "community": 172,
+      "community": 11,
       "norm_label": "claude_pricing"
     },
     {
@@ -18390,7 +18420,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_theotelemetry_nowms",
-      "community": 12,
+      "community": 11,
       "norm_label": "nowms()"
     },
     {
@@ -18420,7 +18450,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_theotelemetry_addtheosessioncost",
-      "community": 172,
+      "community": 11,
       "norm_label": "addtheosessioncost()"
     },
     {
@@ -18430,7 +18460,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "lib_theotelemetry_theosessioncost",
-      "community": 172,
+      "community": 11,
       "norm_label": "theosessioncost()"
     },
     {
@@ -18440,7 +18470,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "lib_theotelemetry_formatusd",
-      "community": 172,
+      "community": 11,
       "norm_label": "formatusd()"
     },
     {
@@ -18540,7 +18570,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "lib_twiliosms_smsmessagewithmedialog",
-      "community": 51,
+      "community": 277,
       "norm_label": "smsmessagewithmedialog()"
     },
     {
@@ -18720,7 +18750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_webhookrequest",
-      "community": 220,
+      "community": 277,
       "norm_label": "webhookrequest.ts"
     },
     {
@@ -18730,7 +18760,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_webhookrequest_parsewebhookpayload",
-      "community": 220,
+      "community": 277,
       "norm_label": "parsewebhookpayload()"
     },
     {
@@ -18740,7 +18770,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_webhookrequest_assertwebhooksecret",
-      "community": 220,
+      "community": 277,
       "norm_label": "assertwebhooksecret()"
     },
     {
@@ -22740,7 +22770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_aria_followup_queue",
-      "community": 22,
+      "community": 280,
       "norm_label": "aria-followup-queue.mjs"
     },
     {
@@ -22750,7 +22780,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "scripts_aria_followup_queue_loaddotenv",
-      "community": 22,
+      "community": 280,
       "norm_label": "loaddotenv()"
     },
     {
@@ -22760,7 +22790,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "scripts_aria_followup_queue_intarg",
-      "community": 22,
+      "community": 280,
       "norm_label": "intarg()"
     },
     {
@@ -22770,7 +22800,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "scripts_aria_followup_queue_main",
-      "community": 22,
+      "community": 280,
       "norm_label": "main()"
     },
     {
@@ -22780,7 +22810,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_aria_provision",
-      "community": 39,
+      "community": 285,
       "norm_label": "aria-provision.mjs"
     },
     {
@@ -22790,7 +22820,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "scripts_aria_provision_ariatoolurl",
-      "community": 39,
+      "community": 285,
       "norm_label": "ariatoolurl()"
     },
     {
@@ -22800,7 +22830,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "scripts_aria_provision_buildvapiplatformtools",
-      "community": 39,
+      "community": 285,
       "norm_label": "buildvapiplatformtools()"
     },
     {
@@ -22810,7 +22840,7 @@
       "source_location": "L295",
       "_origin": "ast",
       "id": "scripts_aria_provision_publicbaseurl",
-      "community": 39,
+      "community": 285,
       "norm_label": "publicbaseurl()"
     },
     {
@@ -22820,7 +22850,7 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "scripts_aria_provision_vapirequest",
-      "community": 39,
+      "community": 285,
       "norm_label": "vapirequest()"
     },
     {
@@ -22830,7 +22860,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "scripts_aria_provision_upserttool",
-      "community": 39,
+      "community": 285,
       "norm_label": "upserttool()"
     },
     {
@@ -22840,7 +22870,7 @@
       "source_location": "L340",
       "_origin": "ast",
       "id": "scripts_aria_provision_attachreusabletools",
-      "community": 39,
+      "community": 285,
       "norm_label": "attachreusabletools()"
     },
     {
@@ -22850,7 +22880,7 @@
       "source_location": "L372",
       "_origin": "ast",
       "id": "scripts_aria_provision_main",
-      "community": 39,
+      "community": 285,
       "norm_label": "main()"
     },
     {
@@ -23200,7 +23230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls",
-      "community": 156,
+      "community": 10,
       "norm_label": "backfill-vapi-voice-calls.mjs"
     },
     {
@@ -23210,7 +23240,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_loadenv",
-      "community": 156,
+      "community": 10,
       "norm_label": "loadenv()"
     },
     {
@@ -23220,7 +23250,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_argvalue",
-      "community": 156,
+      "community": 10,
       "norm_label": "argvalue()"
     },
     {
@@ -23230,7 +23260,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_asarray",
-      "community": 156,
+      "community": 10,
       "norm_label": "asarray()"
     },
     {
@@ -23240,7 +23270,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_vapirequest",
-      "community": 156,
+      "community": 10,
       "norm_label": "vapirequest()"
     },
     {
@@ -23250,7 +23280,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_endofcallpayload",
-      "community": 156,
+      "community": 10,
       "norm_label": "endofcallpayload()"
     },
     {
@@ -23260,7 +23290,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_limit",
-      "community": 156,
+      "community": 10,
       "norm_label": "limit"
     },
     {
@@ -23270,7 +23300,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_assistantid",
-      "community": 156,
+      "community": 10,
       "norm_label": "assistantid"
     },
     {
@@ -23280,7 +23310,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_dryrun",
-      "community": 156,
+      "community": 10,
       "norm_label": "dryrun"
     },
     {
@@ -23290,7 +23320,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_list",
-      "community": 156,
+      "community": 10,
       "norm_label": "list"
     },
     {
@@ -23300,7 +23330,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "scripts_backfill_vapi_voice_calls_candidates",
-      "community": 156,
+      "community": 10,
       "norm_label": "candidates"
     },
     {
@@ -28320,7 +28350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_channelingest_test",
-      "community": 277,
+      "community": 16,
       "norm_label": "channelingest.test.ts"
     },
     {
@@ -28390,7 +28420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_identity_test",
-      "community": 21,
+      "community": 197,
       "norm_label": "identity.test.ts"
     },
     {
@@ -28400,7 +28430,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "ts_identity_test_lead",
-      "community": 21,
+      "community": 197,
       "norm_label": "lead()"
     },
     {
@@ -28410,7 +28440,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "ts_identity_test_event",
-      "community": 21,
+      "community": 197,
       "norm_label": "event()"
     },
     {
@@ -28430,7 +28460,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_inboxdata_test",
-      "community": 40,
+      "community": 274,
       "norm_label": "inboxdata.test.ts"
     },
     {
@@ -28440,7 +28470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_inboxdataadapter_test",
-      "community": 40,
+      "community": 274,
       "norm_label": "inboxdataadapter.test.ts"
     },
     {
@@ -28450,7 +28480,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_irisemail_test",
-      "community": 3,
+      "community": 278,
       "norm_label": "irisemail.test.ts"
     },
     {
@@ -28460,7 +28490,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "ts_irisemail_test_email",
-      "community": 3,
+      "community": 278,
       "norm_label": "email()"
     },
     {
@@ -28470,7 +28500,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "ts_irisemail_test_fakeclient",
-      "community": 3,
+      "community": 278,
       "norm_label": "fakeclient()"
     },
     {
@@ -28590,7 +28620,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_leadimport_test",
-      "community": 30,
+      "community": 157,
       "norm_label": "leadimport.test.ts"
     },
     {
@@ -28620,7 +28650,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_mediaproxy_test",
-      "community": 199,
+      "community": 198,
       "norm_label": "mediaproxy.test.ts"
     },
     {
@@ -28630,7 +28660,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_metawhatsapp_test",
-      "community": 16,
+      "community": 205,
       "norm_label": "metawhatsapp.test.ts"
     },
     {
@@ -28650,7 +28680,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_outbound_test",
-      "community": 22,
+      "community": 280,
       "norm_label": "outbound.test.ts"
     },
     {
@@ -28660,7 +28690,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "ts_outbound_test_noon_ct",
-      "community": 22,
+      "community": 280,
       "norm_label": "noon_ct"
     },
     {
@@ -28670,7 +28700,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "ts_outbound_test_lead",
-      "community": 22,
+      "community": 280,
       "norm_label": "lead()"
     },
     {
@@ -28680,7 +28710,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "ts_outbound_test_outbound",
-      "community": 22,
+      "community": 280,
       "norm_label": "outbound()"
     },
     {
@@ -28720,7 +28750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_theoagent_test",
-      "community": 40,
+      "community": 0,
       "norm_label": "theoagent.test.ts"
     },
     {
@@ -28730,7 +28760,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "ts_theoagent_test_property",
-      "community": 40,
+      "community": 0,
       "norm_label": "property()"
     },
     {
@@ -28740,7 +28770,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "ts_theoagent_test_withoutopenai",
-      "community": 40,
+      "community": 0,
       "norm_label": "withoutopenai()"
     },
     {
@@ -66379,6 +66409,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "lib/channelIngest.ts",
+      "source_location": "L296",
+      "weight": 1.0,
+      "source": "lib_channelingest",
+      "target": "lib_channelingest_twiliomedialoglines",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/channelIngest.ts",
       "source_location": "L138",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -66711,6 +66751,17 @@
       "confidence_score": 1.0,
       "source": "lib_channelingest_twiliowhatsappingestinput",
       "target": "lib_channelingest_twiliotextingestinput"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/channelIngest.ts",
+      "source_location": "L230",
+      "weight": 1.0,
+      "source": "lib_channelingest_twiliotextingestinput",
+      "target": "lib_channelingest_twiliomedialoglines",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -75753,6 +75804,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L247",
+      "weight": 1.0,
+      "source": "lib_inboxdataadapter",
+      "target": "lib_inboxdataadapter_cleansmsdisplaytext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/inboxDataAdapter.ts",
       "source_location": "L153",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -75868,6 +75929,16 @@
       "confidence_score": 1.0,
       "source": "lib_inboxdataadapter",
       "target": "lib_inboxdataadapter_messageeventid"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L273",
+      "weight": 1.0,
+      "source": "lib_inboxdataadapter",
+      "target": "lib_inboxdataadapter_normalizesmsaddress",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -76395,6 +76466,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L239",
+      "weight": 1.0,
+      "source": "lib_inboxdataadapter_smstextandmedia",
+      "target": "lib_inboxdataadapter_cleansmsdisplaytext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/inboxDataAdapter.ts",
       "source_location": "L145",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -76422,6 +76504,17 @@
       "confidence_score": 1.0,
       "source": "lib_inboxdataadapter_smstextandmedia",
       "target": "lib_mediaproxy_rewriteemailhtmlforinbox"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/inboxDataAdapter.ts",
+      "source_location": "L255",
+      "weight": 1.0,
+      "source": "lib_inboxdataadapter_cleansmsdisplaytext",
+      "target": "lib_inboxdataadapter_normalizesmsaddress",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -111195,5 +111288,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "365ce3e9fc8b2b7dce87d397ffb219ebfd6af112"
+  "built_at_commit": "ed4ad58510eb60ca4719621da02c1e6eda2f09e4"
 }
