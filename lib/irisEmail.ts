@@ -596,11 +596,44 @@ function bodyFromPayload(payload: Record<string, unknown> | undefined): string {
   return bodyFromPayload(plain || parts[0]);
 }
 
+function gmailSearchToken(value: string): string {
+  return value.replace(/[\\"]/g, "").trim();
+}
+
+export function irisEmailPollQuery(): string {
+  const override = process.env.IRIS_EMAIL_POLL_QUERY?.trim();
+  if (override) return override;
+  const inboundEmail = (
+    process.env.IRIS_EMAIL_INBOUND_TO ||
+    process.env.TEAM_LEAD_EMAIL ||
+    process.env.GMAIL_INBOUND_EMAIL ||
+    ""
+  ).trim().toLowerCase();
+  const parts = ["is:unread", "-label:AUTO_REPLIED", "-label:NEEDS_HUMAN"];
+  if (inboundEmail.includes("@")) {
+    const token = gmailSearchToken(inboundEmail);
+    parts.push(`{to:${token} deliveredto:${token}}`);
+  }
+  return parts.join(" ");
+}
+
+export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "subject" | "body">): boolean {
+  const contact = parseEmailContact(message.from);
+  const sender = contact.email || message.from.toLowerCase();
+  if (!sender) return false;
+  if (/^(no-?reply|do-?not-?reply|donotreply|noreply|notification|notifications|mailer-daemon|postmaster)@/i.test(sender)) return false;
+  if (/@(?:.*\.)?(?:accounts\.google\.com|google\.com|gohighlevel\.com|github\.com|vercel\.com|calendly\.com|luckyfours\.com)$/i.test(sender)) return false;
+  const text = `${message.subject || ""}\n${message.body || ""}`;
+  if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run)/i.test(text)) return false;
+  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)/i.test(text)) return false;
+  return true;
+}
+
 async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmail = ""): Promise<IrisEmailMessage[]> {
   const listed = await gmail.users.messages.list({
     userId: "me",
     maxResults: limit,
-    q: "is:unread -label:AUTO_REPLIED -label:NEEDS_HUMAN",
+    q: irisEmailPollQuery(),
   });
   const refs = listed.data.messages || [];
   const messages: IrisEmailMessage[] = [];
@@ -609,7 +642,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
     const detail = await gmail.users.messages.get({ userId: "me", id: ref.id, format: "full" });
     const payload = detail.data.payload as Record<string, unknown> | undefined;
     const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
-    messages.push({
+    const message = {
       id: ref.id,
       threadId: detail.data.threadId || ref.threadId || ref.id,
       from: header(headers, "From"),
@@ -621,7 +654,8 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
       references: header(headers, "References"),
       receivedAt: header(headers, "Date"),
       mailboxEmail,
-    });
+    };
+    if (isIrisEligibleEmail(message)) messages.push(message);
   }
   return messages;
 }

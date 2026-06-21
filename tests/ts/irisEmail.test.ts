@@ -5,11 +5,14 @@ import {
   buildIrisEmailLeadMemoryRow,
   classifyIrisEmailText,
   decideIrisEmailExecution,
+  irisEmailPollQuery,
+  isIrisEligibleEmail,
   parseEmailContact,
   processIrisEmailPoll,
   type IrisEmailClient,
   type IrisEmailMessage,
 } from "@/lib/irisEmail";
+import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
 
 function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
   return {
@@ -122,4 +125,63 @@ test("processIrisEmailPoll: live injected path records and applies conservative 
   assert.equal(result.sent, 0);
   assert.deepEqual(calls.labels, [["NEEDS_HUMAN"]]);
   assert.deepEqual(recorded, ["human_required:needs_human"]);
+});
+
+test("iris email cron: live env sends by default unless explicitly overridden", () => {
+  const previousLive = process.env.IRIS_EMAIL_LIVE;
+  const previousSend = process.env.IRIS_EMAIL_SEND_REPLIES;
+  process.env.IRIS_EMAIL_LIVE = "true";
+  process.env.IRIS_EMAIL_SEND_REPLIES = "true";
+  try {
+    assert.equal(irisEmailCronDryRun(new URLSearchParams()), false);
+    assert.equal(irisEmailCronSendReplies(new URLSearchParams(), true), true);
+    assert.equal(irisEmailCronDryRun(new URLSearchParams("dryRun=true")), true);
+    assert.equal(irisEmailCronSendReplies(new URLSearchParams("sendReplies=false"), true), false);
+    assert.equal(irisEmailCronSendReplies(new URLSearchParams(), false), false);
+  } finally {
+    if (previousLive === undefined) delete process.env.IRIS_EMAIL_LIVE;
+    else process.env.IRIS_EMAIL_LIVE = previousLive;
+    if (previousSend === undefined) delete process.env.IRIS_EMAIL_SEND_REPLIES;
+    else process.env.IRIS_EMAIL_SEND_REPLIES = previousSend;
+  }
+});
+
+test("irisEmailPollQuery: scopes default Gmail polling to configured inbound address", () => {
+  const previousQuery = process.env.IRIS_EMAIL_POLL_QUERY;
+  const previousInbound = process.env.IRIS_EMAIL_INBOUND_TO;
+  const previousTeam = process.env.TEAM_LEAD_EMAIL;
+  delete process.env.IRIS_EMAIL_POLL_QUERY;
+  delete process.env.IRIS_EMAIL_INBOUND_TO;
+  process.env.TEAM_LEAD_EMAIL = "martin@lumenosis.com";
+  try {
+    const query = irisEmailPollQuery();
+    assert.match(query, /is:unread/);
+    assert.match(query, /to:martin@lumenosis\.com/);
+    assert.match(query, /deliveredto:martin@lumenosis\.com/);
+  } finally {
+    if (previousQuery === undefined) delete process.env.IRIS_EMAIL_POLL_QUERY;
+    else process.env.IRIS_EMAIL_POLL_QUERY = previousQuery;
+    if (previousInbound === undefined) delete process.env.IRIS_EMAIL_INBOUND_TO;
+    else process.env.IRIS_EMAIL_INBOUND_TO = previousInbound;
+    if (previousTeam === undefined) delete process.env.TEAM_LEAD_EMAIL;
+    else process.env.TEAM_LEAD_EMAIL = previousTeam;
+  }
+});
+
+test("isIrisEligibleEmail: blocks system and no-reply senders before auto-send", () => {
+  assert.equal(isIrisEligibleEmail(email({
+    from: "Google <no-reply@accounts.google.com>",
+    subject: "Security alert",
+    body: "New sign-in from a device.",
+  })), false);
+  assert.equal(isIrisEligibleEmail(email({
+    from: "German Linares <german.linares+gohighlevel.com@mailbox.gohighlevel.com>",
+    subject: "HighLevel End of Trial Discount",
+    body: "Book a demo. 400 N. Saint Paul St. Unsubscribe.",
+  })), false);
+  assert.equal(isIrisEligibleEmail(email({
+    from: "Sam Buyer <sam@example.com>",
+    subject: "Tour request",
+    body: "Can I tour 100 E 51st St #7 tomorrow?",
+  })), true);
 });

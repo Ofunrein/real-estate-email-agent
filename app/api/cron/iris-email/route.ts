@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { databaseEnabled, readInboxSettingsFromDatabase } from "@/lib/database";
 import { processIrisEmailPoll } from "@/lib/irisEmail";
+import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ async function run(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const dryRun = process.env.IRIS_EMAIL_LIVE !== "true" || request.nextUrl.searchParams.get("dryRun") !== "false";
+  const dryRun = irisEmailCronDryRun(request.nextUrl.searchParams);
   const limit = intParam(request.nextUrl.searchParams.get("limit"), 10);
 
   try {
@@ -33,9 +34,10 @@ async function run(request: NextRequest) {
     if (settings && !channelEnabled(settings, "email")) {
       return NextResponse.json({ ok: true, skipped: true, channel: "email", reason: "Email channel disabled in inbox settings.", dryRun });
     }
-    const sendReplies = process.env.IRIS_EMAIL_SEND_REPLIES === "true"
-      && request.nextUrl.searchParams.get("sendReplies") === "true"
-      && (!settings || shouldAutoSendForChannel(settings, "email"));
+    const sendReplies = irisEmailCronSendReplies(
+      request.nextUrl.searchParams,
+      !settings || shouldAutoSendForChannel(settings, "email"),
+    );
     const result = await processIrisEmailPoll({ dryRun, sendReplies, limit });
     return NextResponse.json(result);
   } catch (error) {

@@ -1,0 +1,21 @@
+name: Iris Email Cron
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Poll Iris email agent
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET"
+          curl --fail --show-error --silent \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "https://app.lumenosis.com/api/cron/iris-email"
