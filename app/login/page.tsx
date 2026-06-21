@@ -37,7 +37,25 @@ export default async function LoginPage({
 
   return (
     <main className="login-shell">
-      <section className="login-panel login-panel-auth" aria-labelledby="login-title">
+      <section className="login-panel login-panel-wide" aria-labelledby="login-title">
+        <div className="login-brand-card" aria-hidden="true">
+          <div>
+            <span className="login-eyebrow">Lumenosis AI</span>
+            <h1>Iris lead desk</h1>
+            <p>
+              One operating layer for approved teams to monitor leads, review drafts,
+              and keep every real estate conversation moving.
+            </p>
+            <div className="login-signal-grid">
+              <span>Gmail</span>
+              <span>SMS</span>
+              <span>Voice</span>
+              <span>CRM</span>
+              <span>Listings</span>
+              <span>Human handoff</span>
+            </div>
+          </div>
+        </div>
         <div className="login-form-card login-auth-card">
           <div className="login-orbit" aria-hidden="true">
             <span className="login-ripple login-ripple-one" />
