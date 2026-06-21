@@ -314,7 +314,7 @@ export function ImportsView() {
         <Box>
           <Typography variant="h6">Lead Reopen</Typography>
           <Typography variant="caption" color="text.secondary">
-            Import old CRM, CSV, Sheets, or Composio leads. Segment first. Campaign sending stays off until reviewed.
+            Import old CRM, CSV, or Sheets leads. Segment first. Campaign sending stays off until reviewed.
           </Typography>
         </Box>
         <Chip icon={<SafetyIcon />} color="success" variant="outlined" label="No auto-send on import" />
@@ -336,10 +336,13 @@ export function ImportsView() {
                   <Box>
                     <Typography variant="subtitle2">Source connections</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Composio first where coverage is deep enough. Direct adapters for real-estate CRMs. CSV remains the always-on fallback.
+                      CRM connections are powered by Composio where coverage is strong. Direct adapters and CSV cover real-estate CRM gaps.
                     </Typography>
                   </Box>
                 </Stack>
+                <Alert severity="info" sx={{ py: 0.75 }}>
+                  Composio is useful for Follow Up Boss, HubSpot, Salesforce, Pipedrive, and Close. kvCORE, Lofty/Chime, Sierra, Real Geeks, BoomTown, and CINC stay CSV/direct-adapter first unless their API access is available.
+                </Alert>
                 <Box
                   sx={{
                     display: 'grid',
@@ -349,7 +352,7 @@ export function ImportsView() {
                   {(connectors.length ? connectors : [
                     { id: 'csv', label: 'CSV / export', provider: 'csv_export', path: 'fallback', status: 'ready', detail: 'Works today for any CRM export.', action: 'Choose CSV file' },
                     { id: 'ghl', label: 'GoHighLevel', provider: 'ghl', path: 'direct_adapter', status: 'needs_config', detail: 'Status loads from the import API.', action: 'Configure GHL' },
-                    { id: 'composio', label: 'Composio connectors', provider: 'composio', path: 'preferred', status: 'needs_config', detail: 'Status loads from the import API.', action: 'Connect Composio' },
+                    { id: 'composio', label: 'CRM connections', provider: 'composio', path: 'preferred', status: 'needs_config', detail: 'Powered by Composio for FUB, HubSpot, Salesforce, Pipedrive, and Close.', action: 'Connect CRM' },
                     { id: 'other_crm', label: 'Other CRM export', provider: 'real_estate_crm_export', path: 'csv_first', status: 'fallback', detail: 'CSV fallback works now.', action: 'Import CSV' },
                   ] as ConnectorStatus[]).map((connector) => (
                     <Card key={connector.id} variant="outlined" sx={{ p: 1.25, minHeight: 132 }}>
@@ -450,9 +453,9 @@ export function ImportsView() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <TableChartIcon color="primary" />
                   <Box>
-                    <Typography variant="subtitle2">Sheets / Composio pulls</Typography>
+                    <Typography variant="subtitle2">Sheets / CRM pulls</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Sheets imports the existing lead memory tab. Composio imports from the configured CRM tool slug and normalizes into the same batch flow.
+                      Sheets imports the existing lead memory tab. CRM pulls use Composio when the client has a supported connected CRM and import tool mapping.
                     </Typography>
                   </Box>
                 </Stack>
@@ -461,7 +464,7 @@ export function ImportsView() {
                     Preview Sheets
                   </Button>
                   <Button variant="outlined" disabled={loading} onClick={() => pullComposio(true)}>
-                    Preview Composio
+                    Preview CRM connection
                   </Button>
                   <Button variant="contained" disabled={loading || !summary || !lastPreviewSource} onClick={importLatestSource}>
                     Import latest source
