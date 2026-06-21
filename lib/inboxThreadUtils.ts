@@ -65,7 +65,11 @@ export function buildChannelThreads(events: SheetRow[], channel: Channel): [stri
       acc[key].push(event);
       return acc;
     }, {});
-  return sortThreadEntries(Object.entries(groups));
+  const sortedGroups = Object.entries(groups).map(([key, threadEvents]) => [
+    key,
+    [...threadEvents].sort((a, b) => eventTimeValue(a) - eventTimeValue(b)),
+  ] as [string, SheetRow[]]);
+  return sortThreadEntries(sortedGroups);
 }
 
 export function threadIdentity(threadRef: string, events: SheetRow[], channel?: Channel | string): string {
