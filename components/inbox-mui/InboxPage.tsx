@@ -12,8 +12,12 @@ import { EmptyChannelView } from './components/EmptyChannelView';
 import { PropertiesView } from './components/PropertiesView';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { type ChannelId } from './data/inboxData';
+import { usePersistedSelection } from './hooks/usePersistedSelection';
+
+const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties'];
+
 export function InboxPage() {
-  const [channel, setChannel] = useState<ChannelId>('all');
+  const [channel, setChannel, channelReady] = usePersistedSelection<ChannelId>('iris.inbox.channel', 'all', CHANNEL_IDS);
   const [navOpen, setNavOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -24,6 +28,17 @@ export function InboxPage() {
     setChannel(id);
     setNavOpen(false);
   };
+  if (!channelReady) {
+    return (
+      <Box
+        sx={{
+          width: '100%',
+          minHeight: '100dvh',
+          bgcolor: 'background.default'
+        }}
+      />
+    );
+  }
   return (
     <Box
       sx={{
@@ -110,7 +125,7 @@ export function InboxPage() {
               overflow: { xs: 'visible', lg: 'hidden' }
             }}>
 
-            <ChannelContent key={channel} channel={channel} />
+            <ChannelContent channel={channel} />
           </Box>
 
           {/* Inline context rail only at lg+ */}

@@ -21,6 +21,17 @@ import { useInboxModel } from '../InboxDataContext';
 interface ActivityFeedProps {
   channel: ChannelId;
 }
+
+function activityPreviewBody(event: ActivityEvent) {
+  if (
+    event.channel === 'voice' &&
+    /\b(you are\s+(?:iris|arya|a real estate)|brand voice|system prompt|developer instruction|never reveal|do not reveal|call script)\b/i.test(event.body)
+  ) {
+    return 'Voice call recorded.';
+  }
+  return event.body;
+}
+
 export function ActivityFeed({ channel }: ActivityFeedProps) {
   const { activityEvents, channelMeta } = useInboxModel();
   const events =
@@ -87,6 +98,7 @@ function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
   const isAi = event.kind === 'ai_reply' || event.kind === 'voice';
   const status = event.status ?? (isAi ? 'Sent' : 'New');
   const statusSx = activityStatusSx(status);
+  const body = activityPreviewBody(event);
   return (
     <Box
       sx={{
@@ -246,7 +258,7 @@ function EventRow({ event, isLast }: {event: ActivityEvent;isLast: boolean;}) {
             wordBreak: 'break-word'
           }}>
           
-          {event.body}
+          {body}
         </Typography>
         {event.intent &&
         <Stack

@@ -22,18 +22,23 @@ export function useColorMode(): ColorModeContextValue {
 export function ColorModeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>('light');
 
-  // Seed from the existing `.dark` class on <html> and keep it in sync on toggle
-  // so MUI dark theme matches the rest of the app's dark-mode mechanism.
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('theme');
+    if (saved === 'dark' || saved === 'light') {
+      setMode(saved);
+      return;
+    }
     setMode(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || typeof window === 'undefined') return;
     const el = document.documentElement;
     if (mode === 'dark') el.classList.add('dark');
     else el.classList.remove('dark');
+    el.style.colorScheme = mode;
+    window.localStorage.setItem('theme', mode);
   }, [mode]);
 
   const theme = useMemo(() => makeIrisTheme(mode), [mode]);

@@ -53,11 +53,11 @@ function ToggleGrid({
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: {
-          xs: 'repeat(2, minmax(0, 1fr))',
-          sm: 'repeat(2, minmax(0, 1fr))'
-        },
-        gap: 1
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 112px), 1fr))',
+        gap: {
+          xs: 0.75,
+          sm: 1
+        }
       }}>
       {items.map(([key, label]) =>
       <Box
@@ -65,7 +65,10 @@ function ToggleGrid({
         component="label"
         sx={{
           minWidth: 0,
-          p: 1,
+          p: {
+            xs: 0.75,
+            sm: 1
+          },
           border: '1px solid',
           borderColor: values[key] ? 'primary.main' : 'divider',
           borderRadius: 1.25,
@@ -73,21 +76,39 @@ function ToggleGrid({
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) auto',
           alignItems: 'center',
-          gap: 0.5,
+          gap: {
+            xs: 0.25,
+            sm: 0.5
+          },
           cursor: 'pointer'
         }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 800, lineHeight: 1.15 }} noWrap>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 800,
+              lineHeight: 1.1,
+              fontSize: { xs: 11.5, sm: 13 }
+            }}
+            noWrap>
             {label}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              display: 'block',
+              lineHeight: 1.12,
+              fontSize: { xs: 10.5, sm: 11 }
+            }}>
             {suffix}
           </Typography>
         </Box>
         <Checkbox
+          size="small"
           checked={values[key]}
           onChange={(e) => onChange(key, e.target.checked)}
-          sx={{ p: 0.25 }} />
+          sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 17, sm: 19 } } }} />
       </Box>
       )}
     </Box>
@@ -158,30 +179,49 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             xs: '100%',
             sm: 460
           },
-          maxWidth: 480,
+          maxWidth: '100vw',
+          height: '100dvh',
           boxSizing: 'border-box',
-          p: {
-            xs: 2,
-            sm: 3.5
-          }
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          p: 0
         }
       }}>
-      
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          px: {
+            xs: 1.25,
+            sm: 3
+          },
+          pt: {
+            xs: 1.5,
+            sm: 3
+          },
+          pb: 2
+        }}>
       <Stack
         direction="row"
         justifyContent="space-between"
         alignItems="flex-start"
         sx={{
-          mb: 3
+          mb: {
+            xs: 1.5,
+            sm: 2.5
+          },
+          gap: 1
         }}>
         
         <Box>
           <Typography variant="overline" color="text.secondary">
             Agent Inbox
           </Typography>
-          <Typography variant="h5">Settings</Typography>
+          <Typography variant="h5" sx={{ fontSize: { xs: 22, sm: 24 } }}>Settings</Typography>
         </Box>
-        <Button onClick={onClose} variant="outlined" size="small">
+        <Button onClick={onClose} variant="outlined" size="small" sx={{ flexShrink: 0, minWidth: 0 }}>
           Close
         </Button>
       </Stack>
@@ -189,8 +229,14 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
-          p: 2,
-          mb: 2.5
+          p: {
+            xs: 1.25,
+            sm: 2
+          },
+          mb: {
+            xs: 1.5,
+            sm: 2
+          }
         }}>
         
         <FormControlLabel
@@ -202,7 +248,12 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           }
           label="Draft first by default"
           sx={{
-            mb: 1
+            mb: 1,
+            mr: 0,
+            '& .MuiFormControlLabel-label': {
+              fontSize: { xs: 13, sm: 14 },
+              lineHeight: 1.2
+            }
           }} />
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           When this is on, Iris saves replies to the human review queue instead of sending automatically.
@@ -228,8 +279,14 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
-          p: 2,
-          mb: 2.5
+          p: {
+            xs: 1.25,
+            sm: 2
+          },
+          mb: {
+            xs: 1.5,
+            sm: 2
+          }
         }}>
         <Typography
           variant="overline"
@@ -259,7 +316,10 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
-          p: 2
+          p: {
+            xs: 1.25,
+            sm: 2
+          }
         }}>
         
         <Typography
@@ -278,15 +338,18 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             key={cat.id}
             direction="row"
             alignItems="center"
-            spacing={1.5}>
+            spacing={1}
+            sx={{
+              minWidth: 0
+            }}>
             
               <Tooltip title="Change category color">
                 <Box
                 component="label"
                 sx={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 1.5,
+                  width: { xs: 28, sm: 34 },
+                  height: { xs: 28, sm: 34 },
+                  borderRadius: 1.25,
                   bgcolor: colors[cat.id],
                   flexShrink: 0,
                   cursor: 'pointer',
@@ -321,18 +384,23 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
               <Box
               sx={{
                 flex: 1,
-                px: 1.5,
-                py: 1,
+                minWidth: 0,
+                px: { xs: 1, sm: 1.5 },
+                py: { xs: 0.75, sm: 1 },
                 borderRadius: 1.5,
                 border: '1px solid',
                 borderColor: 'divider'
               }}>
               
-                <Typography variant="body2">{cat.label}</Typography>
+                <Typography variant="body2" noWrap sx={{ fontSize: { xs: 12, sm: 13 } }}>{cat.label}</Typography>
               </Box>
               <FormControlLabel
               sx={{
-                m: 0
+                m: 0,
+                flexShrink: 0,
+                '& .MuiFormControlLabel-label': {
+                  fontSize: { xs: 11, sm: 12 }
+                }
               }}
               control={
               <Checkbox
@@ -355,8 +423,14 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
-          p: 2,
-          mt: 2.5
+          p: {
+            xs: 1.25,
+            sm: 2
+          },
+          mt: {
+            xs: 1.5,
+            sm: 2
+          }
         }}>
         <Typography
           variant="overline"
@@ -378,20 +452,34 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           }}
           sx={{
             justifyContent: 'center',
-            minHeight: 42,
-            fontWeight: 800
+            minHeight: { xs: 38, sm: 42 },
+            fontWeight: 800,
+            fontSize: { xs: 12, sm: 13 },
+            whiteSpace: 'nowrap'
           }}>
           Log out
         </Button>
       </Card>
+      </Box>
 
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: 2,
-          mt: 3
+          gap: 1,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          px: {
+            xs: 1.25,
+            sm: 3
+          },
+          py: {
+            xs: 1,
+            sm: 1.5
+          },
+          flexShrink: 0
         }}>
         {saveStatus === 'error' ?
         <Alert severity="error" sx={{ py: 0, flex: 1 }}>
@@ -399,7 +487,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         </Alert> :
         <Box sx={{ flex: 1 }} />
         }
-        <Button variant="contained" onClick={saveSettings} disabled={saving}>
+        <Button variant="contained" onClick={saveSettings} disabled={saving} sx={{ fontSize: { xs: 12, sm: 13 }, whiteSpace: 'nowrap' }}>
           Save settings
         </Button>
       </Box>

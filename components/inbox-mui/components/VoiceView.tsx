@@ -34,6 +34,7 @@ import {
   type CallOutcome } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { usePersistedSelection } from '../hooks/usePersistedSelection';
 const outcomeColor: Record<CallOutcome, string> = {
   voicemail: '#fbbf24',
   'silence-timed-out': '#94a3b8',
@@ -42,7 +43,15 @@ const outcomeColor: Record<CallOutcome, string> = {
 };
 export function VoiceView() {
   const { voiceContacts } = useInboxModel();
-  const [selectedId, setSelectedId] = useState(voiceContacts[0]?.id ?? '');
+  const voiceContactIds = React.useMemo(
+    () => voiceContacts.map((c) => c.id),
+    [voiceContacts]
+  );
+  const [selectedId, setSelectedId] = usePersistedSelection(
+    'iris.inbox.voice.thread',
+    voiceContactIds[0] ?? '',
+    voiceContactIds
+  );
   const contact =
   voiceContacts.find((c) => c.id === selectedId) ?? voiceContacts[0];
   const readerRef = useRef<HTMLDivElement | null>(null);
