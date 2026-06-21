@@ -160,14 +160,22 @@ function buildEmailMessages(events: SheetRow[], categories: InboxCategory[]): Em
     const direction: EmailMessage["direction"] = !isInbound ? "iris" : isOwner ? "owner" : "inbound";
     const body = eventText(event);
     const subject = isInbound ? (event.summary || "").split("\n")[0] : undefined;
+    // Iris's outbound replies are stored as full HTML (with embedded property
+    // cards/images). Detect that and route it to `html` so the UI renders the
+    // real email — including the neat embedded property previews — instead of
+    // showing raw markup as plain text.
+    const rawMessage = event.message_text || "";
+    const looksHtml = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li)\b/i.test(rawMessage);
+    const html = !isInbound && looksHtml ? rawMessage : undefined;
     return {
       id: `${event.thread_ref || event.email || i}-${i}`,
       sender: direction === "iris" ? "Iris" : direction === "owner" ? "Owner" : (event.full_name || event.email || "Contact"),
       direction,
       time: formatEventTimeShort(event.event_at),
       subject: subject && subject.trim() ? subject.trim().slice(0, 160) : undefined,
-      body: body || undefined,
-      showSchedule: !isInbound && i === events.length - 1,
+      body: html ? undefined : (body || undefined),
+      html,
+      showSchedule: !isInbound && !html && i === events.length - 1,
       flag: event.handoff_reason || undefined,
     };
   });

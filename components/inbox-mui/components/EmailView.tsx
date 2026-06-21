@@ -228,17 +228,14 @@ function EmailBubble({
             p: 1.75,
             borderRadius: 2.5,
             border: '1px solid',
-            borderColor: isIris ? 'primary.main' : 'divider',
+            borderColor: isIris ? 'transparent' : 'divider',
             bgcolor: isIris ?
-            (t) =>
-            t.palette.mode === 'dark' ?
-            'rgba(99,102,241,0.14)' :
-            'rgba(99,102,241,0.08)' :
+            'action.selected' :
             isOwner ?
             'action.selected' :
             'background.default'
           }}>
-          
+
           <Stack
             direction="row"
             justifyContent="space-between"
@@ -253,16 +250,16 @@ function EmailBubble({
                 src={isIris ? agentAvatar : undefined}
                 alt={isIris ? 'Arya, AI agent' : undefined}
                 sx={{
-                  width: 22,
-                  height: 22,
+                  width: 32,
+                  height: 32,
                   bgcolor: isIris ? 'primary.main' : 'action.selected',
                   color: isIris ? 'primary.contrastText' : 'text.secondary'
                 }}>
-                
+
                 {!isIris &&
                 <PersonIcon
                   sx={{
-                    fontSize: 14
+                    fontSize: 16
                   }} />
 
                 }
@@ -292,10 +289,12 @@ function EmailBubble({
           <Typography
             variant="body2"
             sx={{
-              fontWeight: 600
+              fontWeight: 700,
+              color: 'text.primary',
+              mb: 1
             }}>
-            
-              Subject: {message.subject}
+
+              {message.subject}
             </Typography>
           }
           {(message.html || message.body) &&
