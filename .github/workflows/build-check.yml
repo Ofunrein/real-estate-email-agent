@@ -20,6 +20,13 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Check lockfile for internal registry URLs
+        run: |
+          if grep -Eq "npm\\.apple\\.com|artifacts\\.apple\\.com" package-lock.json; then
+            echo "ERROR: package-lock.json contains internal Apple registry URLs — Vercel can't install these."
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
