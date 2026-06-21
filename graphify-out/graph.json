@@ -50,7 +50,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "runtimeerror",
-      "community": 179,
+      "community": 13,
       "norm_label": "runtimeerror"
     },
     {
@@ -240,7 +240,7 @@
       "source_location": "L712",
       "_origin": "ast",
       "id": "agent_get_gmail_service",
-      "community": 207,
+      "community": 13,
       "norm_label": "get_gmail_service()"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "agent_inbox_app_run",
-      "community": 179,
+      "community": 13,
       "norm_label": "run()"
     },
     {
@@ -1430,7 +1430,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_api_diagnostics_inbox_route_ts_inbox_route",
-      "community": 163,
+      "community": 47,
       "norm_label": "route.ts"
     },
     {
@@ -1440,7 +1440,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "app_api_diagnostics_inbox_route_ts_inbox_route_get",
-      "community": 163,
+      "community": 47,
       "norm_label": "get()"
     },
     {
@@ -1716,6 +1716,36 @@
     {
       "label": "route.ts",
       "file_type": "code",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "composio_connect_route",
+      "community": 163,
+      "norm_label": "route.ts"
+    },
+    {
+      "label": "callbackUrl()",
+      "file_type": "code",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "composio_connect_route_callbackurl",
+      "community": 163,
+      "norm_label": "callbackurl()"
+    },
+    {
+      "label": "GET()",
+      "file_type": "code",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "composio_connect_route_get",
+      "community": 163,
+      "norm_label": "get()"
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
       "source_file": "app/api/settings/email-account/connect/route.ts",
       "source_location": "L1",
       "_origin": "ast",
@@ -1790,7 +1820,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_api_settings_inbox_route_ts_inbox_route_get",
-      "community": 163,
+      "community": 49,
       "norm_label": "get()"
     },
     {
@@ -2520,7 +2550,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "theo_sms_route_cachetheoproperties",
-      "community": 11,
+      "community": 172,
       "norm_label": "cachetheoproperties()"
     },
     {
@@ -2660,7 +2690,7 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "theo_social_router_route_recordtheosocialoutbound",
-      "community": 11,
+      "community": 277,
       "norm_label": "recordtheosocialoutbound()"
     },
     {
@@ -2780,7 +2810,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "theo_whatsapp_route_cachetheoproperties",
-      "community": 11,
+      "community": 30,
       "norm_label": "cachetheoproperties()"
     },
     {
@@ -2910,7 +2940,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_page_tsx_app_page",
-      "community": 163,
+      "community": 170,
       "norm_label": "page.tsx"
     },
     {
@@ -2920,7 +2950,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "app_page_home",
-      "community": 163,
+      "community": 170,
       "norm_label": "home()"
     },
     {
@@ -3100,7 +3130,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp",
-      "community": 199,
+      "community": 279,
       "norm_label": "inboxapp.tsx"
     },
     {
@@ -3110,7 +3140,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp_inboxappprops",
-      "community": 199,
+      "community": 279,
       "norm_label": "inboxappprops"
     },
     {
@@ -3120,7 +3150,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "inbox_mui_inboxapp_inboxapp",
-      "community": 199,
+      "community": 279,
       "norm_label": "inboxapp()"
     },
     {
@@ -3170,7 +3200,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "inbox_mui_inboxdatacontext_inboxdataprovider",
-      "community": 199,
+      "community": 279,
       "norm_label": "inboxdataprovider()"
     },
     {
@@ -3200,7 +3230,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage",
-      "community": 205,
+      "community": 279,
       "norm_label": "inboxpage.tsx"
     },
     {
@@ -3210,7 +3240,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_channel_ids",
-      "community": 205,
+      "community": 279,
       "norm_label": "channel_ids"
     },
     {
@@ -3220,7 +3250,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_inboxpage",
-      "community": 205,
+      "community": 279,
       "norm_label": "inboxpage()"
     },
     {
@@ -3230,7 +3260,7 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "inbox_mui_inboxpage_channelcontent",
-      "community": 205,
+      "community": 279,
       "norm_label": "channelcontent()"
     },
     {
@@ -4810,7 +4840,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "core_properties_repair_clean_cell",
-      "community": 179,
+      "community": 6,
       "norm_label": "clean_cell()"
     },
     {
@@ -5060,7 +5090,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "core_sheets_store_read_table",
-      "community": 207,
+      "community": 13,
       "norm_label": "read_table()"
     },
     {
@@ -5080,7 +5110,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "core_sheets_store_update_row",
-      "community": 43,
+      "community": 42,
       "norm_label": "update_row()"
     },
     {
@@ -8520,7 +8550,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_agentidentity",
-      "community": 11,
+      "community": 281,
       "norm_label": "agentidentity.ts"
     },
     {
@@ -8530,7 +8560,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "lib_agentidentity_agentnameforchannel",
-      "community": 11,
+      "community": 281,
       "norm_label": "agentnameforchannel()"
     },
     {
@@ -8540,7 +8570,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "lib_agentidentity_normalizelegacyagentname",
-      "community": 49,
+      "community": 281,
       "norm_label": "normalizelegacyagentname()"
     },
     {
@@ -8550,7 +8580,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_agentidentity_normalizelegacyagenttext",
-      "community": 199,
+      "community": 281,
       "norm_label": "normalizelegacyagenttext()"
     },
     {
@@ -9950,7 +9980,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_cadence_touchdecision",
-      "community": 21,
+      "community": 54,
       "norm_label": "touchdecision"
     },
     {
@@ -10060,7 +10090,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "lib_cadencequeue_cadencequeuechannel",
-      "community": 21,
+      "community": 75,
       "norm_label": "cadencequeuechannel"
     },
     {
@@ -10420,7 +10450,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_channelingest",
-      "community": 172,
+      "community": 277,
       "norm_label": "channelingest.ts"
     },
     {
@@ -10430,7 +10460,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "lib_channelingest_channelingestinput",
-      "community": 11,
+      "community": 277,
       "norm_label": "channelingestinput"
     },
     {
@@ -10440,7 +10470,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "lib_channelingest_stop_words",
-      "community": 172,
+      "community": 277,
       "norm_label": "stop_words"
     },
     {
@@ -10450,7 +10480,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "lib_channelingest_start_words",
-      "community": 172,
+      "community": 277,
       "norm_label": "start_words"
     },
     {
@@ -10460,7 +10490,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_channelingest_help_words",
-      "community": 172,
+      "community": 277,
       "norm_label": "help_words"
     },
     {
@@ -10470,7 +10500,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "lib_channelingest_isonow",
-      "community": 172,
+      "community": 277,
       "norm_label": "isonow()"
     },
     {
@@ -10480,7 +10510,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "lib_channelingest_smscontrolaction",
-      "community": 172,
+      "community": 30,
       "norm_label": "smscontrolaction()"
     },
     {
@@ -10490,7 +10520,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "lib_channelingest_normalizetwiliocontactaddress",
-      "community": 172,
+      "community": 30,
       "norm_label": "normalizetwiliocontactaddress()"
     },
     {
@@ -10500,7 +10530,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "lib_channelingest_inferpreferredchannelfromtext",
-      "community": 172,
+      "community": 277,
       "norm_label": "inferpreferredchannelfromtext()"
     },
     {
@@ -10510,7 +10540,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "lib_channelingest_requiredatabaseforchannelwrites",
-      "community": 172,
+      "community": 277,
       "norm_label": "requiredatabaseforchannelwrites()"
     },
     {
@@ -10520,7 +10550,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "lib_channelingest_recordchannelinteraction",
-      "community": 172,
+      "community": 277,
       "norm_label": "recordchannelinteraction()"
     },
     {
@@ -10530,7 +10560,7 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "lib_channelingest_twiliosmsingestinput",
-      "community": 172,
+      "community": 277,
       "norm_label": "twiliosmsingestinput()"
     },
     {
@@ -10540,7 +10570,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_channelingest_twiliowhatsappingestinput",
-      "community": 172,
+      "community": 277,
       "norm_label": "twiliowhatsappingestinput()"
     },
     {
@@ -10550,7 +10580,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "lib_channelingest_metawhatsappingestpayload",
-      "community": 172,
+      "community": 277,
       "norm_label": "metawhatsappingestpayload"
     },
     {
@@ -10560,7 +10590,7 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "lib_channelingest_metawhatsappingestinput",
-      "community": 172,
+      "community": 30,
       "norm_label": "metawhatsappingestinput()"
     },
     {
@@ -10570,7 +10600,7 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "lib_channelingest_twiliotextingestinput",
-      "community": 172,
+      "community": 277,
       "norm_label": "twiliotextingestinput()"
     },
     {
@@ -10580,7 +10610,7 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "lib_channelingest_vapivoiceingestinput",
-      "community": 172,
+      "community": 277,
       "norm_label": "vapivoiceingestinput()"
     },
     {
@@ -10610,7 +10640,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "lib_clientconfig_cadenceconfig",
-      "community": 75,
+      "community": 54,
       "norm_label": "cadenceconfig"
     },
     {
@@ -10702,6 +10732,76 @@
       "id": "lib_clientconfig_resolveclientconfig",
       "community": 75,
       "norm_label": "resolveclientconfig()"
+    },
+    {
+      "label": "composioConnection.ts",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_composioconnection",
+      "community": 280,
+      "norm_label": "composioconnection.ts"
+    },
+    {
+      "label": "composioApiKey()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "lib_composioconnection_composioapikey",
+      "community": 280,
+      "norm_label": "composioapikey()"
+    },
+    {
+      "label": "composioEnabled()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "lib_composioconnection_composioenabled",
+      "community": 280,
+      "norm_label": "composioenabled()"
+    },
+    {
+      "label": "composioGmailAuthConfigId()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "lib_composioconnection_composiogmailauthconfigid",
+      "community": 280,
+      "norm_label": "composiogmailauthconfigid()"
+    },
+    {
+      "label": "composioExternalUserId()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "lib_composioconnection_composioexternaluserid",
+      "community": 280,
+      "norm_label": "composioexternaluserid()"
+    },
+    {
+      "label": "createComposioClient()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "lib_composioconnection_createcomposioclient",
+      "community": 280,
+      "norm_label": "createcomposioclient()"
+    },
+    {
+      "label": "createComposioGmailConnectLink()",
+      "file_type": "code",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "lib_composioconnection_createcomposiogmailconnectlink",
+      "community": 280,
+      "norm_label": "createcomposiogmailconnectlink()"
     },
     {
       "label": "ghl.ts",
@@ -11120,7 +11220,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_database",
-      "community": 49,
+      "community": 31,
       "norm_label": "database.ts"
     },
     {
@@ -11130,7 +11230,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "lib_database_tablecolumncache",
-      "community": 49,
+      "community": 31,
       "norm_label": "tablecolumncache"
     },
     {
@@ -11200,7 +11300,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "lib_database_clientname",
-      "community": 49,
+      "community": 40,
       "norm_label": "clientname()"
     },
     {
@@ -11210,7 +11310,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "lib_database_cleanrow",
-      "community": 49,
+      "community": 40,
       "norm_label": "cleanrow()"
     },
     {
@@ -11230,7 +11330,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "lib_database_intdbvalue",
-      "community": 49,
+      "community": 31,
       "norm_label": "intdbvalue()"
     },
     {
@@ -11240,7 +11340,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "lib_database_nullableintdbvalue",
-      "community": 49,
+      "community": 31,
       "norm_label": "nullableintdbvalue()"
     },
     {
@@ -11250,7 +11350,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "lib_database_booldbvalue",
-      "community": 49,
+      "community": 31,
       "norm_label": "booldbvalue()"
     },
     {
@@ -11260,7 +11360,7 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "lib_database_leadmemorydbvalue",
-      "community": 49,
+      "community": 31,
       "norm_label": "leadmemorydbvalue()"
     },
     {
@@ -11270,7 +11370,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "lib_database_eventdbvalue",
-      "community": 49,
+      "community": 31,
       "norm_label": "eventdbvalue()"
     },
     {
@@ -11280,7 +11380,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "lib_database_ensureclientindatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "ensureclientindatabase()"
     },
     {
@@ -11320,7 +11420,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "lib_database_voice_call_headers",
-      "community": 49,
+      "community": 31,
       "norm_label": "voice_call_headers"
     },
     {
@@ -11340,7 +11440,7 @@
       "source_location": "L214",
       "_origin": "ast",
       "id": "lib_database_emailaccountrecord",
-      "community": 49,
+      "community": 31,
       "norm_label": "emailaccountrecord"
     },
     {
@@ -11350,7 +11450,7 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "lib_database_threadlinkrecord",
-      "community": 49,
+      "community": 31,
       "norm_label": "threadlinkrecord"
     },
     {
@@ -11360,7 +11460,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "lib_database_emailaccountfromrow",
-      "community": 49,
+      "community": 31,
       "norm_label": "emailaccountfromrow()"
     },
     {
@@ -11390,7 +11490,7 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "lib_database_reademailaccountsfromdatabase",
-      "community": 163,
+      "community": 49,
       "norm_label": "reademailaccountsfromdatabase()"
     },
     {
@@ -11400,7 +11500,7 @@
       "source_location": "L281",
       "_origin": "ast",
       "id": "lib_database_readdefaultemailaccountfromdatabase",
-      "community": 27,
+      "community": 163,
       "norm_label": "readdefaultemailaccountfromdatabase()"
     },
     {
@@ -11410,7 +11510,7 @@
       "source_location": "L298",
       "_origin": "ast",
       "id": "lib_database_upsertemailaccountindatabase",
-      "community": 49,
+      "community": 31,
       "norm_label": "upsertemailaccountindatabase()"
     },
     {
@@ -11440,7 +11540,7 @@
       "source_location": "L375",
       "_origin": "ast",
       "id": "lib_database_inboxcategoryfromrow",
-      "community": 49,
+      "community": 31,
       "norm_label": "inboxcategoryfromrow()"
     },
     {
@@ -11450,7 +11550,7 @@
       "source_location": "L388",
       "_origin": "ast",
       "id": "lib_database_aidraftfromrow",
-      "community": 197,
+      "community": 163,
       "norm_label": "aidraftfromrow()"
     },
     {
@@ -11490,7 +11590,7 @@
       "source_location": "L502",
       "_origin": "ast",
       "id": "lib_database_readinboxcategoriesfromdatabase",
-      "community": 163,
+      "community": 49,
       "norm_label": "readinboxcategoriesfromdatabase()"
     },
     {
@@ -11520,7 +11620,7 @@
       "source_location": "L567",
       "_origin": "ast",
       "id": "lib_database_readactiveaidraftsfromdatabase",
-      "community": 163,
+      "community": 49,
       "norm_label": "readactiveaidraftsfromdatabase()"
     },
     {
@@ -11550,7 +11650,7 @@
       "source_location": "L644",
       "_origin": "ast",
       "id": "lib_database_updateaidraftstatusindatabase",
-      "community": 197,
+      "community": 49,
       "norm_label": "updateaidraftstatusindatabase()"
     },
     {
@@ -11810,7 +11910,7 @@
       "source_location": "L1108",
       "_origin": "ast",
       "id": "lib_database_upsertpropertytodatabase",
-      "community": 11,
+      "community": 40,
       "norm_label": "upsertpropertytodatabase()"
     },
     {
@@ -11820,7 +11920,7 @@
       "source_location": "L1127",
       "_origin": "ast",
       "id": "lib_database_upsertleadmemorytodatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "upsertleadmemorytodatabase()"
     },
     {
@@ -11830,7 +11930,7 @@
       "source_location": "L1160",
       "_origin": "ast",
       "id": "lib_database_appendconversationeventtodatabase",
-      "community": 49,
+      "community": 40,
       "norm_label": "appendconversationeventtodatabase()"
     },
     {
@@ -11940,7 +12040,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_format",
-      "community": 199,
+      "community": 282,
       "norm_label": "format.ts"
     },
     {
@@ -11960,7 +12060,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_format_formatsqft",
-      "community": 199,
+      "community": 282,
       "norm_label": "formatsqft()"
     },
     {
@@ -11970,7 +12070,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "lib_format_displayvalue",
-      "community": 199,
+      "community": 282,
       "norm_label": "displayvalue()"
     },
     {
@@ -11980,7 +12080,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "lib_format_corepropertyfields",
-      "community": 199,
+      "community": 282,
       "norm_label": "corepropertyfields"
     },
     {
@@ -11990,7 +12090,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "lib_format_missingpropertyfields",
-      "community": 199,
+      "community": 282,
       "norm_label": "missingpropertyfields()"
     },
     {
@@ -12020,7 +12120,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailclient",
-      "community": 3,
+      "community": 27,
       "norm_label": "gmailclient"
     },
     {
@@ -12090,7 +12190,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailreplyresult",
-      "community": 3,
+      "community": 27,
       "norm_label": "gmailreplyresult"
     },
     {
@@ -12360,7 +12460,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_googlesheets",
-      "community": 40,
+      "community": 278,
       "norm_label": "googlesheets.ts"
     },
     {
@@ -12370,7 +12470,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_googlesheets_oauthcredentials",
-      "community": 40,
+      "community": 278,
       "norm_label": "oauthcredentials"
     },
     {
@@ -12380,7 +12480,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_googlesheets_readjson",
-      "community": 40,
+      "community": 278,
       "norm_label": "readjson()"
     },
     {
@@ -12390,7 +12490,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "lib_googlesheets_readjsonenv",
-      "community": 40,
+      "community": 278,
       "norm_label": "readjsonenv()"
     },
     {
@@ -12400,7 +12500,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "lib_googlesheets_credentialpaths",
-      "community": 40,
+      "community": 278,
       "norm_label": "credentialpaths()"
     },
     {
@@ -12410,7 +12510,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "lib_googlesheets_spreadsheetid",
-      "community": 40,
+      "community": 278,
       "norm_label": "spreadsheetid()"
     },
     {
@@ -12420,7 +12520,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "lib_googlesheets_sheetsclient",
-      "community": 40,
+      "community": 278,
       "norm_label": "sheetsclient()"
     },
     {
@@ -12430,7 +12530,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "lib_googlesheets_rowtoobject",
-      "community": 40,
+      "community": 278,
       "norm_label": "rowtoobject()"
     },
     {
@@ -12440,7 +12540,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "lib_googlesheets_readsheet",
-      "community": 40,
+      "community": 278,
       "norm_label": "readsheet()"
     },
     {
@@ -12450,7 +12550,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "lib_googlesheets_readsheets",
-      "community": 40,
+      "community": 278,
       "norm_label": "readsheets()"
     },
     {
@@ -12460,7 +12560,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "lib_googlesheets_loadagentinboxdatafromsheets",
-      "community": 40,
+      "community": 278,
       "norm_label": "loadagentinboxdatafromsheets()"
     },
     {
@@ -12470,7 +12570,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "lib_googlesheets_appendpropertytosheets",
-      "community": 11,
+      "community": 278,
       "norm_label": "appendpropertytosheets()"
     },
     {
@@ -12680,7 +12780,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_inboxdata",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxdata.ts"
     },
     {
@@ -12690,7 +12790,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_inboxdata_channel",
-      "community": 49,
+      "community": 274,
       "norm_label": "channel"
     },
     {
@@ -12700,7 +12800,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_inboxdata_agentinboxdata",
-      "community": 199,
+      "community": 279,
       "norm_label": "agentinboxdata"
     },
     {
@@ -12710,7 +12810,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_inboxdata_channelfor",
-      "community": 49,
+      "community": 274,
       "norm_label": "channelfor()"
     },
     {
@@ -12750,7 +12850,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "lib_inboxdata_isreservedtestphone",
-      "community": 49,
+      "community": 274,
       "norm_label": "isreservedtestphone()"
     },
     {
@@ -12760,7 +12860,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "lib_inboxdata_isreservedtestrow",
-      "community": 49,
+      "community": 274,
       "norm_label": "isreservedtestrow()"
     },
     {
@@ -12770,7 +12870,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "lib_inboxdata_isinternalvoiceevent",
-      "community": 49,
+      "community": 274,
       "norm_label": "isinternalvoiceevent()"
     },
     {
@@ -12780,7 +12880,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "lib_inboxdata_normalizeinboxrow",
-      "community": 49,
+      "community": 281,
       "norm_label": "normalizeinboxrow()"
     },
     {
@@ -12790,7 +12890,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "lib_inboxdata_voicetranscriptturn",
-      "community": 49,
+      "community": 274,
       "norm_label": "voicetranscriptturn"
     },
     {
@@ -12800,7 +12900,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "lib_inboxdata_voicespeakerfromlabel",
-      "community": 199,
+      "community": 274,
       "norm_label": "voicespeakerfromlabel()"
     },
     {
@@ -12810,7 +12910,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "lib_inboxdata_parsevoicemessagesjson",
-      "community": 199,
+      "community": 274,
       "norm_label": "parsevoicemessagesjson()"
     },
     {
@@ -12820,7 +12920,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_inboxdata_voicecalltranscriptsource",
-      "community": 199,
+      "community": 274,
       "norm_label": "voicecalltranscriptsource()"
     },
     {
@@ -12830,7 +12930,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "lib_inboxdata_parsevoicetranscript",
-      "community": 199,
+      "community": 274,
       "norm_label": "parsevoicetranscript()"
     },
     {
@@ -12840,7 +12940,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "lib_inboxdata_composeinboxdata",
-      "community": 163,
+      "community": 274,
       "norm_label": "composeinboxdata()"
     },
     {
@@ -12920,7 +13020,7 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_formateventtimeshort",
-      "community": 199,
+      "community": 249,
       "norm_label": "formateventtimeshort()"
     },
     {
@@ -13010,7 +13110,7 @@
       "source_location": "L183",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_smstextandmedia",
-      "community": 199,
+      "community": 276,
       "norm_label": "smstextandmedia()"
     },
     {
@@ -13050,7 +13150,7 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_responsesamplesbyday",
-      "community": 199,
+      "community": 249,
       "norm_label": "responsesamplesbyday()"
     },
     {
@@ -13070,7 +13170,7 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildemailmessages",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildemailmessages()"
     },
     {
@@ -13080,7 +13180,7 @@
       "source_location": "L341",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildemailthreads",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildemailthreads()"
     },
     {
@@ -13090,7 +13190,7 @@
       "source_location": "L363",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildsmsthreads",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildsmsthreads()"
     },
     {
@@ -13130,7 +13230,7 @@
       "source_location": "L472",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildactivityevents",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildactivityevents()"
     },
     {
@@ -13140,7 +13240,7 @@
       "source_location": "L535",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildchannelstats",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildchannelstats()"
     },
     {
@@ -13160,7 +13260,7 @@
       "source_location": "L570",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildreviewqueue",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildreviewqueue()"
     },
     {
@@ -13180,7 +13280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_inboxsettings",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxsettings.ts"
     },
     {
@@ -13190,7 +13290,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "lib_inboxsettings_inboxcategory",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxcategory"
     },
     {
@@ -13200,7 +13300,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_inboxsettings_inboxsettings",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxsettings"
     },
     {
@@ -13210,7 +13310,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "lib_inboxsettings_aidraft",
-      "community": 49,
+      "community": 274,
       "norm_label": "aidraft"
     },
     {
@@ -13220,7 +13320,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "lib_inboxsettings_emailcapability",
-      "community": 49,
+      "community": 274,
       "norm_label": "emailcapability"
     },
     {
@@ -13230,7 +13330,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_inboxsettings_default_inbox_categories",
-      "community": 49,
+      "community": 274,
       "norm_label": "default_inbox_categories"
     },
     {
@@ -13240,7 +13340,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "lib_inboxsettings_default_inbox_settings",
-      "community": 49,
+      "community": 274,
       "norm_label": "default_inbox_settings"
     },
     {
@@ -13250,7 +13350,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "lib_inboxsettings_normalizeinboxcategory",
-      "community": 49,
+      "community": 31,
       "norm_label": "normalizeinboxcategory()"
     },
     {
@@ -13310,7 +13410,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_inboxthreadutils",
-      "community": 199,
+      "community": 249,
       "norm_label": "inboxthreadutils.ts"
     },
     {
@@ -13320,7 +13420,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventchannel",
-      "community": 199,
+      "community": 249,
       "norm_label": "eventchannel()"
     },
     {
@@ -13330,7 +13430,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_latestevent",
-      "community": 199,
+      "community": 249,
       "norm_label": "latestevent()"
     },
     {
@@ -13340,7 +13440,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventtimevalue",
-      "community": 199,
+      "community": 249,
       "norm_label": "eventtimevalue()"
     },
     {
@@ -13360,7 +13460,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_threadneedshuman",
-      "community": 199,
+      "community": 249,
       "norm_label": "threadneedshuman()"
     },
     {
@@ -13370,7 +13470,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_parsedraftkey",
-      "community": 199,
+      "community": 249,
       "norm_label": "parsedraftkey()"
     },
     {
@@ -13380,7 +13480,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_conversationkey",
-      "community": 199,
+      "community": 249,
       "norm_label": "conversationkey()"
     },
     {
@@ -13390,7 +13490,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_sortthreadentries",
-      "community": 199,
+      "community": 249,
       "norm_label": "sortthreadentries()"
     },
     {
@@ -13400,7 +13500,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_buildchannelthreads",
-      "community": 199,
+      "community": 249,
       "norm_label": "buildchannelthreads()"
     },
     {
@@ -13410,7 +13510,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_threadidentity",
-      "community": 199,
+      "community": 249,
       "norm_label": "threadidentity()"
     },
     {
@@ -13420,7 +13520,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicecallkey",
-      "community": 199,
+      "community": 249,
       "norm_label": "voicecallkey()"
     },
     {
@@ -13430,7 +13530,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_latestvoicecall",
-      "community": 199,
+      "community": 249,
       "norm_label": "latestvoicecall()"
     },
     {
@@ -13440,7 +13540,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicecalltimevalue",
-      "community": 199,
+      "community": 249,
       "norm_label": "voicecalltimevalue()"
     },
     {
@@ -13460,7 +13560,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_voicethreadidentity",
-      "community": 199,
+      "community": 249,
       "norm_label": "voicethreadidentity()"
     },
     {
@@ -13470,7 +13570,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_stripemailmetadata",
-      "community": 199,
+      "community": 249,
       "norm_label": "stripemailmetadata()"
     },
     {
@@ -13480,7 +13580,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventtext",
-      "community": 199,
+      "community": 249,
       "norm_label": "eventtext()"
     },
     {
@@ -13490,7 +13590,7 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_eventsummarytext",
-      "community": 199,
+      "community": 281,
       "norm_label": "eventsummarytext()"
     },
     {
@@ -13500,7 +13600,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_formateventtime",
-      "community": 199,
+      "community": 249,
       "norm_label": "formateventtime()"
     },
     {
@@ -13520,7 +13620,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_draftchanneltoviewid",
-      "community": 199,
+      "community": 249,
       "norm_label": "draftchanneltoviewid()"
     },
     {
@@ -13850,7 +13950,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "lib_irisemail_cleanbody",
-      "community": 157,
+      "community": 3,
       "norm_label": "cleanbody()"
     },
     {
@@ -14000,7 +14100,7 @@
       "source_location": "L444",
       "_origin": "ast",
       "id": "lib_irisemail_htmlescape",
-      "community": 249,
+      "community": 3,
       "norm_label": "htmlescape()"
     },
     {
@@ -14010,7 +14110,7 @@
       "source_location": "L452",
       "_origin": "ast",
       "id": "lib_irisemail_plaintohtml",
-      "community": 249,
+      "community": 3,
       "norm_label": "plaintohtml()"
     },
     {
@@ -14020,7 +14120,7 @@
       "source_location": "L459",
       "_origin": "ast",
       "id": "lib_irisemail_formatcurrency",
-      "community": 249,
+      "community": 3,
       "norm_label": "formatcurrency()"
     },
     {
@@ -14030,7 +14130,7 @@
       "source_location": "L466",
       "_origin": "ast",
       "id": "lib_irisemail_propertyfacts",
-      "community": 249,
+      "community": 3,
       "norm_label": "propertyfacts()"
     },
     {
@@ -14040,7 +14140,7 @@
       "source_location": "L476",
       "_origin": "ast",
       "id": "lib_irisemail_propertyhighlights",
-      "community": 249,
+      "community": 3,
       "norm_label": "propertyhighlights()"
     },
     {
@@ -14050,7 +14150,7 @@
       "source_location": "L499",
       "_origin": "ast",
       "id": "lib_irisemail_propertyphotosrc",
-      "community": 199,
+      "community": 276,
       "norm_label": "propertyphotosrc()"
     },
     {
@@ -14060,7 +14160,7 @@
       "source_location": "L505",
       "_origin": "ast",
       "id": "lib_irisemail_propertycardhtml",
-      "community": 249,
+      "community": 3,
       "norm_label": "propertycardhtml()"
     },
     {
@@ -14070,7 +14170,7 @@
       "source_location": "L528",
       "_origin": "ast",
       "id": "lib_irisemail_propertyplain",
-      "community": 249,
+      "community": 3,
       "norm_label": "propertyplain()"
     },
     {
@@ -14080,7 +14180,7 @@
       "source_location": "L539",
       "_origin": "ast",
       "id": "lib_irisemail_dedupeproperties",
-      "community": 249,
+      "community": 3,
       "norm_label": "dedupeproperties()"
     },
     {
@@ -14090,7 +14190,7 @@
       "source_location": "L555",
       "_origin": "ast",
       "id": "lib_irisemail_buildhtmlemailreply",
-      "community": 249,
+      "community": 3,
       "norm_label": "buildhtmlemailreply()"
     },
     {
@@ -14100,7 +14200,7 @@
       "source_location": "L580",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailclaudemodel",
-      "community": 249,
+      "community": 3,
       "norm_label": "irisemailclaudemodel()"
     },
     {
@@ -14110,7 +14210,7 @@
       "source_location": "L584",
       "_origin": "ast",
       "id": "lib_irisemail_anthropicapikey",
-      "community": 249,
+      "community": 3,
       "norm_label": "anthropicapikey()"
     },
     {
@@ -14120,7 +14220,7 @@
       "source_location": "L588",
       "_origin": "ast",
       "id": "lib_irisemail_generateclaudeirisemailreplytext",
-      "community": 249,
+      "community": 3,
       "norm_label": "generateclaudeirisemailreplytext()"
     },
     {
@@ -14130,7 +14230,7 @@
       "source_location": "L652",
       "_origin": "ast",
       "id": "lib_irisemail_generateirisemailreplyrich",
-      "community": 11,
+      "community": 3,
       "norm_label": "generateirisemailreplyrich()"
     },
     {
@@ -14140,7 +14240,7 @@
       "source_location": "L675",
       "_origin": "ast",
       "id": "lib_irisemail_normalizereplydraft",
-      "community": 157,
+      "community": 3,
       "norm_label": "normalizereplydraft()"
     },
     {
@@ -14200,7 +14300,7 @@
       "source_location": "L806",
       "_origin": "ast",
       "id": "lib_irisemail_recordirisemailinteraction",
-      "community": 49,
+      "community": 40,
       "norm_label": "recordirisemailinteraction()"
     },
     {
@@ -14210,7 +14310,7 @@
       "source_location": "L826",
       "_origin": "ast",
       "id": "lib_irisemail_processirisemailpoll",
-      "community": 157,
+      "community": 49,
       "norm_label": "processirisemailpoll()"
     },
     {
@@ -14220,7 +14320,7 @@
       "source_location": "L916",
       "_origin": "ast",
       "id": "lib_irisemail_header",
-      "community": 274,
+      "community": 157,
       "norm_label": "header()"
     },
     {
@@ -14230,7 +14330,7 @@
       "source_location": "L920",
       "_origin": "ast",
       "id": "lib_irisemail_decodebase64url",
-      "community": 274,
+      "community": 3,
       "norm_label": "decodebase64url()"
     },
     {
@@ -14240,7 +14340,7 @@
       "source_location": "L924",
       "_origin": "ast",
       "id": "lib_irisemail_bodyfrompayload",
-      "community": 274,
+      "community": 3,
       "norm_label": "bodyfrompayload()"
     },
     {
@@ -14250,7 +14350,7 @@
       "source_location": "L934",
       "_origin": "ast",
       "id": "lib_irisemail_gmailsearchtoken",
-      "community": 274,
+      "community": 157,
       "norm_label": "gmailsearchtoken()"
     },
     {
@@ -14260,7 +14360,7 @@
       "source_location": "L938",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailpollquery",
-      "community": 274,
+      "community": 157,
       "norm_label": "irisemailpollquery()"
     },
     {
@@ -14270,7 +14370,7 @@
       "source_location": "L956",
       "_origin": "ast",
       "id": "lib_irisemail_isiriseligibleemail",
-      "community": 274,
+      "community": 157,
       "norm_label": "isiriseligibleemail()"
     },
     {
@@ -14280,7 +14380,7 @@
       "source_location": "L968",
       "_origin": "ast",
       "id": "lib_irisemail_listunreadmessages",
-      "community": 274,
+      "community": 157,
       "norm_label": "listunreadmessages()"
     },
     {
@@ -14360,7 +14460,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_leadidentity",
-      "community": 156,
+      "community": 21,
       "norm_label": "leadidentity.ts"
     },
     {
@@ -14370,7 +14470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizeemail",
-      "community": 156,
+      "community": 21,
       "norm_label": "normalizeemail()"
     },
     {
@@ -14380,7 +14480,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizephone",
-      "community": 49,
+      "community": 21,
       "norm_label": "normalizephone()"
     },
     {
@@ -14390,7 +14490,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_leadidentity_normalizename",
-      "community": 156,
+      "community": 21,
       "norm_label": "normalizename()"
     },
     {
@@ -14400,7 +14500,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_leadidentity_mergenonempty",
-      "community": 49,
+      "community": 40,
       "norm_label": "mergenonempty()"
     },
     {
@@ -14410,7 +14510,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_manualreply",
-      "community": 27,
+      "community": 197,
       "norm_label": "manualreply.ts"
     },
     {
@@ -14430,7 +14530,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_manualreply_manualreplyinput",
-      "community": 27,
+      "community": 197,
       "norm_label": "manualreplyinput"
     },
     {
@@ -14440,7 +14540,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "lib_manualreply_manualreplyresult",
-      "community": 27,
+      "community": 197,
       "norm_label": "manualreplyresult"
     },
     {
@@ -14880,7 +14980,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_mediaproxy",
-      "community": 199,
+      "community": 276,
       "norm_label": "mediaproxy.ts"
     },
     {
@@ -14890,7 +14990,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_mediaproxy_proxiable_image_hosts",
-      "community": 199,
+      "community": 276,
       "norm_label": "proxiable_image_hosts"
     },
     {
@@ -14900,7 +15000,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_mediaproxy_isgooglestreetviewurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "isgooglestreetviewurl()"
     },
     {
@@ -14910,7 +15010,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_mediaproxy_unwrapmediaproxyurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "unwrapmediaproxyurl()"
     },
     {
@@ -14920,7 +15020,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lib_mediaproxy_isproxiableimageurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "isproxiableimageurl()"
     },
     {
@@ -14930,7 +15030,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "lib_mediaproxy_mediaproxypath",
-      "community": 199,
+      "community": 276,
       "norm_label": "mediaproxypath()"
     },
     {
@@ -14940,7 +15040,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_mediaproxy_mediaproxyurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "mediaproxyurl()"
     },
     {
@@ -14950,7 +15050,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "lib_mediaproxy_usableinboxphotourl",
-      "community": 199,
+      "community": 276,
       "norm_label": "usableinboxphotourl()"
     },
     {
@@ -14960,7 +15060,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "lib_mediaproxy_addressstem",
-      "community": 199,
+      "community": 276,
       "norm_label": "addressstem()"
     },
     {
@@ -14970,7 +15070,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "lib_mediaproxy_extractpropertyaddressfromemailhtml",
-      "community": 199,
+      "community": 276,
       "norm_label": "extractpropertyaddressfromemailhtml()"
     },
     {
@@ -14980,7 +15080,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "lib_mediaproxy_resolvepropertyphotofromsheet",
-      "community": 199,
+      "community": 276,
       "norm_label": "resolvepropertyphotofromsheet()"
     },
     {
@@ -14990,7 +15090,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "lib_mediaproxy_sanitizeemailhtml",
-      "community": 199,
+      "community": 276,
       "norm_label": "sanitizeemailhtml()"
     },
     {
@@ -15000,7 +15100,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "lib_mediaproxy_rewriteemailhtmlforinbox",
-      "community": 199,
+      "community": 276,
       "norm_label": "rewriteemailhtmlforinbox()"
     },
     {
@@ -15010,7 +15110,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "lib_mediaproxy_isdisplayableimageurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "isdisplayableimageurl()"
     },
     {
@@ -15020,7 +15120,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "lib_mediaproxy_inboximagepreviewurl",
-      "community": 199,
+      "community": 276,
       "norm_label": "inboximagepreviewurl()"
     },
     {
@@ -15534,6 +15634,226 @@
       "norm_label": "selectvoicefollowups()"
     },
     {
+      "label": "publicPropertyData.ts",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata",
+      "community": 275,
+      "norm_label": "publicpropertydata.ts"
+    },
+    {
+      "label": "PublicDataMetric",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_publicdatametric",
+      "community": 275,
+      "norm_label": "publicdatametric"
+    },
+    {
+      "label": "PublicDataResult",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_publicdataresult",
+      "community": 275,
+      "norm_label": "publicdataresult"
+    },
+    {
+      "label": "SocrataDatasetConfig",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_socratadatasetconfig",
+      "community": 275,
+      "norm_label": "socratadatasetconfig"
+    },
+    {
+      "label": "AUSTIN_PERMITS_DATASET",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_austin_permits_dataset",
+      "community": 275,
+      "norm_label": "austin_permits_dataset"
+    },
+    {
+      "label": "clean()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_clean",
+      "community": 275,
+      "norm_label": "clean()"
+    },
+    {
+      "label": "envFlag()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_envflag",
+      "community": 275,
+      "norm_label": "envflag()"
+    },
+    {
+      "label": "elapsed()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L50",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_elapsed",
+      "community": 275,
+      "norm_label": "elapsed()"
+    },
+    {
+      "label": "timeoutSignal()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_timeoutsignal",
+      "community": 275,
+      "norm_label": "timeoutsignal()"
+    },
+    {
+      "label": "getJson()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_getjson",
+      "community": 275,
+      "norm_label": "getjson()"
+    },
+    {
+      "label": "firstPresent()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L66",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_firstpresent",
+      "community": 275,
+      "norm_label": "firstpresent()"
+    },
+    {
+      "label": "formatCurrency()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_formatcurrency",
+      "community": 275,
+      "norm_label": "formatcurrency()"
+    },
+    {
+      "label": "addOptionalParam()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L81",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_addoptionalparam",
+      "community": 275,
+      "norm_label": "addoptionalparam()"
+    },
+    {
+      "label": "fetchFredMortgageRates()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L86",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_fetchfredmortgagerates",
+      "community": 275,
+      "norm_label": "fetchfredmortgagerates()"
+    },
+    {
+      "label": "fetchCensusZipStats()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L109",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_fetchcensuszipstats",
+      "community": 275,
+      "norm_label": "fetchcensuszipstats()"
+    },
+    {
+      "label": "socrataDatasetsForProperty()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L134",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_socratadatasetsforproperty",
+      "community": 275,
+      "norm_label": "socratadatasetsforproperty()"
+    },
+    {
+      "label": "addressSearchNeedle()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L151",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_addresssearchneedle",
+      "community": 275,
+      "norm_label": "addresssearchneedle()"
+    },
+    {
+      "label": "socrataString()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L166",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_socratastring",
+      "community": 275,
+      "norm_label": "socratastring()"
+    },
+    {
+      "label": "formatSocrataRecord()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L170",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_formatsocratarecord",
+      "community": 275,
+      "norm_label": "formatsocratarecord()"
+    },
+    {
+      "label": "fetchSocrataPublicRecords()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L181",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "community": 275,
+      "norm_label": "fetchsocratapublicrecords()"
+    },
+    {
+      "label": "measuredPublicCall()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L201",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_measuredpubliccall",
+      "community": 275,
+      "norm_label": "measuredpubliccall()"
+    },
+    {
+      "label": "fetchPublicPropertyContext()",
+      "file_type": "code",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L228",
+      "_origin": "ast",
+      "id": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "community": 12,
+      "norm_label": "fetchpublicpropertycontext()"
+    },
+    {
       "label": "serviceAreas.ts",
       "file_type": "code",
       "source_file": "lib/serviceAreas.ts",
@@ -15640,7 +15960,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_sheetschema",
-      "community": 49,
+      "community": 274,
       "norm_label": "sheetschema.ts"
     },
     {
@@ -15650,7 +15970,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_sheetschema_properties_headers",
-      "community": 49,
+      "community": 278,
       "norm_label": "properties_headers"
     },
     {
@@ -15660,7 +15980,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "lib_sheetschema_lead_memory_headers",
-      "community": 49,
+      "community": 274,
       "norm_label": "lead_memory_headers"
     },
     {
@@ -15670,7 +15990,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "lib_sheetschema_conversation_events_headers",
-      "community": 49,
+      "community": 274,
       "norm_label": "conversation_events_headers"
     },
     {
@@ -15680,7 +16000,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "lib_sheetschema_sheetrow",
-      "community": 49,
+      "community": 274,
       "norm_label": "sheetrow"
     },
     {
@@ -16557,7 +16877,7 @@
       "label": "TheoEnrichedData",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L5",
+      "source_location": "L6",
       "_origin": "ast",
       "id": "lib_theodata_theoenricheddata",
       "community": 12,
@@ -16567,7 +16887,7 @@
       "label": "SOLD_COMP_TERMS",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L13",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "lib_theodata_sold_comp_terms",
       "community": 12,
@@ -16577,7 +16897,7 @@
       "label": "STREET_TERMS",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L31",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "lib_theodata_street_terms",
       "community": 12,
@@ -16587,7 +16907,7 @@
       "label": "TheoPropertySearchIntent",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L58",
+      "source_location": "L59",
       "_origin": "ast",
       "id": "lib_theodata_theopropertysearchintent",
       "community": 12,
@@ -16597,7 +16917,7 @@
       "label": "clean()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L68",
+      "source_location": "L69",
       "_origin": "ast",
       "id": "lib_theodata_clean",
       "community": 12,
@@ -16607,7 +16927,7 @@
       "label": "truthy()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L72",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "lib_theodata_truthy",
       "community": 12,
@@ -16617,7 +16937,7 @@
       "label": "parseAddressParts()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L76",
+      "source_location": "L77",
       "_origin": "ast",
       "id": "lib_theodata_parseaddressparts",
       "community": 12,
@@ -16627,7 +16947,7 @@
       "label": "timeoutSignal()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L93",
+      "source_location": "L94",
       "_origin": "ast",
       "id": "lib_theodata_timeoutsignal",
       "community": 12,
@@ -16637,7 +16957,7 @@
       "label": "getJson()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L99",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "lib_theodata_getjson",
       "community": 12,
@@ -16647,17 +16967,17 @@
       "label": "measuredDataCall()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L105",
+      "source_location": "L106",
       "_origin": "ast",
       "id": "lib_theodata_measureddatacall",
-      "community": 30,
+      "community": 12,
       "norm_label": "measureddatacall()"
     },
     {
       "label": "formatCurrency()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L142",
+      "source_location": "L143",
       "_origin": "ast",
       "id": "lib_theodata_formatcurrency",
       "community": 12,
@@ -16667,7 +16987,7 @@
       "label": "extractTheoAddress()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L149",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "lib_theodata_extracttheoaddress",
       "community": 12,
@@ -16677,7 +16997,7 @@
       "label": "extractTheoAddresses()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L153",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "lib_theodata_extracttheoaddresses",
       "community": 12,
@@ -16687,7 +17007,7 @@
       "label": "extractTheoPropertySearchQuery()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L169",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "lib_theodata_extracttheopropertysearchquery",
       "community": 12,
@@ -16697,7 +17017,7 @@
       "label": "findPropertySearchArea()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L177",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "lib_theodata_findpropertysearcharea",
       "community": 12,
@@ -16707,7 +17027,7 @@
       "label": "parsePriceTerm()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L187",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "lib_theodata_parsepriceterm",
       "community": 12,
@@ -16717,7 +17037,7 @@
       "label": "parseCountTerm()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L201",
+      "source_location": "L202",
       "_origin": "ast",
       "id": "lib_theodata_parsecountterm",
       "community": 12,
@@ -16727,7 +17047,7 @@
       "label": "normalizeAreaName()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L210",
+      "source_location": "L211",
       "_origin": "ast",
       "id": "lib_theodata_normalizeareaname",
       "community": 12,
@@ -16737,7 +17057,7 @@
       "label": "propertySearchMode()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L217",
+      "source_location": "L218",
       "_origin": "ast",
       "id": "lib_theodata_propertysearchmode",
       "community": 12,
@@ -16747,7 +17067,7 @@
       "label": "extractTheoPropertySearchIntent()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L223",
+      "source_location": "L224",
       "_origin": "ast",
       "id": "lib_theodata_extracttheopropertysearchintent",
       "community": 12,
@@ -16757,17 +17077,17 @@
       "label": "extractTheoListedPropertyAddresses()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L238",
+      "source_location": "L239",
       "_origin": "ast",
       "id": "lib_theodata_extracttheolistedpropertyaddresses",
-      "community": 11,
+      "community": 172,
       "norm_label": "extracttheolistedpropertyaddresses()"
     },
     {
       "label": "mergeProperty()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L256",
+      "source_location": "L257",
       "_origin": "ast",
       "id": "lib_theodata_mergeproperty",
       "community": 12,
@@ -16777,7 +17097,7 @@
       "label": "needsPropertyEnrichment()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L268",
+      "source_location": "L269",
       "_origin": "ast",
       "id": "lib_theodata_needspropertyenrichment",
       "community": 12,
@@ -16787,7 +17107,7 @@
       "label": "isGoogleStreetViewUrl()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L272",
+      "source_location": "L273",
       "_origin": "ast",
       "id": "lib_theodata_isgooglestreetviewurl",
       "community": 12,
@@ -16797,7 +17117,7 @@
       "label": "hasGenericNeighborhood()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L276",
+      "source_location": "L277",
       "_origin": "ast",
       "id": "lib_theodata_hasgenericneighborhood",
       "community": 12,
@@ -16807,7 +17127,7 @@
       "label": "shouldReplacePropertyValue()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L280",
+      "source_location": "L281",
       "_origin": "ast",
       "id": "lib_theodata_shouldreplacepropertyvalue",
       "community": 12,
@@ -16817,7 +17137,7 @@
       "label": "wantsPropertyImage()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L289",
+      "source_location": "L290",
       "_origin": "ast",
       "id": "lib_theodata_wantspropertyimage",
       "community": 12,
@@ -16827,7 +17147,7 @@
       "label": "googleStreetViewProperty()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L293",
+      "source_location": "L294",
       "_origin": "ast",
       "id": "lib_theodata_googlestreetviewproperty",
       "community": 12,
@@ -16837,27 +17157,17 @@
       "label": "timeoutFallbackData()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L308",
+      "source_location": "L309",
       "_origin": "ast",
       "id": "lib_theodata_timeoutfallbackdata",
       "community": 12,
       "norm_label": "timeoutfallbackdata()"
     },
     {
-      "label": "fetchRentCast()",
-      "file_type": "code",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L341",
-      "_origin": "ast",
-      "id": "lib_theodata_fetchrentcast",
-      "community": 12,
-      "norm_label": "fetchrentcast()"
-    },
-    {
       "label": "apifyToken()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L369",
+      "source_location": "L342",
       "_origin": "ast",
       "id": "lib_theodata_apifytoken",
       "community": 12,
@@ -16867,7 +17177,7 @@
       "label": "runApifyActor()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L373",
+      "source_location": "L346",
       "_origin": "ast",
       "id": "lib_theodata_runapifyactor",
       "community": 12,
@@ -16877,7 +17187,7 @@
       "label": "photoFromApify()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L387",
+      "source_location": "L360",
       "_origin": "ast",
       "id": "lib_theodata_photofromapify",
       "community": 12,
@@ -16887,7 +17197,7 @@
       "label": "zillowListingUrl()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L396",
+      "source_location": "L369",
       "_origin": "ast",
       "id": "lib_theodata_zillowlistingurl",
       "community": 12,
@@ -16897,37 +17207,17 @@
       "label": "fetchApifyZillow()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L404",
+      "source_location": "L377",
       "_origin": "ast",
       "id": "lib_theodata_fetchapifyzillow",
       "community": 12,
       "norm_label": "fetchapifyzillow()"
     },
     {
-      "label": "fetchMortgageRates()",
-      "file_type": "code",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L440",
-      "_origin": "ast",
-      "id": "lib_theodata_fetchmortgagerates",
-      "community": 12,
-      "norm_label": "fetchmortgagerates()"
-    },
-    {
-      "label": "fetchCensusZip()",
-      "file_type": "code",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L463",
-      "_origin": "ast",
-      "id": "lib_theodata_fetchcensuszip",
-      "community": 12,
-      "norm_label": "fetchcensuszip()"
-    },
-    {
       "label": "fetchSoldComps()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L482",
+      "source_location": "L413",
       "_origin": "ast",
       "id": "lib_theodata_fetchsoldcomps",
       "community": 12,
@@ -16937,7 +17227,7 @@
       "label": "enrichTheoData()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L503",
+      "source_location": "L434",
       "_origin": "ast",
       "id": "lib_theodata_enrichtheodata",
       "community": 30,
@@ -16947,7 +17237,7 @@
       "label": "runTheoDataEnrichment()",
       "file_type": "code",
       "source_file": "lib/theoData.ts",
-      "source_location": "L519",
+      "source_location": "L450",
       "_origin": "ast",
       "id": "lib_theodata_runtheodataenrichment",
       "community": 12,
@@ -17230,7 +17520,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_theotelemetry_elapsedms",
-      "community": 30,
+      "community": 12,
       "norm_label": "elapsedms()"
     },
     {
@@ -22400,7 +22690,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_bulk_enrich_until_clean",
-      "community": 207,
+      "community": 13,
       "norm_label": "bulk-enrich-until-clean.py"
     },
     {
@@ -22410,7 +22700,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "scripts_bulk_enrich_until_clean_health_score",
-      "community": 207,
+      "community": 13,
       "norm_label": "health_score()"
     },
     {
@@ -22420,7 +22710,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "scripts_bulk_enrich_until_clean_main",
-      "community": 207,
+      "community": 13,
       "norm_label": "main()"
     },
     {
@@ -23170,7 +23460,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "scripts_import_tcad_assessor_normalize_unit_token",
-      "community": 179,
+      "community": 32,
       "norm_label": "_normalize_unit_token()"
     },
     {
@@ -24420,7 +24710,7 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "scripts_property_hygiene_core_field_score",
-      "community": 179,
+      "community": 6,
       "norm_label": "_core_field_score()"
     },
     {
@@ -24430,7 +24720,7 @@
       "source_location": "L253",
       "_origin": "ast",
       "id": "scripts_property_hygiene_tab_sheet_id",
-      "community": 179,
+      "community": 13,
       "norm_label": "_tab_sheet_id()"
     },
     {
@@ -24440,7 +24730,7 @@
       "source_location": "L262",
       "_origin": "ast",
       "id": "scripts_property_hygiene_dedupe_sheet",
-      "community": 179,
+      "community": 13,
       "norm_label": "dedupe_sheet()"
     },
     {
@@ -24500,7 +24790,7 @@
       "source_location": "L428",
       "_origin": "ast",
       "id": "scripts_property_hygiene_zip_median_years",
-      "community": 207,
+      "community": 6,
       "norm_label": "_zip_median_years()"
     },
     {
@@ -24530,7 +24820,7 @@
       "source_location": "L493",
       "_origin": "ast",
       "id": "scripts_property_hygiene_backfill_zip_median_core_fields",
-      "community": 207,
+      "community": 13,
       "norm_label": "backfill_zip_median_core_fields()"
     },
     {
@@ -24580,7 +24870,7 @@
       "source_location": "L606",
       "_origin": "ast",
       "id": "scripts_property_hygiene_read_raw_values",
-      "community": 6,
+      "community": 13,
       "norm_label": "_read_raw_values()"
     },
     {
@@ -24590,7 +24880,7 @@
       "source_location": "L614",
       "_origin": "ast",
       "id": "scripts_property_hygiene_write_values",
-      "community": 6,
+      "community": 13,
       "norm_label": "_write_values()"
     },
     {
@@ -24600,7 +24890,7 @@
       "source_location": "L628",
       "_origin": "ast",
       "id": "scripts_property_hygiene_repair_sheet",
-      "community": 6,
+      "community": 13,
       "norm_label": "repair_sheet()"
     },
     {
@@ -24630,7 +24920,7 @@
       "source_location": "L761",
       "_origin": "ast",
       "id": "scripts_property_hygiene_export_missing_fields_csv",
-      "community": 207,
+      "community": 13,
       "norm_label": "export_missing_fields_csv()"
     },
     {
@@ -24650,7 +24940,7 @@
       "source_location": "L834",
       "_origin": "ast",
       "id": "scripts_property_hygiene_main",
-      "community": 207,
+      "community": 13,
       "norm_label": "main()"
     },
     {
@@ -27020,7 +27310,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_cadence_test",
-      "community": 275,
+      "community": 75,
       "norm_label": "cadence.test.ts"
     },
     {
@@ -27030,7 +27320,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ts_cadence_test_noon_ct",
-      "community": 275,
+      "community": 75,
       "norm_label": "noon_ct"
     },
     {
@@ -27040,7 +27330,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "ts_cadence_test_lead",
-      "community": 275,
+      "community": 75,
       "norm_label": "lead()"
     },
     {
@@ -27050,7 +27340,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "ts_cadence_test_outbound",
-      "community": 275,
+      "community": 75,
       "norm_label": "outbound()"
     },
     {
@@ -27060,7 +27350,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "ts_cadence_test_inbound",
-      "community": 275,
+      "community": 75,
       "norm_label": "inbound()"
     },
     {
@@ -27070,7 +27360,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_cadencequeue_test",
-      "community": 21,
+      "community": 75,
       "norm_label": "cadencequeue.test.ts"
     },
     {
@@ -27080,7 +27370,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "ts_cadencequeue_test_noon_ct",
-      "community": 21,
+      "community": 75,
       "norm_label": "noon_ct"
     },
     {
@@ -27090,7 +27380,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "ts_cadencequeue_test_lead",
-      "community": 21,
+      "community": 75,
       "norm_label": "lead()"
     },
     {
@@ -27100,7 +27390,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "ts_cadencequeue_test_outbound",
-      "community": 21,
+      "community": 75,
       "norm_label": "outbound()"
     },
     {
@@ -27110,7 +27400,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "ts_cadencequeue_test_inbound",
-      "community": 21,
+      "community": 75,
       "norm_label": "inbound()"
     },
     {
@@ -27120,7 +27410,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "ts_cadencequeue_test_plan",
-      "community": 21,
+      "community": 75,
       "norm_label": "plan()"
     },
     {
@@ -27150,7 +27440,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_channelingest_test",
-      "community": 172,
+      "community": 277,
       "norm_label": "channelingest.test.ts"
     },
     {
@@ -27260,7 +27550,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_inboxdata_test",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxdata.test.ts"
     },
     {
@@ -27270,7 +27560,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_inboxdataadapter_test",
-      "community": 49,
+      "community": 274,
       "norm_label": "inboxdataadapter.test.ts"
     },
     {
@@ -27440,7 +27730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_mediaproxy_test",
-      "community": 199,
+      "community": 276,
       "norm_label": "mediaproxy.test.ts"
     },
     {
@@ -27502,6 +27792,16 @@
       "id": "ts_outbound_test_outbound",
       "community": 22,
       "norm_label": "outbound()"
+    },
+    {
+      "label": "publicPropertyData.test.ts",
+      "file_type": "code",
+      "source_file": "tests/ts/publicPropertyData.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "ts_publicpropertydata_test",
+      "community": 275,
+      "norm_label": "publicpropertydata.test.ts"
     },
     {
       "label": "styleTraining.test.ts",
@@ -41118,6 +41418,158 @@
       "weight": 1.0,
       "source": "callback_route_get",
       "target": "lib_gmailconnection_verifygmailoauthstate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "composio_connect_route_callbackurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "composio_connect_route_get",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_authguard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_authguard_requiredashboardauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_authguard_unauthorizedresponse",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_composioconnection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_composioconnection_createcomposiogmailconnectlink",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_database",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "composio_connect_route",
+      "target": "lib_database_databaseenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "composio_connect_route_get",
+      "target": "composio_connect_route_callbackurl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "composio_connect_route_get",
+      "target": "lib_authguard_requiredashboardauth"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "composio_connect_route_get",
+      "target": "lib_authguard_unauthorizedresponse"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "composio_connect_route_get",
+      "target": "lib_composioconnection_createcomposiogmailconnectlink"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/api/settings/email-account/composio-connect/route.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "composio_connect_route_get",
+      "target": "lib_database_databaseenabled"
     },
     {
       "relation": "contains",
@@ -64743,6 +65195,121 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_composioapikey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_composioenabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_composioexternaluserid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_composiogmailauthconfigid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_createcomposioclient",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "lib_composioconnection",
+      "target": "lib_composioconnection_createcomposiogmailconnectlink",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "lib_composioconnection_composioenabled",
+      "target": "lib_composioconnection_composioapikey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "lib_composioconnection_createcomposioclient",
+      "target": "lib_composioconnection_composioapikey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "lib_composioconnection_createcomposiogmailconnectlink",
+      "target": "lib_composioconnection_composiogmailauthconfigid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "lib_composioconnection_createcomposiogmailconnectlink",
+      "target": "lib_composioconnection_composioexternaluserid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/composioConnection.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "lib_composioconnection_createcomposiogmailconnectlink",
+      "target": "lib_composioconnection_createcomposioclient",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "lib/crm/ghl.ts",
       "source_location": "L75",
       "weight": 1.0,
@@ -74433,9 +75000,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L584",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_anthropicapikey",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_anthropicapikey"
     },
     {
       "relation": "contains",
@@ -74553,9 +75120,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L539",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_dedupeproperties",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_dedupeproperties"
     },
     {
       "relation": "contains",
@@ -74633,9 +75200,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L588",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_generateclaudeirisemailreplytext",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_generateclaudeirisemailreplytext"
     },
     {
       "relation": "contains",
@@ -74723,9 +75290,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L580",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_irisemailclaudemodel",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_irisemailclaudemodel"
     },
     {
       "relation": "contains",
@@ -74983,9 +75550,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L476",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_propertyhighlights",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_propertyhighlights"
     },
     {
       "relation": "contains",
@@ -74993,9 +75560,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L499",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_irisemail_propertyphotosrc",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_propertyphotosrc"
     },
     {
       "relation": "contains",
@@ -75064,9 +75631,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_mediaproxy",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy"
     },
     {
       "relation": "imports",
@@ -75075,9 +75642,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_mediaproxy_isproxiableimageurl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_isproxiableimageurl"
     },
     {
       "relation": "imports",
@@ -75086,9 +75653,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_mediaproxy_mediaproxyurl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_mediaproxyurl"
     },
     {
       "relation": "imports",
@@ -75097,9 +75664,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail",
-      "target": "lib_mediaproxy_usableinboxphotourl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_usableinboxphotourl"
     },
     {
       "relation": "imports_from",
@@ -75207,9 +75774,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L622",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateclaudeirisemailreplytext",
-      "target": "lib_irisemail_cleanbody",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_cleanbody"
     },
     {
       "relation": "calls",
@@ -75559,9 +76126,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L511",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_propertycardhtml",
-      "target": "lib_irisemail_propertyhighlights",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_propertyhighlights"
     },
     {
       "relation": "calls",
@@ -75570,9 +76137,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L509",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_propertycardhtml",
-      "target": "lib_irisemail_propertyphotosrc",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_propertyphotosrc"
     },
     {
       "relation": "calls",
@@ -75581,9 +76148,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L501",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_propertyphotosrc",
-      "target": "lib_mediaproxy_isproxiableimageurl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_isproxiableimageurl"
     },
     {
       "relation": "calls",
@@ -75592,9 +76159,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L502",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_propertyphotosrc",
-      "target": "lib_mediaproxy_mediaproxyurl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_mediaproxyurl"
     },
     {
       "relation": "calls",
@@ -75603,9 +76170,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L500",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_propertyphotosrc",
-      "target": "lib_mediaproxy_usableinboxphotourl",
-      "confidence_score": 1.0
+      "target": "lib_mediaproxy_usableinboxphotourl"
     },
     {
       "relation": "calls",
@@ -75625,9 +76192,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L556",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_buildhtmlemailreply",
-      "target": "lib_irisemail_dedupeproperties",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_dedupeproperties"
     },
     {
       "relation": "calls",
@@ -75636,9 +76203,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L595",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateclaudeirisemailreplytext",
-      "target": "lib_irisemail_dedupeproperties",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_dedupeproperties"
     },
     {
       "relation": "calls",
@@ -75658,9 +76225,9 @@
       "source_file": "tests/ts/irisEmail.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ts_irisemail_test",
-      "target": "lib_irisemail_buildhtmlemailreply",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_buildhtmlemailreply"
     },
     {
       "relation": "calls",
@@ -75669,9 +76236,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L638",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateclaudeirisemailreplytext",
-      "target": "lib_irisemail_irisemailclaudemodel",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_irisemailclaudemodel"
     },
     {
       "relation": "calls",
@@ -75680,9 +76247,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L593",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateclaudeirisemailreplytext",
-      "target": "lib_irisemail_anthropicapikey",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_anthropicapikey"
     },
     {
       "relation": "calls",
@@ -75691,9 +76258,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L659",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateirisemailreplyrich",
-      "target": "lib_irisemail_generateclaudeirisemailreplytext",
-      "confidence_score": 1.0
+      "target": "lib_irisemail_generateclaudeirisemailreplytext"
     },
     {
       "relation": "calls",
@@ -78633,6 +79200,524 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L81",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_addoptionalparam",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L151",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_addresssearchneedle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_austin_permits_dataset",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L50",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_elapsed",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L46",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_envflag",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L109",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_fetchcensuszipstats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_fetchfredmortgagerates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L181",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_firstpresent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_formatcurrency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L170",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_formatsocratarecord",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_getjson",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L201",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_measuredpubliccall",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_publicdatametric",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_publicdataresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_socratadatasetconfig",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L134",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_socratadatasetsforproperty",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L166",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_socratastring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_publicpropertydata_timeoutsignal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_sheetschema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata",
+      "target": "lib_sheetschema_sheetrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/theoData.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "lib_theodata",
+      "target": "lib_publicpropertydata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/ts/publicPropertyData.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "ts_publicpropertydata_test",
+      "target": "lib_publicpropertydata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_addoptionalparam",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L152",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_addresssearchneedle",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_envflag",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchcensuszipstats",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L182",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_firstpresent",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_formatcurrency",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L135",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_socratadatasetsforproperty",
+      "target": "lib_publicpropertydata_clean",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L145",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_socratadatasetsforproperty",
+      "target": "lib_publicpropertydata_envflag",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L211",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_measuredpubliccall",
+      "target": "lib_publicpropertydata_elapsed",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_getjson",
+      "target": "lib_publicpropertydata_timeoutsignal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L117",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchcensuszipstats",
+      "target": "lib_publicpropertydata_getjson",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L193",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "target": "lib_publicpropertydata_getjson",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L171",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_formatsocratarecord",
+      "target": "lib_publicpropertydata_firstpresent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L120",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchcensuszipstats",
+      "target": "lib_publicpropertydata_formatcurrency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchcensuszipstats",
+      "target": "lib_publicpropertydata_addoptionalparam",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L185",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "target": "lib_publicpropertydata_socratadatasetsforproperty",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L183",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "target": "lib_publicpropertydata_addresssearchneedle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L191",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "target": "lib_publicpropertydata_socratastring",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/ts/publicPropertyData.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "ts_publicpropertydata_test",
+      "target": "lib_publicpropertydata_fetchsocratapublicrecords",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/publicPropertyData.ts",
+      "source_location": "L230",
+      "weight": 1.0,
+      "source": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "target": "lib_publicpropertydata_measuredpubliccall",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/theoData.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "lib_theodata",
+      "target": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/theoData.ts",
+      "source_location": "L496",
+      "weight": 1.0,
+      "source": "lib_theodata_runtheodataenrichment",
+      "target": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/ts/publicPropertyData.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "ts_publicpropertydata_test",
+      "target": "lib_publicpropertydata_fetchpublicpropertycontext",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "lib/serviceAreas.ts",
       "source_location": "L64",
       "weight": 1.0,
@@ -78954,9 +80039,9 @@
       "source_file": "tests/ts/irisEmail.test.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ts_irisemail_test",
-      "target": "lib_sheetschema",
-      "confidence_score": 1.0
+      "target": "lib_sheetschema"
     },
     {
       "relation": "imports_from",
@@ -79119,9 +80204,9 @@
       "source_file": "tests/ts/irisEmail.test.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ts_irisemail_test",
-      "target": "lib_sheetschema_sheetrow",
-      "confidence_score": 1.0
+      "target": "lib_sheetschema_sheetrow"
     },
     {
       "relation": "imports",
@@ -81489,36 +82574,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "lib/theoData.ts",
-      "source_location": "L463",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_theodata",
-      "target": "lib_theodata_fetchcensuszip"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L440",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_theodata",
-      "target": "lib_theodata_fetchmortgagerates"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L341",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_theodata",
-      "target": "lib_theodata_fetchrentcast"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/theoData.ts",
       "source_location": "L482",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -82058,28 +83113,6 @@
       "confidence_score": 1.0,
       "source": "lib_theodata_getjson",
       "target": "lib_theodata_timeoutsignal"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L471",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_theodata_fetchcensuszip",
-      "target": "lib_theodata_getjson"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/theoData.ts",
-      "source_location": "L345",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_theodata_fetchrentcast",
-      "target": "lib_theodata_getjson"
     },
     {
       "relation": "calls",
@@ -106502,5 +107535,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0e8bc966f33c93dd5073e6272a0fd9b9996dad5f"
+  "built_at_commit": "3fd9484f36ed3a6fb0c7ddc194a2dda35f0e93e3"
 }
