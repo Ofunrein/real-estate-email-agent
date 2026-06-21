@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { databaseEnabled, readInboxSettingsFromDatabase } from "@/lib/database";
 import { processIrisEmailPoll } from "@/lib/irisEmail";
+import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,10 +26,16 @@ async function run(request: NextRequest) {
   }
 
   const dryRun = process.env.IRIS_EMAIL_LIVE !== "true" || request.nextUrl.searchParams.get("dryRun") !== "false";
-  const sendReplies = process.env.IRIS_EMAIL_SEND_REPLIES === "true" && request.nextUrl.searchParams.get("sendReplies") === "true";
   const limit = intParam(request.nextUrl.searchParams.get("limit"), 10);
 
   try {
+    const settings = databaseEnabled() ? await readInboxSettingsFromDatabase() : undefined;
+    if (settings && !channelEnabled(settings, "email")) {
+      return NextResponse.json({ ok: true, skipped: true, channel: "email", reason: "Email channel disabled in inbox settings.", dryRun });
+    }
+    const sendReplies = process.env.IRIS_EMAIL_SEND_REPLIES === "true"
+      && request.nextUrl.searchParams.get("sendReplies") === "true"
+      && (!settings || shouldAutoSendForChannel(settings, "email"));
     const result = await processIrisEmailPoll({ dryRun, sendReplies, limit });
     return NextResponse.json(result);
   } catch (error) {

@@ -188,6 +188,7 @@ const VOICE_CALL_HEADERS = [
   "recording_url",
   "ended_reason",
   "human_owner",
+  "created_at",
 ] as const;
 
 export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
@@ -196,7 +197,11 @@ export async function readVoiceCallsFromDatabase(): Promise<SheetRow[]> {
     `select ${columns}
        from voice_calls
       where client_id = $1
-      order by created_at asc`,
+      order by coalesce(
+        nullif(ended_at, '')::timestamptz,
+        nullif(started_at, '')::timestamptz,
+        created_at
+      ) desc`,
     [clientId()],
   );
   return result.rows.map((row) => rowToStrings(VOICE_CALL_HEADERS, row));

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Drawer,
   Box,
@@ -10,30 +10,43 @@ import {
   FormControlLabel,
   Card,
   Divider,
-  Tooltip } from
+  Tooltip,
+  Alert } from
 '@mui/material';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useCategoryColors } from '../theme/CategoryColorContext';
+import type { InboxSettings } from '@/lib/inboxSettings';
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
 }
 const autoSendChannels = [
-'email',
-'sms',
-'whatsapp',
-'messenger',
-'instagram',
-'website chat'] as
+  ['email', 'Email'],
+  ['sms', 'SMS'],
+  ['whatsapp', 'WhatsApp'],
+  ['messenger', 'Messenger'],
+  ['instagram', 'Instagram'],
+  ['website_chat', 'Website chat'],
+] as
 const;
+const channelAvailability = [
+  ['email', 'Email'],
+  ['messenger', 'Messenger'],
+  ['instagram', 'Instagram DMs'],
+] as const;
 export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
-  const { leadCategories } = useInboxModel();
+  const { leadCategories, inboxSettings } = useInboxModel();
   const { colors, setColor } = useCategoryColors();
-  const [draftFirst, setDraftFirst] = useState(false);
-  const [autoSend, setAutoSend] = useState<Record<string, boolean>>(() =>
-  Object.fromEntries(autoSendChannels.map((c) => [c, true]))
+  const [draftFirst, setDraftFirst] = useState(inboxSettings.draft_first);
+  const [autoSend, setAutoSend] = useState<InboxSettings['auto_send']>(() =>
+  ({ ...inboxSettings.auto_send })
   );
+  const [channelsEnabled, setChannelsEnabled] = useState<InboxSettings['channels_enabled']>(() =>
+  ({ ...inboxSettings.channels_enabled })
+  );
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [categoriesOn, setCategoriesOn] = useState<
     Record<LeadCategoryId, boolean>>(
 
@@ -43,6 +56,39 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       boolean>
 
   );
+  useEffect(() => {
+    if (!open) return;
+    setDraftFirst(inboxSettings.draft_first);
+    setAutoSend({ ...inboxSettings.auto_send });
+    setChannelsEnabled({ ...inboxSettings.channels_enabled });
+    setSaveStatus('idle');
+  }, [inboxSettings, open]);
+
+  const saveSettings = async () => {
+    setSaving(true);
+    setSaveStatus('idle');
+    try {
+      const res = await fetch('/api/settings/inbox', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            draft_first: draftFirst,
+            auto_send: autoSend,
+            channels_enabled: channelsEnabled,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(`settings save failed (${res.status})`);
+      setSaveStatus('saved');
+      onClose();
+    } catch (error) {
+      console.error(error);
+      setSaveStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <Drawer
       anchor="right"
@@ -99,6 +145,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           sx={{
             mb: 1
           }} />
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          When this is on, Iris saves replies to the human review queue instead of sending automatically.
+        </Typography>
         
         <Divider
           sx={{
@@ -115,24 +164,62 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             columnGap: 2
           }}>
           
-          {autoSendChannels.map((c) =>
+          {autoSendChannels.map(([key, label]) =>
           <FormControlLabel
-            key={c}
+            key={key}
             control={
             <Checkbox
-              checked={autoSend[c]}
+              checked={autoSend[key]}
               onChange={(e) =>
               setAutoSend((prev) => ({
                 ...prev,
-                [c]: e.target.checked
+                [key]: e.target.checked
               }))
               } />
 
             }
-            label={`${c} auto-send`} />
+            label={`${label} auto-send`} />
 
           )}
         </Box>
+      </Card>
+
+      <Card
+        variant="outlined"
+        sx={{
+          p: 2,
+          mb: 2.5
+        }}>
+        <Typography
+          variant="overline"
+          color="text.secondary"
+          sx={{
+            display: 'block',
+            mb: 1
+          }}>
+          
+          Channel availability
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          Turn off AI handling for channels that need a human-led inbox.
+        </Typography>
+        <Stack spacing={0.5}>
+          {channelAvailability.map(([key, label]) =>
+          <FormControlLabel
+            key={key}
+            control={
+            <Checkbox
+              checked={channelsEnabled[key]}
+              onChange={(e) =>
+              setChannelsEnabled((prev) => ({
+                ...prev,
+                [key]: e.target.checked
+              }))
+              } />
+            }
+            label={`${label} enabled`} />
+          )}
+        </Stack>
       </Card>
 
       <Card
@@ -234,11 +321,18 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 2,
           mt: 3
         }}>
-        
-        <Button variant="contained" onClick={onClose}>
+        {saveStatus === 'error' ?
+        <Alert severity="error" sx={{ py: 0, flex: 1 }}>
+          Settings did not save.
+        </Alert> :
+        <Box sx={{ flex: 1 }} />
+        }
+        <Button variant="contained" onClick={saveSettings} disabled={saving}>
           Save settings
         </Button>
       </Box>

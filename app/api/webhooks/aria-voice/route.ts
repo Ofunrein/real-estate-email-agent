@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { handleAriaEndOfCall, handleAriaToolCalls } from "@/lib/ariaWebhook";
 import { recordChannelInteraction, vapiVoiceIngestInput } from "@/lib/channelIngest";
+import { upsertVoiceCallToDatabase } from "@/lib/database";
 import { messageType, parseToolCalls } from "@/lib/vapi";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 
@@ -27,7 +28,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(body);
     }
 
-    const result = await recordChannelInteraction(vapiVoiceIngestInput(payload));
+    const ingest = vapiVoiceIngestInput(payload);
+    const callId = ingest.threadRef?.replace(/^voice:/, "") || "";
+    if ((!callId || callId === "unknown") && !ingest.phone && !ingest.messageText && !ingest.recordingUrl) {
+      return NextResponse.json({ ok: true, status: "ignored", reason: "empty voice lifecycle payload" });
+    }
+
+    const hasDisplayableEvent = Boolean(
+      ingest.messageText?.trim() ||
+      ingest.recordingUrl?.trim() ||
+      (ingest.summary?.trim() && ingest.summary !== "Voice call event received."),
+    );
+
+    if (callId && callId !== "unknown") {
+      await upsertVoiceCallToDatabase({
+        call_id: callId,
+        thread_ref: ingest.threadRef,
+        direction: ingest.direction,
+        phone: ingest.phone,
+        started_at: "",
+        ended_at: "",
+        duration_sec: 0,
+        summary: ingest.summary,
+        transcript: ingest.messageText,
+        recording_url: ingest.recordingUrl,
+      });
+    }
+
+    if (!hasDisplayableEvent) {
+      return NextResponse.json({
+        ok: true,
+        status: callId && callId !== "unknown" ? "tracked" : "ignored",
+        channel: "voice",
+        threadRef: ingest.threadRef,
+      });
+    }
+
+    const result = await recordChannelInteraction(ingest);
     return NextResponse.json({
       ok: true,
       channel: result.event.channel,

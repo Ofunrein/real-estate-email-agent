@@ -53,14 +53,14 @@ export const DEFAULT_INBOX_CATEGORIES: InboxCategory[] = [
 ];
 
 export const DEFAULT_INBOX_SETTINGS: InboxSettings = {
-  draft_first: true,
+  draft_first: false,
   auto_send: {
-    email: false,
-    sms: false,
-    whatsapp: false,
-    messenger: false,
-    instagram: false,
-    website_chat: false,
+    email: true,
+    sms: true,
+    whatsapp: true,
+    messenger: true,
+    instagram: true,
+    website_chat: true,
   },
   channels_enabled: {
     email: true,
@@ -94,6 +94,14 @@ export function normalizeInboxSettings(input: Partial<InboxSettings> = {}): Inbo
     channels_enabled: { ...DEFAULT_INBOX_SETTINGS.channels_enabled, ...(input.channels_enabled || {}) },
     cache_status: input.cache_status && typeof input.cache_status === "object" ? input.cache_status : {},
   };
+}
+
+export function shouldAutoSendForChannel(settings: InboxSettings, channel: Exclude<Channel, "voice" | "unknown">): boolean {
+  return !settings.draft_first && settings.auto_send[channel] !== false;
+}
+
+export function channelEnabled(settings: InboxSettings, channel: Exclude<Channel, "voice" | "unknown">): boolean {
+  return settings.channels_enabled[channel] !== false;
 }
 
 export function inferCategorySlug(events: SheetRow[], categories: InboxCategory[] = DEFAULT_INBOX_CATEGORIES): string {

@@ -32,6 +32,15 @@ test("parseToolCalls: object arguments and toolCalls alias", () => {
   assert.equal(calls[0].args.role, "buyer");
 });
 
+test("parseToolCalls: singular Vapi toolCall shape", () => {
+  const calls = parseToolCalls({
+    message: { type: "tool-calls", toolCall: { id: "single_1", function: { name: "getCallerContext", arguments: {} } } },
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].id, "single_1");
+  assert.equal(calls[0].name, "getCallerContext");
+});
+
 test("parseToolCalls: legacy function-call shape", () => {
   const calls = parseToolCalls({
     message: { type: "function-call", toolCallId: "leg_1", functionCall: { name: "getCallerContext", parameters: {} } },

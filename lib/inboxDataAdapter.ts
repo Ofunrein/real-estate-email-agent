@@ -22,6 +22,11 @@ import {
 import type { SheetRow } from "@/lib/sheetSchema";
 import { formatPrice } from "@/lib/format";
 import {
+  inboxImagePreviewUrl,
+  isDisplayableImageUrl,
+  rewriteEmailHtmlForInbox,
+} from "@/lib/mediaProxy";
+import {
   channelAccounts,
   channelMeta,
   leadCategories,
@@ -44,6 +49,9 @@ import {
 } from "@/components/inbox-mui/data/inboxData";
 
 const DAYS = 14;
+const HTML_TAG_RE = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li|strong|em)\b/i;
+const MEDIA_URL_RE = /(https?:\/\/[^\s<>"')]+|\/api\/media\/proxy\?url=[^\s<>"')]+)/gi;
+const MEDIA_LABEL_RE = /^\s*(?:MMS|SMS)?\s*(?:image|photo|media|attachment|Social DM image)\s*:\s*(.+?)\s*$/i;
 
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -97,6 +105,84 @@ function formatEventTimeShort(value?: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function formatResponseDuration(seconds: number, empty = "No replies"): string {
+  if (!seconds || seconds <= 0) return empty;
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  if (minutes < 60) return remaining ? `${minutes}m ${remaining}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+function looksLikeHtml(value = ""): boolean {
+  return HTML_TAG_RE.test(value);
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .trim();
+}
+
+function emailSubject(event: SheetRow): string | undefined {
+  const direct = (event.source_detail || event.subject || "").trim();
+  if (direct) return direct.slice(0, 160);
+  const sourceLine = (event.summary || "").match(/^Source:\s*gmail\s*\/\s*(.+)$/im);
+  const subject = (sourceLine?.[1] || "").trim();
+  return subject ? subject.slice(0, 160) : undefined;
+}
+
+function emailBodyPreview(event: SheetRow): string {
+  const text = eventText(event) || event.summary || "";
+  return looksLikeHtml(text) ? stripHtml(text) : text;
+}
+
+function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string }> } {
+  const media: Array<{ url: string; alt: string }> = [];
+  const seen = new Set<string>();
+  const textLines: string[] = [];
+
+  const addMedia = (url: string) => {
+    const displayUrl = inboxImagePreviewUrl(url.trim().replace(/[.,;]+$/, ""));
+    if (!displayUrl || !isDisplayableImageUrl(displayUrl) || seen.has(displayUrl)) return false;
+    seen.add(displayUrl);
+    media.push({ url: displayUrl, alt: "MMS image" });
+    return true;
+  };
+
+  for (const line of raw.split("\n")) {
+    const labelMatch = line.match(MEDIA_LABEL_RE);
+    if (labelMatch) {
+      const urls = [...labelMatch[1].matchAll(MEDIA_URL_RE)].map((match) => match[1]);
+      if (urls.length && urls.every(addMedia)) continue;
+    }
+
+    let nextLine = line;
+    const urls = [...line.matchAll(MEDIA_URL_RE)].map((match) => match[1]);
+    for (const url of urls) {
+      if (isDisplayableImageUrl(url) && addMedia(url)) {
+        nextLine = nextLine.replace(url, "").trimEnd();
+      }
+    }
+    textLines.push(nextLine);
+  }
+
+  const body = textLines.join("\n").replace(/\n{3,}$/g, "\n\n").trim();
+  return {
+    body,
+    html: looksLikeHtml(body) ? rewriteEmailHtmlForInbox(body) : undefined,
+    media,
+  };
 }
 
 function realChannelToView(rawChannel: string): Exclude<ChannelId, "all" | "properties"> {
@@ -153,26 +239,64 @@ function buildSparkline(bins: ReturnType<typeof buildDayBins>): { sparkline: num
   return { sparkline, peakDay: bins[peakIdx]?.label || "", peakCount: bins[peakIdx]?.events || 0 };
 }
 
-function buildEmailMessages(events: SheetRow[], categories: InboxCategory[]): EmailMessage[] {
+function responseSamplesByDay(events: SheetRow[]): Map<string, number[]> {
+  const byThread = new Map<string, SheetRow[]>();
+  for (const event of events) {
+    const key = conversationKey(event, eventChannel(event));
+    const time = eventTimeValue(event);
+    if (!key || !time) continue;
+    const list = byThread.get(key) || [];
+    list.push(event);
+    byThread.set(key, list);
+  }
+
+  const byDay = new Map<string, number[]>();
+  for (const list of byThread.values()) {
+    const sorted = [...list].sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
+    for (let i = 0; i < sorted.length; i += 1) {
+      const inbound = sorted[i];
+      if (inbound.direction !== "inbound") continue;
+      const inboundMs = eventTimeValue(inbound);
+      if (!inboundMs) continue;
+      const reply = sorted.slice(i + 1).find((event) => event.direction !== "inbound" && eventTimeValue(event) >= inboundMs);
+      if (!reply) continue;
+      const replyMs = eventTimeValue(reply);
+      if (!replyMs) continue;
+      const seconds = Math.round((replyMs - inboundMs) / 1000);
+      if (seconds < 0 || seconds > 7 * 24 * 60 * 60) continue;
+      const day = dayKey(new Date(inboundMs));
+      const samples = byDay.get(day) || [];
+      samples.push(seconds);
+      byDay.set(day, samples);
+    }
+  }
+  return byDay;
+}
+
+function average(values: number[]): number {
+  if (!values.length) return 0;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function buildEmailMessages(events: SheetRow[], data: AgentInboxData): EmailMessage[] {
   return events.map((event, i) => {
     const isInbound = event.direction === "inbound";
     const isOwner = isInbound && (event.source || "").toLowerCase().includes("owner");
     const direction: EmailMessage["direction"] = !isInbound ? "iris" : isOwner ? "owner" : "inbound";
     const body = eventText(event);
-    const subject = isInbound ? (event.summary || "").split("\n")[0] : undefined;
+    const subject = isInbound ? emailSubject(event) : undefined;
     // Iris's outbound replies are stored as full HTML (with embedded property
     // cards/images). Detect that and route it to `html` so the UI renders the
     // real email — including the neat embedded property previews — instead of
     // showing raw markup as plain text.
     const rawMessage = event.message_text || "";
-    const looksHtml = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li)\b/i.test(rawMessage);
-    const html = !isInbound && looksHtml ? rawMessage : undefined;
+    const html = looksLikeHtml(rawMessage) ? rewriteEmailHtmlForInbox(rawMessage, data.properties) : undefined;
     return {
       id: `${event.thread_ref || event.email || i}-${i}`,
       sender: direction === "iris" ? "Iris" : direction === "owner" ? "Owner" : (event.full_name || event.email || "Contact"),
       direction,
       time: formatEventTimeShort(event.event_at),
-      subject: subject && subject.trim() ? subject.trim().slice(0, 160) : undefined,
+      subject,
       body: html ? undefined : (body || undefined),
       html,
       showSchedule: !isInbound && !html && i === events.length - 1,
@@ -193,12 +317,12 @@ function buildEmailThreads(data: AgentInboxData): EmailThread[] {
       contact: latest.email || key,
       name: latest.full_name || latest.email || key,
       time: formatEventTimeShort(latest.event_at),
-      preview: eventText(latest) || (latest.summary || "").slice(0, 80),
+      preview: emailBodyPreview(latest).slice(0, 160),
       messageCount: events.length,
       needsReview,
       reviewReason: reason,
       category,
-      messages: buildEmailMessages(events, data.inboxCategories),
+      messages: buildEmailMessages(events, data),
     };
   });
 }
@@ -208,17 +332,23 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
   return entries.map(([key, events]) => {
     const latest = latestEvent(events);
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
-    const messages: SmsMessage[] = events.map((event, i) => ({
-      id: `${key}-${i}`,
-      direction: event.direction === "inbound" ? "inbound" : "iris",
-      time: formatEventTimeShort(event.event_at),
-      body: eventText(event) || event.summary || "",
-    }));
+    const messages: SmsMessage[] = events.map((event, i) => {
+      const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
+      return {
+        id: `${key}-${i}`,
+        direction: event.direction === "inbound" ? "inbound" : "iris",
+        time: formatEventTimeShort(event.event_at),
+        body: parsed.body,
+        html: parsed.html,
+        media: parsed.media,
+      };
+    });
+    const latestSms = smsTextAndMedia(eventText(latest) || latest.summary || "");
     return {
       id: key,
       contact: latest.phone || latest.full_name || key,
       time: formatEventTimeShort(latest.event_at),
-      preview: eventText(latest) || (latest.summary || "").slice(0, 80),
+      preview: latestSms.body || (latestSms.media.length ? `${latestSms.media.length} MMS image${latestSms.media.length === 1 ? "" : "s"}` : (latest.summary || "").slice(0, 80)),
       messageCount: events.length,
       category,
       messages,
@@ -229,7 +359,7 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
 function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
   const entries = buildVoiceCallThreads(data.voiceCalls);
   return entries.map(([key, calls]) => {
-    const latest = calls[calls.length - 1] || {};
+    const latest = calls[0] || {};
     const contact = voiceThreadIdentity(key, calls);
     const allTurns: CallTurn[] = [];
     const callsOut: Call[] = calls.map((call, i) => {
@@ -242,7 +372,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
       allTurns.push(...turns);
       return {
         id: call.call_id || `${key}-${i}`,
-        time: formatEventTimeShort(call.ended_at || call.started_at || call.event_at),
+        time: formatEventTimeShort(call.ended_at || call.started_at || call.event_at || call.created_at),
         duration: formatCallDuration(callDurationSeconds(call)),
         outcome: callOutcome(call),
         turns,
@@ -254,7 +384,7 @@ function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
       id: key,
       contact,
       phone: latest.phone || calls.find((c) => c.phone)?.phone || undefined,
-      time: formatEventTimeShort(latest.ended_at || latest.started_at || latest.event_at),
+      time: formatEventTimeShort(latest.ended_at || latest.started_at || latest.event_at || latest.created_at),
       summary: latest.summary || (allTurns[0]?.text ?? ""),
       callCount: calls.length,
       tag: callOutcome(latest),
@@ -313,6 +443,7 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
       const view = realChannelToView(event.channel || "");
       const isAi = event.direction !== "inbound";
       const kind: ActivityEvent["kind"] = view === "voice" ? "voice" : isAi ? "ai_reply" : "inbound";
+      const status: ActivityEvent["status"] = eventNeedsHuman(event) ? "Review" : isAi ? "Sent" : "New";
       return {
         id: event.thread_ref || `${i}`,
         channel: view,
@@ -321,6 +452,7 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
         intent: event.event_type || undefined,
         body: eventText(event) || event.summary || "",
         time: formatEventTimeShort(event.event_at),
+        status,
         isHuman: !isAi,
       };
     });
@@ -395,6 +527,9 @@ function buildReviewQueue(data: AgentInboxData): ReviewItem[] {
 export function adaptInboxData(data: AgentInboxData): InboxModel {
   const bins = buildDayBins(data.events);
   const { sparkline, peakDay, peakCount } = buildSparkline(bins);
+  const responsesByDay = responseSamplesByDay(data.events);
+  const todayResponses = responsesByDay.get(dayKey(new Date())) || [];
+  const avgResponseSeconds = average(todayResponses);
 
   const needReview = data.metrics.needs_human;
   const handled = data.metrics.inbound_messages + data.metrics.outbound_replies;
@@ -440,6 +575,9 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
       activityDays: DAYS,
       peakDay,
       peakCount,
+      avgResponseSeconds,
+      avgResponseLabel: formatResponseDuration(avgResponseSeconds),
+      avgResponseSamples: todayResponses.length,
     },
     sparkline,
     statTrends: {
@@ -450,8 +588,10 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
         const h = b.inbound + b.outbound;
         return { value: h ? Math.round((b.outbound / h) * 100) : 0 };
       }),
+      avgResponse: bins.map((b) => ({ value: average(responsesByDay.get(b.key) || []) })),
     },
     drafts: data.drafts as Record<string, unknown>,
+    inboxSettings: data.inboxSettings,
   };
 }
 

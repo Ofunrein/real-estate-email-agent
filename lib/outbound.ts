@@ -59,12 +59,19 @@ function clean(value?: string): string {
   return String(value || "").trim();
 }
 
+function looksLikePhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length >= value.replace(/\s/g, "").length - 2;
+}
+
 function defaultVoiceCompanyName() {
   return process.env.ARIA_CLIENT_NAME || process.env.TEAM_NAME || process.env.CLIENT_NAME || "Austin Realty";
 }
 
 function outboundCallReason(input: OutboundCallInput): string {
-  return clean(input.callReason) || clean(input.leadContext) || "your real estate request";
+  const reason = clean(input.callReason);
+  if (reason && reason.length <= 120) return reason;
+  return "your real estate request";
 }
 
 export function outboundFirstMessage(input: OutboundCallInput): string {
@@ -73,7 +80,9 @@ export function outboundFirstMessage(input: OutboundCallInput): string {
   const callReason = outboundCallReason(input);
   const leadName = clean(input.leadName);
   if (leadName) {
-    return `Hi ${leadName}, this is ${agentName} with ${companyName}. I'm calling about ${callReason}. Do you have a quick minute?`;
+    if (!looksLikePhone(leadName)) {
+      return `Hi ${leadName}, this is ${agentName} with ${companyName}. I'm calling about ${callReason}. Do you have a quick minute?`;
+    }
   }
   return `Hi, this is ${agentName} with ${companyName}. I'm calling about your real estate request. Do you have a quick minute?`;
 }
@@ -88,7 +97,7 @@ function outboundCallBody(config: OutboundConfig, input: OutboundCallInput): Rec
   const preferredChannel = clean(input.preferredChannel);
   const outboundFirstMessage = outboundFirstMessageForVariables(input);
   const customer: Record<string, unknown> = { number: input.customerNumber };
-  if (leadName) customer.name = leadName;
+  if (leadName && !looksLikePhone(leadName)) customer.name = leadName;
   if (leadEmail) customer.email = leadEmail;
 
   return {

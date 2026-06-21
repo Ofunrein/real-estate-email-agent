@@ -9,11 +9,19 @@ import {
   Avatar,
   IconButton,
   Tooltip,
-  Divider } from
+  Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText } from
 '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import MenuIcon from '@mui/icons-material/Menu';
 import InsightsIcon from '@mui/icons-material/InsightsOutlined';
+import SettingsIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { signOut } from 'next-auth/react';
 import { Moon, Sun } from 'lucide-react';
 import { type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
@@ -36,6 +44,8 @@ export function TopBar({
 }: TopBarProps) {
   const { mode, toggle } = useColorMode();
   const { channelMeta, channelAccounts } = useInboxModel();
+  const [profileAnchor, setProfileAnchor] = React.useState<HTMLElement | null>(null);
+  const profileOpen = Boolean(profileAnchor);
   const title =
   channel === 'all' ?
   'Overview' :
@@ -43,6 +53,11 @@ export function TopBar({
   'Properties' :
   (channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>]?.label ?? channel);
   const account = channelAccounts[channel];
+  const accountMeta =
+  channel === 'all' || channel === 'properties' ?
+  undefined :
+  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties'>];
+  const AccountIcon = accountMeta?.icon;
   return (
     <Box
       component="header"
@@ -127,33 +142,58 @@ export function TopBar({
         {/* Connected account headline */}
         <Box
           sx={{
-            textAlign: 'right',
             display: {
               xs: 'none',
-              md: 'block'
+              md: 'grid'
             },
-            minWidth: 0
+            gridTemplateColumns: 'auto minmax(0, 1fr)',
+            columnGap: 0.75,
+            alignItems: 'center',
+            minWidth: 0,
+            maxWidth: 260
           }}>
-          
-          <Typography
-            variant="body2"
+          {AccountIcon &&
+          <Box
             sx={{
-              fontWeight: 700
-            }}
-            noWrap>
-            
-            {account.label}: {account.value}
-          </Typography>
-          <Typography
-            variant="caption"
-            color="success.main"
-            sx={{
-              fontWeight: 700,
-              letterSpacing: '0.08em'
+              width: 24,
+              height: 24,
+              borderRadius: 1,
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'action.hover',
+              color: 'text.primary',
+              border: '1px solid',
+              borderColor: 'divider'
             }}>
             
-            {account.status}
-          </Typography>
+              <AccountIcon sx={{ fontSize: 15 }} aria-hidden />
+            </Box>
+          }
+          <Box sx={{ minWidth: 0, textAlign: 'right' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 700,
+                color: 'text.primary',
+                lineHeight: 1.15
+              }}
+              noWrap>
+              
+              {account.value}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="success.main"
+              sx={{
+                display: 'block',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                lineHeight: 1.2
+              }}>
+              
+              {account.status}
+            </Typography>
+          </Box>
         </Box>
 
         <Button
@@ -163,19 +203,17 @@ export function TopBar({
             display: {
               xs: 'none',
               sm: 'inline-flex'
-            }
+            },
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 32,
+            px: 1.75,
+            lineHeight: 1,
+            borderRadius: 999,
+            fontWeight: 700
           }}>
           
           Change
-        </Button>
-
-        <Button
-          variant="text"
-          size="small"
-          onClick={onOpenSettings}
-          aria-label="Open settings">
-          
-          Settings
         </Button>
 
         {/* Light / dark toggle: sun in dark mode, moon in light mode */}
@@ -241,18 +279,75 @@ export function TopBar({
           }} />
         
 
-        <Avatar
-          sx={{
-            width: 34,
-            height: 34,
-            bgcolor: 'primary.main',
-            color: 'primary.contrastText',
-            fontWeight: 700,
-            fontSize: 14
+        <Tooltip title="Open profile menu">
+          <IconButton
+            onClick={(event) => setProfileAnchor(event.currentTarget)}
+            aria-label="Open profile menu"
+            aria-controls={profileOpen ? 'profile-menu' : undefined}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen ? 'true' : undefined}
+            sx={{
+              border: '1px solid',
+              borderColor: profileOpen ? 'primary.main' : 'divider',
+              borderRadius: 999,
+              p: 0.25,
+              gap: 0.25
+            }}>
+            <Avatar
+              sx={{
+                width: 30,
+                height: 30,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                fontWeight: 700,
+                fontSize: 13
+              }}>
+              
+              ML
+            </Avatar>
+            <KeyboardArrowDownIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.25 }} />
+          </IconButton>
+        </Tooltip>
+        <Menu
+          id="profile-menu"
+          anchorEl={profileAnchor}
+          open={profileOpen}
+          onClose={() => setProfileAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{
+            paper: {
+              sx: {
+                mt: 1,
+                minWidth: 188,
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: 4
+              }
+            }
           }}>
-          
-          ML
-        </Avatar>
+          <MenuItem
+            onClick={() => {
+              setProfileAnchor(null);
+              onOpenSettings?.();
+            }}>
+            <ListItemIcon>
+              <SettingsIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Settings" />
+          </MenuItem>
+          <Divider />
+          <MenuItem
+            onClick={() => {
+              setProfileAnchor(null);
+              void signOut({ callbackUrl: '/login' });
+            }}>
+            <ListItemIcon>
+              <LogoutIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Log out" />
+          </MenuItem>
+        </Menu>
       </Stack>
     </Box>);
 

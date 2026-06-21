@@ -73,8 +73,14 @@ export function parseToolCalls(payload: Record<string, unknown>): VapiToolCall[]
     ? message.toolCallList
     : Array.isArray(message.toolCalls)
       ? message.toolCalls
+      : message.toolCall
+        ? [message.toolCall]
       : Array.isArray((payload as { toolCalls?: unknown[] }).toolCalls)
         ? (payload as { toolCalls: unknown[] }).toolCalls
+        : Array.isArray((payload as { toolCallList?: unknown[] }).toolCallList)
+          ? (payload as { toolCallList: unknown[] }).toolCallList
+        : (payload as { toolCall?: unknown }).toolCall
+          ? [(payload as { toolCall: unknown }).toolCall]
         : [];
 
   if (list.length) {

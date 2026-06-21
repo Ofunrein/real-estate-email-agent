@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const body = await response.arrayBuffer();
   const headers = new Headers({
     "Content-Type": contentType,
-    "Cache-Control": "private, max-age=3600",
+    "Cache-Control": "private, max-age=3600, stale-while-revalidate=86400",
     "Accept-Ranges": "bytes",
   });
   for (const header of ["content-length", "content-range"]) {

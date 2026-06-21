@@ -6,6 +6,7 @@ import MessengerIcon from '@mui/icons-material/ChatBubbleOutline';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import WebsiteIcon from '@mui/icons-material/LanguageOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
+import type { InboxSettings } from '@/lib/inboxSettings';
 
 // This module holds the TYPES + static config (icons, labels, defaults) for
 // the inbox UI. All live data is produced by lib/inboxDataAdapter.ts from
@@ -62,6 +63,7 @@ export interface ActivityEvent {
   intent?: string;
   body: string;
   time: string;
+  status?: 'New' | 'Sent' | 'Review';
   isHuman?: boolean;
 }
 
@@ -135,6 +137,8 @@ export interface SmsMessage {
   direction: 'inbound' | 'iris';
   time: string;
   body: string;
+  html?: string;
+  media?: Array<{ url: string; alt: string }>;
 }
 
 export interface SmsThread {
@@ -222,6 +226,9 @@ export interface Metrics {
   activityDays: number;
   peakDay: string;
   peakCount: number;
+  avgResponseSeconds: number;
+  avgResponseLabel: string;
+  avgResponseSamples: number;
 }
 
 export interface InboxModel {
@@ -244,8 +251,10 @@ export interface InboxModel {
     leadsTotal: TrendPoint[];
     events: TrendPoint[];
     aiRate: TrendPoint[];
+    avgResponse: TrendPoint[];
   };
   drafts: Record<string, unknown>;
+  inboxSettings: InboxSettings;
 }
 
 /* ----------------------------- Static config ------------------------------- */

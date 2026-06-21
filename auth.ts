@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 const DEFAULT_ALLOWED_EMAILS = ["ofunrein123@gmail.com"];
@@ -19,6 +20,10 @@ export function isAllowedAuthEmail(email?: string | null) {
   return Boolean(email && getAllowedAuthEmails().has(email.toLowerCase()));
 }
 
+export function localAuthBypassEnabled() {
+  return process.env.NODE_ENV !== "production" && process.env.ALLOW_LOCAL_AUTH_BYPASS === "1";
+}
+
 export function authEmailListLabel() {
   return Array.from(getAllowedAuthEmails()).join(", ");
 }
@@ -26,12 +31,33 @@ export function authEmailListLabel() {
 const googleClientId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
 
+export function hasGoogleAuthProvider() {
+  return Boolean(googleClientId && googleClientSecret);
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
-    Google({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
+    ...(hasGoogleAuthProvider()
+      ? [
+          Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+          }),
+        ]
+      : []),
+    Credentials({
+      id: "credentials",
+      name: "Email",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const { authorizeDashboardPassword } = await import("@/lib/dashboardPasswordAuth");
+        const user = await authorizeDashboardPassword(credentials?.email, credentials?.password);
+        return user ? { id: user.email, email: user.email, name: user.name } : null;
+      },
     }),
   ],
   pages: {
@@ -40,18 +66,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ account, profile }) {
-      if (account?.provider !== "google") {
-        return false;
+      if (account?.provider === "credentials") {
+        return true;
       }
 
-      const email = profile?.email?.toLowerCase();
-      return Boolean(email && profile?.email_verified === true && isAllowedAuthEmail(email));
+      if (account?.provider === "google") {
+        const email = profile?.email?.toLowerCase();
+        return Boolean(email && profile?.email_verified === true && isAllowedAuthEmail(email));
+      }
+
+      return false;
     },
     authorized({ auth: session, request }) {
       const pathname = request.nextUrl.pathname;
 
+      if (localAuthBypassEnabled()) {
+        return true;
+      }
+
       if (
         pathname === "/login" ||
+        pathname === "/reset-password" ||
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/api/webhooks") ||
         pathname.startsWith("/api/cron")
