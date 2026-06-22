@@ -158,8 +158,8 @@ test("irisEmailPollQuery: scopes default Gmail polling to configured inbound add
   try {
     const query = irisEmailPollQuery();
     assert.match(query, /in:inbox/);
+    assert.match(query, /is:unread/);
     assert.match(query, /newer_than:14d/);
-    assert.doesNotMatch(query, /is:unread/);
     assert.doesNotMatch(query, /AUTO_REPLIED/);
     assert.doesNotMatch(query, /NEEDS_HUMAN/);
     assert.match(query, /to:martin@lumenosis\.com/);
@@ -172,6 +172,18 @@ test("irisEmailPollQuery: scopes default Gmail polling to configured inbound add
     if (previousTeam === undefined) delete process.env.TEAM_LEAD_EMAIL;
     else process.env.TEAM_LEAD_EMAIL = previousTeam;
   }
+});
+
+test("classifyIrisEmailText: treats listing links as property inquiries", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Property",
+    body: "https://www.zillow.com/homedetails/12725-Bloomington-Dr-129-Austin-TX-78748/123_zpid/",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(classification.intent, "property_details");
+  assert.equal(classification.primary_lead_role, "buyer");
+  assert.equal(execution.canReply, true);
 });
 
 test("processIrisEmailPoll: duplicate unread messages are labeled but not recorded or sent", async () => {

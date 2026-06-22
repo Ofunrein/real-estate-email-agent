@@ -53,6 +53,41 @@ test("social connection display prefers newest connected account over setup fall
   assert.equal(display.connection?.id, "ig-new");
 });
 
+test("social connection display exposes avatar and subtitle metadata", () => {
+  const status: ConnectionStatus = {
+    channels: {
+      instagram: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "ig-live",
+            channel: "instagram",
+            provider: "composio_instagram",
+            selected_asset_name: "@martn.o",
+            selected_asset_id: "17841400000000000",
+            connected_account_id: "ca_live",
+            status: "connected",
+            metadata: {
+              composio_auth_configured: true,
+              profile_image_url: "https://cdn.example.com/martn-o.jpg",
+              profile_url: "https://www.instagram.com/martn.o/",
+            },
+            updated_at: "2026-06-22T04:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "instagram", "@austin.realty", "READY");
+
+  assert.equal(display.value, "@martn.o");
+  assert.equal(display.avatarUrl, "https://cdn.example.com/martn-o.jpg");
+  assert.equal(display.subtitle, "https://www.instagram.com/martn.o/");
+});
+
+
 test("social connection display does not use static fallback identity when setup is missing", () => {
   const display = displayForChannelConnection(null, "messenger", "Austin Realty Page", "READY");
 

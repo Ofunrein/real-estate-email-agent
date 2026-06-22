@@ -178,7 +178,19 @@ export function TopBar({
             minWidth: 0,
             maxWidth: { sm: 220, md: 320 }
           }}>
-          {AccountIcon &&
+          {accountDisplay.avatarUrl ?
+          <Avatar
+            src={accountDisplay.avatarUrl}
+            alt={accountDisplay.value}
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'action.hover'
+            }} /> :
+          AccountIcon &&
           <Box
             sx={{
               width: 24,
