@@ -225,7 +225,12 @@ export function EmailView() {
               </Stack>
             </Box>
 
-            <ReaderFooter />
+            <ReaderFooter
+              threadId={thread.id}
+              channel="email"
+              to={thread.contact}
+              subject={thread.messages.find((message) => message.subject)?.subject || `Re: ${thread.contact}`}
+            />
           </Card> :
 
         <EmptyThreadCard />

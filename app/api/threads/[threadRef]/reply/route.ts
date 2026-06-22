@@ -10,7 +10,7 @@ import { databaseEnabled, upsertThreadLinkInDatabase } from "@/lib/database";
 export const dynamic = "force-dynamic";
 
 type ReplyBody = {
-  channel: "sms" | "whatsapp" | "email";
+  channel: "sms" | "whatsapp" | "email" | "instagram" | "messenger";
   to: string;
   body: string;
   mediaUrls?: string[];
@@ -21,7 +21,7 @@ type ReplyBody = {
 };
 
 // Map public /uploads/<filename> URL → absolute disk path for email attachment reads.
-function resolveAttachments(mediaUrls: string[] = [], channel: "sms" | "whatsapp" | "email"): EmailAttachment[] {
+function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["channel"]): EmailAttachment[] {
   if (channel !== "email") return [];
   return mediaUrls
     .map((url) => {
@@ -31,7 +31,9 @@ function resolveAttachments(mediaUrls: string[] = [], channel: "sms" | "whatsapp
       const ext = filename.split(".").pop()?.toLowerCase() ?? "";
       const contentTypeMap: Record<string, string> = {
         jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-        gif: "image/gif", webp: "image/webp", pdf: "application/pdf", mp4: "video/mp4",
+        gif: "image/gif", webp: "image/webp", pdf: "application/pdf",
+        m4a: "audio/mp4", mp3: "audio/mpeg", ogg: "audio/ogg", opus: "audio/ogg",
+        wav: "audio/wav", webm: "audio/webm", mp4: "video/mp4",
       };
       return {
         filename,
@@ -40,6 +42,20 @@ function resolveAttachments(mediaUrls: string[] = [], channel: "sms" | "whatsapp
       } satisfies EmailAttachment;
     })
     .filter(Boolean) as EmailAttachment[];
+}
+
+function mediaLogLabel(channel: ReplyBody["channel"], url: string): string {
+  if (/\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(url)) return "Voice note";
+  if (channel === "whatsapp") return "WhatsApp media";
+  if (channel === "instagram" || channel === "messenger") return "Social DM media";
+  if (channel === "email") return "Attachment";
+  return "MMS media";
+}
+
+function messageWithMediaLog(input: ReplyBody): string {
+  const body = input.body?.trim() || "";
+  const mediaLines = (input.mediaUrls || []).map((url) => `${mediaLogLabel(input.channel, url)}: ${url}`);
+  return [body, ...mediaLines].filter(Boolean).join("\n\n");
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
@@ -68,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     phone: input.channel !== "email" ? input.to : undefined,
     email: input.channel === "email" ? input.to : undefined,
     threadRef,
-    messageText: input.body,
+    messageText: messageWithMediaLog(input),
     status: result.ok && result.fallbackReason ? "sent_fresh" : "sent",
     mailboxEmail: input.channel === "email" ? result.mailboxEmail : "",
     gmailThreadId: input.channel === "email" ? result.gmailThreadId : "",

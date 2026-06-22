@@ -27,21 +27,26 @@ Lumenosis is a managed AI implementation service, not a self-serve SaaS. Clients
 Already built or partially built:
 
 - Shared inbox data model and dashboard tabs for email, SMS, voice, Instagram, Messenger, WhatsApp, website, properties, and Lead Reopen.
+- Lead Reopen remains visible and now exposes a campaign review surface before activation: eligible, needs review, blocked, duplicate counts, no auto-send on import, and activation locked until reviewed.
 - SMS via Twilio: inbound/outbound, media logging, handoff alerts, call-lead escalation, and shared Iris reply logic.
 - Voice via Vapi: inbound/outbound calls, live status panel, recordings, transcript parsing, and cross-channel caller context.
 - WhatsApp direct Meta Cloud route: inbound webhook verification, signature verification, message parsing, direct send, media send, and shared Iris reply logic.
 - ManyChat social router: dynamic block route for Instagram/Messenger, real-estate intent guard, property lookup, media replies, and ManyChat setup docs/scripts.
 - Composio SDK dependency and Gmail connect helper.
+- Composio direct-send helper for Instagram and Messenger behind environment configuration. It is not the default sender until each client has a verified connected account, selected asset, and smoke test.
 - Lead Reopen import pipeline with CSV, Google Sheets, CRM adapter pull, and Composio import hook.
+- Dashboard thread surfaces for Instagram, Messenger, WhatsApp, and Website now share the SMS-style reader, category filters, recent-activity deep links, takeover composer, and latest-message scroll behavior.
+- Human takeover composer supports paste/upload attachments through the existing thread upload route and passes media URLs into manual replies for channels that can send media.
 
 Main gaps:
 
 - No generic channel connection registry for client-selected Instagram/Facebook/WhatsApp accounts.
 - No dashboard UI for selecting which connected Page, Instagram Business account, WhatsApp number, or CRM account each client should use.
 - No generic Composio connect endpoint beyond Gmail and CRM import env configuration.
-- Social direct mode is not unified with ManyChat mode. Today ManyChat remains the practical Instagram/Messenger sender path.
+- Social direct mode is partially unified at the manual-send helper level, but ManyChat remains the practical Instagram/Messenger sender path until direct Composio/Meta smoke tests pass.
 - WhatsApp direct mode exists, but Composio WhatsApp is not abstracted behind the same sender interface.
 - Deployment runbook does not yet show per-client social account connection, webhook subscription, and E2E smoke tests.
+- Runtime file uploads still need durable object storage for production scale; the current composer uses the existing local upload route.
 
 ## V1 Build Target
 
@@ -290,13 +295,13 @@ Files:
 - `lib/socialSender.ts`
 - `lib/manychatSocial.ts`
 - `app/api/webhooks/theo-social-router/route.ts`
-- Optional `lib/composioSocial.ts`
+- `lib/composioSocial.ts`
 
 Deliverables:
 
 - One sender contract for Instagram/Messenger.
 - ManyChat remains default.
-- Composio direct sender feature-flagged.
+- Composio direct sender environment-configured and feature-flagged.
 - Prevent double-send with takeover and draft-first rules.
 
 ### E. WhatsApp Adapter Split
@@ -346,6 +351,7 @@ These must be closed before enabling new social auto-send:
   - Instagram/Messenger 24-hour messaging window.
   - WhatsApp template requirement outside the customer-service window.
 - Keep iMessage relay and voice cloning out of V1.
+- Fish Audio voice cloning, TTS, and STT are supported as a later voice-note utility, not as the V1 message transport. Vapi remains the voice-call transport and Twilio/Meta/Composio remain message transports.
 - Keep CRM writes to contact upsert and internal activity mirror first. Pipeline moves and drips require a separate reviewed rollout.
 
 ## Subagent Development Plan

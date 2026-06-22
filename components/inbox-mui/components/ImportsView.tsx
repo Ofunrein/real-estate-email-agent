@@ -135,10 +135,32 @@ export function ImportsView() {
   const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
   const [batchesError, setBatchesError] = useState('');
   const [lastPreviewSource, setLastPreviewSource] = useState<'csv' | 'crm' | 'google_sheets' | 'composio' | null>(null);
+  const [lastResultDryRun, setLastResultDryRun] = useState(true);
 
   const topSegments = useMemo(() => {
     const counts = summary?.segmentCounts || {};
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  }, [summary]);
+
+  const campaignReview = useMemo(() => {
+    if (!summary) {
+      return {
+        blockedCount: 0,
+        reviewNeeded: 0,
+        duplicateOrMerged: 0,
+        persisted: false,
+      };
+    }
+    const blockedSegments = new Set(['missing_contact_info', 'do_not_contact', 'needs_human']);
+    const blockedCount = Object.entries(summary.segmentCounts)
+      .filter(([segment]) => blockedSegments.has(segment))
+      .reduce((total, [, count]) => total + count, 0);
+    return {
+      blockedCount,
+      reviewNeeded: Math.max(summary.totalRows - summary.campaignEligible, 0),
+      duplicateOrMerged: summary.duplicateRows + summary.mergedDuplicates,
+      persisted: Boolean(summary.batchId),
+    };
   }, [summary]);
 
   async function loadBatches() {
@@ -181,6 +203,7 @@ export function ImportsView() {
       setSummary(data.summary);
       setPreview(data.preview || []);
       setLastPreviewSource('csv');
+      setLastResultDryRun(Boolean(data.dryRun));
       if (!nextDryRun) await loadBatches();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Import failed');
@@ -203,6 +226,7 @@ export function ImportsView() {
       setSummary(data.summary);
       setPreview(data.preview || []);
       setLastPreviewSource('crm');
+      setLastResultDryRun(Boolean(data.dryRun));
       if (!nextDryRun) await loadBatches();
     } catch (pullError) {
       setError(pullError instanceof Error ? pullError.message : 'CRM pull failed');
@@ -225,6 +249,7 @@ export function ImportsView() {
       setSummary(data.summary);
       setPreview(data.preview || []);
       setLastPreviewSource('google_sheets');
+      setLastResultDryRun(Boolean(data.dryRun));
       if (!nextDryRun) await loadBatches();
     } catch (pullError) {
       setError(pullError instanceof Error ? pullError.message : 'Google Sheets pull failed');
@@ -247,6 +272,7 @@ export function ImportsView() {
       setSummary(data.summary);
       setPreview(data.preview || []);
       setLastPreviewSource('composio');
+      setLastResultDryRun(Boolean(data.dryRun));
       if (!nextDryRun) await loadBatches();
     } catch (pullError) {
       setError(pullError instanceof Error ? pullError.message : 'Composio pull failed');
@@ -537,6 +563,97 @@ export function ImportsView() {
                 ) : (
                   <Typography variant="body2" color="text.secondary">
                     Run a preview to see row counts, duplicates, blocked contacts, and segment distribution.
+                  </Typography>
+                )}
+              </Stack>
+            </Card>
+
+            <Card sx={{ p: 2 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <SafetyIcon color="success" />
+                    <Box>
+                      <Typography variant="subtitle2">Campaign review</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Activation is a reviewed step. Fresh imports never auto-message old leads.
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Chip
+                    size="small"
+                    color={campaignReview.persisted ? 'success' : summary ? 'info' : 'default'}
+                    variant={campaignReview.persisted ? 'filled' : 'outlined'}
+                    label={campaignReview.persisted ? 'Imported' : summary ? 'Preview only' : 'Not started'}
+                  />
+                </Stack>
+
+                {summary ? (
+                  <>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
+                        gap: 1,
+                      }}>
+                      {[
+                        ['Eligible', summary.campaignEligible],
+                        ['Needs review', campaignReview.reviewNeeded],
+                        ['Blocked', campaignReview.blockedCount],
+                        ['Duplicates', campaignReview.duplicateOrMerged],
+                      ].map(([label, value]) => (
+                        <Card key={label} variant="outlined" sx={{ p: 1.25 }}>
+                          <Typography variant="caption" color="text.secondary">{label}</Typography>
+                          <Typography
+                            variant="h6"
+                            color={label === 'Eligible' ? 'success.main' : label === 'Blocked' ? 'error.main' : 'text.primary'}>
+                            {value}
+                          </Typography>
+                        </Card>
+                      ))}
+                    </Box>
+
+                    <Stack spacing={0.75}>
+                      {[
+                        ['Preview mapping', true],
+                        ['Import into lead memory', campaignReview.persisted],
+                        ['Review candidates by segment', campaignReview.persisted && summary.campaignEligible > 0],
+                        ['Activate reactivation campaign', false],
+                      ].map(([label, complete], index) => (
+                        <Stack key={String(label)} direction="row" spacing={1} alignItems="center">
+                          <Chip
+                            size="small"
+                            color={complete ? 'success' : index === 3 ? 'default' : 'info'}
+                            variant={complete ? 'filled' : 'outlined'}
+                            label={complete ? 'done' : index === 3 ? 'locked' : 'next'}
+                            sx={{ minWidth: 58 }}
+                          />
+                          <Typography variant="body2">{label}</Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+
+                    <Alert severity={campaignReview.persisted ? 'success' : 'info'} sx={{ py: 0.75 }}>
+                      {campaignReview.persisted
+                        ? `${summary.campaignEligible} lead${summary.campaignEligible === 1 ? '' : 's'} can move into reviewed campaign selection. Sending still requires explicit campaign activation.`
+                        : 'This is a preview. Import the latest source before building a reviewed campaign queue.'}
+                    </Alert>
+
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                      <Button
+                        variant="contained"
+                        disabled={loading || !lastPreviewSource || !lastResultDryRun}
+                        onClick={importLatestSource}>
+                        Import for review
+                      </Button>
+                      <Button variant="outlined" disabled>
+                        Activate after approval
+                      </Button>
+                    </Stack>
+                  </>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Preview a CRM, Sheets, Composio, or CSV source first. This card becomes the activation checklist for Lead Reopen.
                   </Typography>
                 )}
               </Stack>

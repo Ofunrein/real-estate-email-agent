@@ -15,6 +15,7 @@ const emptyModel: InboxModel = {
   channelStats: {} as InboxModel['channelStats'],
   emailThreads: [],
   smsThreads: [],
+  textThreads: { instagram: [], messenger: [], whatsapp: [], website: [] },
   voiceContacts: [],
   properties: [],
   propertyHealth: { score: 0, total: 0, clean: '0% clean', missingCore: 0, duplicateGroups: 0, rows: 0 },

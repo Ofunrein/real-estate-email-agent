@@ -9,6 +9,7 @@ import { EmailView } from './components/EmailView';
 import { SmsView } from './components/SmsView';
 import { VoiceView } from './components/VoiceView';
 import { EmptyChannelView } from './components/EmptyChannelView';
+import { TextChannelView } from './components/TextChannelView';
 import { PropertiesView } from './components/PropertiesView';
 import { ImportsView } from './components/ImportsView';
 import { SettingsDrawer } from './components/SettingsDrawer';
@@ -39,6 +40,9 @@ export function InboxPage() {
       } else if (targetChannel === 'sms') {
         window.localStorage.setItem('iris.inbox.sms.category', 'all');
         window.localStorage.setItem('iris.inbox.sms.thread', event.threadId);
+      } else if (targetChannel === 'instagram' || targetChannel === 'messenger' || targetChannel === 'whatsapp' || targetChannel === 'website') {
+        window.localStorage.setItem(`iris.inbox.${targetChannel}.category`, 'all');
+        window.localStorage.setItem(`iris.inbox.${targetChannel}.thread`, event.threadId);
       } else if (targetChannel === 'voice') {
         window.localStorage.setItem('iris.inbox.voice.thread', event.threadId);
       }
@@ -209,6 +213,11 @@ function ChannelContent({
       return <SmsView onOpenVoice={onOpenVoice} />;
     case 'voice':
       return <VoiceView />;
+    case 'instagram':
+    case 'messenger':
+    case 'whatsapp':
+    case 'website':
+      return <TextChannelView channel={channel} />;
     case 'properties':
       return <PropertiesView />;
     case 'imports':

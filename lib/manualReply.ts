@@ -1,9 +1,10 @@
 import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
+import { sendComposioSocialMessage } from "@/lib/composioSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 
 export type EmailAttachment = { filename: string; contentType: string; path: string };
 export type ManualReplyInput = {
-  channel: "sms" | "whatsapp" | "email";
+  channel: "sms" | "whatsapp" | "email" | "instagram" | "messenger";
   to: string; // phone for sms/wa, email address for email
   body: string;
   mediaUrls?: string[];
@@ -32,7 +33,28 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
         return r.sent ? { ok: true } : { ok: false, error: r.error || "SMS not sent" };
       }
       case "whatsapp":
+        if ((process.env.WHATSAPP_PROVIDER || "").toLowerCase() === "composio") {
+          const r = await sendComposioSocialMessage({
+            channel: "whatsapp",
+            to: input.to,
+            body: input.body,
+            mediaUrls: input.mediaUrls,
+            threadRef: input.threadId,
+          });
+          return r.ok ? { ok: true } : r;
+        }
         return await sendWhatsApp(input);
+      case "instagram":
+      case "messenger": {
+        const r = await sendComposioSocialMessage({
+          channel: input.channel,
+          to: input.to,
+          body: input.body,
+          mediaUrls: input.mediaUrls,
+          threadRef: input.threadId,
+        });
+        return r.ok ? { ok: true } : r;
+      }
       case "email":
         return await sendEmail(input);
       default:

@@ -147,7 +147,7 @@ export async function handleTheoAppointmentMessage(
       ? await rescheduleGHLEvent(appointment.ghl_event_id, timePreference.date, timePreference.time, timezone)
       : { success: true, confirmed_time: `${timePreference.date} at ${timePreference.time}` };
     if (!calendarResult.success) {
-      return { handled: true, reply: "I had trouble updating that. I'll flag it for the agent to sort out.", nextAction: "done" };
+      return { handled: true, reply: "I had trouble updating that. Iris flagged it for human review so the team can sort it out.", nextAction: "done" };
     }
     await rescheduleAppointmentById(
       appointment.id,
@@ -157,7 +157,7 @@ export async function handleTheoAppointmentMessage(
     );
     return {
       handled: true,
-      reply: `${namePrefix}done - rescheduled to ${calendarResult.confirmed_time}. Confirmation on the way.`,
+      reply: `${namePrefix}done, rescheduled to ${calendarResult.confirmed_time}. Reply here if timing changes.`,
       nextAction: "done",
     };
   }
@@ -166,7 +166,7 @@ export async function handleTheoAppointmentMessage(
   if (!timePreference) {
     return {
       handled: true,
-      reply: `${namePrefix}what day and time works? Morning or afternoon is fine.`,
+      reply: `${namePrefix}what day and time works for the showing? Morning or afternoon is fine.`,
       nextAction: "needs_time",
     };
   }
@@ -183,7 +183,7 @@ export async function handleTheoAppointmentMessage(
     booked_via_channel: "sms",
   });
   if (!result.success) {
-    return { handled: true, reply: "Sounds good. I'll have the agent confirm that time with you.", nextAction: "done" };
+    return { handled: true, reply: "Got it. I saved that showing request and Iris will keep this thread updated.", nextAction: "done" };
   }
   await notifySlackOnBooking({
     outcome: "BOOKED",
@@ -195,7 +195,7 @@ export async function handleTheoAppointmentMessage(
   }).catch(() => null);
   return {
     handled: true,
-    reply: `${namePrefix}you're set for ${result.confirmed_time}${propertyAddress ? ` at ${propertyAddress}` : ""}. Confirmation on the way.`,
+    reply: `${namePrefix}you're set for ${result.confirmed_time}${propertyAddress ? ` at ${propertyAddress}` : ""}. Reply here if timing changes.`,
     nextAction: "done",
   };
 }

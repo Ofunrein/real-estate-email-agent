@@ -54,7 +54,7 @@ const RECENT_ACTIVITY_LIMIT = 30;
 const ACTIVITY_BODY_LIMIT = 180;
 const HTML_TAG_RE = /<\/?(div|table|img|a|h[1-9]|p|br|span|ul|ol|li|strong|em)\b/i;
 const MEDIA_URL_RE = /(https?:\/\/[^\s<>"')]+|\/api\/media\/proxy\?url=[^\s<>"')]+)/gi;
-const MEDIA_LABEL_RE = /^\s*(?:MMS|SMS)?\s*(?:image|photo|media|attachment|Social DM image)\s*:\s*(.+?)\s*$/i;
+const MEDIA_LABEL_RE = /^\s*(?:(?:MMS|SMS|WhatsApp|Social DM)\s*)?(image|photo|media|attachment|audio|voice note|voice)\s*:\s*(.+?)\s*$/i;
 const SYSTEM_PROMPT_RE = /\b(you are\s+(?:iris|arya|a real estate)|brand voice|assistant\s+(?:for|to)\s+(?:austin|the)|tool(?:s|ing)?|system prompt|developer instruction|never reveal|do not reveal|call script)\b/i;
 const NON_REAL_ESTATE_EMAIL_RE = /\b(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)\b/i;
 const REAL_ESTATE_EMAIL_RE = /\b(home|house|condo|property|listing|showing|tour|buy|buyer|sell|seller|rent|lease|realtor|real estate|bedroom|bath|mortgage|valuation|pre.?approved|appointment|zillow|mls)\b/i;
@@ -206,24 +206,32 @@ function messageEventId(event: SheetRow, fallback: string): string {
   return `${event.thread_ref || event.email || event.phone || "event"}-${stableEventHash(key || fallback)}`;
 }
 
-function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string }> } {
-  const media: Array<{ url: string; alt: string }> = [];
+function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string; kind?: "image" | "audio" | "file" }> } {
+  const media: Array<{ url: string; alt: string; kind?: "image" | "audio" | "file" }> = [];
   const seen = new Set<string>();
   const textLines: string[] = [];
 
-  const addMedia = (url: string) => {
-    const displayUrl = inboxImagePreviewUrl(url.trim().replace(/[.,;]+$/, ""));
-    if (!displayUrl || !isDisplayableImageUrl(displayUrl) || seen.has(displayUrl)) return false;
+  const addMedia = (url: string, label = "media") => {
+    const trimmed = url.trim().replace(/[.,;]+$/, "");
+    const displayUrl = isDisplayableImageUrl(trimmed) ? inboxImagePreviewUrl(trimmed) : trimmed;
+    if (!displayUrl || seen.has(displayUrl)) return false;
+    const kind = isDisplayableImageUrl(displayUrl) ? "image" : isDisplayableAudioUrl(displayUrl) ? "audio" : "file";
+    if (kind === "file" && !/attachment|media/i.test(label)) return false;
     seen.add(displayUrl);
-    media.push({ url: displayUrl, alt: "MMS image" });
+    media.push({
+      url: displayUrl,
+      alt: kind === "audio" ? "Voice note" : kind === "image" ? "MMS image" : "Attachment",
+      kind,
+    });
     return true;
   };
 
   for (const line of raw.split("\n")) {
     const labelMatch = line.match(MEDIA_LABEL_RE);
     if (labelMatch) {
-      const urls = [...labelMatch[1].matchAll(MEDIA_URL_RE)].map((match) => match[1]);
-      if (urls.length && urls.every(addMedia)) continue;
+      const label = labelMatch[1] || "media";
+      const urls = [...labelMatch[2].matchAll(MEDIA_URL_RE)].map((match) => match[1]);
+      if (urls.length && urls.every((url) => addMedia(url, label))) continue;
     }
 
     let nextLine = line;
@@ -242,6 +250,10 @@ function smsTextAndMedia(raw: string): { body: string; html?: string; media: Arr
     html: looksLikeHtml(body) ? rewriteEmailHtmlForInbox(body) : undefined,
     media,
   };
+}
+
+function isDisplayableAudioUrl(value: string): boolean {
+  return /\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(value);
 }
 
 function cleanSmsDisplayText(text: string): string {
@@ -435,7 +447,7 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
       return {
         id,
         eventId: id,
-        direction: event.direction === "inbound" ? "inbound" : "iris",
+        direction: smsMessageDirection(event),
         time: formatEventTimeShort(event.event_at),
         body: parsed.body,
         html: parsed.html,
@@ -453,6 +465,61 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
       messages,
     };
   });
+}
+
+function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "messenger" | "whatsapp" | "website"): SmsThread[] {
+  const groups = data.events
+    .filter((event) => realChannelToView(event.channel || "") === view)
+    .reduce<Record<string, SheetRow[]>>((acc, event) => {
+      const rawChannel = eventChannel(event);
+      const key = conversationKey(event, rawChannel);
+      acc[key] ||= [];
+      acc[key].push(event);
+      return acc;
+    }, {});
+
+  return Object.entries(groups)
+    .map(([key, events]) => {
+      const sorted = [...events].sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
+      const latest = latestEvent(sorted);
+      const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
+      const messages: SmsMessage[] = sorted.map((event, i) => {
+        const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
+        const id = messageEventId(event, `${key}-${i}`);
+        return {
+          id,
+          eventId: id,
+          direction: smsMessageDirection(event),
+          time: formatEventTimeShort(event.event_at),
+          body: parsed.body,
+          html: parsed.html,
+          media: parsed.media,
+        };
+      });
+      const latestText = smsTextAndMedia(eventText(latest) || latest.summary || "");
+      return {
+        sortValue: eventTimeValue(latest),
+        thread: {
+        id: key,
+        contact: threadIdentity(latest.thread_ref || key, sorted, eventChannel(latest)),
+        time: formatEventTimeShort(latest.event_at),
+        preview: latestText.body || (latestText.media.length ? `${latestText.media.length} image${latestText.media.length === 1 ? "" : "s"}` : (latest.summary || "").slice(0, 80)),
+        messageCount: sorted.length,
+        category,
+        messages,
+        },
+      };
+    })
+    .sort((a, b) => b.sortValue - a.sortValue)
+    .map((entry) => entry.thread);
+}
+
+function smsMessageDirection(event: SheetRow): SmsMessage["direction"] {
+  if (event.direction === "inbound") return "inbound";
+  const source = String(event.source || "").toLowerCase();
+  const agentName = String(event.agent_name || "").toLowerCase();
+  if (source.includes("human") || source.includes("owner") || agentName === "owner") return "owner";
+  return "iris";
 }
 
 function buildVoiceContacts(data: AgentInboxData): VoiceContact[] {
@@ -695,6 +762,12 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
     channelStats: buildChannelStats(data),
     emailThreads: buildEmailThreads(data),
     smsThreads: buildSmsThreads(data),
+    textThreads: {
+      instagram: buildTextThreadsForView(data, "instagram"),
+      messenger: buildTextThreadsForView(data, "messenger"),
+      whatsapp: buildTextThreadsForView(data, "whatsapp"),
+      website: buildTextThreadsForView(data, "website"),
+    },
     voiceContacts: buildVoiceContacts(data),
     properties: buildProperties(data),
     propertyHealth: {

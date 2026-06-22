@@ -22,6 +22,9 @@ import {
   type ChannelId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+
+const contextRailWidth = 'clamp(232px, 24vw, 312px)';
+
 interface ContextColumnProps {
   channel: ChannelId;
   inDrawer?: boolean;
@@ -47,12 +50,39 @@ export function ContextColumn({
     <Stack
       spacing={2}
       sx={{
-        width: inDrawer ? '100%' : 312,
-        flexShrink: 0,
+        width: inDrawer ? '100%' : contextRailWidth,
+        maxWidth: '100%',
+        minWidth: 0,
+        flex: inDrawer ? '1 1 auto' : `0 1 ${contextRailWidth}`,
+        flexShrink: 1,
+        alignSelf: 'stretch',
         overflowY: 'auto',
-        height: inDrawer ? '100%' : 'auto',
-        p: inDrawer ? 2 : 0,
-        pr: inDrawer ? 2 : 0.5
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        boxSizing: 'border-box',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100%',
+        p: inDrawer ? { xs: 1.5, sm: 2 } : 0,
+        pr: inDrawer ? { xs: 1.5, sm: 2 } : 0.5,
+        '& > .MuiCard-root': {
+          minWidth: 0,
+          flexShrink: 0,
+          overflow: 'visible'
+        },
+        '& .MuiTypography-root': {
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word'
+        },
+        '& .MuiChip-root': {
+          maxWidth: '100%'
+        },
+        '& .MuiChip-label': {
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
       }}
       component="aside"
       aria-label="Context">
@@ -149,7 +179,15 @@ export function ContextColumn({
             }} />
           
         </Stack>
-        <Stack direction="row" spacing={3}>
+        <Stack
+          direction="row"
+          spacing={3}
+          useFlexGap
+          sx={{
+            minWidth: 0,
+            flexWrap: 'wrap',
+            rowGap: 1
+          }}>
           <Box>
             <Typography variant="h6">{stats.events}</Typography>
             <Typography variant="caption" color="text.secondary">
@@ -185,12 +223,11 @@ export function ContextColumn({
             variant="body2"
             sx={{
               fontWeight: 600
-            }}
-            noWrap>
-            
+            }}>
+
               {stats.lastActivity.contact}
             </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
+            <Typography variant="body2" color="text.secondary">
               {stats.lastActivity.message}
             </Typography>
             <Divider />
@@ -265,10 +302,15 @@ export function ContextColumn({
           direction="row"
           justifyContent="space-between"
           alignItems="center"
+          spacing={1}
+          useFlexGap
           sx={{
-            mb: 1
+            mb: 1,
+            minWidth: 0,
+            flexWrap: 'wrap',
+            rowGap: 1
           }}>
-          
+
           <Typography variant="subtitle2">Human review</Typography>
           {stats.humanReview === 'flagged' ?
           <Chip
@@ -297,7 +339,7 @@ export function ContextColumn({
               bgcolor: 'action.hover'
             }}>
             
-                <Stack direction="row" spacing={0.75} alignItems="center">
+                <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
                   <FlagIcon
                 sx={{
                   fontSize: 13,
@@ -308,8 +350,7 @@ export function ContextColumn({
                 variant="caption"
                 sx={{
                   fontWeight: 600
-                }}
-                noWrap>
+                }}>
                 
                     {r.contact}
                   </Typography>
@@ -328,7 +369,7 @@ export function ContextColumn({
           )}
           </Stack> :
 
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
             <CheckCircleIcon
             fontSize="small"
             sx={{
@@ -397,7 +438,8 @@ export function ContextColumn({
           spacing={1}
           alignItems="center"
           sx={{
-            mb: 1
+            mb: 1,
+            minWidth: 0
           }}>
           
           <HomeIcon
@@ -408,7 +450,7 @@ export function ContextColumn({
           
           <Typography variant="subtitle2">Data readiness</Typography>
         </Stack>
-        <Stack direction="row" alignItems="baseline" spacing={0.5}>
+        <Stack direction="row" alignItems="baseline" spacing={0.5} useFlexGap sx={{ minWidth: 0, flexWrap: 'wrap' }}>
           <Typography variant="h5" color="success.main">
             100
           </Typography>
@@ -446,11 +488,17 @@ export function ContextColumn({
 }
 function TodayRow({ label, value, color }: {label: string;value: string;color: string;}) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="caption" color="text.secondary">
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="flex-start"
+      spacing={1}
+      useFlexGap
+      sx={{ minWidth: 0, flexWrap: 'wrap', rowGap: 0.5 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flex: '1 1 120px' }}>
         {label}
       </Typography>
-      <Typography sx={{ fontSize: '14px', fontWeight: 800, color }}>
+      <Typography sx={{ fontSize: '14px', fontWeight: 800, color, flexShrink: 0, textAlign: 'right' }}>
         {value}
       </Typography>
     </Stack>);
@@ -458,11 +506,19 @@ function TodayRow({ label, value, color }: {label: string;value: string;color: s
 }
 function Row({ label, value }: {label: string;value: React.ReactNode;}) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="caption" color="text.secondary">
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="flex-start"
+      spacing={1}
+      useFlexGap
+      sx={{ minWidth: 0, flexWrap: 'wrap', rowGap: 0.5 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flex: '1 1 72px' }}>
         {label}
       </Typography>
-      {value}
+      <Box sx={{ minWidth: 0, maxWidth: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+        {value}
+      </Box>
     </Stack>);
 
 }
@@ -479,18 +535,23 @@ function FlowRow({ label, value, icon, color, pct }: FlowRowProps) {
       <Stack
         direction="row"
         justifyContent="space-between"
-        alignItems="center"
+        alignItems="flex-start"
+        spacing={1}
+        useFlexGap
         sx={{
-          mb: 0.5
+          mb: 0.5,
+          minWidth: 0,
+          flexWrap: 'wrap',
+          rowGap: 0.5
         }}>
         
-        <Stack direction="row" spacing={0.75} alignItems="center">
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0, flex: '1 1 auto' }}>
           <Box
             sx={{
               color,
-              display: 'flex'
+              display: 'flex',
+              flexShrink: 0
             }}>
-            
             {icon}
           </Box>
           <Typography variant="body2" color="text.secondary">
@@ -500,9 +561,9 @@ function FlowRow({ label, value, icon, color, pct }: FlowRowProps) {
         <Typography
           variant="body2"
           sx={{
-            fontWeight: 700
+            fontWeight: 700,
+            flexShrink: 0
           }}>
-          
           {value}
         </Typography>
       </Stack>

@@ -144,11 +144,11 @@ export interface EmailThread {
 export interface SmsMessage {
   id: string;
   eventId: string;
-  direction: 'inbound' | 'iris';
+  direction: 'inbound' | 'iris' | 'owner';
   time: string;
   body: string;
   html?: string;
-  media?: Array<{ url: string; alt: string }>;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file' }>;
 }
 
 export interface SmsThread {
@@ -251,6 +251,7 @@ export interface InboxModel {
   channelStats: Record<Exclude<ChannelId, 'properties' | 'imports'>, ChannelStats>;
   emailThreads: EmailThread[];
   smsThreads: SmsThread[];
+  textThreads: Record<'instagram' | 'messenger' | 'whatsapp' | 'website', SmsThread[]>;
   voiceContacts: VoiceContact[];
   properties: Property[];
   propertyHealth: PropertyHealth;

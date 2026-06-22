@@ -12,7 +12,16 @@ const ALLOWED = new Set([
   "image/png",
   "image/gif",
   "image/webp",
+  "audio/aac",
+  "audio/m4a",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/wav",
+  "audio/webm",
   "video/mp4",
+  "video/webm",
   "application/pdf",
 ]);
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar } from '@mui/material';
+import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar, Chip } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import { ConversationList } from './ConversationList';
@@ -107,7 +107,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
     try {
       const recentContext = thread.messages
         .slice(-6)
-        .map((message) => `${message.direction === 'iris' ? 'Iris' : thread.contact}: ${message.body || (message.media?.length ? `${message.media.length} MMS image${message.media.length === 1 ? '' : 's'}` : '')}`)
+        .map((message) => `${message.direction === 'iris' ? 'Iris' : message.direction === 'owner' ? 'Owner' : thread.contact}: ${message.body || (message.media?.length ? `${message.media.length} MMS image${message.media.length === 1 ? '' : 's'}` : '')}`)
         .filter((line) => line.trim())
         .join('\n');
       const res = await fetch('/api/voice/call', {
@@ -266,7 +266,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
               </Stack>
             </Box>
 
-            <ReaderFooter />
+            <ReaderFooter threadId={thread.id} channel="sms" to={thread.contact} />
           </Card> :
 
         <Card
@@ -288,7 +288,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
     </Box>);
 
 }
-function SmsBubble({
+export function SmsBubble({
   message,
   contact,
   highlighted,
@@ -298,6 +298,11 @@ function SmsBubble({
 
 }: {message: SmsMessage;contact: string;highlighted?: boolean;registerTarget?: (node: HTMLDivElement | null) => void;}) {
   const isIris = message.direction === 'iris';
+  const isOwner = message.direction === 'owner';
+  const isOutbound = message.direction !== 'inbound';
+  const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
+  const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
+  const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
   const cleanHtml =
     message.html && typeof window !== 'undefined'
       ? (() => {
@@ -315,7 +320,7 @@ function SmsBubble({
       ref={registerTarget}
       sx={{
         display: 'flex',
-        flexDirection: isIris ? 'row-reverse' : 'row',
+        flexDirection: isOutbound ? 'row-reverse' : 'row',
         alignItems: 'flex-end',
         gap: 1,
         scrollMargin: '24px'
@@ -328,10 +333,10 @@ function SmsBubble({
           width: 28,
           height: 28,
           flexShrink: 0,
-          bgcolor: isIris ? 'primary.main' : 'action.selected',
-          color: 'text.secondary'
+          bgcolor: isIris ? 'primary.main' : isOwner ? 'text.primary' : 'action.selected',
+          color: isOwner ? 'background.paper' : 'text.secondary'
         }}>
-        {!isIris && <PersonIcon sx={{ fontSize: 16, color: '#64748b' }} aria-hidden />}
+        {!isIris && <PersonIcon sx={{ fontSize: 16, color: isOwner ? 'background.paper' : '#64748b' }} aria-hidden />}
       </Avatar>
 
       <Box
@@ -339,13 +344,13 @@ function SmsBubble({
           maxWidth: { xs: '84%', md: '68%' },
           display: 'flex',
           flexDirection: 'column',
-          alignItems: isIris ? 'flex-end' : 'flex-start'
+          alignItems: isOutbound ? 'flex-end' : 'flex-start'
         }}>
 
         <Stack
           direction="row"
           spacing={1}
-          justifyContent={isIris ? 'flex-end' : 'flex-start'}
+          justifyContent={isOutbound ? 'flex-end' : 'flex-start'}
           alignItems="center"
           sx={{
             mb: 0.25
@@ -358,7 +363,7 @@ function SmsBubble({
               color: 'text.secondary'
             }}>
 
-            {isIris ? 'Iris sent' : `${contact} received`}
+            {isIris ? 'Iris sent' : isOwner ? 'Owner sent' : `${contact} received`}
           </Typography>
           <Typography
             sx={{
@@ -369,11 +374,43 @@ function SmsBubble({
             {message.time}
           </Typography>
         </Stack>
-        {!!message.media?.length &&
+        {!!imageMedia.length &&
         <SmsMediaGallery
-          media={message.media}
-          isIris={isIris}
+          media={imageMedia}
+          isIris={isOutbound}
           hasText={Boolean(message.body || cleanHtml)} />
+        }
+        {!!audioMedia.length &&
+        <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (message.body || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+          {audioMedia.map((item, index) => (
+            <Box
+              key={`${item.url}-${index}`}
+              sx={{
+                p: 0.75,
+                borderRadius: 2,
+                bgcolor: isOutbound ? 'primary.main' : 'background.default',
+                border: '1px solid',
+                borderColor: isOutbound ? 'rgba(255,255,255,0.18)' : 'divider',
+                '& audio': { display: 'block', width: { xs: 210, sm: 260 }, maxWidth: '100%' }
+              }}>
+              <audio controls preload="metadata" src={item.url} />
+            </Box>
+          ))}
+        </Stack>
+        }
+        {!!fileMedia.length &&
+        <Stack spacing={0.5} sx={{ mt: imageMedia.length || audioMedia.length ? 0.7 : 0, mb: (message.body || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+          {fileMedia.map((item, index) => (
+            <Chip
+              key={`${item.url}-${index}`}
+              component="a"
+              href={item.url}
+              clickable
+              size="small"
+              label={item.alt || 'Attachment'}
+            />
+          ))}
+        </Stack>
         }
         {(message.body || cleanHtml) &&
         <Box
@@ -382,11 +419,11 @@ function SmsBubble({
             py: 1,
             px: 1.75,
             borderRadius: '16px',
-            borderBottomRightRadius: isIris ? '4px' : '16px',
-            borderBottomLeftRadius: isIris ? '16px' : '4px',
-            bgcolor: isIris ? 'primary.main' : 'background.default',
-            color: isIris ? '#fff' : 'text.secondary',
-            border: highlighted ? '1px solid' : isIris ? 'none' : '1px solid',
+            borderBottomRightRadius: isOutbound ? '4px' : '16px',
+            borderBottomLeftRadius: isOutbound ? '16px' : '4px',
+            bgcolor: isIris ? 'primary.main' : isOwner ? 'text.primary' : 'background.default',
+            color: isOutbound ? '#fff' : 'text.secondary',
+            border: highlighted ? '1px solid' : isOutbound ? 'none' : '1px solid',
             borderColor: highlighted ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
           }}>
@@ -396,9 +433,9 @@ function SmsBubble({
             sx={{
               fontSize: '0.875rem',
               lineHeight: 1.5,
-              color: isIris ? '#fff' : 'text.secondary',
+              color: isOutbound ? '#fff' : 'text.secondary',
               overflowWrap: 'anywhere',
-              '& a': { color: isIris ? '#fff' : 'primary.main' },
+              '& a': { color: isOutbound ? '#fff' : 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
               '& p': { m: 0, mb: 0.75 }
             }}
@@ -421,7 +458,7 @@ function SmsBubble({
 
 }
 
-function SmsMediaGallery({
+export function SmsMediaGallery({
   media,
   isIris,
   hasText
