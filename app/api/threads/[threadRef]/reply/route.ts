@@ -6,6 +6,7 @@ import { recordChannelInteraction } from "@/lib/channelIngest";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { type EmailAttachment, sendManualReply } from "@/lib/manualReply";
 import { databaseEnabled, upsertThreadLinkInDatabase } from "@/lib/database";
+import { readMediaUpload } from "@/lib/mediaUploads";
 
 export const dynamic = "force-dynamic";
 
@@ -21,27 +22,40 @@ type ReplyBody = {
 };
 
 // Map public /uploads/<filename> URL → absolute disk path for email attachment reads.
-function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["channel"]): EmailAttachment[] {
+async function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["channel"]): Promise<EmailAttachment[]> {
   if (channel !== "email") return [];
-  return mediaUrls
-    .map((url) => {
-      const match = /\/uploads\/([^?#]+)$/.exec(url);
-      if (!match) return null;
-      const filename = match[1];
-      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-      const contentTypeMap: Record<string, string> = {
-        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-        gif: "image/gif", webp: "image/webp", pdf: "application/pdf",
-        m4a: "audio/mp4", mp3: "audio/mpeg", ogg: "audio/ogg", opus: "audio/ogg",
-        wav: "audio/wav", webm: "audio/webm", mp4: "video/mp4",
-      };
-      return {
-        filename,
-        contentType: contentTypeMap[ext] ?? "application/octet-stream",
-        path: join(process.cwd(), "public", "uploads", filename),
-      } satisfies EmailAttachment;
-    })
-    .filter(Boolean) as EmailAttachment[];
+  const attachments: EmailAttachment[] = [];
+  for (const url of mediaUrls) {
+    const dbMatch = /\/api\/media\/uploads\/([^/?#]+)\/([^?#]+)$/.exec(url);
+    if (dbMatch) {
+      const upload = await readMediaUpload(decodeURIComponent(dbMatch[1]));
+      if (upload) {
+        attachments.push({
+          filename: upload.filename,
+          contentType: upload.contentType,
+          data: upload.data,
+        });
+      }
+      continue;
+    }
+
+    const match = /\/uploads\/([^?#]+)$/.exec(url);
+    if (!match) continue;
+    const filename = decodeURIComponent(match[1]);
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    const contentTypeMap: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+      gif: "image/gif", webp: "image/webp", pdf: "application/pdf",
+      m4a: "audio/mp4", mp3: "audio/mpeg", ogg: "audio/ogg", opus: "audio/ogg",
+      wav: "audio/wav", webm: "audio/webm", mp4: "video/mp4",
+    };
+    attachments.push({
+      filename,
+      contentType: contentTypeMap[ext] ?? "application/octet-stream",
+      path: join(process.cwd(), "public", "uploads", filename),
+    });
+  }
+  return attachments;
 }
 
 function mediaLogLabel(channel: ReplyBody["channel"], url: string): string {
@@ -72,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
 
   const result = await sendManualReply({
     ...input,
-    attachments: resolveAttachments(input.mediaUrls, input.channel),
+    attachments: await resolveAttachments(input.mediaUrls, input.channel),
   });
   if (!result.ok) return NextResponse.json(result, { status: 502 });
 

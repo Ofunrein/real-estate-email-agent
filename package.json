@@ -41,6 +41,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@types/dompurify": "^3.0.5",
     "@vapi-ai/server-sdk": "^1.2.0",
+    "@vercel/blob": "^2.4.1",
     "dompurify": "^3.4.11",
     "fish-audio": "^0.1.0",
     "framer-motion": "^12.40.0",
