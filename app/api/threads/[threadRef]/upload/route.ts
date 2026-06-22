@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeManualVoiceUpload } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB (Twilio MMS limit ~5MB; WhatsApp/Gmail higher)

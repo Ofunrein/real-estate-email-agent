@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
-import { transcribeFishAudio } from "@/lib/fishAudio";
+import { transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await transcribeFishAudio(file);
+    const result = await transcribeDeepgramAudio(file);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "transcription_failed";

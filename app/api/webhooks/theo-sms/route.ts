@@ -12,7 +12,7 @@ import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
-import { fishAudioEnabled, transcribeFishAudio } from "@/lib/fishAudio";
+import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 
 export const dynamic = "force-dynamic";
 
@@ -247,7 +247,7 @@ async function fetchTwilioMediaFile(url: string, contentType: string, index: num
 
 async function payloadWithVoiceTranscripts(payload: Record<string, string>): Promise<Record<string, string>> {
   const indexes = inboundVoiceMediaIndexes(payload);
-  if (!indexes.length || !fishAudioEnabled()) return payload;
+  if (!indexes.length || !deepgramAudioEnabled()) return payload;
 
   const transcripts: string[] = [];
   for (const index of indexes.slice(0, 2)) {
@@ -255,7 +255,7 @@ async function payloadWithVoiceTranscripts(payload: Record<string, string>): Pro
     const mediaType = payload[`MediaContentType${index}`] || "";
     try {
       const file = await fetchTwilioMediaFile(mediaUrl, mediaType, index);
-      const result = await transcribeFishAudio(file);
+      const result = await transcribeDeepgramAudio(file);
       const text = result.text.trim();
       if (text) transcripts.push(text);
     } catch (error) {
