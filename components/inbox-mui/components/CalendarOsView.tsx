@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -22,6 +22,7 @@ import EventIcon from '@mui/icons-material/EventOutlined';
 import GroupIcon from '@mui/icons-material/GroupsOutlined';
 import LinkOffIcon from '@mui/icons-material/LinkOffOutlined';
 import SettingsIcon from '@mui/icons-material/SettingsOutlined';
+import SyncIcon from '@mui/icons-material/SyncOutlined';
 import TuneIcon from '@mui/icons-material/TuneOutlined';
 import VideocamIcon from '@mui/icons-material/VideocamOutlined';
 
@@ -161,53 +162,63 @@ export function CalendarOsView() {
   const [settings, setSettings] = useState<CalendarSetting[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [message, setMessage] = useState('');
+  const [busyAction, setBusyAction] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadCalendar = useCallback(async () => {
+    setState('loading');
+    try {
+      const [appointmentsResult, settingsResult] = await Promise.allSettled([
+        readJson('/api/calendar/appointments'),
+        readJson('/api/calendar/settings')
+      ]);
 
-    async function loadCalendar() {
-      setState('loading');
-      try {
-        const [appointmentsResult, settingsResult] = await Promise.allSettled([
-          readJson('/api/calendar/appointments'),
-          readJson('/api/calendar/settings')
-        ]);
-        if (cancelled) return;
+      const nextAppointments = appointmentsResult.status === 'fulfilled'
+        ? listFrom(appointmentsResult.value, ['appointments', 'events', 'items', 'results']).map(appointmentFrom)
+        : [];
+      const nextSettings = settingsResult.status === 'fulfilled'
+        ? listFrom(settingsResult.value, ['settings', 'calendars', 'items', 'results']).map(settingFrom)
+        : [];
 
-        const nextAppointments = appointmentsResult.status === 'fulfilled'
-          ? listFrom(appointmentsResult.value, ['appointments', 'events', 'items', 'results']).map(appointmentFrom)
-          : [];
-        const nextSettings = settingsResult.status === 'fulfilled'
-          ? listFrom(settingsResult.value, ['settings', 'calendars', 'items', 'results']).map(settingFrom)
-          : [];
+      setAppointments(nextAppointments);
+      setSettings(nextSettings);
 
-        setAppointments(nextAppointments);
-        setSettings(nextSettings);
-
-        if (appointmentsResult.status === 'rejected' && settingsResult.status === 'rejected') {
-          setState('disconnected');
-          setMessage('Calendar APIs are not available. Connect or migrate calendar data to populate this workspace.');
-          return;
-        }
-        if (!nextAppointments.length && !nextSettings.length) {
-          setState('empty');
-          setMessage('Calendar APIs responded, but no appointments or settings were returned.');
-          return;
-        }
-        setState('ready');
-        setMessage('');
-      } catch {
-        if (cancelled) return;
+      if (appointmentsResult.status === 'rejected' && settingsResult.status === 'rejected') {
         setState('disconnected');
         setMessage('Calendar APIs are not available. Connect or migrate calendar data to populate this workspace.');
+        return;
       }
+      if (!nextAppointments.length && !nextSettings.length) {
+        setState('empty');
+        setMessage('Calendar APIs responded, but no appointments or settings were returned.');
+        return;
+      }
+      setState('ready');
+      setMessage('');
+    } catch {
+      setState('disconnected');
+      setMessage('Calendar APIs are not available. Connect or migrate calendar data to populate this workspace.');
     }
-
-    void loadCalendar();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadCalendar();
+  }, [loadCalendar]);
+
+  async function syncCalendar() {
+    setBusyAction('sync');
+    setMessage('');
+    try {
+      const response = await fetch('/api/calendar/sync/full', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Calendar sync failed');
+      await loadCalendar();
+      setMessage(`Synced ${data.summary?.itemsWritten || 0} calendar events from ${data.summary?.connections || 0} connected account(s).`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Calendar sync failed');
+    } finally {
+      setBusyAction('');
+    }
+  }
 
   const displayAppointments = appointments;
   const displaySettings = settings.length ? settings : disconnectedSettings;
@@ -242,6 +253,22 @@ export function CalendarOsView() {
           <ToggleButton value="week">Week</ToggleButton>
           <ToggleButton value="month">Month</ToggleButton>
         </ToggleButtonGroup>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<SyncIcon />}
+            disabled={Boolean(busyAction)}
+            onClick={() => void syncCalendar()}>
+            Sync calendar
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/calendar/connect/google'; }}>
+            Connect Google
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/calendar/connect/outlook'; }}>
+            Connect Outlook
+          </Button>
+        </Stack>
       </Stack>
 
       {state === 'loading' ? (

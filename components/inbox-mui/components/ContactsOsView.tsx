@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Avatar,
   Box,
+  Button,
   Card,
   Chip,
   CircularProgress,
@@ -24,6 +25,8 @@ import LocalOfferIcon from '@mui/icons-material/LocalOfferOutlined';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import StarIcon from '@mui/icons-material/StarOutline';
+import SyncIcon from '@mui/icons-material/SyncOutlined';
+import UploadFileIcon from '@mui/icons-material/UploadFileOutlined';
 import WorkspacesIcon from '@mui/icons-material/WorkspacesOutlined';
 
 type ContactTab = 'directory' | 'profile';
@@ -126,38 +129,71 @@ export function ContactsOsView() {
   const [selectedId, setSelectedId] = useState('');
   const [state, setState] = useState<LoadState>('loading');
   const [message, setMessage] = useState('');
+  const [busyAction, setBusyAction] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const reloadContacts = useCallback(async () => {
+    setState('loading');
+    try {
+      const nextContacts = await loadContacts();
+      setContacts(nextContacts);
+      setSelectedId((current) => current && nextContacts.some((contact) => contact.id === current) ? current : nextContacts[0]?.id || '');
+      if (!nextContacts.length) {
+        setState('empty');
+        setMessage('Contacts API responded, but no contacts were returned.');
+        return;
+      }
+      setState('ready');
+      setMessage('');
+    } catch {
+      setContacts([]);
+      setSelectedId('');
+      setState('mock');
+      setMessage('Contacts API is not available. Connect or import contacts to populate this workspace.');
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    void reloadContacts();
+  }, [reloadContacts]);
 
-    async function run() {
-      setState('loading');
-      try {
-        const nextContacts = await loadContacts();
-        if (cancelled) return;
-        setContacts(nextContacts);
-        setSelectedId(nextContacts[0]?.id || '');
-        if (!nextContacts.length) {
-          setState('empty');
-          setMessage('Contacts API responded, but no contacts were returned.');
-          return;
-        }
-        setState('ready');
-        setMessage('');
-      } catch {
-        if (cancelled) return;
-        setContacts([]);
-        setSelectedId('');
-        setState('mock');
-        setMessage('Contacts API is not available. Connect or import contacts to populate this workspace.');
-      }
+  async function importCsv(file: File) {
+    setBusyAction('import');
+    setMessage('');
+    try {
+      const body = new FormData();
+      body.set('file', file);
+      body.set('dryRun', 'false');
+      const response = await fetch('/api/contacts/import', { method: 'POST', body });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Contact import failed');
+      await reloadContacts();
+      const summary = data.summary || {};
+      setMessage(`Imported ${summary.importedContacts || 0} contacts from ${file.name}. ${summary.duplicateRows || 0} duplicates skipped.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Contact import failed');
+      setState('mock');
+    } finally {
+      setBusyAction('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }
 
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  async function syncContacts() {
+    setBusyAction('sync');
+    setMessage('');
+    try {
+      const response = await fetch('/api/contacts/sync/full', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Contact sync failed');
+      await reloadContacts();
+      setMessage(`Synced ${data.summary?.itemsWritten || 0} contacts from ${data.summary?.connections || 0} connected account(s).`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Contact sync failed');
+    } finally {
+      setBusyAction('');
+    }
+  }
 
   const displayContacts = contacts;
   const filteredContacts = useMemo(() => {
@@ -205,6 +241,40 @@ export function ContactsOsView() {
           }}
           aria-label="Search contacts"
         />
+        <input
+          ref={fileInputRef}
+          hidden
+          type="file"
+          accept=".csv,text/csv"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void importCsv(file);
+          }}
+        />
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<UploadFileIcon />}
+            disabled={Boolean(busyAction)}
+            onClick={() => fileInputRef.current?.click()}>
+            Import CSV
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<SyncIcon />}
+            disabled={Boolean(busyAction)}
+            onClick={() => void syncContacts()}>
+            Sync contacts
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/contacts/connect/google'; }}>
+            Connect Google
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/contacts/connect/outlook'; }}>
+            Connect Outlook
+          </Button>
+        </Stack>
       </Stack>
 
       {state === 'loading' ? (

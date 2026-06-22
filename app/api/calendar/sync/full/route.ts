@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+import { syncCalendars } from "@/lib/calendarContactsSync";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   const session = await requireDashboardAuth();
-  if (!session) return unauthorizedResponse();
-  return NextResponse.json({
-    ok: true,
-    status: "queued",
-    syncType: "full",
-    message: "Full calendar sync endpoint is available; provider execution runs through backend adapters when a connection exists.",
-  });
+  if (!session?.user?.email) return unauthorizedResponse();
+  const summary = await syncCalendars({ userEmail: session.user.email, syncType: "full" });
+  return NextResponse.json({ ok: summary.errors.length === 0, status: "complete", summary });
 }
