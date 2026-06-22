@@ -32,6 +32,11 @@ export function persistActivityEventTarget(event: ActivityEvent) {
   window.localStorage.setItem("iris.inbox.last.event", eventId);
 }
 
+export function clearActivityEventTarget() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+}
+
 export function useActivityEventTarget(
   channel: Exclude<ChannelId, "all" | "properties" | "imports">,
   threadId: string | undefined,
