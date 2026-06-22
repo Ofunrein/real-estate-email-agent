@@ -60,6 +60,7 @@ test("socialDmIngestInput: stores separate social channel thread refs", () => {
   const ingest = socialDmIngestInput(input, shouldTheoHandleSocialDm(input));
   assert.equal(ingest.channel, "messenger");
   assert.equal(ingest.threadRef, "messenger:contact_4");
+  assert.equal(ingest.phone, "contact_4");
   assert.equal(ingest.source, "manychat");
   assert.equal(ingest.agentName, "Iris");
 });

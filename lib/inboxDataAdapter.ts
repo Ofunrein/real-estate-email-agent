@@ -516,6 +516,7 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
         thread: {
         id: key,
         contact: threadIdentity(latest.thread_ref || key, sorted, eventChannel(latest)),
+        replyTo: ["instagram", "messenger"].includes(eventChannel(latest)) ? latest.phone || "" : latest.phone || key,
         time: formatEventTimeShort(latest.event_at),
         preview: latestText.body || (latestText.media.length ? `${latestText.media.length} image${latestText.media.length === 1 ? "" : "s"}` : (latest.summary || "").slice(0, 80)),
         messageCount: sorted.length,

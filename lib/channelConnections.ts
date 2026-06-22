@@ -221,6 +221,14 @@ export function envFallbackChannelConnections(
     }),
     fallbackRecord({
       clientId,
+      channel: "whatsapp",
+      provider: "composio_whatsapp",
+      connected: false,
+      healthReason: "Connect and select a WhatsApp Business account through Composio.",
+      metadata: { composio_auth_configured: composioConfigured && configured(env.COMPOSIO_WHATSAPP_AUTH_CONFIG_ID) },
+    }),
+    fallbackRecord({
+      clientId,
       channel: "instagram",
       provider: manychatConfigured ? "manychat" : "composio_instagram",
       connected: false,
