@@ -20,6 +20,11 @@ import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 import type { InboxSettings } from '@/lib/inboxSettings';
+import {
+  type ConnectionStatus,
+  displayForChannelConnection,
+  useChannelConnectionStatus
+} from '../hooks/useChannelConnectionStatus';
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -43,26 +48,6 @@ const composioConnections = [
   ['facebook', 'Facebook Messenger', 'Facebook Page messaging'],
   ['whatsapp', 'WhatsApp Business', 'Business number or WABA'],
 ] as const;
-
-type ConnectionRecord = {
-  channel: string;
-  provider: string;
-  selected_asset_name?: string;
-  selected_asset_id?: string;
-  status: string;
-  health_reason?: string;
-  metadata?: Record<string, unknown>;
-};
-
-type ConnectionStatus = {
-  fallback?: boolean;
-  connections?: ConnectionRecord[];
-  channels?: Record<string, {
-    connected: boolean;
-    needs_config: boolean;
-    connections: ConnectionRecord[];
-  }>;
-};
 
 function ToggleGrid({
   items,
@@ -141,7 +126,15 @@ function ToggleGrid({
   );
 }
 
-function ComposioConnectionGrid({ status }: { status: ConnectionStatus | null }) {
+function ComposioConnectionGrid({
+  status,
+  disconnectingId,
+  onDisconnect
+}: {
+  status: ConnectionStatus | null;
+  disconnectingId: string;
+  onDisconnect: (id: string) => void;
+}) {
   const channelForSlug = (slug: string) => slug === 'facebook' ? 'messenger' : slug;
   const connectionForSlug = (slug: string) => {
     const channel = channelForSlug(slug);
@@ -160,10 +153,21 @@ function ComposioConnectionGrid({ status }: { status: ConnectionStatus | null })
       {composioConnections.map(([slug, label, helper]) => (
         (() => {
           const connection = connectionForSlug(slug);
-          const connected = connection?.status === 'connected';
+          const connected = connection?.status === 'connected' && Boolean(connection.selected_asset_name || connection.selected_asset_id || connection.connected_account_id);
           const authConfigured = Boolean(connection?.metadata?.composio_auth_configured);
-          const pill = connected ? 'connected' : authConfigured ? 'auth ready' : 'needs config';
+          const display = displayForChannelConnection(
+            status,
+            channelForSlug(slug) as Parameters<typeof displayForChannelConnection>[1],
+            '',
+            ''
+          );
+          const pill = connected ? 'connected' : authConfigured ? 'auth configured' : 'needs config';
           const tone = connected ? 'success' : authConfigured ? 'info' : 'warning';
+          const detail = connected
+            ? `Connected to ${display.value}`
+            : authConfigured
+              ? 'Auth is configured. Connect and select the actual account to activate Iris.'
+              : connection?.health_reason || helper;
           return (
         <Box
           key={slug}
@@ -192,16 +196,29 @@ function ComposioConnectionGrid({ status }: { status: ConnectionStatus | null })
               />
             </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.15, mt: 0.25 }}>
-              {connection?.selected_asset_name || connection?.selected_asset_id || connection?.health_reason || helper}
+              {detail}
             </Typography>
           </Box>
-          <Button
-            href={`/api/settings/composio/connect/${slug}`}
-            variant="outlined"
-            size="small"
-            sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
-            {connected ? 'Reconnect' : 'Connect'}
-          </Button>
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            <Button
+              href={`/api/settings/composio/connect/${slug}`}
+              variant="outlined"
+              size="small"
+              sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
+              {connected ? 'Change' : 'Connect'}
+            </Button>
+            {connected && connection?.id &&
+            <Button
+              variant="text"
+              color="error"
+              size="small"
+              disabled={disconnectingId === connection.id}
+              onClick={() => onDisconnect(connection.id)}
+              sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
+              {disconnectingId === connection.id ? 'Disconnecting...' : 'Disconnect'}
+            </Button>
+            }
+          </Stack>
         </Box>
           );
         })()
@@ -221,8 +238,13 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   );
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
-  const [connectionError, setConnectionError] = useState('');
+  const [disconnectingId, setDisconnectingId] = useState('');
+  const [disconnectError, setDisconnectError] = useState('');
+  const {
+    status: connectionStatus,
+    error: connectionError,
+    refresh: refreshConnections,
+  } = useChannelConnectionStatus(open);
   const [categoriesOn, setCategoriesOn] = useState<
     Record<LeadCategoryId, boolean>>(
 
@@ -246,21 +268,20 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     setSaveStatus('idle');
   }, [inboxSettings, leadCategories, open]);
 
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    setConnectionError('');
-    void fetch('/api/settings/channel-connections')
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `connection status failed (${res.status})`);
-        if (!cancelled) setConnectionStatus(data);
-      })
-      .catch((error) => {
-        if (!cancelled) setConnectionError(error instanceof Error ? error.message : 'Could not load connection status.');
-      });
-    return () => { cancelled = true; };
-  }, [open]);
+  const disconnectConnection = async (id: string) => {
+    setDisconnectingId(id);
+    setDisconnectError('');
+    try {
+      const res = await fetch(`/api/settings/channel-connections?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || 'Could not disconnect account.');
+      await refreshConnections();
+    } catch (error) {
+      setDisconnectError(error instanceof Error ? error.message : 'Could not disconnect account.');
+    } finally {
+      setDisconnectingId('');
+    }
+  };
 
   const saveSettings = async () => {
     setSaving(true);
@@ -427,8 +448,12 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           Connect social inboxes through Composio. SMS and Voice stay on the provisioned Twilio/Vapi numbers.
         </Typography>
-        {connectionError && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError}</Alert>}
-        <ComposioConnectionGrid status={connectionStatus} />
+        {(connectionError || disconnectError) && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError || disconnectError}</Alert>}
+        <ComposioConnectionGrid
+          status={connectionStatus}
+          disconnectingId={disconnectingId}
+          onDisconnect={disconnectConnection}
+        />
       </Card>
 
       <Card

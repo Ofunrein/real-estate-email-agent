@@ -303,6 +303,15 @@ export function SmsBubble({
   const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
   const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
   const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
+  const voiceTranscripts = (message.body || "")
+    .split("\n")
+    .map((line) => line.trim().match(/^Voice note transcript:\s*(.+)$/i)?.[1]?.trim() || "")
+    .filter(Boolean);
+  const visibleBody = (message.body || "")
+    .split("\n")
+    .filter((line) => !/^Voice note transcript:/i.test(line.trim()))
+    .join("\n")
+    .trim();
   const cleanHtml =
     message.html && typeof window !== 'undefined'
       ? (() => {
@@ -333,10 +342,14 @@ export function SmsBubble({
           width: 28,
           height: 28,
           flexShrink: 0,
-          bgcolor: isIris ? 'primary.main' : isOwner ? 'text.primary' : 'action.selected',
-          color: isOwner ? 'background.paper' : 'text.secondary'
+          bgcolor: (theme) => isIris
+            ? theme.palette.primary.main
+            : isOwner
+              ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.2)' : theme.palette.text.primary
+              : theme.palette.action.selected,
+          color: (theme) => isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : 'background.paper'
         }}>
-        {!isIris && <PersonIcon sx={{ fontSize: 16, color: isOwner ? 'background.paper' : '#64748b' }} aria-hidden />}
+        {!isIris && <PersonIcon sx={{ fontSize: 16, color: (theme) => isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : isOwner ? theme.palette.background.paper : '#64748b' }} aria-hidden />}
       </Avatar>
 
       <Box
@@ -378,22 +391,45 @@ export function SmsBubble({
         <SmsMediaGallery
           media={imageMedia}
           isIris={isOutbound}
-          hasText={Boolean(message.body || cleanHtml)} />
+          hasText={Boolean(visibleBody || cleanHtml || voiceTranscripts.length)} />
         }
         {!!audioMedia.length &&
-        <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (message.body || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+        <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (visibleBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
           {audioMedia.map((item, index) => (
             <Box
               key={`${item.url}-${index}`}
               sx={{
                 p: 0.75,
-                borderRadius: 2,
-                bgcolor: isOutbound ? 'primary.main' : 'background.default',
+                borderRadius: 3,
+                bgcolor: (theme) => isOutbound
+                  ? theme.palette.primary.main
+                  : theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.default,
                 border: '1px solid',
-                borderColor: isOutbound ? 'rgba(255,255,255,0.18)' : 'divider',
-                '& audio': { display: 'block', width: { xs: 210, sm: 260 }, maxWidth: '100%' }
+                borderColor: (theme) => isOutbound ? 'rgba(255,255,255,0.18)' : theme.palette.divider,
+                boxShadow: isOutbound ? '0 8px 24px rgba(99,102,241,0.18)' : 'none',
+                '& audio': {
+                  display: 'block',
+                  width: { xs: 210, sm: 260 },
+                  maxWidth: '100%',
+                  height: 34,
+                  colorScheme: (theme) => theme.palette.mode
+                }
               }}>
               <audio controls preload="metadata" src={item.url} />
+              {voiceTranscripts[index] &&
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  mt: 0.65,
+                  px: 0.5,
+                  color: isOutbound ? 'rgba(255,255,255,0.82)' : 'text.secondary',
+                  lineHeight: 1.35,
+                  whiteSpace: 'pre-wrap'
+                }}>
+                {voiceTranscripts[index]}
+              </Typography>
+              }
             </Box>
           ))}
         </Stack>
@@ -412,7 +448,7 @@ export function SmsBubble({
           ))}
         </Stack>
         }
-        {(message.body || cleanHtml) &&
+        {(visibleBody || cleanHtml) &&
         <Box
           sx={{
             mt: message.media?.length ? 0.7 : 0,
@@ -421,8 +457,14 @@ export function SmsBubble({
             borderRadius: '16px',
             borderBottomRightRadius: isOutbound ? '4px' : '16px',
             borderBottomLeftRadius: isOutbound ? '16px' : '4px',
-            bgcolor: isIris ? 'primary.main' : isOwner ? 'text.primary' : 'background.default',
-            color: isOutbound ? '#fff' : 'text.secondary',
+            bgcolor: (theme) => isIris
+              ? theme.palette.primary.main
+              : isOwner
+                ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.16)' : theme.palette.text.primary
+                : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : theme.palette.background.default,
+            color: (theme) => isOutbound
+              ? isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff'
+              : theme.palette.text.secondary,
             border: highlighted ? '1px solid' : isOutbound ? 'none' : '1px solid',
             borderColor: highlighted ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
@@ -433,7 +475,7 @@ export function SmsBubble({
             sx={{
               fontSize: '0.875rem',
               lineHeight: 1.5,
-              color: isOutbound ? '#fff' : 'text.secondary',
+              color: (theme) => isOutbound ? isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff' : theme.palette.text.secondary,
               overflowWrap: 'anywhere',
               '& a': { color: isOutbound ? '#fff' : 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
@@ -448,7 +490,7 @@ export function SmsBubble({
               overflowWrap: 'anywhere'
             }}>
 
-            {message.body}
+            {visibleBody}
           </Typography>
           }
         </Box>

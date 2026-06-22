@@ -50,11 +50,22 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
     .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
 }
 
+function mediaLogLabel(url: string): string {
+  const lower = url.toLowerCase();
+  if (/\.(?:m4a|mp3|aac|wav|ogg|webm)(?:[?#]|$)/i.test(lower) || /(?:audio|voice)/i.test(lower)) {
+    return "MMS audio";
+  }
+  if (/\.(?:jpg|jpeg|png|gif|webp|heic)(?:[?#]|$)/i.test(lower) || /(?:photo|image)/i.test(lower)) {
+    return "MMS image";
+  }
+  return "MMS media";
+}
+
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
   const cleanBody = body.trim();
   const cleanUrls = cleanMediaUrls(mediaUrls);
   if (!cleanUrls.length) return cleanBody;
-  return [cleanBody, "", ...cleanUrls.map((url) => `MMS image: ${url}`)].join("\n");
+  return [cleanBody, "", ...cleanUrls.map((url) => `${mediaLogLabel(url)}: ${url}`)].filter(Boolean).join("\n");
 }
 
 export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
@@ -70,8 +81,8 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
 
   const recipient = smsRecipientAddress(to);
   const message = body.trim();
-  if (!recipient || !message) {
-    return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or body", mediaCount: cleanUrls.length };
+  if (!recipient || (!message && !cleanUrls.length)) {
+    return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or message media", mediaCount: cleanUrls.length };
   }
   if (isUnsafeSmsRecipient(recipient)) {
     return {
@@ -99,8 +110,10 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
   const form = new URLSearchParams({
     To: recipient,
     From: fromNumber,
-    Body: message,
   });
+  if (message) {
+    form.append("Body", message);
+  }
   for (const mediaUrl of cleanUrls) {
     form.append("MediaUrl", mediaUrl);
   }

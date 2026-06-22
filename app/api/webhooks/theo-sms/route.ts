@@ -12,6 +12,7 @@ import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
+import { fishAudioEnabled, transcribeFishAudio } from "@/lib/fishAudio";
 
 export const dynamic = "force-dynamic";
 
@@ -208,12 +209,78 @@ async function recordTheoOutbound(input: TheoOutboundInput) {
   });
 }
 
+function inboundVoiceMediaIndexes(payload: Record<string, string>): number[] {
+  const count = Math.max(0, Number(payload.NumMedia || "0") || 0);
+  const indexes: number[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const url = (payload[`MediaUrl${i}`] || "").trim();
+    const contentType = (payload[`MediaContentType${i}`] || "").toLowerCase();
+    if (url && (contentType.startsWith("audio/") || contentType.startsWith("video/"))) {
+      indexes.push(i);
+    }
+  }
+  return indexes;
+}
+
+function extensionForMediaType(contentType: string): string {
+  if (contentType.includes("mp4") || contentType.includes("m4a")) return "m4a";
+  if (contentType.includes("mpeg") || contentType.includes("mp3")) return "mp3";
+  if (contentType.includes("ogg") || contentType.includes("opus")) return "ogg";
+  if (contentType.includes("wav")) return "wav";
+  if (contentType.includes("webm")) return "webm";
+  return "m4a";
+}
+
+async function fetchTwilioMediaFile(url: string, contentType: string, index: number): Promise<File> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+  const authToken = process.env.TWILIO_AUTH_TOKEN || "";
+  const response = await fetch(url, {
+    headers: accountSid && authToken
+      ? { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` }
+      : undefined,
+  });
+  if (!response.ok) throw new Error(`Twilio media fetch failed: ${response.status}`);
+  const mediaType = response.headers.get("content-type") || contentType || "audio/mp4";
+  const bytes = await response.arrayBuffer();
+  return new File([bytes], `inbound-voice-note-${index}.${extensionForMediaType(mediaType)}`, { type: mediaType });
+}
+
+async function payloadWithVoiceTranscripts(payload: Record<string, string>): Promise<Record<string, string>> {
+  const indexes = inboundVoiceMediaIndexes(payload);
+  if (!indexes.length || !fishAudioEnabled()) return payload;
+
+  const transcripts: string[] = [];
+  for (const index of indexes.slice(0, 2)) {
+    const mediaUrl = payload[`MediaUrl${index}`] || "";
+    const mediaType = payload[`MediaContentType${index}`] || "";
+    try {
+      const file = await fetchTwilioMediaFile(mediaUrl, mediaType, index);
+      const result = await transcribeFishAudio(file);
+      const text = result.text.trim();
+      if (text) transcripts.push(text);
+    } catch (error) {
+      logTheo("voice note transcription skipped", {
+        mediaIndex: index,
+        error: error instanceof Error ? error.message : "transcription_failed",
+      });
+    }
+  }
+
+  if (!transcripts.length) return payload;
+  return {
+    ...payload,
+    Body: [payload.Body || "", ...transcripts.map((text) => `Voice note transcript: ${text}`)]
+      .filter((part) => part.trim())
+      .join("\n\n"),
+  };
+}
+
 export async function POST(request: NextRequest) {
   const requestStarted = nowMs();
   try {
     assertWebhookSecret(request);
     const parseStarted = nowMs();
-    const payload = stringPayload(await parseWebhookPayload(request));
+    let payload = stringPayload(await parseWebhookPayload(request));
     const leadPhone = normalizeTwilioContactAddress(payload.From || "");
     logTheo("inbound received", {
       from: payload.From,
@@ -252,6 +319,16 @@ export async function POST(request: NextRequest) {
         status: "skipped",
         action: "blocked_system_otp",
         reply_sent: false,
+      });
+    }
+    const transcriptStarted = nowMs();
+    payload = await payloadWithVoiceTranscripts(payload);
+    if (elapsedMs(transcriptStarted) > 10) {
+      logTheo("voice media transcript processed", {
+        from: payload.From,
+        voiceMedia: inboundVoiceMediaIndexes(payload).length,
+        hasTranscript: /voice note transcript:/i.test(payload.Body || ""),
+        elapsedMs: elapsedMs(transcriptStarted),
       });
     }
     const inboundInput = twilioSmsIngestInput(payload);

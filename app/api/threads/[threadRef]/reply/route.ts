@@ -15,6 +15,7 @@ type ReplyBody = {
   to: string;
   body: string;
   mediaUrls?: string[];
+  mediaTranscripts?: Array<{ url?: string; text?: string }>;
   subject?: string;
   threadId?: string;
   messageId?: string;
@@ -68,7 +69,13 @@ function mediaLogLabel(channel: ReplyBody["channel"], url: string): string {
 
 function messageWithMediaLog(input: ReplyBody): string {
   const body = input.body?.trim() || "";
-  const mediaLines = (input.mediaUrls || []).map((url) => `${mediaLogLabel(input.channel, url)}: ${url}`);
+  const mediaLines = (input.mediaUrls || []).flatMap((url) => {
+    const transcript = input.mediaTranscripts?.find((item) => item.url === url)?.text?.trim();
+    return [
+      `${mediaLogLabel(input.channel, url)}: ${url}`,
+      transcript ? `Voice note transcript: ${transcript}` : "",
+    ].filter(Boolean);
+  });
   return [body, ...mediaLines].filter(Boolean).join("\n\n");
 }
 

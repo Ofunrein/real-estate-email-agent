@@ -13,15 +13,19 @@ import {
 import { useInboxModel } from '../InboxDataContext';
 import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
+import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 
 type TextChannelId = Extract<ChannelId, 'instagram' | 'messenger' | 'whatsapp' | 'website'>;
 
 export function TextChannelView({ channel }: { channel: TextChannelId }) {
-  const { textThreads, leadCategories, channelMeta, channelStats } = useInboxModel();
+  const { textThreads, leadCategories, channelMeta, channelStats, channelAccounts } = useInboxModel();
+  const { status: connectionStatus } = useChannelConnectionStatus(true);
   const threads = textThreads[channel] || [];
   const meta = channelMeta[channel];
   const stats = channelStats[channel];
+  const account = channelAccounts[channel];
+  const accountDisplay = displayForChannelConnection(connectionStatus, channel, account.value, account.status);
   const { colors } = useCategoryColors();
   const categoryValues = useMemo(
     () => ['all', ...leadCategories.map((c) => c.id)] as CategoryFilterValue[],
@@ -108,7 +112,9 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
       <WorkspaceHeader
         title={`${meta.label} Threads`}
         subtitle="Read and operate the exact conversation as Iris handled it."
-        count={`${stats?.events || 0} touches`} />
+        count={`${stats?.events || 0} touches`}
+        agentActive={accountDisplay.ready}
+        agentLabel={accountDisplay.ready ? 'Agent active' : 'Setup needed'} />
 
       <CategoryFilter
         value={category}

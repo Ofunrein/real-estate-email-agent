@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Chip, Stack, Typography, Button, TextField, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFileOutlined';
 import CloseIcon from '@mui/icons-material/Close';
@@ -21,7 +21,50 @@ interface ReaderFooterProps {
   disabledReason?: string;
 }
 
-type QueuedAttachment = { url: string; filename: string };
+type QueuedAttachment = { url: string; filename: string; transcript?: string };
+
+function RecordingWaveform({ seconds }: { seconds: number }) {
+  return (
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        height: 42,
+        px: 1.25,
+        borderRadius: 999,
+        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#08090d' : '#111827',
+        color: '#ff365f',
+        border: '1px solid',
+        borderColor: 'rgba(255,54,95,0.22)'
+      }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flex: 1, minWidth: 0, height: 22, overflow: 'hidden' }}>
+        {Array.from({ length: 38 }).map((_, index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 2,
+              borderRadius: 999,
+              bgcolor: '#ff365f',
+              height: `${7 + ((index * 13) % 18)}px`,
+              animation: 'irisWavePulse 620ms ease-in-out infinite',
+              animationDelay: `${index * 28}ms`,
+              '@keyframes irisWavePulse': {
+                '0%, 100%': { transform: 'scaleY(0.55)', opacity: 0.62 },
+                '50%': { transform: 'scaleY(1.15)', opacity: 1 }
+              }
+            }}
+          />
+        ))}
+      </Box>
+      <Typography sx={{ fontSize: 12, fontWeight: 800, color: '#ff365f', fontVariantNumeric: 'tabular-nums' }}>
+        0:{String(seconds).padStart(2, '0')}
+      </Typography>
+    </Stack>
+  );
+}
 
 export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledReason }: ReaderFooterProps) {
   const [takenOver, setTakenOver] = useState(false);
@@ -31,6 +74,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const [uploading, setUploading] = useState(false);
   const [generatingVoice, setGeneratingVoice] = useState(false);
   const [recordingVoice, setRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [cloningVoice, setCloningVoice] = useState(false);
   const [voiceCloneStatus, setVoiceCloneStatus] = useState('');
   const [handingBack, setHandingBack] = useState(false);
@@ -41,6 +85,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingStartedAtRef = useRef(0);
   const canSendChannel = channel !== 'website';
   const sendTarget = to || threadId || '';
 
@@ -65,8 +110,19 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     }
   };
 
-  const uploadFiles = async (files: FileList | File[]) => {
-    if (!threadId || !files.length) return;
+  useEffect(() => {
+    if (!recordingVoice) {
+      setRecordingSeconds(0);
+      return undefined;
+    }
+    const tick = () => setRecordingSeconds(Math.max(0, Math.round((Date.now() - recordingStartedAtRef.current) / 1000)));
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [recordingVoice]);
+
+  const uploadFiles = async (files: FileList | File[]): Promise<QueuedAttachment[]> => {
+    if (!threadId || !files.length) return [];
     setUploading(true);
     setError('');
     try {
@@ -80,8 +136,10 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
         uploaded.push({ url: data.url, filename: data.filename || file.name });
       }
       setAttachments((current) => [...current, ...uploaded]);
+      return uploaded;
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Could not upload attachment.');
+      return [];
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -111,6 +169,9 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
           body,
           subject,
           mediaUrls: attachments.map((attachment) => attachment.url),
+          mediaTranscripts: attachments
+            .filter((attachment) => attachment.transcript?.trim())
+            .map((attachment) => ({ url: attachment.url, text: attachment.transcript?.trim() })),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -148,11 +209,29 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     }
   };
 
+  const transcribeBlob = async (blob: Blob): Promise<string> => {
+    try {
+      const file = new File([blob], `manual-voice-transcript-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
+      const form = new FormData();
+      form.set('file', file);
+      const res = await fetch('/api/media/transcribe', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) return '';
+      return String(data.text || '').trim();
+    } catch {
+      return '';
+    }
+  };
+
   const uploadRecordedVoice = async (blob: Blob) => {
     const type = (blob.type || 'audio/webm').split(';')[0] || 'audio/webm';
     const extension = type.includes('ogg') ? 'ogg' : type.includes('mpeg') || type.includes('mp3') ? 'mp3' : 'webm';
     const file = new File([blob], `manual-voice-note-${Date.now()}.${extension}`, { type });
-    await uploadFiles([file]);
+    const [uploaded] = await uploadFiles([file]);
+    if (!uploaded) return;
+    const transcript = await transcribeBlob(blob);
+    if (!transcript) return;
+    setAttachments((current) => current.map((attachment) => attachment.url === uploaded.url ? { ...attachment, transcript } : attachment));
   };
 
   const cleanupRecordingStream = () => {
@@ -177,6 +256,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       const recorder = new MediaRecorder(stream, preferredType ? { mimeType: preferredType } : undefined);
       recordingStreamRef.current = stream;
       recordingChunksRef.current = [];
+      recordingStartedAtRef.current = Date.now();
       mediaRecorderRef.current = recorder;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) recordingChunksRef.current.push(event.data);
@@ -195,7 +275,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
         recordingChunksRef.current = [];
         if (chunks.length) void uploadRecordedVoice(new Blob(chunks, { type: mimeType }));
       };
-      recorder.start();
+      recorder.start(250);
       setRecordingVoice(true);
     } catch (recordError) {
       cleanupRecordingStream();
@@ -344,7 +424,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             <Chip
               key={attachment.url}
               size="small"
-              label={attachment.filename}
+              label={attachment.transcript ? `${attachment.filename} · transcript ready` : attachment.filename}
               onDelete={() => setAttachments((current) => current.filter((item) => item.url !== attachment.url))}
               deleteIcon={<CloseIcon />}
             />
@@ -381,6 +461,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             </IconButton>
           </span>
         </Tooltip>
+        {recordingVoice && <RecordingWaveform seconds={recordingSeconds} />}
         <Tooltip title={recordingVoice ? 'Stop recording manual voice note' : 'Record manual voice note'}>
           <span>
             <IconButton
@@ -390,13 +471,13 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
               sx={{
                 flexShrink: 0,
                 border: '1px solid',
-                borderColor: recordingVoice ? 'error.main' : 'divider',
-                bgcolor: recordingVoice ? 'error.light' : 'transparent',
-                color: recordingVoice ? 'error.contrastText' : 'inherit',
+                borderColor: recordingVoice ? '#ff365f' : 'divider',
+                bgcolor: recordingVoice ? '#ff365f' : 'transparent',
+                color: recordingVoice ? '#fff' : 'inherit',
                 borderRadius: 1.5,
                 width: 34,
                 height: 34,
-                '&:hover': { bgcolor: recordingVoice ? 'error.main' : undefined },
+                '&:hover': { bgcolor: recordingVoice ? '#e11d48' : undefined },
               }}
               aria-label={recordingVoice ? 'Stop recording manual voice note' : 'Record manual voice note'}>
               {recordingVoice ? <StopCircleIcon sx={{ fontSize: 16 }} /> : <MicIcon sx={{ fontSize: 16 }} />}
@@ -427,7 +508,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             </IconButton>
           </span>
         </Tooltip>
-        <TextField
+        {!recordingVoice && <TextField
           inputRef={inputRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -439,7 +520,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
           size="small"
           fullWidth
           sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-        />
+        />}
         <IconButton
           onClick={handleSend}
           disabled={sendDisabled}
