@@ -6,6 +6,8 @@ import MessengerIcon from '@mui/icons-material/ChatBubbleOutline';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import WebsiteIcon from '@mui/icons-material/LanguageOutlined';
 import ReopenIcon from '@mui/icons-material/AutoAwesomeMotionOutlined';
+import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined';
+import ContactsIcon from '@mui/icons-material/ContactsOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { InboxSettings } from '@/lib/inboxSettings';
 
@@ -22,8 +24,13 @@ export type ChannelId =
   | 'messenger'
   | 'whatsapp'
   | 'website'
+  | 'calendar'
+  | 'contacts'
   | 'properties'
   | 'imports';
+
+export type OperatingTabId = 'calendar' | 'contacts' | 'properties' | 'imports';
+export type MessageChannelId = Exclude<ChannelId, 'all' | OperatingTabId>;
 
 export interface Channel {
   id: ChannelId;
@@ -62,7 +69,7 @@ export type EventKind = 'inbound' | 'ai_reply' | 'note' | 'voice';
 
 export interface ActivityEvent {
   id: string;
-  channel: Exclude<ChannelId, 'all' | 'properties' | 'imports'>;
+  channel: MessageChannelId;
   threadId: string;
   threadRef: string;
   eventId?: string;
@@ -78,7 +85,7 @@ export interface ActivityEvent {
 export interface ReviewItem {
   id: string;
   key: string;
-  channel: Exclude<ChannelId, 'all' | 'properties' | 'imports'>;
+  channel: MessageChannelId;
   contact: string;
   reason: string;
   receivedAt: string;
@@ -244,12 +251,12 @@ export interface Metrics {
 
 export interface InboxModel {
   channels: Channel[];
-  channelMeta: Record<Exclude<ChannelId, 'all' | 'properties' | 'imports'>, { label: string; icon: SvgIconComponent; accent: string }>;
+  channelMeta: Record<MessageChannelId, { label: string; icon: SvgIconComponent; accent: string }>;
   channelAccounts: Record<ChannelId, ConnectedAccount>;
   leadCategories: LeadCategory[];
   activityEvents: ActivityEvent[];
   reviewQueue: ReviewItem[];
-  channelStats: Record<Exclude<ChannelId, 'properties' | 'imports'>, ChannelStats>;
+  channelStats: Record<Exclude<ChannelId, OperatingTabId>, ChannelStats>;
   emailThreads: EmailThread[];
   smsThreads: SmsThread[];
   textThreads: Record<'instagram' | 'messenger' | 'whatsapp' | 'website', SmsThread[]>;
@@ -272,7 +279,7 @@ export interface InboxModel {
 /* ----------------------------- Static config ------------------------------- */
 
 export const channelMeta: Record<
-  Exclude<ChannelId, 'all' | 'properties' | 'imports'>,
+  MessageChannelId,
   { label: string; icon: SvgIconComponent; accent: string }
 > = {
   email: { label: 'Email', icon: EmailIcon, accent: '#818cf8' },
@@ -293,11 +300,15 @@ export const channelAccounts: Record<ChannelId, ConnectedAccount> = {
   messenger: { label: 'Messenger', value: 'Not connected', status: 'SETUP NEEDED' },
   whatsapp: { label: 'WhatsApp', value: 'Not connected', status: 'SETUP NEEDED' },
   website: { label: 'Website chat', value: 'austinrealty.com', status: 'READY' },
+  calendar: { label: 'Calendar OS', value: 'Appointments', status: 'READY' },
+  contacts: { label: 'Contacts OS', value: 'Lead directory', status: 'READY' },
   properties: { label: 'Property data', value: 'Austin Realty sheet', status: 'SYNCED' },
   imports: { label: 'Lead Reopen', value: 'Import queue', status: 'READY' },
 };
 
 export const importChannelMeta = { label: 'Lead Reopen', icon: ReopenIcon, accent: '#a855f7' };
+export const calendarChannelMeta = { label: 'Calendar', icon: CalendarIcon, accent: '#38bdf8' };
+export const contactsChannelMeta = { label: 'Contacts', icon: ContactsIcon, accent: '#14b8a6' };
 
 export const leadCategories: LeadCategory[] = [
   { id: 'needs-reply', label: 'Needs Reply', color: '#8b5cf6' },

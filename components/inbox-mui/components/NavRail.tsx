@@ -12,7 +12,7 @@ import {
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import HomeOutlinedIcon from '@mui/icons-material/HomeWorkOutlined';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
-import { importChannelMeta, type ChannelId } from '../data/inboxData';
+import { calendarChannelMeta, contactsChannelMeta, importChannelMeta, type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 interface NavRailProps {
   active: ChannelId;
@@ -22,6 +22,8 @@ interface NavRailProps {
 export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
   const { channels } = useInboxModel();
   const ImportIcon = importChannelMeta.icon;
+  const ContactsIcon = contactsChannelMeta.icon;
+  const CalendarIcon = calendarChannelMeta.icon;
   return (
     <Box
       component="nav"
@@ -121,6 +123,18 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
           active={active === 'properties'}
           onClick={() => onSelect('properties')}
           accent="#94a3b8" />
+        <NavItem
+          label={contactsChannelMeta.label}
+          icon={<ContactsIcon fontSize="small" />}
+          active={active === 'contacts'}
+          onClick={() => onSelect('contacts')}
+          accent={contactsChannelMeta.accent} />
+        <NavItem
+          label={calendarChannelMeta.label}
+          icon={<CalendarIcon fontSize="small" />}
+          active={active === 'calendar'}
+          onClick={() => onSelect('calendar')}
+          accent={calendarChannelMeta.accent} />
         <NavItem
           label={importChannelMeta.label}
           icon={<ImportIcon fontSize="small" />}
