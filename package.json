@@ -33,7 +33,9 @@
     "test:py": "pytest tests/"
   },
   "dependencies": {
+    "@cartesia/cartesia-js": "^3.2.0",
     "@composio/core": "^0.11.0",
+    "@deepgram/sdk": "^5.4.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.11",

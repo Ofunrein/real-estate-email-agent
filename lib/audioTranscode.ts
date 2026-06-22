@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -20,9 +21,26 @@ function m4aFilename(name: string): string {
   return name.replace(/\.(webm|ogg)$/i, ".m4a") || `manual-voice-note-${Date.now()}.m4a`;
 }
 
+async function resolveFfmpegPath(): Promise<string> {
+  const candidates = [
+    ffmpegPath,
+    join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg"),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Try the next candidate; bundled serverless paths can differ by build mode.
+    }
+  }
+  throw new Error("Audio conversion is not available on this server");
+}
+
 export async function normalizeManualVoiceUpload(file: File): Promise<File> {
   if (!shouldTranscodeForSmsAudio(file)) return file;
-  if (!ffmpegPath) throw new Error("Audio conversion is not available on this server");
+  const executable = await resolveFfmpegPath();
 
   const id = randomUUID();
   const inputPath = join(tmpdir(), `${id}.webm`);
@@ -30,7 +48,7 @@ export async function normalizeManualVoiceUpload(file: File): Promise<File> {
 
   try {
     await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
-    await execFileAsync(ffmpegPath, [
+    await execFileAsync(executable, [
       "-y",
       "-i",
       inputPath,

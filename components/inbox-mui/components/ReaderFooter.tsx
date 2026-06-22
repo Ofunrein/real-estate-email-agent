@@ -77,6 +77,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [cloningVoice, setCloningVoice] = useState(false);
   const [voiceCloneStatus, setVoiceCloneStatus] = useState('');
+  const [voiceCloneId, setVoiceCloneId] = useState('');
   const [handingBack, setHandingBack] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -88,6 +89,11 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const recordingStartedAtRef = useRef(0);
   const canSendChannel = channel !== 'website';
   const sendTarget = to || threadId || '';
+
+  useEffect(() => {
+    const savedVoiceId = window.localStorage.getItem('iris.operator.cartesiaVoiceId');
+    if (savedVoiceId) setVoiceCloneId(savedVoiceId);
+  }, []);
 
   const handleTakeOver = async () => {
     if (!threadId) {
@@ -194,7 +200,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       const res = await fetch('/api/media/voice-note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voiceId: voiceCloneId || undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false || !data.url) throw new Error(data.error || 'Voice note could not be generated.');
@@ -306,6 +312,9 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       const res = await fetch('/api/media/voice-clone', { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false || !data.voiceId) throw new Error(data.error || 'Voice clone could not be created.');
+      const nextVoiceId = String(data.voiceId);
+      setVoiceCloneId(nextVoiceId);
+      window.localStorage.setItem('iris.operator.cartesiaVoiceId', nextVoiceId);
       setVoiceCloneStatus(`Voice clone ready: ${String(data.voiceId).slice(0, 8)}...`);
     } catch (cloneError) {
       setError(cloneError instanceof Error ? cloneError.message : 'Voice clone could not be created.');

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
-import { cloneFishVoice } from "@/lib/fishAudio";
+import { cloneCartesiaVoice } from "@/lib/cartesiaAudio";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
@@ -22,8 +23,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await cloneFishVoice({ title, files, texts });
-    return NextResponse.json({ ok: true, voiceId: result.id, title: result.title, state: result.state });
+    const result = await cloneCartesiaVoice({
+      title,
+      files,
+      description: texts.find((text) => text.trim()),
+    });
+    return NextResponse.json({ ok: true, provider: "cartesia", voiceId: result.id, title: result.title, state: result.state });
   } catch (error) {
     const message = error instanceof Error ? error.message : "voice_clone_failed";
     return NextResponse.json({ ok: false, error: message }, { status: 503 });
