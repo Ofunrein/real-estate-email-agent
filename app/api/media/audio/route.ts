@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 const ALLOWED_AUDIO_HOSTS = new Set([
   "storage.vapi.ai",
   "recordings.vapi.ai",
+  "api.twilio.com",
 ]);
 
 function allowedAudioUrl(value: string): URL | null {
@@ -25,15 +26,24 @@ export async function GET(request: NextRequest) {
   }
 
   const range = request.headers.get("range") || "";
+  const isTwilioMedia = source.hostname.toLowerCase() === "api.twilio.com";
+  const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
+  const authToken = process.env.TWILIO_AUTH_TOKEN || "";
   const response = await fetch(source, {
     headers: {
       "User-Agent": "LumenosisVoiceMediaProxy/1.0",
       Accept: "audio/*,*/*;q=0.8",
       ...(range ? { Range: range } : {}),
+      ...(isTwilioMedia && accountSid && authToken
+        ? { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}` }
+        : {}),
     },
     signal: AbortSignal.timeout(15_000),
   });
-  const contentType = response.headers.get("content-type") || "audio/mpeg";
+  const rawContentType = response.headers.get("content-type") || "audio/mpeg";
+  const contentType = isTwilioMedia && rawContentType.toLowerCase().startsWith("video/")
+    ? "audio/mp4"
+    : rawContentType;
   if (!response.ok && response.status !== 206) {
     return NextResponse.json({ ok: false, error: "Audio is not fetchable" }, { status: 502 });
   }

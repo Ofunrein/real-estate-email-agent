@@ -26,6 +26,7 @@ import { Moon, Sun } from 'lucide-react';
 import { importChannelMeta, type ChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useColorMode } from '../theme/ColorModeContext';
+import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 interface TopBarProps {
   channel: ChannelId;
   onOpenNav?: () => void;
@@ -44,6 +45,7 @@ export function TopBar({
 }: TopBarProps) {
   const { mode, toggle } = useColorMode();
   const { channelMeta, channelAccounts } = useInboxModel();
+  const { status: connectionStatus } = useChannelConnectionStatus(true);
   const [profileAnchor, setProfileAnchor] = React.useState<HTMLElement | null>(null);
   const profileOpen = Boolean(profileAnchor);
   const title =
@@ -55,6 +57,13 @@ export function TopBar({
   importChannelMeta.label :
   (channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>]?.label ?? channel);
   const account = channelAccounts[channel];
+  const accountDisplay = displayForChannelConnection(
+    connectionStatus,
+    channel,
+    account?.value || '',
+    account?.status || ''
+  );
+  const agentReady = accountDisplay.ready;
   const accountMeta =
   channel === 'all' || channel === 'properties' || channel === 'imports' ?
   undefined :
@@ -116,7 +125,7 @@ export function TopBar({
               }} />
 
             }
-            label="Agent active"
+            label={agentReady ? 'Agent active' : 'Setup needed'}
             sx={{
               flexShrink: 0,
               display: {
@@ -124,9 +133,9 @@ export function TopBar({
                 sm: 'inline-flex'
               },
               bgcolor: 'action.selected',
-              color: 'success.main',
+              color: agentReady ? 'success.main' : 'warning.main',
               '& .MuiChip-icon': {
-                color: 'success.main'
+                color: agentReady ? 'success.main' : 'warning.main'
               }
             }} />
           
@@ -181,11 +190,11 @@ export function TopBar({
               }}
               noWrap>
               
-              {account.value}
+              {accountDisplay.value}
             </Typography>
             <Typography
               variant="caption"
-              color="success.main"
+              color={agentReady ? 'success.main' : 'warning.main'}
               sx={{
                 display: 'block',
                 fontWeight: 800,
@@ -193,7 +202,7 @@ export function TopBar({
                 lineHeight: 1.2
               }}>
               
-              {account.status}
+              {accountDisplay.status}
             </Typography>
           </Box>
         </Box>
@@ -273,7 +282,7 @@ export function TopBar({
         <CircleIcon
           sx={{
             fontSize: 10,
-            color: 'success.main',
+            color: agentReady ? 'success.main' : 'warning.main',
             display: {
               xs: 'none',
               sm: 'block'

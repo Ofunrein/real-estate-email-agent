@@ -8,12 +8,16 @@ interface WorkspaceHeaderProps {
   subtitle: string;
   count: string;
   reviewCount?: number;
+  agentActive?: boolean;
+  agentLabel?: string;
 }
 export function WorkspaceHeader({
   title,
   subtitle,
   count,
-  reviewCount
+  reviewCount,
+  agentActive = true,
+  agentLabel
 }: WorkspaceHeaderProps) {
   return (
     <Box
@@ -45,12 +49,12 @@ export function WorkspaceHeader({
               }} />
 
             }
-            label="Agent active"
+            label={agentLabel || (agentActive ? "Agent active" : "Setup needed")}
             sx={{
               bgcolor: 'action.selected',
-              color: 'success.main',
+              color: agentActive ? 'success.main' : 'warning.main',
               '& .MuiChip-icon': {
-                color: 'success.main'
+                color: agentActive ? 'success.main' : 'warning.main'
               }
             }} />
           
