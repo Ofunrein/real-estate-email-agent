@@ -37,6 +37,11 @@ const channelAvailability = [
   ['messenger', 'Messenger'],
   ['instagram', 'Instagram DMs'],
 ] as const;
+const composioConnections = [
+  ['instagram', 'Instagram DMs', 'Business or Creator account'],
+  ['facebook', 'Facebook Messenger', 'Facebook Page messaging'],
+  ['whatsapp', 'WhatsApp Business', 'Business number or WABA'],
+] as const;
 
 function ToggleGrid({
   items,
@@ -111,6 +116,49 @@ function ToggleGrid({
           sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 17, sm: 19 } } }} />
       </Box>
       )}
+    </Box>
+  );
+}
+
+function ComposioConnectionGrid() {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 132px), 1fr))',
+        gap: { xs: 0.75, sm: 1 }
+      }}>
+      {composioConnections.map(([slug, label, helper]) => (
+        <Box
+          key={slug}
+          sx={{
+            minWidth: 0,
+            p: { xs: 0.9, sm: 1 },
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1.25,
+            bgcolor: 'background.paper',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.75
+          }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: { xs: 12, sm: 13 }, fontWeight: 800, lineHeight: 1.15 }}>
+              {label}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.15, mt: 0.25 }}>
+              {helper}
+            </Typography>
+          </Box>
+          <Button
+            href={`/api/settings/composio/connect/${slug}`}
+            variant="outlined"
+            size="small"
+            sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
+            Connect
+          </Button>
+        </Box>
+      ))}
     </Box>
   );
 }
@@ -288,6 +336,33 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             [key]: checked
           }))
           } />
+      </Card>
+
+      <Card
+        variant="outlined"
+        sx={{
+          p: {
+            xs: 1.25,
+            sm: 2
+          },
+          mb: {
+            xs: 1.5,
+            sm: 2
+          }
+        }}>
+        <Typography
+          variant="overline"
+          color="text.secondary"
+          sx={{
+            display: 'block',
+            mb: 1
+          }}>
+          Connections
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          Connect social inboxes through Composio. SMS and Voice stay on the provisioned Twilio/Vapi numbers.
+        </Typography>
+        <ComposioConnectionGrid />
       </Card>
 
       <Card

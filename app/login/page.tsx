@@ -52,21 +52,13 @@ export default async function LoginPage({
             <span className="login-orbit-chip login-orbit-chip-three">Voice</span>
             <span className="login-orbit-chip login-orbit-chip-four">Gmail</span>
           </div>
-          <div>
+          <div className="login-brand-copy">
             <span className="login-eyebrow">Lumenosis AI</span>
             <h1>Iris lead desk</h1>
             <p>
               One operating layer for approved teams to monitor leads, review drafts,
               and keep every real estate conversation moving.
             </p>
-            <div className="login-signal-grid">
-              <span>Gmail</span>
-              <span>SMS</span>
-              <span>Voice</span>
-              <span>CRM</span>
-              <span>Listings</span>
-              <span>Human handoff</span>
-            </div>
           </div>
         </div>
         <div className="login-form-card login-auth-card">

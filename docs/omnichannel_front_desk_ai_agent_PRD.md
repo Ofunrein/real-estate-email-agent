@@ -11,6 +11,15 @@
 
 The repo-aligned execution plan lives in [omnichannel_execution_plan.md](./omnichannel_execution_plan.md). Use that document for build order, channel ownership, Composio-vs-direct decisions, subagent workstreams, test gates, and deployment sequencing.
 
+Current build stance:
+
+- Lumenosis is a managed implementation product, not self-serve SaaS.
+- Lead Reopen campaign activation requires review before any imported lead is messaged.
+- Instagram and Facebook Messenger should connect through Composio where supported, but production sending stays gated by selected account/page, Meta policy, and a real smoke test.
+- WhatsApp stays direct Meta/Twilio first; Composio WhatsApp is optional where a client connects a usable WhatsApp Business asset.
+- Fish Audio is the preferred voice clone/TTS/STT vendor for future voice-note workflows. Vapi remains the voice-call transport.
+- iMessage is out of scope.
+
 ---
 
 ## 1. Product Overview
