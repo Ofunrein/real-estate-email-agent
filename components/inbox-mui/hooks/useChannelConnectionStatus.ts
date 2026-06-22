@@ -33,6 +33,8 @@ export type ChannelConnectionDisplay = {
   ready: boolean;
   value: string;
   status: string;
+  subtitle?: string;
+  avatarUrl?: string;
   connection?: ChannelConnectionRecord;
 };
 
@@ -42,6 +44,11 @@ function selectedAssetLabel(connection?: ChannelConnectionRecord) {
   return [
     connection?.selected_asset_name,
     typeof connection?.metadata?.display_name === "string" ? connection.metadata.display_name : "",
+    typeof connection?.metadata?.handle === "string" ? connection.metadata.handle : "",
+    typeof connection?.metadata?.username === "string" ? `@${String(connection.metadata.username).replace(/^@/, "")}` : "",
+    typeof connection?.metadata?.page_name === "string" ? connection.metadata.page_name : "",
+    typeof connection?.metadata?.verified_name === "string" ? connection.metadata.verified_name : "",
+    typeof connection?.metadata?.display_phone_number === "string" ? connection.metadata.display_phone_number : "",
     typeof connection?.metadata?.word_id === "string" ? connection.metadata.word_id : "",
   ].map((value) => String(value || "").trim()).find(Boolean) || "";
 }
@@ -54,6 +61,32 @@ function outboundReady(connection?: ChannelConnectionRecord) {
   if (!connection) return false;
   if (connection.metadata?.outbound_ready === false) return false;
   return true;
+}
+
+function metadataString(connection: ChannelConnectionRecord | undefined, keys: string[]) {
+  if (!connection?.metadata) return "";
+  return keys
+    .map((key) => connection.metadata?.[key])
+    .map((value) => typeof value === "string" ? value.trim() : "")
+    .find(Boolean) || "";
+}
+
+function connectionAvatarUrl(connection?: ChannelConnectionRecord) {
+  return metadataString(connection, ["profile_image_url", "page_picture_url", "avatar_url", "picture_url"]);
+}
+
+function connectionSubtitle(connection?: ChannelConnectionRecord) {
+  if (!connection) return "";
+  if (connection.channel === "instagram") {
+    return metadataString(connection, ["profile_url", "account_type"]) || "Instagram Business";
+  }
+  if (connection.channel === "messenger") {
+    return metadataString(connection, ["page_category", "profile_url"]) || "Facebook Page";
+  }
+  if (connection.channel === "whatsapp") {
+    return metadataString(connection, ["verified_name", "display_phone_number"]) || "WhatsApp Business";
+  }
+  return "";
 }
 
 function byNewest(a: ChannelConnectionRecord, b: ChannelConnectionRecord) {
@@ -89,6 +122,8 @@ export function displayForChannelConnection(
       ready,
       value: label,
       status: ready ? "READY" : "SETUP NEEDED",
+      subtitle: connectionSubtitle(connected),
+      avatarUrl: connectionAvatarUrl(connected),
       connection: connected,
     };
   }
@@ -98,6 +133,8 @@ export function displayForChannelConnection(
       ready: false,
       value: "No account connected",
       status: "SETUP NEEDED",
+      subtitle: connectionSubtitle(configured),
+      avatarUrl: connectionAvatarUrl(configured),
       connection: configured,
     };
   }
@@ -106,6 +143,8 @@ export function displayForChannelConnection(
     ready: false,
     value: "Not connected",
     status: "SETUP NEEDED",
+    subtitle: connectionSubtitle(connection),
+    avatarUrl: connectionAvatarUrl(connection),
     connection,
   };
 }

@@ -161,6 +161,8 @@ const SENSITIVE_FLAGS = new Set([
 
 const STREET_ADDRESS_RE =
   /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/gi;
+const PROPERTY_URL_RE =
+  /\bhttps?:\/\/(?:www\.)?(?:zillow|realtor|redfin|homes|trulia)\.com\/[^\s<>"')]+/gi;
 
 function uniq(values: string[]): string[] {
   const seen = new Set<string>();
@@ -226,6 +228,10 @@ function extractAddresses(text: string): string[] {
   return uniq((text.match(STREET_ADDRESS_RE) || []).map((value) => value.replace(/\s+/g, " ")));
 }
 
+function extractPropertyUrls(text: string): string[] {
+  return uniq(text.match(PROPERTY_URL_RE) || []);
+}
+
 function extractBudget(text: string): string | null {
   const match = text.match(/\$ ?\d[\d,.]*(?:\s?[kKmM])?|\b\d[\d,.]*\s?(?:k|m)\b/);
   return match ? match[0].replace(/\s+/g, "") : null;
@@ -274,6 +280,7 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields): string |
 export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" | "body">): IrisEmailClassification {
   const clean = cleanBody(`${message.subject || ""}\n${message.body || ""}`);
   const addresses = extractAddresses(clean);
+  const propertyUrls = extractPropertyUrls(clean);
   const flags = detectIrisComplianceFlags(clean);
   const noSignal = noOrStopSignal(clean);
   const fields: IrisLeadFields = {
@@ -290,12 +297,12 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const opportunityTags: string[] = [];
 
   const spamLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution)/i.test(clean);
-  const realEstateLike = /(home|house|condo|property|listing|showing|tour|buy|sell|rent|lease|realtor|real estate|bedroom|mortgage)/i.test(clean) || addresses.length > 0;
+  const realEstateLike = /(home|house|condo|property|listing|showing|tour|buy|sell|rent|lease|realtor|real estate|bedroom|mortgage)/i.test(clean) || addresses.length > 0 || propertyUrls.length > 0;
   if (spamLike && !realEstateLike) {
     intent = "spam";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
-  } else if (addresses.length) {
+  } else if (addresses.length || propertyUrls.length) {
     intent = /(show|tour|see|visit|schedule|available today|open house)/i.test(clean) ? "showing_request" : "property_details";
     role = "buyer";
   } else if (/(showing|tour|open house|see it|view it|schedule|appointment)/i.test(clean)) {
@@ -921,14 +928,46 @@ function decodeBase64Url(value = ""): string {
   return Buffer.from(value.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function htmlToText(value: string): string {
+  return decodeHtmlEntities(value)
+    .replace(/<\s*(br|\/p|\/div|\/li|\/tr)\b[^>]*>/gi, "\n")
+    .replace(/<\s*(p|div|li|tr)\b[^>]*>/gi, "\n")
+    .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_match, href, label) => `${label} ${href}`)
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function bodyFromPayload(payload: Record<string, unknown> | undefined): string {
   if (!payload) return "";
   const body = payload.body as { data?: string } | undefined;
-  if (body?.data) return decodeBase64Url(body.data);
+  const mimeType = String(payload.mimeType || "");
+  if (body?.data) {
+    const decoded = decodeBase64Url(body.data);
+    return /html/i.test(mimeType) ? htmlToText(decoded) : decoded;
+  }
   const parts = payload.parts as Record<string, unknown>[] | undefined;
   if (!parts?.length) return "";
-  const plain = parts.find((part) => part.mimeType === "text/plain");
-  return bodyFromPayload(plain || parts[0]);
+  const plain = parts.find((part) => String(part.mimeType || "") === "text/plain");
+  if (plain) return bodyFromPayload(plain);
+  const html = parts.find((part) => /html/i.test(String(part.mimeType || "")));
+  if (html) return bodyFromPayload(html);
+  return parts.map((part) => bodyFromPayload(part)).filter(Boolean).join("\n").trim();
 }
 
 function gmailSearchToken(value: string): string {
@@ -945,7 +984,7 @@ export function irisEmailPollQuery(): string {
     process.env.GMAIL_INBOUND_EMAIL ||
     ""
   ).trim().toLowerCase();
-  const parts = ["in:inbox", `newer_than:${gmailSearchToken(lookback)}`];
+  const parts = ["in:inbox", "is:unread", `newer_than:${gmailSearchToken(lookback)}`];
   if (inboundEmail.includes("@")) {
     const token = gmailSearchToken(inboundEmail);
     parts.push(`{to:${token} deliveredto:${token}}`);

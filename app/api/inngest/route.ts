@@ -2,6 +2,7 @@ import { serve } from "inngest/next";
 import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
+import { composioSocialMinutePoll } from "@/lib/inngest/functions/composioSocialMinutePoll";
 import { irisEmailMinutePoll } from "@/lib/inngest/functions/irisEmailMinutePoll";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export const runtime = "nodejs";
 
 const inngestHandler = serve({
   client: inngest,
-  functions: [irisEmailMinutePoll],
+  functions: [irisEmailMinutePoll, composioSocialMinutePoll],
 });
 
 function missingSigningKeyResponse() {

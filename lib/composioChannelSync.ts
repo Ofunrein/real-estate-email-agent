@@ -47,6 +47,16 @@ function nestedString(value: unknown, path: string[]): string {
   return typeof cursor === "string" ? cursor.trim() : "";
 }
 
+function pictureUrl(value: unknown): string {
+  return [
+    nestedString(value, ["picture", "data", "url"]),
+    nestedString(value, ["picture", "url"]),
+    nestedString(value, ["profile_picture_url"]),
+    nestedString(value, ["profilePictureUrl"]),
+    nestedString(value, ["avatar_url"]),
+  ].find(Boolean) || "";
+}
+
 function displayName(channel: SocialConnectChannel, account: Record<string, unknown>) {
   const data = account.data;
   return [
@@ -113,18 +123,24 @@ async function enrichConnectedAccount(input: {
         "INSTAGRAM_GET_USER_INFO",
         input.userId,
         input.connectedAccountId,
-        { ig_user_id: "me" },
+        { ig_user_id: "me", fields: "id,username,name,account_type,profile_picture_url" },
       );
       const data = jsonRecord(info.data);
       const username = String(data.username || "").trim();
       const id = String(data.id || "").trim();
+      const name = String(data.name || "").trim();
+      const profileImageUrl = pictureUrl(data);
       return {
         selectedAssetId: id || input.connectedAccountId,
-        selectedAssetName: username ? `@${username.replace(/^@/, "")}` : fallbackName,
+        selectedAssetName: username ? `@${username.replace(/^@/, "")}` : name || fallbackName,
         sourceDetail: {
           instagram_user_id: id,
           username,
+          handle: username ? `@${username.replace(/^@/, "")}` : "",
+          display_name: name || (username ? `@${username.replace(/^@/, "")}` : fallbackName),
           account_type: String(data.account_type || ""),
+          profile_image_url: profileImageUrl,
+          profile_url: username ? `https://www.instagram.com/${username.replace(/^@/, "")}/` : "",
         },
         defaultSendArguments: {},
       };
@@ -148,9 +164,11 @@ async function enrichConnectedAccount(input: {
         { limit: 25, fields: "id,name,category,tasks,link,picture" },
       );
       const pages = firstArray(pagesResult, ["data", "data"]);
-      const page = pages[0] || {};
+      const configuredPageId = process.env.COMPOSIO_FACEBOOK_PAGE_ID || "";
+      const page = pages.find((item) => String(item.id || "") === configuredPageId) || pages[0] || {};
       const pageId = String(page.id || "").trim();
       const pageName = String(page.name || "").trim();
+      const pagePictureUrl = pictureUrl(page);
       return {
         selectedAssetId: pageId || input.connectedAccountId,
         selectedAssetName: pageName || fallbackName,
@@ -159,6 +177,9 @@ async function enrichConnectedAccount(input: {
           page_name: pageName,
           page_category: String(page.category || ""),
           page_count: pages.length,
+          profile_image_url: pagePictureUrl,
+          page_picture_url: pagePictureUrl,
+          profile_url: String(page.link || ""),
         },
         defaultSendArguments: pageId ? { page_id: pageId } : {},
       };
@@ -189,12 +210,15 @@ async function enrichConnectedAccount(input: {
       const phone = phones[0] || {};
       const phoneNumberId = String(phone.id || phone.phone_number_id || "").trim();
       const displayPhone = String(phone.display_phone_number || phone.verified_name || phone.name || "").trim();
+      const verifiedName = String(phone.verified_name || phone.name || "").trim();
       return {
         selectedAssetId: phoneNumberId || input.connectedAccountId,
         selectedAssetName: displayPhone || fallbackName,
         sourceDetail: {
           phone_number_id: phoneNumberId,
           display_phone_number: displayPhone,
+          verified_name: verifiedName,
+          display_name: verifiedName || displayPhone,
           phone_count: phones.length,
         },
         defaultSendArguments: phoneNumberId ? { phone_number_id: phoneNumberId } : {},

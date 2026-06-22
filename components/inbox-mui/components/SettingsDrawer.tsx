@@ -9,6 +9,7 @@ import {
   Checkbox,
   FormControlLabel,
   Card,
+  Avatar,
   Chip,
   Divider,
   Tooltip,
@@ -228,7 +229,22 @@ function ComposioConnectionGrid({
               bgcolor: 'action.hover'
             }
           }}>
-          <Box sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0 }}>
+          {display.avatarUrl && (
+            <Avatar
+              src={display.avatarUrl}
+              alt={display.value}
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                flexShrink: 0
+              }}
+            />
+          )}
+          <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between" sx={{ minWidth: 0 }}>
               <Typography noWrap sx={{ fontSize: { xs: 13, sm: 14 }, fontWeight: 850, lineHeight: 1.15, minWidth: 0 }}>
                 {label}
@@ -244,12 +260,18 @@ function ComposioConnectionGrid({
             <Typography variant="caption" color={connected ? 'text.primary' : 'text.secondary'} sx={{ display: 'block', lineHeight: 1.25, mt: 0.5, fontWeight: connected ? 700 : 500 }} noWrap>
               {detail}
             </Typography>
+            {connected && display.subtitle && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2, mt: 0.25 }} noWrap>
+                {display.subtitle}
+              </Typography>
+            )}
             {connected && missing.length > 0 && (
               <Typography variant="caption" color="warning.main" sx={{ display: 'block', lineHeight: 1.2, mt: 0.25 }} noWrap>
                 Finish send setup
               </Typography>
             )}
           </Box>
+          </Stack>
           <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
             <Button
               href={connectUrl}
