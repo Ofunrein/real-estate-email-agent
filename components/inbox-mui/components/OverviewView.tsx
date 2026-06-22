@@ -52,7 +52,7 @@ export function OverviewView({ active = true, onOpenActivityEvent }: {active?: b
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
-            label="Events"
+            label="Conversations handled"
             value={metrics.events}
             hint={`${metrics.threads} threads tracked`}
             accent="#06b6d4"

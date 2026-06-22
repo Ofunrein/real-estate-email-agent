@@ -93,13 +93,13 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
                 ml: 0.5
               }}>
               
-              events
+              touches
             </Box>
           </Typography>
         </Box>
       </Stack>
       <Typography variant="caption" color="text.secondary">
-        Peak {metrics.peakDay} · {metrics.peakCount} events
+        Peak {metrics.peakDay} · {metrics.peakCount} touches
       </Typography>
 
       <Box
@@ -157,7 +157,7 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
                   zIndex: 2
                 }}>
                 
-                {v} events
+                {v} touches
               </Box>
               {/* Outer wrapper replays grow-up; inner bar keeps hover scaleX separate. */}
               <Box

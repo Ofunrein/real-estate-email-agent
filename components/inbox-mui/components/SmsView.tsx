@@ -151,7 +151,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
       <WorkspaceHeader
         title="SMS Threads"
         subtitle="Read the exact conversation as the AI handled it."
-        count="51 events" />
+        count="51 touches" />
       
 
       <CategoryFilter
