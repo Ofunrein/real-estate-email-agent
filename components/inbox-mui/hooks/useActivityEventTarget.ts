@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { ActivityEvent, ChannelId } from "../data/inboxData";
+import type { ActivityEvent, MessageChannelId } from "../data/inboxData";
 
 const STORAGE_KEY = "iris.inbox.activityTarget";
 
@@ -38,7 +38,7 @@ export function clearActivityEventTarget() {
 }
 
 export function useActivityEventTarget(
-  channel: Exclude<ChannelId, "all" | "properties" | "imports">,
+  channel: MessageChannelId,
   threadId: string | undefined,
 ) {
   const [eventId, setEventId] = useState<string | null>(null);

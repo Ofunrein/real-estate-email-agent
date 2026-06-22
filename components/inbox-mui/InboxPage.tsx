@@ -12,12 +12,14 @@ import { EmptyChannelView } from './components/EmptyChannelView';
 import { TextChannelView } from './components/TextChannelView';
 import { PropertiesView } from './components/PropertiesView';
 import { ImportsView } from './components/ImportsView';
+import { CalendarOsView } from './components/CalendarOsView';
+import { ContactsOsView } from './components/ContactsOsView';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { type ActivityEvent, type ChannelId } from './data/inboxData';
 import { persistActivityEventTarget } from './hooks/useActivityEventTarget';
 import { usePersistedSelection } from './hooks/usePersistedSelection';
 
-const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'properties', 'imports'];
+const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'calendar', 'contacts', 'properties', 'imports'];
 
 export function InboxPage() {
   const [channel, setChannel, channelReady] = usePersistedSelection<ChannelId>('iris.inbox.channel', 'all', CHANNEL_IDS);
@@ -26,7 +28,7 @@ export function InboxPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const theme = useTheme();
   const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
-  const showContextRail = channel !== 'properties' && channel !== 'imports';
+  const showContextRail = channel !== 'properties' && channel !== 'imports' && channel !== 'calendar' && channel !== 'contacts';
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -229,6 +231,10 @@ function ChannelContent({
     case 'whatsapp':
     case 'website':
       return <TextChannelView channel={channel} />;
+    case 'calendar':
+      return <CalendarOsView />;
+    case 'contacts':
+      return <ContactsOsView />;
     case 'properties':
       return <PropertiesView />;
     case 'imports':

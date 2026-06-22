@@ -23,7 +23,13 @@ import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { signOut } from 'next-auth/react';
 import { Moon, Sun } from 'lucide-react';
-import { importChannelMeta, type ChannelId } from '../data/inboxData';
+import {
+  calendarChannelMeta,
+  contactsChannelMeta,
+  importChannelMeta,
+  type ChannelId,
+  type MessageChannelId
+} from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useColorMode } from '../theme/ColorModeContext';
 import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
@@ -60,9 +66,13 @@ export function TopBar({
   'Overview' :
   channel === 'properties' ?
   'Properties' :
+  channel === 'calendar' ?
+  calendarChannelMeta.label :
+  channel === 'contacts' ?
+  contactsChannelMeta.label :
   channel === 'imports' ?
   importChannelMeta.label :
-  (channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>]?.label ?? channel);
+  (channelMeta[channel as MessageChannelId]?.label ?? channel);
   const account = channelAccounts[channel];
   const accountDisplay = displayForChannelConnection(
     connectionStatus,
@@ -73,9 +83,9 @@ export function TopBar({
   const agentReady = accountDisplay.ready;
   const connectSlug = composioConnectSlug[channel];
   const accountMeta =
-  channel === 'all' || channel === 'properties' || channel === 'imports' ?
+  channel === 'all' || channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ?
   undefined :
-  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>];
+  channelMeta[channel as MessageChannelId];
   const AccountIcon = accountMeta?.icon;
   return (
     <Box
