@@ -43,7 +43,10 @@ export function parseDraftKey(key: string): { channel: Channel; threadRef: strin
 
 export function conversationKey(event: SheetRow, channel?: Channel | string): string {
   const normalizedChannel = channel || eventChannel(event);
-  if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(normalizedChannel)) {
+  if (["messenger", "instagram"].includes(normalizedChannel)) {
+    return event.phone || event.thread_ref || event.email || event.full_name || "unknown";
+  }
+  if (["sms", "whatsapp", "voice"].includes(normalizedChannel)) {
     return event.phone || event.thread_ref || event.email || "unknown";
   }
   if (normalizedChannel === "email") {
@@ -75,6 +78,9 @@ export function buildChannelThreads(events: SheetRow[], channel: Channel): [stri
 export function threadIdentity(threadRef: string, events: SheetRow[], channel?: Channel | string): string {
   const latest = latestEvent(events);
   if (channel === "email") return latest.email || threadRef;
+  if (["messenger", "instagram"].includes(channel || "")) {
+    return latest.full_name || latest.phone || threadRef;
+  }
   if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(channel || "")) {
     return latest.phone || latest.full_name || threadRef;
   }

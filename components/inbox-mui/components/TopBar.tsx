@@ -35,6 +35,13 @@ interface TopBarProps {
   showNavToggle?: boolean;
   showContextToggle?: boolean;
 }
+
+const composioConnectSlug: Partial<Record<ChannelId, string>> = {
+  instagram: 'instagram',
+  messenger: 'facebook',
+  whatsapp: 'whatsapp',
+};
+
 export function TopBar({
   channel,
   onOpenNav,
@@ -64,6 +71,7 @@ export function TopBar({
     account?.status || ''
   );
   const agentReady = accountDisplay.ready;
+  const connectSlug = composioConnectSlug[channel];
   const accountMeta =
   channel === 'all' || channel === 'properties' || channel === 'imports' ?
   undefined :
@@ -128,10 +136,7 @@ export function TopBar({
             label={agentReady ? 'Agent active' : 'Setup needed'}
             sx={{
               flexShrink: 0,
-              display: {
-                xs: 'none',
-                sm: 'inline-flex'
-              },
+              display: 'inline-flex',
               bgcolor: 'action.selected',
               color: agentReady ? 'success.main' : 'warning.main',
               '& .MuiChip-icon': {
@@ -155,13 +160,13 @@ export function TopBar({
           sx={{
             display: {
               xs: 'none',
-              md: 'grid'
+              sm: 'grid'
             },
             gridTemplateColumns: 'auto minmax(0, 1fr)',
             columnGap: 0.75,
             alignItems: 'center',
             minWidth: 0,
-            maxWidth: 260
+            maxWidth: { sm: 220, md: 320 }
           }}>
           {AccountIcon &&
           <Box
@@ -188,7 +193,7 @@ export function TopBar({
                 color: 'text.primary',
                 lineHeight: 1.15
               }}
-              noWrap>
+          noWrap>
               
               {accountDisplay.value}
             </Typography>
@@ -210,6 +215,8 @@ export function TopBar({
         <Button
           variant="outlined"
           size="small"
+          href={connectSlug ? `/api/settings/composio/connect/${connectSlug}` : undefined}
+          onClick={connectSlug ? undefined : onOpenSettings}
           sx={{
             display: {
               xs: 'none',
@@ -224,7 +231,7 @@ export function TopBar({
             fontWeight: 700
           }}>
           
-          Change
+          {agentReady ? 'Change' : 'Set up'}
         </Button>
 
         {/* Light / dark toggle: sun in dark mode, moon in light mode */}

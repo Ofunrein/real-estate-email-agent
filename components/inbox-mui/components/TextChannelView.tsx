@@ -99,7 +99,12 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
     clearActivityEventTarget();
     setSelectedId(id);
   };
-  const disabledReason = channel === 'website' ? 'Website chat manual send is not wired yet.' : undefined;
+  const missingRecipient = thread && ['instagram', 'messenger'].includes(channel) && !thread.replyTo;
+  const disabledReason = channel === 'website'
+    ? 'Website chat manual send is not wired yet.'
+    : missingRecipient
+      ? 'Missing platform recipient id for this thread.'
+      : undefined;
   return (
     <Box
       sx={{
@@ -190,7 +195,7 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
             <ReaderFooter
               threadId={thread.id}
               channel={channel}
-              to={thread.contact}
+              to={thread.replyTo || (['instagram', 'messenger'].includes(channel) ? '' : thread.contact)}
               disabledReason={disabledReason}
             />
           </Card> :

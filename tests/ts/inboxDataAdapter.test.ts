@@ -149,6 +149,80 @@ test("adaptInboxData aligns activity event ids with rendered message ids", () =>
   assert.notEqual(smsActivity?.eventId, "sms:+15125550123");
 });
 
+test("adaptInboxData shows Instagram contact name but preserves platform recipient id for replies", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "martn.o",
+        phone: "1526516032549624",
+        thread_ref: "instagram:thread-abc",
+        gmail_message_id: "instagram:message-1",
+        message_text: "Thanks bud looking for a home in Austin",
+        event_at: "2026-06-22T09:18:36.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "outbound",
+        full_name: "martn.o",
+        phone: "1526516032549624",
+        thread_ref: "instagram:thread-abc",
+        gmail_message_id: "instagram:message-2",
+        message_text: "Send me the area, budget, and bedroom count and I'll narrow it down.",
+        event_at: "2026-06-22T10:09:12.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.contact, "martn.o");
+  assert.equal(thread.replyTo, "1526516032549624");
+  assert.equal(thread.messageCount, 2);
+});
+
+test("adaptInboxData keeps social owner replies in the same sender thread", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "martn.o",
+        phone: "1526516032549624",
+        thread_ref: "instagram:thread-abc",
+        gmail_message_id: "instagram:message-1",
+        message_text: "Can you send me some 3 beds 3 baths in Austin?",
+        event_at: "2026-06-22T12:05:10.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "outbound",
+        agent_name: "Owner",
+        source: "human_takeover",
+        phone: "1526516032549624",
+        thread_ref: "1526516032549624",
+        message_text: "I can help",
+        event_at: "2026-06-22T12:06:17.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(model.textThreads.instagram.length, 1);
+  assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.messageCount, 2);
+  assert.equal(thread.messages[1]?.direction, "owner");
+});
+
 test("adaptInboxData sorts voice contacts and calls by actual call time", () => {
   const data = composeInboxData(
     [],

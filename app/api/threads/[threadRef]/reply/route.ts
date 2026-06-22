@@ -3,10 +3,17 @@ import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction } from "@/lib/channelIngest";
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { type EmailAttachment, sendManualReply } from "@/lib/manualReply";
-import { databaseEnabled, upsertThreadLinkInDatabase } from "@/lib/database";
+import {
+  databaseEnabled,
+  readEventsForThreadFromDatabase,
+  readEventsForThreadOrContactFromDatabase,
+  upsertThreadLinkInDatabase,
+} from "@/lib/database";
 import { readMediaUpload } from "@/lib/mediaUploads";
+import type { SheetRow } from "@/lib/sheetSchema";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +86,49 @@ function messageWithMediaLog(input: ReplyBody): string {
   return [body, ...mediaLines].filter(Boolean).join("\n\n");
 }
 
+function normalizeChannel(value: string): ReplyBody["channel"] | "" {
+  const channel = value.toLowerCase().trim();
+  if (["sms", "whatsapp", "email", "instagram", "messenger"].includes(channel)) {
+    return channel as ReplyBody["channel"];
+  }
+  return "";
+}
+
+function normalizeTarget(channel: ReplyBody["channel"], value: string) {
+  const clean = value.trim();
+  if (channel === "email") return clean.toLowerCase();
+  if (channel === "sms" || channel === "whatsapp") return clean.replace(/^whatsapp:/i, "").replace(/\s+/g, "");
+  return clean;
+}
+
+function threadReplyTarget(threadRef: string, events: SheetRow[]): { channel: ReplyBody["channel"]; to: string } | null {
+  const latest = events[events.length - 1];
+  if (!latest) return null;
+  const channel = normalizeChannel(latest.channel || "");
+  if (!channel) return null;
+  const to = channel === "email"
+    ? latest.email || threadRef
+    : channel === "sms" || channel === "whatsapp"
+      ? latest.phone || threadRef
+      : latest.phone || "";
+  return to ? { channel, to } : null;
+}
+
+function isSocialReplyChannel(channel: ReplyBody["channel"]) {
+  return channel === "instagram" || channel === "messenger";
+}
+
+function canonicalReplyThreadRef(threadRef: string, channel: ReplyBody["channel"], events: SheetRow[]) {
+  if (!isSocialReplyChannel(channel)) return threadRef;
+  return [...events]
+    .reverse()
+    .find((event) => event.thread_ref?.startsWith(`${channel}:`))
+    ?.thread_ref || threadRef;
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
   const { threadRef } = await params;
   const input = (await req.json()) as ReplyBody;
 
@@ -89,6 +138,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
 
   if (!(await isTakeoverActive(threadRef))) {
     return NextResponse.json({ ok: false, error: "No active takeover for this thread" }, { status: 403 });
+  }
+
+  const recentEvents = databaseEnabled()
+    ? await (
+      isSocialReplyChannel(input.channel)
+        ? readEventsForThreadOrContactFromDatabase({ threadRef, channel: input.channel, limit: 20 })
+        : readEventsForThreadFromDatabase(threadRef, 20)
+    ).catch(() => [])
+    : [];
+  const resolvedTarget = threadReplyTarget(threadRef, recentEvents);
+  const persistedThreadRef = canonicalReplyThreadRef(threadRef, input.channel, recentEvents);
+  if (resolvedTarget) {
+    if (resolvedTarget.channel !== input.channel) {
+      return NextResponse.json({ ok: false, error: "Reply channel does not match this thread" }, { status: 409 });
+    }
+    if (normalizeTarget(input.channel, input.to) !== normalizeTarget(resolvedTarget.channel, resolvedTarget.to)) {
+      return NextResponse.json({ ok: false, error: "Reply recipient does not match this thread" }, { status: 409 });
+    }
+    input.to = resolvedTarget.to;
   }
 
   const result = await sendManualReply({
@@ -104,7 +172,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     source: "human_takeover",
     phone: input.channel !== "email" ? input.to : undefined,
     email: input.channel === "email" ? input.to : undefined,
-    threadRef,
+    threadRef: persistedThreadRef,
     messageText: messageWithMediaLog(input),
     status: result.ok && result.fallbackReason ? "sent_fresh" : "sent",
     mailboxEmail: input.channel === "email" ? result.mailboxEmail : "",

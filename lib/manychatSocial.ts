@@ -162,6 +162,7 @@ export function socialDmIngestInput(input: SocialDmPayload, guard: SocialDmGuard
     channel: input.channel as SocialDmChannel,
     agentName: IRIS_AGENT_NAME,
     fullName: input.senderName,
+    phone: input.contactId || input.threadId,
     source: "manychat",
     sourceDetail,
     threadRef,

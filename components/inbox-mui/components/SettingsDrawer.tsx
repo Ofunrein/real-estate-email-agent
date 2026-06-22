@@ -44,9 +44,9 @@ const channelAvailability = [
   ['instagram', 'Instagram DMs'],
 ] as const;
 const composioConnections = [
-  ['instagram', 'Instagram DMs', 'Business or Creator account'],
-  ['facebook', 'Facebook Messenger', 'Facebook Page messaging'],
-  ['whatsapp', 'WhatsApp Business', 'Business number or WABA'],
+  ['instagram', 'Instagram DMs'],
+  ['facebook', 'Messenger'],
+  ['whatsapp', 'WhatsApp'],
 ] as const;
 
 function ToggleGrid({
@@ -136,21 +136,44 @@ function ComposioConnectionGrid({
   onDisconnect: (id: string) => void;
 }) {
   const channelForSlug = (slug: string) => slug === 'facebook' ? 'messenger' : slug;
+  const missingSetup = (connection?: NonNullable<ConnectionStatus['connections']>[number]) => {
+    const missing = connection?.metadata?.outbound_missing;
+    return Array.isArray(missing) ? missing.map(String).filter(Boolean) : [];
+  };
+  const newest = (connections: NonNullable<ConnectionStatus['connections']>) =>
+    [...connections].sort((a, b) =>
+      new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()
+    );
+  const composioRows = (connections: NonNullable<ConnectionStatus['connections']>) =>
+    connections.filter((connection) => connection.provider.startsWith('composio_'));
+  const accountLabel = (connection?: NonNullable<ConnectionStatus['connections']>[number]) =>
+    [
+      connection?.selected_asset_name,
+      typeof connection?.metadata?.display_name === 'string' ? connection.metadata.display_name : '',
+    ].map((value) => String(value || '').trim()).find(Boolean) || '';
   const connectionForSlug = (slug: string) => {
     const channel = channelForSlug(slug);
-    const direct = status?.channels?.[channel]?.connections?.[0];
+    const channelStatus = status?.channels?.[channel];
+    const display = displayForChannelConnection(
+      status,
+      channel as Parameters<typeof displayForChannelConnection>[1],
+      '',
+      ''
+    );
+    if (display.connection) return display.connection;
+    const direct = newest(composioRows(channelStatus?.connections || []))[0];
     if (direct) return direct;
-    return status?.connections?.find((connection) => connection.channel === channel);
+    return newest(composioRows(status?.connections?.filter((connection) => connection.channel === channel) || []))[0];
   };
 
   return (
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 132px), 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 178px), 1fr))',
         gap: { xs: 0.75, sm: 1 }
       }}>
-      {composioConnections.map(([slug, label, helper]) => (
+      {composioConnections.map(([slug, label]) => (
         (() => {
           const connection = connectionForSlug(slug);
           const connected = connection?.status === 'connected' && Boolean(connection.selected_asset_name || connection.selected_asset_id || connection.connected_account_id);
@@ -161,30 +184,53 @@ function ComposioConnectionGrid({
             '',
             ''
           );
-          const pill = connected ? 'connected' : authConfigured ? 'auth configured' : 'needs config';
-          const tone = connected ? 'success' : authConfigured ? 'info' : 'warning';
-          const detail = connected
-            ? `Connected to ${display.value}`
-            : authConfigured
-              ? 'Auth is configured. Connect and select the actual account to activate Iris.'
-              : connection?.health_reason || helper;
+          const missing = missingSetup(connection);
+          const ready = connected && display.ready;
+          const pill = ready ? 'Ready' : connected ? 'Setup needed' : authConfigured ? 'Connect' : 'Setup needed';
+          const tone = ready ? 'success' : connected ? 'warning' : authConfigured ? 'info' : 'warning';
+          const labelText = accountLabel(connection);
+          const detail = connected ? labelText || 'Connected account' : authConfigured ? 'Choose account' : 'Needs setup';
+          const actionLabel = connected ? 'Change' : 'Connect';
+          const connectUrl = `/api/settings/composio/connect/${slug}`;
           return (
         <Box
           key={slug}
+          component="div"
+          role={!ready ? 'button' : undefined}
+          tabIndex={!ready ? 0 : undefined}
+          onClick={(event) => {
+            if (ready) return;
+            const target = event.target as HTMLElement;
+            if (target.closest('button,a')) return;
+            window.location.href = connectUrl;
+          }}
+          onKeyDown={(event) => {
+            if (ready || !['Enter', ' '].includes(event.key)) return;
+            event.preventDefault();
+            window.location.href = connectUrl;
+          }}
           sx={{
             minWidth: 0,
-            p: { xs: 0.9, sm: 1 },
+            p: { xs: 1, sm: 1.15 },
             border: '1px solid',
-            borderColor: 'divider',
+            borderColor: ready ? 'success.light' : 'divider',
             borderRadius: 1.25,
             bgcolor: 'background.paper',
             display: 'flex',
             flexDirection: 'column',
-            gap: 0.75
+            gap: 0.85,
+            color: 'inherit',
+            textDecoration: 'none',
+            boxShadow: ready ? 'inset 0 0 0 1px rgba(16, 185, 129, 0.28)' : 'none',
+            cursor: ready ? 'default' : 'pointer',
+            '&:hover': {
+              borderColor: ready ? 'success.main' : 'primary.main',
+              bgcolor: 'action.hover'
+            }
           }}>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between" sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: { xs: 12, sm: 13 }, fontWeight: 800, lineHeight: 1.15 }} noWrap>
+              <Typography noWrap sx={{ fontSize: { xs: 13, sm: 14 }, fontWeight: 850, lineHeight: 1.15, minWidth: 0 }}>
                 {label}
               </Typography>
               <Chip
@@ -195,19 +241,24 @@ function ComposioConnectionGrid({
                 sx={{ height: 20, flexShrink: 0, '& .MuiChip-label': { px: 0.75, fontSize: 10, fontWeight: 800 } }}
               />
             </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.15, mt: 0.25 }}>
+            <Typography variant="caption" color={connected ? 'text.primary' : 'text.secondary'} sx={{ display: 'block', lineHeight: 1.25, mt: 0.5, fontWeight: connected ? 700 : 500 }} noWrap>
               {detail}
             </Typography>
+            {connected && missing.length > 0 && (
+              <Typography variant="caption" color="warning.main" sx={{ display: 'block', lineHeight: 1.2, mt: 0.25 }} noWrap>
+                Finish send setup
+              </Typography>
+            )}
           </Box>
           <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
             <Button
-              href={`/api/settings/composio/connect/${slug}`}
-              variant="outlined"
+              href={connectUrl}
+              variant={connected ? 'outlined' : 'contained'}
               size="small"
               sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
-              {connected ? 'Change' : 'Connect'}
+              {actionLabel}
             </Button>
-            {connected && connection?.id &&
+            {connection?.id && !String(connection.id).startsWith('env_') &&
             <Button
               variant="text"
               color="error"
@@ -215,7 +266,7 @@ function ComposioConnectionGrid({
               disabled={disconnectingId === connection.id}
               onClick={() => onDisconnect(connection.id)}
               sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
-              {disconnectingId === connection.id ? 'Disconnecting...' : 'Disconnect'}
+              {disconnectingId === connection.id ? 'Removing...' : connected ? 'Disconnect' : 'Reset'}
             </Button>
             }
           </Stack>
@@ -441,12 +492,12 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           color="text.secondary"
           sx={{
             display: 'block',
-            mb: 1
+            mb: 0.75
           }}>
           Connections
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-          Connect social inboxes through Composio. SMS and Voice stay on the provisioned Twilio/Vapi numbers.
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
+          Social inboxes Iris can operate.
         </Typography>
         {(connectionError || disconnectError) && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError || disconnectError}</Alert>}
         <ComposioConnectionGrid

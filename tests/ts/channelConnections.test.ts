@@ -82,10 +82,11 @@ test("env fallback reports configured direct channels without exposing secrets",
   }, "env-client");
 
   const byChannel = Object.fromEntries(fallback.map((connection) => [connection.channel, connection]));
+  const whatsappMeta = fallback.find((connection) => connection.channel === "whatsapp" && connection.provider === "meta_cloud");
   assert.equal(byChannel.email.status, "connected");
   assert.equal(byChannel.sms.selected_asset_name, "+15125550123");
   assert.equal(byChannel.voice.status, "connected");
-  assert.equal(byChannel.whatsapp.status, "connected");
+  assert.equal(whatsappMeta?.status, "connected");
   assert.equal(byChannel.crm.status, "connected");
   assert.equal(byChannel.slack.status, "connected");
   assert.doesNotMatch(JSON.stringify(fallback), /xoxb-secret|refresh_token|TWILIO_AUTH_TOKEN|WHATSAPP_ACCESS_TOKEN/);

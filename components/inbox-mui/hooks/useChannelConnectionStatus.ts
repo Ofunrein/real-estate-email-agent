@@ -15,6 +15,8 @@ export type ChannelConnectionRecord = {
   status: string;
   health_reason?: string;
   metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type ConnectionStatus = {
@@ -39,9 +41,27 @@ const composioManagedChannels = new Set<ChannelId>(["instagram", "messenger", "w
 function selectedAssetLabel(connection?: ChannelConnectionRecord) {
   return [
     connection?.selected_asset_name,
-    connection?.selected_asset_id,
-    connection?.connected_account_id,
+    typeof connection?.metadata?.display_name === "string" ? connection.metadata.display_name : "",
+    typeof connection?.metadata?.word_id === "string" ? connection.metadata.word_id : "",
   ].map((value) => String(value || "").trim()).find(Boolean) || "";
+}
+
+function connectionLabel(connection?: ChannelConnectionRecord) {
+  return selectedAssetLabel(connection) || (connection ? "Connected account" : "");
+}
+
+function outboundReady(connection?: ChannelConnectionRecord) {
+  if (!connection) return false;
+  if (connection.metadata?.outbound_ready === false) return false;
+  return true;
+}
+
+function byNewest(a: ChannelConnectionRecord, b: ChannelConnectionRecord) {
+  return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+}
+
+function composioConnection(connection: ChannelConnectionRecord) {
+  return connection.provider.startsWith("composio_");
 }
 
 export function displayForChannelConnection(
@@ -54,14 +74,23 @@ export function displayForChannelConnection(
     return { ready: ["READY", "SYNCED"].includes(fallbackStatus), value: fallbackValue, status: fallbackStatus };
   }
 
-  const connections = status?.channels?.[channel]?.connections || [];
-  const connected = connections.find((connection) => connection.status === "connected");
+  const connections = (status?.channels?.[channel]?.connections || []).filter(composioConnection);
+  const connected = [...connections]
+    .filter((connection) => connection.status === "connected")
+    .sort(byNewest)
+    [0];
   const configured = connections.find((connection) => connection.metadata?.composio_auth_configured);
   const connection = connected || configured || connections[0];
-  const label = selectedAssetLabel(connected);
+  const label = connectionLabel(connected);
 
   if (connected && label) {
-    return { ready: true, value: label, status: "READY", connection: connected };
+    const ready = outboundReady(connected);
+    return {
+      ready,
+      value: label,
+      status: ready ? "READY" : "SETUP NEEDED",
+      connection: connected,
+    };
   }
 
   if (configured) {

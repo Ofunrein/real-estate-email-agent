@@ -1165,6 +1165,37 @@ export async function readEventsForThreadFromDatabase(threadRef: string, limit =
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }
 
+export async function readEventsForThreadOrContactFromDatabase(input: {
+  threadRef: string;
+  channel: string;
+  limit?: number;
+}): Promise<SheetRow[]> {
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
+  const result = await getPool().query(
+    `select ${columns}
+       from conversation_events
+      where client_id = $1
+        and (
+          thread_ref = $2
+          or (
+            channel = $3
+            and (
+              phone = $2
+              or email = $2
+            )
+          )
+        )
+      order by coalesce(
+          nullif(event_at, '')::timestamptz,
+          created_at
+        ) desc,
+        id desc
+      limit $4`,
+    [clientId(), input.threadRef, input.channel, input.limit || 12],
+  );
+  return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
 export async function hasNewerInboundForThreadInDatabase(threadRef: string, eventAt: string): Promise<boolean> {
   const result = await getPool().query(
     `with current_event as (
@@ -1536,6 +1567,22 @@ export async function readConversationEventByGmailMessageId(gmailMessageId: stri
     [clientId(), id],
   );
   return result.rows[0] ? rowToStrings(CONVERSATION_EVENTS_HEADERS, result.rows[0]) : null;
+}
+
+export async function conversationEventMessageIdExists(messageId: string): Promise<boolean> {
+  const id = messageId.trim();
+  if (!id || !await tableReady("conversation_events")) return false;
+  const result = await getPool().query(
+    `select exists (
+       select 1
+         from conversation_events
+        where client_id = $1
+          and gmail_message_id = $2
+        limit 1
+     ) as exists`,
+    [clientId(), id],
+  );
+  return Boolean(result.rows[0]?.exists);
 }
 
 export async function hasOutboundEmailReplyAfterEventInDatabase(input: {

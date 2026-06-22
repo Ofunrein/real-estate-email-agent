@@ -154,6 +154,7 @@ export interface SmsMessage {
 export interface SmsThread {
   id: string;
   contact: string;
+  replyTo?: string;
   time: string;
   preview: string;
   messageCount: number;
@@ -288,9 +289,9 @@ export const channelAccounts: Record<ChannelId, ConnectedAccount> = {
   email: { label: 'Email', value: 'martin@lumenosis.com', status: 'READY' },
   sms: { label: 'SMS number', value: '+1 (512) 846-9460', status: 'READY' },
   voice: { label: 'Voice line', value: '+1 (512) 846-9460', status: 'READY' },
-  instagram: { label: 'Instagram', value: '@austin.realty', status: 'READY' },
-  messenger: { label: 'Messenger', value: 'Austin Realty Page', status: 'READY' },
-  whatsapp: { label: 'WhatsApp', value: '+1 (512) 846-9460', status: 'READY' },
+  instagram: { label: 'Instagram', value: 'Not connected', status: 'SETUP NEEDED' },
+  messenger: { label: 'Messenger', value: 'Not connected', status: 'SETUP NEEDED' },
+  whatsapp: { label: 'WhatsApp', value: 'Not connected', status: 'SETUP NEEDED' },
   website: { label: 'Website chat', value: 'austinrealty.com', status: 'READY' },
   properties: { label: 'Property data', value: 'Austin Realty sheet', status: 'SYNCED' },
   imports: { label: 'Lead Reopen', value: 'Import queue', status: 'READY' },

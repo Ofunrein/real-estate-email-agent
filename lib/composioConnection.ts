@@ -83,10 +83,10 @@ export async function createComposioConnectLink(input: {
   const toolkit = composioToolkit(input.channel);
   const maybeComposio = composio as unknown as {
     create?: (userId: string) => Promise<{
-      authorize?: (toolkit: string, options: { callbackUrl: string; authConfigId?: string }) => Promise<unknown>;
+      authorize?: (toolkit: string, options: { callbackUrl: string; authConfigId?: string; allowMultiple?: boolean; alias?: string }) => Promise<unknown>;
     }>;
     connectedAccounts?: {
-      link?: (userId: string, authConfigId: string, options: { callbackUrl: string }) => Promise<unknown>;
+      link?: (userId: string, authConfigId: string, options: { callbackUrl: string; allowMultiple?: boolean; alias?: string }) => Promise<unknown>;
     };
   };
 
@@ -98,6 +98,7 @@ export async function createComposioConnectLink(input: {
     return linkResponsePayload(await session.authorize(toolkit, {
       callbackUrl: input.callbackUrl,
       ...(authConfigId ? { authConfigId } : {}),
+      allowMultiple: true,
     }));
   }
 
@@ -107,5 +108,6 @@ export async function createComposioConnectLink(input: {
   }
   return linkResponsePayload(await maybeComposio.connectedAccounts.link(userId, authConfigId, {
     callbackUrl: input.callbackUrl,
+    allowMultiple: true,
   }));
 }
