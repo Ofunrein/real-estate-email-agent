@@ -4,7 +4,9 @@ import { composioExternalUserId, createComposioClient } from "@/lib/composioConn
 import { sendComposioSocialMessage, type ComposioSocialChannel } from "@/lib/composioSocial";
 import {
   conversationEventMessageIdExists,
+  findCandidatePropertiesFromDatabase,
   findLeadInDatabase,
+  findPropertiesByAddressesFromDatabase,
   readEventsForThreadFromDatabase,
   readEventsForThreadOrContactFromDatabase,
   readInboxSettingsFromDatabase,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/manychatSocial";
 import { fetchStyleContext } from "@/lib/styleTraining";
 import { generateTheoReply } from "@/lib/theoAgent";
+import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 type PollChannel = Extract<SocialDmChannel, "instagram" | "messenger">;
@@ -231,15 +234,69 @@ function eventDateValue(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function automatedOutboundEvent(event: Awaited<ReturnType<typeof readEventsForThreadFromDatabase>>[number]) {
+  const source = String(event.source || "").toLowerCase();
+  const agentName = String(event.agent_name || "").toLowerCase();
+  if (source.includes("human") || source.includes("owner") || agentName === "owner") return false;
+  return event.direction !== "inbound";
+}
+
 function alreadyHandledInbound(messageKey: string, events: Awaited<ReturnType<typeof readEventsForThreadFromDatabase>>) {
   const inbound = events.find((event) => event.gmail_message_id === messageKey && event.direction === "inbound");
   if (!inbound) return true;
   const inboundAt = eventDateValue(inbound.event_at || inbound.created_at || "");
   if (!inboundAt) return true;
   return events.some((event) =>
-    event.direction !== "inbound" &&
+    automatedOutboundEvent(event) &&
     eventDateValue(event.event_at || event.created_at || "") > inboundAt
   );
+}
+
+export function socialPollInboundAlreadyHandledForTest(
+  messageKey: string,
+  events: Awaited<ReturnType<typeof readEventsForThreadFromDatabase>>,
+) {
+  return alreadyHandledInbound(messageKey, events);
+}
+
+async function findComposioSocialProperties(message: string, recentEvents: Awaited<ReturnType<typeof readEventsForThreadFromDatabase>>) {
+  const previousOutbound = recentEvents
+    .filter((event) => event.direction !== "inbound")
+    .map((event) => event.message_text || event.summary || "")
+    .filter(Boolean);
+  const requestedAddresses = extractTheoListedPropertyAddresses(message, ...previousOutbound);
+  const addressMatches = await findPropertiesByAddressesFromDatabase(requestedAddresses, 5);
+  const propertySearch = extractTheoPropertySearchIntent(message);
+  const propertyQuery = extractTheoPropertySearchQuery(message);
+  const shouldSearch = Boolean(
+    propertyQuery ||
+    propertySearch.area ||
+    propertySearch.beds ||
+    propertySearch.baths ||
+    propertySearch.minPrice ||
+    propertySearch.maxPrice ||
+    propertySearch.mode !== "general",
+  );
+  const candidateMatches = shouldSearch
+    ? await findCandidatePropertiesFromDatabase(
+      {
+        query: propertyQuery,
+        area: propertySearch.area,
+        beds: propertySearch.beds,
+        baths: propertySearch.baths,
+        minPrice: propertySearch.minPrice,
+        maxPrice: propertySearch.maxPrice,
+        mode: propertySearch.mode,
+        excludeAddresses: addressMatches.map((property) => property.address).filter(Boolean),
+      },
+      5,
+    )
+    : [];
+  return [...addressMatches, ...candidateMatches]
+    .filter((property, index, list) =>
+      property.address && list.findIndex((item) => item.address?.toLowerCase() === property.address.toLowerCase()) === index,
+    )
+    .slice(0, 5);
 }
 
 async function processMessage(message: ComposioMessage, connection: ChannelConnectionRecord): Promise<"imported" | "replied" | "skipped"> {
@@ -292,7 +349,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
   }
 
   const recentEvents = await readEventsForThreadOrContactFromDatabase({
-    threadRef: message.senderId,
+    threadRef,
     channel: message.channel,
     limit: 12,
   });
@@ -300,12 +357,19 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     return "skipped";
   }
   const lead = await findLeadInDatabase({ full_name: message.senderName });
+  const properties = await findComposioSocialProperties(message.text, recentEvents);
+  const enriched = await enrichTheoData({
+    message: message.text,
+    lead: lead || result?.lead,
+    properties,
+  });
   const reply = await generateTheoReply({
     message: message.text,
     lead: lead || result?.lead,
-    properties: [],
+    properties: enriched.properties,
     recentEvents,
     source: message.channel,
+    dataContext: enriched.context,
     styleContext: await fetchStyleContext(),
   });
   const routeResult = buildSocialRouterResult({

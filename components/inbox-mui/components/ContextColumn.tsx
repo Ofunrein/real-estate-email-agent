@@ -19,7 +19,8 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import {
   agentAvatar,
-  type ChannelId } from
+  type ChannelId,
+  type MessageChannelId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 
@@ -34,15 +35,15 @@ export function ContextColumn({
   inDrawer = false
 }: ContextColumnProps) {
   const { channelStats, reviewQueue, channelMeta, metrics } = useInboxModel();
-  const statsKey: Exclude<ChannelId, 'properties' | 'imports'> =
-  channel === 'properties' || channel === 'imports' ? 'all' : channel;
+  const statsKey: "all" | MessageChannelId =
+  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ? 'all' : channel;
   const stats = channelStats[statsKey];
   const label =
   channel === 'all' ?
   'All channels' :
-  channel === 'properties' || channel === 'imports' ?
+  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ?
   'All channels' :
-  channelMeta[channel as Exclude<ChannelId, 'all' | 'properties' | 'imports'>]?.label ?? channel;
+  channelMeta[channel as MessageChannelId]?.label ?? channel;
   const total = stats.inbound + stats.aiReplies;
   const approvalRate = total > 0 ? Math.round((stats.aiReplies / total) * 100) : 0;
   const suggestions = reviewQueue.slice(0, 3);

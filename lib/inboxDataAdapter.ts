@@ -42,6 +42,7 @@ import {
   type EmailThread,
   type InboxModel,
   type LeadCategoryId,
+  type MessageChannelId,
   type Property,
   type ReviewItem,
   type SmsMessage,
@@ -305,7 +306,6 @@ function normalizeSmsAddress(value: string): string {
     .trim();
 }
 
-type MessageChannelId = Exclude<ChannelId, "all" | "properties" | "imports">;
 
 function realChannelToView(rawChannel: string): MessageChannelId {
   const adapted = adaptChannelId(rawChannel);
@@ -610,10 +610,10 @@ function buildChannels(data: AgentInboxData): InboxModel["channels"] {
   return order
     .map((id) => ({
       id,
-      label: id === "all" ? "All channels" : channelMeta[id as Exclude<ChannelId, "all" | "properties" | "imports">].label,
-      icon: id === "all" ? channelMeta.website.icon : channelMeta[id as Exclude<ChannelId, "all" | "properties" | "imports">].icon,
+      label: id === "all" ? "All channels" : channelMeta[id as MessageChannelId].label,
+      icon: id === "all" ? channelMeta.website.icon : channelMeta[id as MessageChannelId].icon,
       count: counts[id] || 0,
-      accent: id === "all" ? "#818cf8" : channelMeta[id as Exclude<ChannelId, "all" | "properties" | "imports">].accent,
+      accent: id === "all" ? "#818cf8" : channelMeta[id as MessageChannelId].accent,
     }));
 }
 
@@ -681,9 +681,9 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
     .map((entry) => entry.event);
 }
 
-function buildChannelStats(data: AgentInboxData): Record<Exclude<ChannelId, "properties" | "imports">, ChannelStats> {
-  const views: Exclude<ChannelId, "properties" | "imports">[] = ["all", "email", "sms", "voice", "instagram", "messenger", "whatsapp", "website"];
-  const result = {} as Record<Exclude<ChannelId, "properties" | "imports">, ChannelStats>;
+function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelId, ChannelStats> {
+  const views: Array<"all" | MessageChannelId> = ["all", "email", "sms", "voice", "instagram", "messenger", "whatsapp", "website"];
+  const result = {} as Record<"all" | MessageChannelId, ChannelStats>;
   for (const view of views) {
     const events = view === "all" ? data.events : data.events.filter((e) => realChannelToView(e.channel || "") === view);
     const threadKeys = new Set(events.map((e) => conversationKey(e, view === "all" ? "" : realChannelToViewRaw(view))));

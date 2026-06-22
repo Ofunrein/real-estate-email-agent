@@ -1,10 +1,10 @@
 "use client";
 import React from 'react';
 import { Box, Card, Stack, Typography, Avatar } from '@mui/material';
-import { type ChannelId } from '../data/inboxData';
+import { type MessageChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 interface EmptyChannelViewProps {
-  channel: Exclude<ChannelId, 'all' | 'properties' | 'imports'>;
+  channel: MessageChannelId;
 }
 export function EmptyChannelView({ channel }: EmptyChannelViewProps) {
   const { channelMeta } = useInboxModel();

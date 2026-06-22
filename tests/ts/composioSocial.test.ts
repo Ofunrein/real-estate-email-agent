@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildComposioSocialSendArguments, composioSocialSendHealth } from "@/lib/composioSocial";
+import { socialPollInboundAlreadyHandledForTest } from "@/lib/composioSocialPoll";
 
 test("buildComposioSocialSendArguments overwrites stale social recipient and body", () => {
   const args = buildComposioSocialSendArguments(
@@ -58,4 +59,31 @@ test("composioSocialSendHealth lets saved selected asset args override env defau
 
   assert.equal(messenger.outboundReady, true);
   assert.equal(messenger.arguments.page_id, "selected_page");
+});
+
+test("social poll retry is not suppressed by owner/manual outbound", () => {
+  const inbound = {
+    direction: "inbound",
+    gmail_message_id: "instagram:mid_1",
+    event_at: "2026-06-22T12:05:00.000Z",
+    source: "composio",
+    agent_name: "Iris",
+  };
+  const owner = {
+    direction: "outbound",
+    gmail_message_id: "instagram:owner_1",
+    event_at: "2026-06-22T12:06:00.000Z",
+    source: "human_takeover",
+    agent_name: "owner",
+  };
+  const iris = {
+    direction: "outbound",
+    gmail_message_id: "instagram:reply_1",
+    event_at: "2026-06-22T12:07:00.000Z",
+    source: "composio",
+    agent_name: "Iris",
+  };
+
+  assert.equal(socialPollInboundAlreadyHandledForTest("instagram:mid_1", [inbound, owner] as any), false);
+  assert.equal(socialPollInboundAlreadyHandledForTest("instagram:mid_1", [inbound, owner, iris] as any), true);
 });
