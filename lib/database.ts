@@ -22,6 +22,7 @@ import {
   CENTRAL_TEXAS_ALIASES,
   CENTRAL_TEXAS_CITIES,
 } from "@/lib/serviceAreas";
+import type { ChannelConnectionInput, ChannelConnectionRecord } from "@/lib/channelConnections";
 
 let pool: Pool | null = null;
 const tableColumnCache = new Map<string, Set<string>>();
@@ -123,14 +124,14 @@ function eventDbValue(header: string, value: unknown): unknown {
   return value ?? "";
 }
 
-export async function ensureClientInDatabase(): Promise<void> {
+export async function ensureClientInDatabase(cid = clientId(), name = clientName()): Promise<void> {
   await getPool().query(
     `insert into clients (id, name)
      values ($1, $2)
      on conflict (id) do update set
        name = excluded.name,
        updated_at = now()`,
-    [clientId(), clientName()],
+    [cid, name],
   );
 }
 
@@ -332,6 +333,191 @@ function numberRecord(value: unknown): Record<string, number> {
   return Object.fromEntries(
     Object.entries(jsonRecord(value)).map(([key, count]) => [key, Number(count || 0)]),
   );
+}
+
+function channelConnectionFromRow(row: Record<string, unknown>): ChannelConnectionRecord {
+  return {
+    id: String(row.id || ""),
+    client_id: String(row.client_id || ""),
+    channel: String(row.channel || ""),
+    provider: String(row.provider || ""),
+    external_user_id: String(row.external_user_id || ""),
+    auth_config_id: String(row.auth_config_id || ""),
+    connected_account_id: String(row.connected_account_id || ""),
+    selected_asset_id: String(row.selected_asset_id || ""),
+    selected_asset_name: String(row.selected_asset_name || ""),
+    selected_asset_type: String(row.selected_asset_type || ""),
+    status: String(row.status || ""),
+    health_reason: String(row.health_reason || ""),
+    webhook_status: String(row.webhook_status || ""),
+    metadata: jsonRecord(row.metadata),
+    created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
+    updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+function cleanConnectionText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function cleanConnectionSlug(value: unknown): string {
+  return cleanConnectionText(value).toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+}
+
+function channelConnectionValues(input: ChannelConnectionInput) {
+  const channel = cleanConnectionSlug(input.channel);
+  if (!channel) throw new Error("channel is required");
+  const provider = cleanConnectionSlug(input.provider || "manual");
+  const selectedAssetId = cleanConnectionText(input.selected_asset_id);
+  const connectedAccountId = cleanConnectionText(input.connected_account_id);
+  return {
+    channel,
+    provider,
+    externalUserId: cleanConnectionText(input.external_user_id),
+    authConfigId: cleanConnectionText(input.auth_config_id),
+    connectedAccountId,
+    selectedAssetId,
+    selectedAssetName: cleanConnectionText(input.selected_asset_name),
+    selectedAssetType: cleanConnectionText(input.selected_asset_type),
+    status: cleanConnectionSlug(input.status || (selectedAssetId || connectedAccountId ? "connected" : "needs_config")),
+    healthReason: cleanConnectionText(input.health_reason),
+    webhookStatus: cleanConnectionSlug(input.webhook_status || ""),
+    metadata: jsonRecord(input.metadata),
+  };
+}
+
+export async function listChannelConnectionsFromDatabase(cid = clientId()): Promise<ChannelConnectionRecord[]> {
+  if (!await tableReady("channel_connections")) return [];
+  const result = await getPool().query(
+    `select id, client_id, channel, provider, external_user_id, auth_config_id,
+            connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
+            status, health_reason, webhook_status, metadata, created_at, updated_at
+       from channel_connections
+      where client_id = $1
+      order by channel asc, provider asc, selected_asset_name asc, updated_at desc`,
+    [cid],
+  );
+  return result.rows.map(channelConnectionFromRow);
+}
+
+export async function getChannelConnectionFromDatabase(
+  cid: string,
+  id: string,
+): Promise<ChannelConnectionRecord | null> {
+  if (!await tableReady("channel_connections")) return null;
+  const result = await getPool().query(
+    `select id, client_id, channel, provider, external_user_id, auth_config_id,
+            connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
+            status, health_reason, webhook_status, metadata, created_at, updated_at
+       from channel_connections
+      where client_id = $1
+        and id = $2
+      limit 1`,
+    [cid, id],
+  );
+  return result.rows[0] ? channelConnectionFromRow(result.rows[0]) : null;
+}
+
+export async function upsertChannelConnectionInDatabase(
+  cid: string,
+  input: ChannelConnectionInput,
+): Promise<ChannelConnectionRecord> {
+  if (!await tableReady("channel_connections")) {
+    throw new Error("channel_connections table is missing. Run db/migrations/013_channel_connections.sql");
+  }
+  await ensureClientInDatabase(cid, cid);
+  const values = channelConnectionValues(input);
+  const id = cleanConnectionText(input.id);
+
+  if (id) {
+    const result = await getPool().query(
+      `update channel_connections
+          set channel = $3,
+              provider = $4,
+              external_user_id = $5,
+              auth_config_id = $6,
+              connected_account_id = $7,
+              selected_asset_id = $8,
+              selected_asset_name = $9,
+              selected_asset_type = $10,
+              status = $11,
+              health_reason = $12,
+              webhook_status = $13,
+              metadata = $14::jsonb,
+              updated_at = now()
+        where client_id = $1
+          and id = $2
+        returning id, client_id, channel, provider, external_user_id, auth_config_id,
+                  connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
+                  status, health_reason, webhook_status, metadata, created_at, updated_at`,
+      [
+        cid,
+        id,
+        values.channel,
+        values.provider,
+        values.externalUserId,
+        values.authConfigId,
+        values.connectedAccountId,
+        values.selectedAssetId,
+        values.selectedAssetName,
+        values.selectedAssetType,
+        values.status,
+        values.healthReason,
+        values.webhookStatus,
+        JSON.stringify(values.metadata),
+      ],
+    );
+    if (result.rows[0]) return channelConnectionFromRow(result.rows[0]);
+  }
+
+  const result = await getPool().query(
+    `insert into channel_connections (
+        client_id, channel, provider, external_user_id, auth_config_id, connected_account_id,
+        selected_asset_id, selected_asset_name, selected_asset_type, status, health_reason,
+        webhook_status, metadata
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
+      on conflict (client_id, channel, provider, selected_asset_id) do update set
+        external_user_id = excluded.external_user_id,
+        auth_config_id = excluded.auth_config_id,
+        connected_account_id = excluded.connected_account_id,
+        selected_asset_name = excluded.selected_asset_name,
+        selected_asset_type = excluded.selected_asset_type,
+        status = excluded.status,
+        health_reason = excluded.health_reason,
+        webhook_status = excluded.webhook_status,
+        metadata = channel_connections.metadata || excluded.metadata,
+        updated_at = now()
+      returning id, client_id, channel, provider, external_user_id, auth_config_id,
+                connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
+                status, health_reason, webhook_status, metadata, created_at, updated_at`,
+    [
+      cid,
+      values.channel,
+      values.provider,
+      values.externalUserId,
+      values.authConfigId,
+      values.connectedAccountId,
+      values.selectedAssetId,
+      values.selectedAssetName,
+      values.selectedAssetType,
+      values.status,
+      values.healthReason,
+      values.webhookStatus,
+      JSON.stringify(values.metadata),
+    ],
+  );
+  return channelConnectionFromRow(result.rows[0]);
+}
+
+export async function deleteChannelConnectionFromDatabase(cid: string, id: string): Promise<boolean> {
+  if (!await tableReady("channel_connections")) return false;
+  const result = await getPool().query(
+    `delete from channel_connections
+      where client_id = $1
+        and id = $2`,
+    [cid, id],
+  );
+  return Number(result.rowCount || 0) > 0;
 }
 
 function leadImportBatchFromRow(row: Record<string, unknown>): LeadImportBatchRecord {

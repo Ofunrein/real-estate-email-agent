@@ -9,6 +9,7 @@ import {
   Checkbox,
   FormControlLabel,
   Card,
+  Chip,
   Divider,
   Tooltip,
   Alert } from
@@ -42,6 +43,26 @@ const composioConnections = [
   ['facebook', 'Facebook Messenger', 'Facebook Page messaging'],
   ['whatsapp', 'WhatsApp Business', 'Business number or WABA'],
 ] as const;
+
+type ConnectionRecord = {
+  channel: string;
+  provider: string;
+  selected_asset_name?: string;
+  selected_asset_id?: string;
+  status: string;
+  health_reason?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type ConnectionStatus = {
+  fallback?: boolean;
+  connections?: ConnectionRecord[];
+  channels?: Record<string, {
+    connected: boolean;
+    needs_config: boolean;
+    connections: ConnectionRecord[];
+  }>;
+};
 
 function ToggleGrid({
   items,
@@ -120,7 +141,15 @@ function ToggleGrid({
   );
 }
 
-function ComposioConnectionGrid() {
+function ComposioConnectionGrid({ status }: { status: ConnectionStatus | null }) {
+  const channelForSlug = (slug: string) => slug === 'facebook' ? 'messenger' : slug;
+  const connectionForSlug = (slug: string) => {
+    const channel = channelForSlug(slug);
+    const direct = status?.channels?.[channel]?.connections?.[0];
+    if (direct) return direct;
+    return status?.connections?.find((connection) => connection.channel === channel);
+  };
+
   return (
     <Box
       sx={{
@@ -129,6 +158,13 @@ function ComposioConnectionGrid() {
         gap: { xs: 0.75, sm: 1 }
       }}>
       {composioConnections.map(([slug, label, helper]) => (
+        (() => {
+          const connection = connectionForSlug(slug);
+          const connected = connection?.status === 'connected';
+          const authConfigured = Boolean(connection?.metadata?.composio_auth_configured);
+          const pill = connected ? 'connected' : authConfigured ? 'auth ready' : 'needs config';
+          const tone = connected ? 'success' : authConfigured ? 'info' : 'warning';
+          return (
         <Box
           key={slug}
           sx={{
@@ -143,11 +179,20 @@ function ComposioConnectionGrid() {
             gap: 0.75
           }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontSize: { xs: 12, sm: 13 }, fontWeight: 800, lineHeight: 1.15 }}>
-              {label}
-            </Typography>
+            <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between" sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: { xs: 12, sm: 13 }, fontWeight: 800, lineHeight: 1.15 }} noWrap>
+                {label}
+              </Typography>
+              <Chip
+                size="small"
+                label={pill}
+                color={tone}
+                variant={connected ? 'filled' : 'outlined'}
+                sx={{ height: 20, flexShrink: 0, '& .MuiChip-label': { px: 0.75, fontSize: 10, fontWeight: 800 } }}
+              />
+            </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.15, mt: 0.25 }}>
-              {helper}
+              {connection?.selected_asset_name || connection?.selected_asset_id || connection?.health_reason || helper}
             </Typography>
           </Box>
           <Button
@@ -155,9 +200,11 @@ function ComposioConnectionGrid() {
             variant="outlined"
             size="small"
             sx={{ alignSelf: 'flex-start', fontSize: 11, minHeight: 28, px: 1.1 }}>
-            Connect
+            {connected ? 'Reconnect' : 'Connect'}
           </Button>
         </Box>
+          );
+        })()
       ))}
     </Box>
   );
@@ -174,6 +221,8 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   );
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
+  const [connectionError, setConnectionError] = useState('');
   const [categoriesOn, setCategoriesOn] = useState<
     Record<LeadCategoryId, boolean>>(
 
@@ -196,6 +245,22 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     );
     setSaveStatus('idle');
   }, [inboxSettings, leadCategories, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setConnectionError('');
+    void fetch('/api/settings/channel-connections')
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `connection status failed (${res.status})`);
+        if (!cancelled) setConnectionStatus(data);
+      })
+      .catch((error) => {
+        if (!cancelled) setConnectionError(error instanceof Error ? error.message : 'Could not load connection status.');
+      });
+    return () => { cancelled = true; };
+  }, [open]);
 
   const saveSettings = async () => {
     setSaving(true);
@@ -362,7 +427,8 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           Connect social inboxes through Composio. SMS and Voice stay on the provisioned Twilio/Vapi numbers.
         </Typography>
-        <ComposioConnectionGrid />
+        {connectionError && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError}</Alert>}
+        <ComposioConnectionGrid status={connectionStatus} />
       </Card>
 
       <Card
