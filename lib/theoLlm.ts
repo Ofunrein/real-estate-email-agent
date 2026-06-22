@@ -74,6 +74,33 @@ function truncateSms(value: string): string {
   return `${slice}...`;
 }
 
+function normalizeSmsTimePhrase(value: string): string {
+  return value.replace(/\b(\d{1,2})(?::00)?\s*(am|pm)\b/gi, (_match, hour: string, meridiem: string) => {
+    return `${Number(hour)}:00 ${meridiem.toUpperCase()}`;
+  });
+}
+
+export function polishTheoSmsCopy(value: string): string {
+  const text = cleanSmsReply(value);
+  const showingMatch = text.match(
+    /^An agent from Austin Realty will reach out to confirm your\s+(.+?)\s+showing\s+(.+?)\s+at\s+(.+?)\.\s+They can answer any questions and walk you through the property\.\s+Is there anything specific you want them to know before the visit\??$/i,
+  );
+
+  if (showingMatch) {
+    const timePhrase = normalizeSmsTimePhrase(showingMatch[1]);
+    const dayPhrase = showingMatch[2].trim();
+    const address = showingMatch[3].trim();
+    return `You're set for ${dayPhrase} at ${timePhrase} at ${address}. Iris will keep this thread updated if anything changes. Reply here with any access notes or timing changes.`;
+  }
+
+  return text
+    .replace(/\bAn agent from Austin Realty will reach out to confirm\b/gi, "Iris will keep this thread updated on")
+    .replace(/\bThey can answer any questions and walk you through the property\.\s*/gi, "")
+    .replace(/\bIs there anything else you want to say for them\??/gi, "Reply here with any access notes or timing changes.")
+    .replace(/\bIs there anything specific you want them to know before the visit\??/gi, "Reply here with any access notes or timing changes.")
+    .trim();
+}
+
 function field(label: string, value?: string, limit = 260): string {
   const text = compact(value, limit);
   return text ? `${label}=${text}` : "";
@@ -296,6 +323,7 @@ Rules:
 - If the classification says needs_human, still answer simple safe facts from the provided property rows when useful, such as price, beds, baths, sqft, status, address, features, photo/link availability, or listing agent fields.
 - If the classification says needs_human, do not answer the sensitive part: Fair Housing, lending qualification, legal/contract, negotiation, pricing judgment, privacy, broker judgment, or angry complaint resolution. Answer the safe factual part first, then say a real person will follow up on the part that needs human review.
 - Human-assisted monitoring is backup, not a reason to stop being useful. When safe, keep helping with factual property search/details while a person handles the sensitive or trust-heavy part.
+- Routine showing confirmations must stay first-person as Iris. Do not say "an agent will reach out", "they can answer questions", or "they can walk you through the property" unless this is an actual human handoff.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
 - Do not mention AI, model names, prompts, logs, or internal systems.${styleBlock(context)}`;
 
@@ -321,7 +349,7 @@ Write only the SMS reply.`;
 
   const call = await anthropicMessage(respondModel(), system, user, 420, "theo_reply");
   return {
-    reply: truncateSms(call.text),
+    reply: truncateSms(polishTheoSmsCopy(call.text)),
     metrics: [call],
   };
 }
