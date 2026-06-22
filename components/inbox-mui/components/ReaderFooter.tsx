@@ -5,8 +5,11 @@ import AttachFileIcon from '@mui/icons-material/AttachFileOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import CircleIcon from '@mui/icons-material/Circle';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoiceOutlined';
+import MicIcon from '@mui/icons-material/MicOutlined';
+import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOverOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToyOutlined';
+import StopCircleIcon from '@mui/icons-material/StopCircleOutlined';
 
 type ManualChannel = 'email' | 'sms' | 'whatsapp' | 'instagram' | 'messenger' | 'website';
 
@@ -27,10 +30,17 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generatingVoice, setGeneratingVoice] = useState(false);
+  const [recordingVoice, setRecordingVoice] = useState(false);
+  const [cloningVoice, setCloningVoice] = useState(false);
+  const [voiceCloneStatus, setVoiceCloneStatus] = useState('');
   const [handingBack, setHandingBack] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const voiceCloneInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
   const canSendChannel = channel !== 'website';
   const sendTarget = to || threadId || '';
 
@@ -138,6 +148,93 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     }
   };
 
+  const uploadRecordedVoice = async (blob: Blob) => {
+    const type = (blob.type || 'audio/webm').split(';')[0] || 'audio/webm';
+    const extension = type.includes('ogg') ? 'ogg' : type.includes('mpeg') || type.includes('mp3') ? 'mp3' : 'webm';
+    const file = new File([blob], `manual-voice-note-${Date.now()}.${extension}`, { type });
+    await uploadFiles([file]);
+  };
+
+  const cleanupRecordingStream = () => {
+    recordingStreamRef.current?.getTracks().forEach((track) => track.stop());
+    recordingStreamRef.current = null;
+  };
+
+  const handleStartManualVoiceNote = async () => {
+    if (!threadId || !canSendChannel || recordingVoice) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Browser microphone recording is not available here.');
+      return;
+    }
+    setError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+          ? 'audio/ogg;codecs=opus'
+          : '';
+      const recorder = new MediaRecorder(stream, preferredType ? { mimeType: preferredType } : undefined);
+      recordingStreamRef.current = stream;
+      recordingChunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordingChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setError('Voice note recording failed.');
+        setRecordingVoice(false);
+        cleanupRecordingStream();
+      };
+      recorder.onstop = () => {
+        const chunks = [...recordingChunksRef.current];
+        const mimeType = recorder.mimeType || 'audio/webm';
+        setRecordingVoice(false);
+        cleanupRecordingStream();
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+        if (chunks.length) void uploadRecordedVoice(new Blob(chunks, { type: mimeType }));
+      };
+      recorder.start();
+      setRecordingVoice(true);
+    } catch (recordError) {
+      cleanupRecordingStream();
+      setRecordingVoice(false);
+      setError(recordError instanceof Error ? recordError.message : 'Microphone access was blocked.');
+    }
+  };
+
+  const handleStopManualVoiceNote = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    } else {
+      setRecordingVoice(false);
+      cleanupRecordingStream();
+    }
+  };
+
+  const handleCloneVoice = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setCloningVoice(true);
+    setVoiceCloneStatus('');
+    setError('');
+    try {
+      const form = new FormData();
+      form.set('file', files[0]);
+      form.set('title', 'Iris operator voice');
+      const res = await fetch('/api/media/voice-clone', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false || !data.voiceId) throw new Error(data.error || 'Voice clone could not be created.');
+      setVoiceCloneStatus(`Voice clone ready: ${String(data.voiceId).slice(0, 8)}...`);
+    } catch (cloneError) {
+      setError(cloneError instanceof Error ? cloneError.message : 'Voice clone could not be created.');
+    } finally {
+      setCloningVoice(false);
+      if (voiceCloneInputRef.current) voiceCloneInputRef.current.value = '';
+    }
+  };
+
   const handleHandBack = async () => {
     if (!threadId) return;
     setHandingBack(true);
@@ -200,7 +297,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     );
   }
 
-  const sendDisabled = (!message.trim() && !attachments.length) || sending || uploading || generatingVoice || !threadId || !sendTarget || !canSendChannel;
+  const sendDisabled = (!message.trim() && !attachments.length) || sending || uploading || generatingVoice || recordingVoice || !threadId || !sendTarget || !canSendChannel;
 
   return (
     <Box
@@ -238,6 +335,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       </Stack>
 
       {error && <Alert severity="warning" sx={{ mx: 1.25, mt: 1 }}>{error}</Alert>}
+      {voiceCloneStatus && <Alert severity="success" sx={{ mx: 1.25, mt: 1 }}>{voiceCloneStatus}</Alert>}
       {!canSendChannel && <Alert severity="info" sx={{ mx: 1.25, mt: 1 }}>Website chat manual send is not wired yet.</Alert>}
 
       {!!attachments.length && (
@@ -264,6 +362,13 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
           accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,audio/aac,audio/m4a,audio/mpeg,audio/mp3,audio/mp4,audio/ogg,audio/wav,audio/webm,application/pdf"
           onChange={(event) => event.target.files && void uploadFiles(event.target.files)}
         />
+        <input
+          ref={voiceCloneInputRef}
+          hidden
+          type="file"
+          accept="audio/aac,audio/m4a,audio/mpeg,audio/mp3,audio/mp4,audio/ogg,audio/wav,audio/webm,video/webm"
+          onChange={(event) => void handleCloneVoice(event.target.files)}
+        />
         <Tooltip title="Attach image, audio, PDF, or video">
           <span>
             <IconButton
@@ -276,15 +381,49 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="Generate voice note from this reply">
+        <Tooltip title={recordingVoice ? 'Stop recording manual voice note' : 'Record manual voice note'}>
+          <span>
+            <IconButton
+              size="small"
+              onClick={recordingVoice ? handleStopManualVoiceNote : handleStartManualVoiceNote}
+              disabled={uploading || sending || !threadId || !canSendChannel}
+              sx={{
+                flexShrink: 0,
+                border: '1px solid',
+                borderColor: recordingVoice ? 'error.main' : 'divider',
+                bgcolor: recordingVoice ? 'error.light' : 'transparent',
+                color: recordingVoice ? 'error.contrastText' : 'inherit',
+                borderRadius: 1.5,
+                width: 34,
+                height: 34,
+                '&:hover': { bgcolor: recordingVoice ? 'error.main' : undefined },
+              }}
+              aria-label={recordingVoice ? 'Stop recording manual voice note' : 'Record manual voice note'}>
+              {recordingVoice ? <StopCircleIcon sx={{ fontSize: 16 }} /> : <MicIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Generate cloned AI voice note from typed reply">
           <span>
             <IconButton
               size="small"
               onClick={handleGenerateVoiceNote}
-              disabled={generatingVoice || !message.trim() || !threadId || !canSendChannel}
+              disabled={generatingVoice || recordingVoice || !message.trim() || !threadId || !canSendChannel}
               sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, width: 34, height: 34 }}
-              aria-label="Generate voice note">
+              aria-label="Generate cloned AI voice note">
               {generatingVoice ? <CircularProgress size={14} /> : <KeyboardVoiceIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Clone or update operator voice">
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => voiceCloneInputRef.current?.click()}
+              disabled={cloningVoice || recordingVoice || !threadId || !canSendChannel}
+              sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, width: 34, height: 34 }}
+              aria-label="Clone operator voice">
+              {cloningVoice ? <CircularProgress size={14} /> : <RecordVoiceOverIcon sx={{ fontSize: 16 }} />}
             </IconButton>
           </span>
         </Tooltip>
