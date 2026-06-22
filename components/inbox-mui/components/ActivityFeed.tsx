@@ -11,7 +11,6 @@ import {
 '@mui/material';
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
 import SouthEastIcon from '@mui/icons-material/SouthEast';
-import GraphicEqIcon from '@mui/icons-material/GraphicEqOutlined';
 import {
   agentAvatar,
   type ChannelId,
@@ -62,12 +61,12 @@ export function ActivityFeed({ channel, onOpenEvent }: ActivityFeedProps) {
           <Box>
             <Typography variant="subtitle1">Recent activity</Typography>
             <Typography variant="caption" color="text.secondary">
-              Latest cross-channel activity from the shared event log.
+              Latest cross-channel lead touches from the shared timeline.
             </Typography>
           </Box>
           <Chip
             size="small"
-            label={`${events.length} events`}
+            label={`${events.length} updates`}
             variant="outlined" />
           
         </Stack>
@@ -151,7 +150,7 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
           
           {isAi ?
           event.kind === 'voice' ?
-          <GraphicEqIcon fontSize="small" /> :
+          Icon ? <Icon fontSize="small" /> : null :
           null :
 
           Icon ?

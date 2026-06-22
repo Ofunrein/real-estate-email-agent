@@ -105,7 +105,7 @@ export function EmailView() {
       <WorkspaceHeader
         title="Email Threads"
         subtitle="Read the exact conversation as the AI handled it."
-        count="68 events"
+        count="68 touches"
         reviewCount={2} />
       
 

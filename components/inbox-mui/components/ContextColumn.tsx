@@ -153,7 +153,7 @@ export function ContextColumn({
           <Box>
             <Typography variant="h6">{stats.events}</Typography>
             <Typography variant="caption" color="text.secondary">
-              events
+              touches
             </Typography>
           </Box>
           <Box>

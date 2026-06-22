@@ -2035,13 +2035,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
-    "mtime": 1782075494.18396,
-    "ast_hash": "bce3a71622d56d4d680f8e3897fc4d4c",
+    "mtime": 1782087355.29283,
+    "ast_hash": "ac821729aa24e700f7b688801c5744b3",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityFeed.tsx": {
-    "mtime": 1782046807.9813921,
-    "ast_hash": "6e7627d5cbcef27d3340cded1a070028",
+    "mtime": 1782087332.3136654,
+    "ast_hash": "43aa6811a9e3b0686b5e98fd0e0f98b4",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/CategoryFilter.tsx": {
@@ -2055,8 +2055,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ContextColumn.tsx": {
-    "mtime": 1782078759.6706972,
-    "ast_hash": "45365429e49f22fe1ee6607f38768574",
+    "mtime": 1782087364.108443,
+    "ast_hash": "235b48624e797c38ac2bce87d8c19c5d",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ConversationList.tsx": {
@@ -2065,8 +2065,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
-    "mtime": 1782086582.3701873,
-    "ast_hash": "fdc02133d36cf6d93066552279a29187",
+    "mtime": 1782087383.4743905,
+    "ast_hash": "4976b5d31f73dc20a651bae9006ffa85",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmptyChannelView.tsx": {
@@ -2085,8 +2085,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
-    "mtime": 1782046815.8147075,
-    "ast_hash": "69b00fc828744c2ff14e743ef682425a",
+    "mtime": 1782087345.3729937,
+    "ast_hash": "94e097384e6d67457812072255522bc2",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/PropertiesView.tsx": {
@@ -2120,8 +2120,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782086567.8364897,
-    "ast_hash": "2e963b48d0efc1d4422498d8d14d76b5",
+    "mtime": 1782087373.5902624,
+    "ast_hash": "719197387e20c3c5728defb8620f85f1",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782084964.2724144,
-    "ast_hash": "e0564a4ad931c4dfd56ae5e4d8ba6e7d",
+    "mtime": 1782087395.589844,
+    "ast_hash": "2843d9e58782e0946618964079e10f71",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
