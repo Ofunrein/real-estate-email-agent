@@ -14,7 +14,7 @@ import {
   type LeadCategoryId } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
-import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
+import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
 
@@ -67,6 +67,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
   visibleThreads.find((t) => t.id === selectedId) ??
   visibleThreads[0];
   const targetEventId = useActivityEventTarget('sms', thread?.id);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
   const scrolledTargetRef = useRef<string | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
@@ -79,8 +80,26 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
     scrolledTargetRef.current = targetEventId;
     requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      clearActivityEventTarget();
     });
   }, [targetEventId, thread?.id]);
+  useEffect(() => {
+    if (targetEventId || !scrollRef.current) return;
+    const el = scrollRef.current;
+    const scrollLatest = () => {
+      el.scrollTop = el.scrollHeight;
+    };
+    requestAnimationFrame(() => {
+      scrollLatest();
+      requestAnimationFrame(scrollLatest);
+    });
+    const timeout = window.setTimeout(scrollLatest, 120);
+    return () => window.clearTimeout(timeout);
+  }, [targetEventId, thread?.id, thread?.messages.length]);
+  const handleSelectThread = (id: string) => {
+    clearActivityEventTarget();
+    setSelectedId(id);
+  };
   const handleCallLead = async () => {
     if (!thread?.contact || dialing) return;
     setDialing(true);
@@ -166,7 +185,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
 	            categoryColor: colors[t.category]
 	          }))}
           selectedId={thread?.id ?? ''}
-          onSelect={setSelectedId} />
+          onSelect={handleSelectThread} />
         
 
         {thread ?
@@ -217,6 +236,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
             }
 
             <Box
+            ref={scrollRef}
             sx={{
               flex: 1,
               overflowY: 'auto',

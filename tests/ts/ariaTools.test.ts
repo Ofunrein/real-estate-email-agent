@@ -136,9 +136,14 @@ test("searchProperties: empty result action", async () => {
 
 test("sendPropertyDetailsSms: sends listing details and photo media", async () => {
   let sent: { to: string; body: string; mediaUrls?: string[] } | null = null;
+  let logged: Parameters<NonNullable<AriaToolDeps["recordSms"]>>[0] | null = null;
   const out = await runAriaTool("sendPropertyDetailsSms", { address: "123 Main St", query: "send photos" }, ctx, deps({
     sendSms: async (to, body, mediaUrls) => {
       sent = { to, body, mediaUrls };
+      return { sent: true, skipped: false, error: "" };
+    },
+    recordSms: async (input) => {
+      logged = input;
     },
   }));
 
@@ -147,6 +152,10 @@ test("sendPropertyDetailsSms: sends listing details and photo media", async () =
   assert.equal(sent!.to, ctx.phone);
   assert.match(sent!.body, /123 Main St/);
   assert.deepEqual(sent!.mediaUrls, ["https://photos.zillowstatic.com/fp/one.jpg"]);
+  assert.equal(logged!.channel, "sms");
+  assert.equal(logged!.direction, "outbound");
+  assert.equal(logged!.threadRef, `sms:${ctx.phone}`);
+  assert.match(logged!.messageText || "", /MMS image:/);
   assert.match(out.result, /texted the listing details and photos/);
 });
 

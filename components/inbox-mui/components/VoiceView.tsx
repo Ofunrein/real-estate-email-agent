@@ -34,7 +34,7 @@ import {
   type CallOutcome } from
 '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
-import { useActivityEventTarget } from '../hooks/useActivityEventTarget';
+import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 const outcomeColor: Record<CallOutcome, string> = {
   voicemail: '#fbbf24',
@@ -70,9 +70,17 @@ export function VoiceView() {
     scrolledTargetRef.current = targetEventId;
     requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      clearActivityEventTarget();
     });
   }, [targetEventId, contact?.id]);
+  useEffect(() => {
+    if (targetEventId || !scrollRef.current) return;
+    requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    });
+  }, [targetEventId, contact?.id, contact?.calls.length]);
   const handleSelect = (id: string) => {
+    clearActivityEventTarget();
     setSelectedId(id);
     // Jump to the conversation thread when a voice contact is opened.
     requestAnimationFrame(() => {

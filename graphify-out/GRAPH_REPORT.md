@@ -1,16 +1,16 @@
 # Graph Report - real-estate-email-agent  (2026-06-21)
 
 ## Corpus Check
-- 449 files · ~1,849,428 words
+- 450 files · ~1,852,153 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3707 nodes · 7049 edges · 284 communities (228 shown, 56 thin omitted)
+- 3733 nodes · 7080 edges · 279 communities (223 shown, 56 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4531c159`
+- Built from commit: `bd0d9b08`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -211,7 +211,6 @@
 - [[_COMMUNITY_Community 204|Community 204]]
 - [[_COMMUNITY_Community 205|Community 205]]
 - [[_COMMUNITY_Community 206|Community 206]]
-- [[_COMMUNITY_Community 207|Community 207]]
 - [[_COMMUNITY_Community 209|Community 209]]
 - [[_COMMUNITY_Community 210|Community 210]]
 - [[_COMMUNITY_Community 211|Community 211]]
@@ -237,7 +236,6 @@
 - [[_COMMUNITY_Community 231|Community 231]]
 - [[_COMMUNITY_Community 232|Community 232]]
 - [[_COMMUNITY_Community 233|Community 233]]
-- [[_COMMUNITY_Community 234|Community 234]]
 - [[_COMMUNITY_Community 235|Community 235]]
 - [[_COMMUNITY_Community 236|Community 236]]
 - [[_COMMUNITY_Community 237|Community 237]]
@@ -272,11 +270,8 @@
 - [[_COMMUNITY_Community 275|Community 275]]
 - [[_COMMUNITY_Community 276|Community 276]]
 - [[_COMMUNITY_Community 277|Community 277]]
-- [[_COMMUNITY_Community 278|Community 278]]
 - [[_COMMUNITY_Community 279|Community 279]]
-- [[_COMMUNITY_Community 280|Community 280]]
 - [[_COMMUNITY_Community 281|Community 281]]
-- [[_COMMUNITY_Community 282|Community 282]]
 - [[_COMMUNITY_Community 287|Community 287]]
 
 ## God Nodes (most connected - your core abstractions)
@@ -294,23 +289,23 @@
 ## Surprising Connections (you probably didn't know these)
 - `GET()` --calls--> `assertWebhookSecret()`  [INFERRED]
   app/api/diagnostics/inbox/route.ts → lib/webhookRequest.ts
-- `GET()` --calls--> `readInboxCategoriesFromDatabase()`  [INFERRED]
+- `PATCH()` --calls--> `upsertInboxCategoriesInDatabase()`  [INFERRED]
   app/api/settings/inbox/route.ts → lib/database.ts
-- `GET()` --calls--> `readInboxSettingsFromDatabase()`  [INFERRED]
+- `PATCH()` --calls--> `upsertInboxSettingsInDatabase()`  [INFERRED]
   app/api/settings/inbox/route.ts → lib/database.ts
-- `PATCH()` --calls--> `requireDashboardAuth()`  [INFERRED]
-  app/api/settings/inbox/route.ts → lib/authGuard.ts
-- `PATCH()` --calls--> `unauthorizedResponse()`  [INFERRED]
-  app/api/settings/inbox/route.ts → lib/authGuard.ts
+- `ResetPasswordPage()` --calls--> `localAuthBypassEnabled()`  [EXTRACTED]
+  app/reset-password/page.tsx → auth.ts
+- `main()` --calls--> `build_hygiene_report()`  [INFERRED]
+  scripts/bulk-enrich-until-clean.py → core/property_hygiene.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (284 total, 56 thin omitted)
+## Communities (279 total, 56 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.12
-Nodes (30): asksForLightGreeting(), canShareSafeFactsDuringHandoff(), classifyTheoMessage(), cleanSmsReply(), formatTheoGeneralReply(), formatTheoNoPropertyOptions(), formatTheoPhotoLinkFallback(), formatTheoPropertyLinks() (+22 more)
+Cohesion: 0.07
+Nodes (68): AUSTIN_NEIGHBORHOODS, CENTRAL_TEXAS_ALIASES, CENTRAL_TEXAS_CITIES, CENTRAL_TEXAS_SEARCH_AREAS, isCentralTexasCity(), normalizeArea(), titleArea(), asksForAlternativeProperties() (+60 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.06
@@ -321,8 +316,8 @@ Cohesion: 0.04
 Nodes (50): dependencies, @emotion/react, @mui/icons-material, @mui/icons-material/ArrowOutward, @mui/icons-material/AutoAwesome, @mui/icons-material/ChatBubbleOutline, @mui/icons-material/CheckCircle, @mui/icons-material/CheckCircleOutline (+42 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.08
-Nodes (46): ensureGmailLabel(), anthropicApiKey(), applyGmailLabels(), bodyFromPayload(), buildHtmlEmailReply(), buildIrisEmailConversationEventRow(), buildIrisEmailLeadMemoryRow(), buildIrisEmailOutboundEventRow() (+38 more)
+Cohesion: 0.17
+Nodes (16): buildIrisEmailConversationEventRow(), buildIrisEmailLeadMemoryRow(), buildIrisEmailOutboundEventRow(), cleanBody(), gmailSearchToken(), handoffSummary(), header(), IrisEmailClient (+8 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.04
@@ -334,7 +329,7 @@ Nodes (41): applySettings(), boardEl, boardSwitcherEl, detailList(), detailText(
 
 ### Community 6 - "Community 6"
 Cohesion: 0.14
-Nodes (43): rentcast_lookup(), clean_cell(), normalize_address_key(), _apify_price_digits(), _apify_search_record(), _apply_missing_values(), backfill_zip_median_core_fields(), _batch_detail_lookup() (+35 more)
+Nodes (38): apify_zillow_lookup(), Look up any address on Zillow via Apify. Uses maxcopell/zillow-detail-scraper, rentcast_lookup(), normalize_address_key(), batch_update_rows(), _apify_price_digits(), _apify_search_record(), _apply_missing_values() (+30 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.09
@@ -353,32 +348,32 @@ Cohesion: 0.06
 Nodes (51): POST(), clockContext(), defaultEndDeps, defaultToolDeps, EndOfCallDeps, handleAriaEndOfCall(), handleAriaToolCalls(), notifyTypeForAction() (+43 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.09
-Nodes (42): ChannelIngestInput, ALLOWED_ROUTE_REASONS, buildSocialRouterResult(), formatManyChatDynamicBlock(), ManyChatDynamicBlock, ManyChatMessage, maxSocialImages(), normalizeChannel() (+34 more)
+Cohesion: 0.10
+Nodes (36): ALLOWED_ROUTE_REASONS, buildSocialRouterResult(), formatManyChatDynamicBlock(), ManyChatDynamicBlock, ManyChatMessage, maxSocialImages(), normalizeChannel(), normalizeManyChatPayload() (+28 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.13
-Nodes (37): fetchPublicPropertyContext(), apifyToken(), clean(), extractTheoAddress(), extractTheoAddresses(), extractTheoPropertySearchIntent(), extractTheoPropertySearchQuery(), fetchApifyZillow() (+29 more)
+Cohesion: 0.14
+Nodes (37): apifyToken(), clean(), extractTheoAddress(), extractTheoAddresses(), extractTheoPropertySearchIntent(), extractTheoPropertySearchQuery(), fetchApifyZillow(), fetchSoldComps() (+29 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.09
-Nodes (27): AgentInboxHandler, build_metrics(), group_events_by_thread(), load_inbox_data(), render_index(), BaseHTTPRequestHandler, append_conversation_event(), build_conversation_event() (+19 more)
+Cohesion: 0.15
+Nodes (21): get_gmail_service(), build_add_sheet_requests(), ensure_workbook_schema(), get_spreadsheet_tabs(), missing_headers(), Any, read_table(), row_to_dict() (+13 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.10
-Nodes (23): apify_zillow_lookup(), append_question_to_reply(), build_email_conversation_event(), build_email_lead_memory_update(), build_handoff_summary(), derive_next_question(), generate_closeout_reply(), generate_multi_property_html() (+15 more)
+Cohesion: 0.11
+Nodes (36): append_question_to_reply(), _as_list(), build_email_conversation_event(), build_email_lead_memory_update(), build_handoff_summary(), classify_email(), derive_next_question(), detect_compliance_flags() (+28 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.05
 Nodes (43): dependencies, class-variance-authority, clsx, embla-carousel-auto-scroll, embla-carousel-react, @fillout/react, framer-motion, lucide-react (+35 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.14
-Nodes (21): HELP_WORDS, inferPreferredChannelFromText(), isoNow(), MetaWhatsAppIngestPayload, oliviaWebsiteIngestInput(), recordChannelInteraction(), requireDatabaseForChannelWrites(), START_WORDS (+13 more)
+Cohesion: 0.13
+Nodes (23): ChannelIngestInput, HELP_WORDS, inferPreferredChannelFromText(), isoNow(), MetaWhatsAppIngestPayload, oliviaWebsiteIngestInput(), recordChannelInteraction(), requireDatabaseForChannelWrites() (+15 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.14
-Nodes (27): appointmentType(), AriaToolContext, AriaToolDeps, AriaToolName, AriaToolOutcome, baseIngest(), bookAppointmentTool(), cancelAppointmentTool() (+19 more)
+Cohesion: 0.13
+Nodes (28): AppointmentInput, appointmentType(), AriaToolContext, AriaToolDeps, AriaToolName, AriaToolOutcome, baseIngest(), bookAppointmentTool() (+20 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.07
@@ -393,20 +388,20 @@ Cohesion: 0.07
 Nodes (26): 1. DESIGN DIRECTION, 2. ANTI-SLOP RULES, 3. VISUAL SYSTEM, 4. LAYOUT OVERHAUL, 5. COMPONENT BREAKDOWN, 6. QUICK WINS (ship this week), 7. IMPLEMENTATION ORDER, AgentInboxClient UI Overhaul Design Brief (+18 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.13
-Nodes (24): authorized(), eventKeys(), GET(), leadsWithEvents(), plan(), TouchDecision, AUTOMATED_CHANNELS, CadenceQueuePlan (+16 more)
+Cohesion: 0.11
+Nodes (26): addressable(), AUTOMATED_CHANNELS, CadenceQueueChannel, CadenceQueuePlan, CadenceQueueSkip, CadenceQueueTask, cleanChannel(), consentOk() (+18 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.14
 Nodes (27): outboundConfig(), POST(), clean(), defaultVoiceCompanyName(), evaluateFollowups(), FollowupCandidate, LeadWithEvents, looksLikePhone() (+19 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.17
-Nodes (18): appointmentType(), POST(), AppointmentRecord, AppointmentStatus, AppointmentType, createAppointment(), CreateAppointmentInput, findAppointmentById() (+10 more)
+Cohesion: 0.21
+Nodes (15): appointmentType(), POST(), AppointmentRecord, AppointmentStatus, AppointmentType, cancelAppointmentById(), createAppointment(), CreateAppointmentInput (+7 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.22
-Nodes (12): StyleExample, buildStyleFewShot(), defaultDeps, fetchStyleContext(), StyleTrainingDeps, ariaToolUrl(), attachReusableTools(), buildVapiPlatformTools() (+4 more)
+Cohesion: 0.36
+Nodes (5): StyleExample, buildStyleFewShot(), defaultDeps, fetchStyleContext(), StyleTrainingDeps
 
 ### Community 25 - "Community 25"
 Cohesion: 0.08
@@ -417,24 +412,24 @@ Cohesion: 0.13
 Nodes (19): asObject(), createGhlAdapter(), GhlConfig, GhlRequest, toAppointment(), toContact(), toImportedLead(), CrmActivity (+11 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.11
-Nodes (34): GET(), redirectHome(), decryptEmailAccountToken(), encryptEmailAccountToken(), encryptionKey(), encryptionSecret(), appBaseUrl(), connectGmailAccountFromCode() (+26 more)
+Cohesion: 0.05
+Nodes (72): authEmailListLabel(), DEFAULT_ALLOWED_EMAILS, getAllowedAuthEmails(), { handlers, auth, signIn, signOut }, hasGoogleAuthProvider(), isAllowedAuthEmail(), GET(), redirectHome() (+64 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.44
 Nodes (9): activateTakeover(), clientId(), getPool(), getTakeover(), isTakeoverActive(), releaseTakeover(), TakeoverState, GET() (+1 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.13
-Nodes (28): appendLeadImportItemToDatabase(), buildHeaderIndex(), buildImportPreview(), cleanText(), compactTags(), dedupeKeyFor(), FIELD_ALIASES, hasAny() (+20 more)
+Cohesion: 0.12
+Nodes (29): buildHeaderIndex(), buildImportPreview(), cleanText(), compactTags(), dedupeKeyFor(), FIELD_ALIASES, hasAny(), ImportOptions (+21 more)
 
 ### Community 31 - "Community 31"
 Cohesion: 0.38
 Nodes (12): areaTerms(), hasHardStructuredCriteria(), matchesArea(), normalizeSearchText(), numericValue(), propertyHaystack(), propertyLooksRental(), propertyMatchesCriteria() (+4 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.19
-Nodes (20): _address_keys(), _apply_tcad_values(), build_tcad_index(), _canonical_unit_address(), _digits(), _download_export(), fetch_properties(), field_fill_rates() (+12 more)
+Cohesion: 0.21
+Nodes (19): _address_keys(), _apply_tcad_values(), build_tcad_index(), _canonical_unit_address(), _digits(), _download_export(), fetch_properties(), field_fill_rates() (+11 more)
 
 ### Community 33 - "Community 33"
 Cohesion: 0.10
@@ -445,28 +440,28 @@ Cohesion: 0.10
 Nodes (19): 1. X/Twitter Trend Summary, 2. Reference UI Teardown, 3. Anti-Slop Checklist — Agent Inbox Specific, 4. Design System Spec, 5. Component Architecture, 6. Quick Wins — 48 Hours, 7. Full Overhaul Plan, Border Radius System (+11 more)
 
 ### Community 35 - "Community 35"
-Cohesion: 0.16
-Nodes (10): EmailView(), SmsView(), SmsViewProps, ActivityTarget, activityTargetId(), persistActivityEventTarget(), useActivityEventTarget(), usePersistedSelection() (+2 more)
+Cohesion: 0.15
+Nodes (14): EmailView(), SmsView(), formatTime(), outcomeColor, parseDuration(), RecordingPlayer(), VoiceView(), SmsViewProps (+6 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.18
 Nodes (8): MANYCHAT_REQUIRED_FIELDS, MANYCHAT_REQUIRED_TAGS, ManyChatApiClient, ManyChatResource, ManyChatSetupSnapshot, missingManyChatResources(), normalizeManyChatList(), resourceNames()
 
 ### Community 37 - "Community 37"
-Cohesion: 0.20
-Nodes (15): Path, blank_event(), build_inbound_event(), build_outbound_event(), compact_fields(), event_key(), import_events(), inbound_summary() (+7 more)
+Cohesion: 0.19
+Nodes (16): values_for_headers(), Path, blank_event(), build_inbound_event(), build_outbound_event(), compact_fields(), event_key(), import_events() (+8 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.12
 Nodes (19): apify_zillow_search(), _comp_value(), get_mortgage_rates(), get_neighborhood_stats(), get_sold_comps(), hubspot_add_note(), hubspot_upsert_contact(), _log_cost() (+11 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.30
-Nodes (11): AriaAssistantOptions, ariaVoiceWebhookUrl(), buildAriaAssistant(), buildFallbackVoice(), buildVoiceConfig(), modelProviderFor(), optionalBool(), optionalNumber() (+3 more)
+Cohesion: 0.19
+Nodes (18): AriaAssistantOptions, ariaVoiceWebhookUrl(), buildAriaAssistant(), buildFallbackVoice(), buildVoiceConfig(), modelProviderFor(), optionalBool(), optionalNumber() (+10 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.29
-Nodes (8): DraftActionBody, emailSubject(), gmailThreadIdForEmail(), latestEvent(), normalizedChannel(), POST(), aiDraftFromRow(), upsertAiDraftInDatabase()
+Cohesion: 0.12
+Nodes (25): DraftActionBody, emailSubject(), gmailThreadIdForEmail(), latestEvent(), normalizedChannel(), POST(), GET(), Home() (+17 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.10
@@ -477,8 +472,8 @@ Cohesion: 0.23
 Nodes (14): backfill_events(), decode_body(), eligible_event(), header_map(), list_sent_messages(), main(), match_backfills(), normalize_subject() (+6 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.18
-Nodes (17): _as_list(), classify_email(), detect_compliance_flags(), detect_no_signal(), _extract_json_dict(), get_lead_memory(), get_new_messages(), get_thread_context() (+9 more)
+Cohesion: 0.08
+Nodes (23): A. Connection Registry, B. Composio Connect Layer, C. Settings UI, Channel Ownership, Channel Routing, Composio Account Selection, Connection UX, Current Repo State (+15 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.11
@@ -493,35 +488,35 @@ Cohesion: 0.32
 Nodes (8): _addresses_match(), append_property_to_sheet(), get_listings(), _get_sheet_headers(), _normalize_address_key(), Append a newly discovered property to the properties tab., search_listings_by_address(), _sheet_header_key()
 
 ### Community 47 - "Community 47"
-Cohesion: 0.23
-Nodes (13): sendGmailReply(), sendGmailReplyWithOptions(), validGmailThreadId(), verifyGmailThread(), EmailAttachment, ManualReplyInput, ManualReplyResult, sendEmail() (+5 more)
+Cohesion: 0.26
+Nodes (10): append_conversation_event(), build_conversation_event(), build_lead_memory_update(), iso_now(), join_values(), merge_lead_memory(), upsert_lead_memory(), append_row() (+2 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.22
-Nodes (18): resolveCrmAdapter(), cancelAppointmentById(), rescheduleAppointmentById(), addMinutes(), AppointmentInput, AppointmentResult, bookAppointment(), bookGHL() (+10 more)
+Cohesion: 0.28
+Nodes (14): resolveCrmAdapter(), addMinutes(), AppointmentResult, bookAppointment(), bookGHL(), cancelGHLEvent(), parseLocalDateTime(), rescheduleGHLEvent() (+6 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.09
-Nodes (72): PATCH(), appendConversationEventToDatabase(), boolDbValue(), cleanRow(), clientId(), clientName(), conversationEventExistsByGmailMessageId(), createLeadImportBatchInDatabase() (+64 more)
+Cohesion: 0.08
+Nodes (72): aiDraftFromRow(), appendConversationEventToDatabase(), appendLeadImportItemToDatabase(), boolDbValue(), cleanRow(), clientId(), clientName(), conversationEventExistsByGmailMessageId() (+64 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.09
 Nodes (23): StarButton(), StarButtonProps, cn(), Topbar(), Badge(), BadgeProps, badgeVariants, Button (+15 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.26
-Nodes (12): POST(), handleAgentSmsControl(), agentAlertPhone(), cleanMediaUrls(), envFlag(), isUnsafeSmsRecipient(), missingConfig(), recipientDigits() (+4 more)
+Cohesion: 0.24
+Nodes (13): POST(), handleAgentSmsControl(), agentAlertPhone(), cleanMediaUrls(), envFlag(), isUnsafeSmsRecipient(), missingConfig(), recipientDigits() (+5 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.12
 Nodes (15): 1. SKILL CAPABILITY MAP, 2. THE OPTIMAL CHAIN, 3. WHAT X SAYS IS MISSING, 4. THE UNIFIED TRIGGER LOGIC, 5. SELF-IMPROVEMENT MECHANISM, 6. THE THREE SKILL GAPS TO FILL, Branch: App Shell / Dashboard, Branch: Landing Page / Marketing Site (+7 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.24
-Nodes (14): CrmAppointment, addHour(), buildIcsInvite(), cancelShowing(), ChangeShowingResult, formatWhen(), icsStamp(), rescheduleShowing() (+6 more)
+Cohesion: 0.26
+Nodes (13): CrmAppointment, addHour(), buildIcsInvite(), cancelShowing(), ChangeShowingResult, formatWhen(), icsStamp(), rescheduleShowing() (+5 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.21
+Cohesion: 0.30
 Nodes (11): channelOrder(), consentOk(), dayKey(), eventTime(), lastInboundTime(), localHour(), nextTouch(), optedOut() (+3 more)
 
 ### Community 55 - "Community 55"
@@ -541,20 +536,20 @@ Cohesion: 0.22
 Nodes (13): appendEvents(), CONVERSATION_EVENTS_HEADERS, LEAD_MEMORY_HEADERS, loadDotenv(), main(), PROPERTIES_HEADERS, readJson(), readSheet() (+5 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.14
-Nodes (19): apply_labels(), check_followups(), _claude(), enrich_missing_fields(), get_my_email(), _google_error_status(), _google_execute(), _is_transient_claude_error() (+11 more)
+Cohesion: 0.12
+Nodes (21): apply_labels(), check_followups(), _claude(), enrich_missing_fields(), get_my_email(), get_new_messages(), _google_error_status(), _google_execute() (+13 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.07
 Nodes (25): ActivityEvent, Call, CallOutcome, CallTurn, Channel, channelAccounts, ChannelId, channelMeta (+17 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.28
-Nodes (7): AUSTIN_NEIGHBORHOODS, CENTRAL_TEXAS_ALIASES, CENTRAL_TEXAS_CITIES, CENTRAL_TEXAS_SEARCH_AREAS, isCentralTexasCity(), normalizeArea(), titleArea()
+Cohesion: 0.15
+Nodes (15): anthropicApiKey(), buildHtmlEmailReply(), decideIrisEmailExecution(), dedupeProperties(), formatCurrency(), generateClaudeIrisEmailReplyText(), generateIrisEmailReply(), generateIrisEmailReplyRich() (+7 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.27
-Nodes (12): formatAppointmentForAgent(), buildCallerContextResponse(), CallerContext, ChannelExcerpt, compileCallerContext(), extractArea(), extractBedrooms(), extractBudget() (+4 more)
+Cohesion: 0.25
+Nodes (13): formatAppointmentForAgent(), buildCallerContextResponse(), CallerContext, ChannelExcerpt, compileCallerContext(), extractArea(), extractBedrooms(), extractBudget() (+5 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.14
@@ -705,8 +700,8 @@ Cohesion: 0.10
 Nodes (20): GhlCalendar(), Reveal(), RevealProps, RevealVariant, GlowCard(), GlowCardProps, glowColorMap, caseStudies (+12 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.36
-Nodes (6): ReviewPanel(), InboxModel, emptyModel, InboxDataContext, InboxDataContextValue, useInboxData()
+Cohesion: 0.17
+Nodes (11): ReviewPanel(), autoSendChannels, SettingsDrawer(), SettingsDrawerProps, channelAvailability, InboxModel, emptyModel, InboxDataContext (+3 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.60
@@ -809,20 +804,20 @@ Cohesion: 0.11
 Nodes (18): aria-deep-dive.tsx, Branch: `feature/website-copy-refresh`, case-study-wall.tsx / content/case-studies.ts, Execution Rules, faq.tsx / content/faq.ts, final-cta.tsx, Hero Changes, Lumenosis Website Copy Refresh (+10 more)
 
 ### Community 153 - "Community 153"
-Cohesion: 0.13
-Nodes (25): AGENCY_KNOWLEDGE_CONTEXT, TheoClassification, anthropicKey(), anthropicMessage(), AnthropicMessageResult, AnthropicTextBlock, AnthropicUsage, classifyModel() (+17 more)
+Cohesion: 0.12
+Nodes (27): AGENCY_KNOWLEDGE_CONTEXT, TheoClassification, anthropicKey(), anthropicMessage(), AnthropicMessageResult, AnthropicTextBlock, AnthropicUsage, classifyModel() (+19 more)
 
 ### Community 155 - "Community 155"
 Cohesion: 0.20
 Nodes (8): siteStructuredData, Aurora, AuroraBackground(), SpotlightButtonWrapper(), SpotlightButtonWrapperProps, FinalCTA(), Footer(), StickyCtaBar()
 
 ### Community 156 - "Community 156"
-Cohesion: 0.14
-Nodes (25): normalizeLegacyAgentText(), buildActivityEvents(), buildChannelStats(), buildEmailMessages(), buildEmailThreads(), buildReviewQueue(), buildSmsThreads(), formatEventTimeShort() (+17 more)
+Cohesion: 0.27
+Nodes (7): AgentInboxHandler, build_metrics(), group_events_by_thread(), load_inbox_data(), render_index(), BaseHTTPRequestHandler, AgentInboxTests
 
 ### Community 157 - "Community 157"
-Cohesion: 0.15
-Nodes (25): hasCrmImport(), configured(), connectorStatuses(), GET(), payloadFromRequest(), sourceTypeFrom(), truthy(), composioApiKey() (+17 more)
+Cohesion: 0.18
+Nodes (21): hasCrmImport(), configured(), connectorStatuses(), GET(), payloadFromRequest(), POST(), sourceTypeFrom(), truthy() (+13 more)
 
 ### Community 158 - "Community 158"
 Cohesion: 0.10
@@ -845,8 +840,8 @@ Cohesion: 0.12
 Nodes (16): dependencies, date-fns, @emotion/react, @emotion/styled, framer-motion, lucide-react, @mui/icons-material, @mui/material (+8 more)
 
 ### Community 163 - "Community 163"
-Cohesion: 0.13
-Nodes (35): GET(), GET(), Home(), POST(), callbackUrl(), GET(), GET(), CONVERSATIONS_CACHE (+27 more)
+Cohesion: 0.19
+Nodes (25): GET(), POST(), callbackUrl(), GET(), GET(), GET(), LIVE_DASHBOARD_CACHE, eventChannel() (+17 more)
 
 ### Community 164 - "Community 164"
 Cohesion: 0.15
@@ -873,16 +868,16 @@ Cohesion: 0.18
 Nodes (10): API Notes, Commands, Conventions, Git Signals, Notes, Overview, Project Instructions, Project Structure (+2 more)
 
 ### Community 170 - "Community 170"
-Cohesion: 0.13
-Nodes (28): authEmailListLabel(), DEFAULT_ALLOWED_EMAILS, getAllowedAuthEmails(), { handlers, auth, signIn, signOut }, hasGoogleAuthProvider(), isAllowedAuthEmail(), localAuthBypassEnabled(), appBaseUrl() (+20 more)
+Cohesion: 0.29
+Nodes (10): PROPERTIES_HEADERS, bulkUpsertProperties(), chunks(), clean(), eventKey(), getSyncPool(), SheetsToNeonSyncResult, syncSheetsToNeon() (+2 more)
 
 ### Community 171 - "Community 171"
 Cohesion: 0.33
 Nodes (6): faq, FaqItem, Faq(), AccordionContent, AccordionItem, AccordionTrigger
 
 ### Community 172 - "Community 172"
-Cohesion: 0.18
-Nodes (22): twilioSmsIngestInput(), extractTheoListedPropertyAddresses(), cacheTheoProperties(), combinedInboundMessage(), delay(), hasFreshPropertySearchCriteria(), isSystemOtpMessage(), logTheo() (+14 more)
+Cohesion: 0.19
+Nodes (21): extractTheoListedPropertyAddresses(), cacheTheoProperties(), combinedInboundMessage(), delay(), hasFreshPropertySearchCriteria(), isSystemOtpMessage(), logTheo(), logTheoMetrics() (+13 more)
 
 ### Community 173 - "Community 173"
 Cohesion: 0.22
@@ -921,8 +916,8 @@ Cohesion: 0.29
 Nodes (5): inter, jetbrains, newsreader, ThemeProvider(), metadata
 
 ### Community 182 - "Community 182"
-Cohesion: 0.20
-Nodes (11): formatTime(), outcomeColor, parseDuration(), RecordingPlayer(), VoiceView(), fmt(), LiveCallPanel(), LiveCallPanelProps (+3 more)
+Cohesion: 0.38
+Nodes (6): fmt(), LiveCallPanel(), LiveCallPanelProps, LiveTurn, statusLabel(), AriaPhoneDemo()
 
 ### Community 184 - "Community 184"
 Cohesion: 0.50
@@ -937,16 +932,16 @@ Cohesion: 0.18
 Nodes (8): GlassStatCallout(), MagnetProps, RotatingText(), Niche, niches, Hero(), HERO_AUDIENCES, HERO_IMAGES
 
 ### Community 197 - "Community 197"
-Cohesion: 0.21
-Nodes (15): addressable(), leadIdentity(), buildConfirmation(), chooseStitchCandidate(), confirmationMatches(), defaultDeps, IdentityDeps, lastTouchAt() (+7 more)
+Cohesion: 0.28
+Nodes (9): buildConfirmation(), confirmationMatches(), defaultDeps, IdentityDeps, lastTouchAt(), resolveCaller(), stitchByEmailOrName(), StitchResult (+1 more)
 
 ### Community 198 - "Community 198"
-Cohesion: 0.30
-Nodes (16): smsTextAndMedia(), propertyPhotoSrc(), addressStem(), extractPropertyAddressFromEmailHtml(), inboxImagePreviewUrl(), isDisplayableImageUrl(), isGoogleStreetViewUrl(), isProxiableImageUrl() (+8 more)
+Cohesion: 0.43
+Nodes (7): authorized(), eventKeys(), GET(), leadsWithEvents(), plan(), LeadWithEvents, clientConfig
 
 ### Community 199 - "Community 199"
-Cohesion: 0.10
-Nodes (27): formatPrice(), voiceCallTranscriptSource(), adaptInboxData(), average(), buildChannels(), buildDayBins(), buildProperties(), buildSparkline() (+19 more)
+Cohesion: 0.05
+Nodes (76): InboxApp(), InboxAppProps, InboxDataProvider(), normalizeLegacyAgentText(), formatPrice(), AgentInboxData, parseVoiceMessagesJson(), parseVoiceTranscript() (+68 more)
 
 ### Community 200 - "Community 200"
 Cohesion: 0.33
@@ -957,8 +952,8 @@ Cohesion: 0.14
 Nodes (13): 10. CTA Copy, 11. Positioning vs. Competitors, 12. Specific Copy Lines to Use, 1. Headline Frameworks, 2. Hero Section Principles, 3. VSL / Video Section, 4. Awareness Level Copy, 5. Benefit Section Templates (+5 more)
 
 ### Community 202 - "Community 202"
-Cohesion: 0.35
-Nodes (12): asksForAlternativeProperties(), asksForPropertyAmenities(), asksForPropertyAvailability(), asksForPropertyComparison(), asksForPropertyDetails(), asksForPropertyOptions(), asksForPropertySafeInquiry(), asksForPropertyShowing() (+4 more)
+Cohesion: 0.53
+Nodes (5): notifySlackOnBooking(), notifySlackOnHotLead(), notifySlackOnTransfer(), postSlack(), SlackCallPayload
 
 ### Community 203 - "Community 203"
 Cohesion: 0.19
@@ -970,23 +965,19 @@ Nodes (13): Current Scope, Data Sources, Lead Reopen Workload, Next Execution Ph
 
 ### Community 205 - "Community 205"
 Cohesion: 0.12
-Nodes (29): metaWhatsAppIngestInput(), normalizeTwilioContactAddress(), smsControlAction(), cleanMediaUrls(), cleanRecipient(), envFlag(), extractMetaWhatsAppMessages(), graphVersion() (+21 more)
+Nodes (30): metaWhatsAppIngestInput(), normalizeTwilioContactAddress(), smsControlAction(), cleanMediaUrls(), cleanRecipient(), envFlag(), extractMetaWhatsAppMessages(), graphVersion() (+22 more)
 
 ### Community 206 - "Community 206"
-Cohesion: 0.36
-Nodes (8): irisEmailMinutePoll, inngest, canServeInngest(), GET(), inngestHandler, missingSigningKeyResponse(), POST(), PUT()
-
-### Community 207 - "Community 207"
-Cohesion: 0.40
-Nodes (9): get_gmail_service(), ensure_workbook_schema(), get_spreadsheet_tabs(), _create_backup(), main(), _read_raw_values(), _unique_backup_tab(), _write_values() (+1 more)
+Cohesion: 0.25
+Nodes (10): irisEmailMinutePoll, IrisEmailMinutePollResult, inngest, canServeInngest(), GET(), inngestHandler, missingSigningKeyResponse(), POST() (+2 more)
 
 ### Community 210 - "Community 210"
 Cohesion: 0.20
 Nodes (9): name, private, scripts, build, dev, lint, preview, type (+1 more)
 
 ### Community 211 - "Community 211"
-Cohesion: 0.20
-Nodes (9): 11. CRM Integration, 12. Key Constraints & Limitations, 14. Exit Criteria, 1. Product Overview, 2. Target User, 4. Technical Architecture, 5. SDK & Integration Stack, 8. Composio SDK Onboarding Flow (for your end users) (+1 more)
+Cohesion: 0.18
+Nodes (10): 11. CRM Integration, 12. Key Constraints & Limitations, 14. Exit Criteria, 1. Product Overview, 2. Target User, 4. Technical Architecture, 5. SDK & Integration Stack, 8. Composio SDK Onboarding Flow (for your end users) (+2 more)
 
 ### Community 212 - "Community 212"
 Cohesion: 0.20
@@ -1017,8 +1008,8 @@ Cohesion: 0.32
 Nodes (7): formatResponseTarget(), leaks, ProblemAgitation(), Stat, StatItem(), stats, useProgress()
 
 ### Community 220 - "Community 220"
-Cohesion: 0.18
-Nodes (12): classifyIrisEmailText(), detectIrisComplianceFlags(), extractAddresses(), extractArea(), extractBeds(), extractBudget(), extractTimeline(), humanHandoffReason() (+4 more)
+Cohesion: 0.10
+Nodes (29): ensureGmailLabel(), GmailClient, GmailReplyResult, applyGmailLabels(), bodyFromPayload(), classifyIrisEmailText(), decodeBase64Url(), detectIrisComplianceFlags() (+21 more)
 
 ### Community 221 - "Community 221"
 Cohesion: 0.29
@@ -1041,8 +1032,8 @@ Cohesion: 0.29
 Nodes (6): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 
 ### Community 226 - "Community 226"
-Cohesion: 0.27
-Nodes (11): run(), RuntimeError, apply_patch(), call_llm(), fetch_rows(), fill_stats(), llm_providers(), load_env() (+3 more)
+Cohesion: 0.21
+Nodes (16): run(), clean_cell(), RuntimeError, apply_patch(), call_llm(), fetch_rows(), fill_stats(), llm_providers() (+8 more)
 
 ### Community 227 - "Community 227"
 Cohesion: 0.33
@@ -1068,10 +1059,6 @@ Nodes (6): 13. Build Phases, Phase 1 — Core DM Agent (Weeks 1–3), Phase 2 �
 Cohesion: 0.33
 Nodes (6): 3.12 iMessage Relay (Build Options), Build Recommendation for Lumenosis, How iMessage Relay Works (Under the Hood), Option 1: BlueBubbles (Free, Open Source — Requires Mac), Option 2: Claw Messenger (No Mac Required — $5–25/mo), Option 3: Apple Messages for Business (Official — Hard)
 
-### Community 234 - "Community 234"
-Cohesion: 0.23
-Nodes (14): cleanText(), formatFacts(), formatOptionFacts(), formatPrice(), formatSqft(), formatTheoAmenityAnswer(), formatTheoAvailabilityAnswer(), formatTheoPropertyDetails() (+6 more)
-
 ### Community 237 - "Community 237"
 Cohesion: 0.40
 Nodes (5): 10. Webhook Setup, Meta Webhooks (Instagram + Messenger), Twilio SMS Webhook, Vapi Webhook, WhatsApp Webhook (Composio-native)
@@ -1081,8 +1068,8 @@ Cohesion: 0.40
 Nodes (5): 3.10 Voice Cloning (ElevenLabs + Fish Audio), Implementation: Voice Clone Onboarding for Your Users, Recommended SDKs (pick one or offer both as user options), Voice Reply — Sending Audio Across Channels, Why Voice Cloning?
 
 ### Community 241 - "Community 241"
-Cohesion: 0.27
-Nodes (11): IrisEmailMinutePollResult, authorized(), GET(), intParam(), POST(), run(), channelEnabled(), shouldAutoSendForChannel() (+3 more)
+Cohesion: 0.36
+Nodes (9): authorized(), GET(), intParam(), POST(), run(), channelEnabled(), shouldAutoSendForChannel(), irisEmailCronDryRun() (+1 more)
 
 ### Community 246 - "Community 246"
 Cohesion: 0.50
@@ -1101,43 +1088,31 @@ Cohesion: 0.67
 Nodes (3): 6. Meta API Scopes Required, Facebook Page / Messenger, Instagram
 
 ### Community 274 - "Community 274"
-Cohesion: 0.13
-Nodes (27): normalizeLegacyAgentName(), Channel, channelFor(), isInternalVoiceEvent(), isReservedTestPhone(), isReservedTestRow(), normalizeInboxRow(), parseVoiceMessagesJson() (+19 more)
+Cohesion: 0.27
+Nodes (12): EmailCapability, InboxCategory, inferCategorySlug(), clean(), draftForGeneral(), draftForProperty(), facts(), humanRisk() (+4 more)
 
 ### Community 275 - "Community 275"
-Cohesion: 0.18
-Nodes (19): addOptionalParam(), addressSearchNeedle(), AUSTIN_PERMITS_DATASET, clean(), elapsed(), envFlag(), fetchCensusZipStats(), fetchSocrataPublicRecords() (+11 more)
+Cohesion: 0.17
+Nodes (20): addOptionalParam(), addressSearchNeedle(), AUSTIN_PERMITS_DATASET, clean(), elapsed(), envFlag(), fetchCensusZipStats(), fetchPublicPropertyContext() (+12 more)
 
 ### Community 277 - "Community 277"
 Cohesion: 0.29
 Nodes (3): ContextColumn(), ContextColumnProps, FlowRowProps
 
-### Community 278 - "Community 278"
-Cohesion: 0.33
-Nodes (4): autoSendChannels, SettingsDrawer(), SettingsDrawerProps, channelAvailability
-
 ### Community 279 - "Community 279"
-Cohesion: 0.18
-Nodes (6): ConnectorStatus, ImportBatch, ImportPreviewRow, ImportSummary, ImportsView(), segmentLabels
-
-### Community 280 - "Community 280"
-Cohesion: 0.50
-Nodes (4): InboxApp(), InboxAppProps, InboxDataProvider(), AgentInboxData
+Cohesion: 0.14
+Nodes (8): ConnectorStatus, ImportBatch, ImportPreviewRow, ImportSummary, ImportsView(), segmentLabels, CHANNEL_IDS, InboxPage()
 
 ### Community 281 - "Community 281"
-Cohesion: 0.16
-Nodes (20): appendPropertyToSheets(), credentialPaths(), loadAgentInboxDataFromSheets(), OAuthCredentials, readJson(), readJsonEnv(), readSheet(), readSheets() (+12 more)
-
-### Community 282 - "Community 282"
-Cohesion: 0.60
-Nodes (5): envFlag(), mediaImagesEnabled(), smsImagesEnabled(), socialDmImagesEnabled(), whatsAppImagesEnabled()
+Cohesion: 0.18
+Nodes (17): CONVERSATIONS_CACHE, GET(), readEvents(), readProperties(), appendPropertyToSheets(), credentialPaths(), loadAgentInboxDataFromSheets(), OAuthCredentials (+9 more)
 
 ### Community 287 - "Community 287"
-Cohesion: 0.12
-Nodes (7): CadenceQueueChannel, corePropertyFields, CONVERSATION_EVENTS_HEADERS, LEAD_MEMORY_HEADERS, SheetRow, NOON_CT, plan()
+Cohesion: 0.16
+Nodes (5): corePropertyFields, CONVERSATION_EVENTS_HEADERS, LEAD_MEMORY_HEADERS, SheetRow, NOON_CT
 
 ## Knowledge Gaps
-- **1377 isolated node(s):** `Response`, `CONVERSATIONS_CACHE`, `LIVE_DASHBOARD_CACHE`, `inngestHandler`, `LEADS_CACHE` (+1372 more)
+- **1399 isolated node(s):** `Response`, `CONVERSATIONS_CACHE`, `LIVE_DASHBOARD_CACHE`, `inngestHandler`, `LEADS_CACHE` (+1394 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **56 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1146,15 +1121,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AriaPhoneDemo()` connect `Community 182` to `Community 130`?**
   _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `SheetRow` connect `Community 287` to `Community 0`, `Community 3`, `Community 7`, `Community 12`, `Community 16`, `Community 17`, `Community 274`, `Community 275`, `Community 21`, `Community 22`, `Community 281`, `Community 153`, `Community 156`, `Community 30`, `Community 163`, `Community 40`, `Community 49`, `Community 54`, `Community 63`, `Community 197`, `Community 199`?**
+- **Why does `SheetRow` connect `Community 287` to `Community 0`, `Community 3`, `Community 7`, `Community 12`, `Community 16`, `Community 17`, `Community 274`, `Community 275`, `Community 21`, `Community 22`, `Community 281`, `Community 153`, `Community 30`, `Community 40`, `Community 170`, `Community 49`, `Community 54`, `Community 63`, `Community 197`, `Community 198`, `Community 199`, `Community 220`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **What connects `Response`, `Legacy Iris email daemon.  Keep this runtime intact while the Gmail polling, rep`, `Wrapper for all outbound HTTP calls — logs URL, status, elapsed ms.` to the rest of the system?**
-  _1401 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1423 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.12473118279569892 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06627175120325805 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.058544303797468354 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.04 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.08163265306122448 - nodes in this community are weakly interconnected._
+- **Should `Community 4` be split into smaller, more focused modules?**
+  _Cohesion score 0.04081632653061224 - nodes in this community are weakly interconnected._
