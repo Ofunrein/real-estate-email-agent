@@ -617,7 +617,7 @@ function buildChannelStats(data: AgentInboxData): Record<Exclude<ChannelId, "pro
       lastActivity: latest
         ? {
             contact: latest.email || latest.phone || latest.full_name || "unknown",
-            message: eventText(latest) || latest.summary || "",
+            message: usableActivityText(eventText(latest) || latest.summary || "", latest.summary || ""),
             status: latest.direction === "inbound" ? "received" : "sent",
             when: formatEventTimeShort(latest.event_at),
           }
