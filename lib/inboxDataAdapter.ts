@@ -213,9 +213,14 @@ function smsTextAndMedia(raw: string): { body: string; html?: string; media: Arr
 
   const addMedia = (url: string, label = "media") => {
     const trimmed = url.trim().replace(/[.,;]+$/, "");
-    const displayUrl = isDisplayableImageUrl(trimmed) ? inboxImagePreviewUrl(trimmed) : trimmed;
+    const labeledAudio = /audio|voice/i.test(label);
+    const displayUrl = isDisplayableImageUrl(trimmed)
+      ? inboxImagePreviewUrl(trimmed)
+      : labeledAudio
+        ? inboxAudioPreviewUrl(trimmed)
+        : trimmed;
     if (!displayUrl || seen.has(displayUrl)) return false;
-    const kind = isDisplayableImageUrl(displayUrl) ? "image" : isDisplayableAudioUrl(displayUrl) ? "audio" : "file";
+    const kind = isDisplayableImageUrl(displayUrl) ? "image" : isDisplayableAudioUrl(displayUrl) || labeledAudio ? "audio" : "file";
     if (kind === "file" && !/attachment|media/i.test(label)) return false;
     seen.add(displayUrl);
     media.push({
@@ -253,7 +258,16 @@ function smsTextAndMedia(raw: string): { body: string; html?: string; media: Arr
 }
 
 function isDisplayableAudioUrl(value: string): boolean {
-  return /\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(value);
+  return /\/api\/media\/audio\?url=/i.test(value) || /\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(value);
+}
+
+function inboxAudioPreviewUrl(value: string): string {
+  const raw = value.trim();
+  if (!raw || raw.startsWith("/api/media/audio") || raw.startsWith("/api/media/uploads") || raw.startsWith("/uploads/")) return raw;
+  if (/^https:\/\/api\.twilio\.com\/2010-04-01\/Accounts\//i.test(raw) || /^https:\/\/(?:storage|recordings)\.vapi\.ai\//i.test(raw)) {
+    return `/api/media/audio?url=${encodeURIComponent(raw)}`;
+  }
+  return raw;
 }
 
 function cleanSmsDisplayText(text: string): string {

@@ -300,7 +300,11 @@ function twilioMediaLogLines(payload: Record<string, string>): string[] {
     const url = (payload[`MediaUrl${i}`] || "").trim();
     if (!url) continue;
     const contentType = (payload[`MediaContentType${i}`] || "").toLowerCase();
-    const label = contentType.startsWith("image/") || !contentType ? "MMS image" : "MMS media";
+    const label = contentType.startsWith("image/") || !contentType
+      ? "MMS image"
+      : contentType.startsWith("audio/") || contentType.startsWith("video/")
+        ? "MMS audio"
+        : "MMS media";
     lines.push(`${label}: ${url}`);
   }
   return lines;

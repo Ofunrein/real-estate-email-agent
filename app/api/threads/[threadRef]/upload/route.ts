@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { normalizeManualVoiceUpload } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     if (file.size > MAX_SIZE) return NextResponse.json({ ok: false, error: "File too large (max 10MB)" }, { status: 413 });
     if (!ALLOWED.has(file.type)) return NextResponse.json({ ok: false, error: `Type not allowed: ${file.type || "unknown"}` }, { status: 415 });
 
-    const uploaded = await saveMediaUpload({ file, threadRef, requestUrl: req.url });
+    const normalizedFile = await normalizeManualVoiceUpload(file);
+    const uploaded = await saveMediaUpload({ file: normalizedFile, threadRef, requestUrl: req.url });
     return NextResponse.json({ ok: true, ...uploaded });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed";
