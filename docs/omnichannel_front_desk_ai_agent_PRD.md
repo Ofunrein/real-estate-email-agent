@@ -7,6 +7,12 @@
 
 ---
 
+## Implementation Scope
+
+The repo-aligned execution plan lives in [omnichannel_execution_plan.md](./omnichannel_execution_plan.md). Use that document for build order, channel ownership, Composio-vs-direct decisions, subagent workstreams, test gates, and deployment sequencing.
+
+---
+
 ## 1. Product Overview
 
 A white-label AI front desk agent that connects to a user's Instagram Business account, Facebook Page, SMS line, and phone number. It automatically reads incoming DMs and messages, qualifies leads (e.g. seller leads in real estate), and replies on behalf of the account owner — 24/7, without human intervention for routine conversations.

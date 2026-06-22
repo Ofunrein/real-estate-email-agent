@@ -9,7 +9,7 @@
 //
 // Pure except for the two injected async deps, so it is unit-testable.
 
-import type { ChannelIngestInput } from "@/lib/channelIngest";
+import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { resolveCaller as resolveCallerDefault, type CallerIdentity } from "@/lib/identity";
 import {
   lookupPropertyForVoice,
@@ -45,7 +45,7 @@ import {
 } from "@/lib/appointmentStore";
 import { buildCallerContextResponse, compileCallerContext } from "@/lib/ariaMemory";
 import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
-import { sendTheoSms } from "@/lib/twilioSms";
+import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 
 export type AriaToolName =
@@ -82,6 +82,7 @@ export type AriaToolDeps = {
   cancelGHLEvent: (ghlEventId: string) => Promise<boolean>;
   rescheduleGHLEvent: (ghlEventId: string, newDate: string, newTime: string, timezone?: string) => Promise<{ success: boolean; confirmed_time?: string; error?: string }>;
   sendSms: (to: string, body: string, mediaUrls?: string[]) => Promise<unknown>;
+  recordSms?: (input: ChannelIngestInput) => Promise<unknown>;
   notifyBooking: typeof notifySlackOnBooking;
   notifyTransfer: typeof notifySlackOnTransfer;
 };
@@ -101,6 +102,7 @@ const defaultDeps: AriaToolDeps = {
   cancelGHLEvent,
   rescheduleGHLEvent,
   sendSms: sendTheoSms,
+  recordSms: recordChannelInteraction,
   notifyBooking: notifySlackOnBooking,
   notifyTransfer: notifySlackOnTransfer,
 };
@@ -295,11 +297,44 @@ async function sendPropertyDetailsSms(ctx: AriaToolContext, args: Record<string,
   }
 
   const mediaUrls = listingMediaUrls(properties, includePhotos);
-  await deps.sendSms(phone, body, mediaUrls);
+  const sendResult = await deps.sendSms(phone, body, mediaUrls);
   const firstAddress = str(properties[0]?.address);
-  const result = mediaUrls.length
-    ? "Sent - I texted the listing details and photos now."
-    : "Sent - I texted the listing details now. I did not have a sendable photo for that one.";
+  const sent =
+    typeof sendResult === "object" && sendResult !== null && "sent" in sendResult
+      ? Boolean((sendResult as { sent?: unknown }).sent)
+      : true;
+  const skipped =
+    typeof sendResult === "object" && sendResult !== null && "skipped" in sendResult
+      ? Boolean((sendResult as { skipped?: unknown }).skipped)
+      : false;
+  const sendError =
+    typeof sendResult === "object" && sendResult !== null && "error" in sendResult
+      ? String((sendResult as { error?: unknown }).error || "")
+      : "";
+  await deps.recordSms?.({
+    channel: "sms",
+    direction: "outbound",
+    agentName: IRIS_AGENT_NAME,
+    phone,
+    source: "vapi",
+    sourceDetail: ctx.callId ? `voice call ${ctx.callId}` : "voice tool",
+    threadRef: `sms:${phone}`,
+    eventType: "sms_ai_reply",
+    messageText: smsMessageWithMediaLog(body, mediaUrls),
+    summary: `${IRIS_AGENT_NAME} texted ${properties.length} listing detail${properties.length === 1 ? "" : "s"} from a voice call${mediaUrls.length ? ` with ${mediaUrls.length} photo${mediaUrls.length === 1 ? "" : "s"}` : ""}${firstAddress ? ` for ${firstAddress}` : ""}.`,
+    aiAction: mediaUrls.length ? "property_details_sms_sent_with_photos" : "property_details_sms_sent",
+    handoffReason: sendError,
+    status: sent ? "sent" : skipped ? "skipped" : "send_failed",
+    propertyInterest: firstAddress || str(hydrated.lead?.property_interest),
+    preferredChannel: "sms",
+    smsConsent: "voice_requested_sms",
+    nextAction: sent ? "await_response" : "human_follow_up",
+  }).catch(() => null);
+  const result = sent
+    ? mediaUrls.length
+      ? "Sent - I texted the listing details and photos now."
+      : "Sent - I texted the listing details now. I did not have a sendable photo for that one."
+    : "I tried to text the listing details, but the SMS did not send. I logged it for the team to review.";
 
   return {
     result,
@@ -308,9 +343,10 @@ async function sendPropertyDetailsSms(ctx: AriaToolContext, args: Record<string,
       messageText: query,
       propertyInterest: firstAddress || str(hydrated.lead?.property_interest),
       aiAction: mediaUrls.length ? "property_details_sms_sent_with_photos" : "property_details_sms_sent",
-      nextAction: "sms_listing_details_sent",
-      status: "sent",
+      nextAction: sent ? "sms_listing_details_sent" : "human_follow_up",
+      status: sent ? "sent" : skipped ? "skipped" : "send_failed",
       summary: `${IRIS_AGENT_NAME} texted ${properties.length} listing detail${properties.length === 1 ? "" : "s"}${mediaUrls.length ? ` with ${mediaUrls.length} photo${mediaUrls.length === 1 ? "" : "s"}` : ""}${firstAddress ? ` for ${firstAddress}` : ""}.`,
+      handoffReason: sendError,
     },
   };
 }
