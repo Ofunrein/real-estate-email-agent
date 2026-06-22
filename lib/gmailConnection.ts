@@ -76,7 +76,7 @@ export type GmailReplyInput = {
   threadId?: string;
   messageId?: string;
   references?: string;
-  attachments?: Array<{ filename: string; contentType: string; path: string }>;
+  attachments?: Array<{ filename: string; contentType: string; path?: string; data?: Buffer }>;
 };
 
 export type GmailReplyResult = {
@@ -376,7 +376,7 @@ export async function sendGmailReplyWithOptions(
       input.body,
     ];
     for (const attachment of input.attachments) {
-      const data = fs.readFileSync(attachment.path);
+      const data = attachment.data ?? (attachment.path ? fs.readFileSync(attachment.path) : Buffer.alloc(0));
       parts.push(
         `--${boundary}`,
         `Content-Type: ${attachment.contentType}`,

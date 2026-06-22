@@ -2,7 +2,7 @@ import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailCo
 import { sendComposioSocialMessage } from "@/lib/composioSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 
-export type EmailAttachment = { filename: string; contentType: string; path: string };
+export type EmailAttachment = { filename: string; contentType: string; path?: string; data?: Buffer };
 export type ManualReplyInput = {
   channel: "sms" | "whatsapp" | "email" | "instagram" | "messenger";
   to: string; // phone for sms/wa, email address for email
