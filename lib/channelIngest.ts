@@ -6,6 +6,7 @@ import type { SheetRow } from "@/lib/sheetSchema";
 export type ChannelIngestInput = {
   channel: Channel;
   direction?: "inbound" | "outbound";
+  eventAt?: string;
   agentName: string;
   email?: string;
   phone?: string;
@@ -86,7 +87,7 @@ export function requireDatabaseForChannelWrites(): void {
 
 export async function recordChannelInteraction(input: ChannelIngestInput): Promise<{ event: SheetRow; lead: SheetRow }> {
   requireDatabaseForChannelWrites();
-  const eventAt = isoNow();
+  const eventAt = input.eventAt || isoNow();
   const threadRef = input.threadRef || input.email || input.phone || `${input.channel}:unknown`;
   const hasLeadIdentity = Boolean(input.email || input.phone || input.fullName);
 

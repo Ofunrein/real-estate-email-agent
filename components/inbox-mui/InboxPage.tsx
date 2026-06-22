@@ -27,6 +27,17 @@ export function InboxPage() {
   const theme = useTheme();
   const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
   const showContextRail = channel !== 'properties' && channel !== 'imports';
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const connected = url.searchParams.get('composioConnected');
+    if (!connected) return;
+    const target = connected === 'facebook' ? 'messenger' : connected;
+    if (CHANNEL_IDS.includes(target as ChannelId)) setChannel(target as ChannelId);
+    setSettingsOpen(true);
+    url.searchParams.delete('composioConnected');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [setChannel]);
   const handleSelect = (id: ChannelId) => {
     setChannel(id);
     setNavOpen(false);
