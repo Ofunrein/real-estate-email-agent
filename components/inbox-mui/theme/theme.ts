@@ -1,34 +1,32 @@
 import { createTheme, type Theme } from '@mui/material/styles';
 
-// High-contrast light + dark control-room palettes for the Agent Inbox.
-// Tuned for maximum legibility (older users / accessibility): near-black text
-// on white in light mode, near-white text on deep navy in dark mode.
+// Restrained neutral light + dark palettes for Agent Inbox (ElevenLabs-inspired).
+// Dark mode uses charcoal surfaces (#18181D paper, #111115 bg) not navy.
 export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
   const isDark = mode === 'dark';
   return createTheme({
     palette: {
       mode,
       primary: {
-        main: '#6366f1',
-        light: '#818cf8',
-        dark: '#4f46e5',
+        main: '#7C6AF5',
+        light: '#9B8FFF',
+        dark: '#6356D4',
         contrastText: '#ffffff'
       },
       secondary: { main: '#22d3ee' },
-      success: { main: isDark ? '#4ade80' : '#047857' },
-      warning: { main: isDark ? '#fbbf24' : '#b45309' },
+      success: { main: isDark ? '#34C678' : '#16A34A' },
+      warning: { main: isDark ? '#D97706' : '#b45309' },
       error: { main: isDark ? '#f87171' : '#b91c1c' },
-      info: { main: '#38bdf8' },
+      info: { main: isDark ? '#60A5FA' : '#38bdf8' },
       background: {
-        default: isDark ? '#0b1120' : '#ffffff',
-        paper: isDark ? '#0f172a' : '#ffffff'
+        default: isDark ? '#111115' : '#F4F4F7',
+        paper: isDark ? '#18181D' : '#ffffff'
       },
       text: {
-        // Maximum contrast: black-ish on white, white-ish on navy.
-        primary: isDark ? '#f8fafc' : '#0a0e1a',
-        secondary: isDark ? '#e2e8f0' : '#1e293b'
+        primary: isDark ? '#EDEDF5' : '#0a0e1a',
+        secondary: isDark ? '#A8A8BC' : '#1e293b'
       },
-      divider: isDark ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.16)'
+      divider: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
     },
     shape: { borderRadius: 12 },
     typography: {
@@ -45,7 +43,7 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: isDark ? '#0b1120' : '#ffffff'
+            backgroundColor: isDark ? '#111115' : '#F4F4F7'
           }
         }
       },
@@ -54,9 +52,9 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
           root: {
             backgroundImage: 'none',
             border: isDark ?
-            '1px solid rgba(148,163,184,0.16)' :
-            '1px solid rgba(15,23,42,0.12)',
-            backgroundColor: isDark ? '#0f172a' : '#ffffff'
+            '1px solid rgba(255,255,255,0.07)' :
+            '1px solid rgba(15,23,42,0.10)',
+            backgroundColor: isDark ? '#18181D' : '#ffffff'
           }
         }
       },
@@ -65,9 +63,9 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       MuiTooltip: {
         styleOverrides: {
           tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#0f172a',
+            backgroundColor: isDark ? '#242429' : '#E8E8EF',
             fontSize: 12,
-            border: isDark ? '1px solid rgba(148,163,184,0.18)' : 'none'
+            border: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none'
           }
         }
       }
