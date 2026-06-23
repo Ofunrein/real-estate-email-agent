@@ -3118,13 +3118,13 @@ time,
 
 /* ── Light mode tokens (default) ── */
 :root {
-  --s-bg:           #F8F8FB;
+  --s-bg:           #F4F4F7;
   --s-sidebar-bg:   #FFFFFF;
-  --s-sidebar-border: #EBEBF0;
+  --s-sidebar-border: #E5E5EB;
   --s-card:         #FFFFFF;
-  --s-card-border:  #EBEBF0;
-  --s-card-hover:   #F4F4F8;
-  --s-surface:      #F4F4F8;
+  --s-card-border:  #E5E5EB;
+  --s-card-hover:   #F0F0F5;
+  --s-surface:      #F0F0F5;
 
   --s-text-1:       #09091A;
   --s-text-2:       #2E2E48;
@@ -3135,7 +3135,7 @@ time,
   --s-accent-soft:  #E4E0FF;
   --s-accent-2:     #F07A4A;
   --s-accent-2-soft:#FEF0E8;
-  --s-success:      #22C55E;
+  --s-success:      #16A34A;
   --s-success-soft: #DCFCE7;
   --s-warn:         #F59E0B;
   --s-warn-soft:    #FEF3C7;
@@ -3161,16 +3161,16 @@ time,
 
 /* ── Dark mode tokens ── */
 .dark {
-  --s-bg:           #08080E;
-  --s-sidebar-bg:   #0B0B13;
-  --s-sidebar-border: rgba(255,255,255,0.09);
-  --s-card:         #12121A;
-  --s-card-border:  rgba(255,255,255,0.10);
-  --s-card-hover:   #1A1A26;
-  --s-surface:      #1A1A26;
+  --s-bg:           #0F0F12;
+  --s-sidebar-bg:   #141417;
+  --s-sidebar-border: rgba(255,255,255,0.07);
+  --s-card:         #1A1A1E;
+  --s-card-border:  rgba(255,255,255,0.07);
+  --s-card-hover:   #1E1E24;
+  --s-surface:      #1E1E24;
 
-  --s-text-1:       #F4F4FF;
-  --s-text-2:       #C2C2DC;
+  --s-text-1:       #EDEDF5;
+  --s-text-2:       #A8A8BC;
   --s-text-3:       #9090AE;
   --s-label:        #9090AE;
 
@@ -3178,7 +3178,7 @@ time,
   --s-accent-soft:  rgba(124,106,245,0.15);
   --s-accent-2:     #FF8C5A;
   --s-accent-2-soft:rgba(240,122,74,0.12);
-  --s-success:      #4ADE80;
+  --s-success:      #34C678;
   --s-success-soft: rgba(34,197,94,0.12);
   --s-warn:         #FBB948;
   --s-warn-soft:    rgba(245,158,11,0.12);
