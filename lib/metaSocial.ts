@@ -1,0 +1,368 @@
+import crypto from "crypto";
+
+import { mediaProxyUrl } from "@/lib/mediaProxy";
+import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
+
+export type MetaSocialChannel = "instagram" | "messenger";
+
+export type MetaSocialInboundMessage = {
+  channel: MetaSocialChannel;
+  senderId: string;
+  senderName: string;
+  senderUsername: string;
+  recipientId: string;
+  messageId: string;
+  createdTime: string;
+  text: string;
+  media: OmnichannelMedia[];
+  entryId: string;
+};
+
+export type MetaSocialSendResult = {
+  sent: boolean;
+  skipped: boolean;
+  messageIds: string[];
+  error: string;
+  deliveredBody: string;
+  deliveredMediaUrls: string[];
+  droppedMediaUrls: string[];
+};
+
+type ConnectionHints = {
+  instagramIds?: Iterable<string>;
+  messengerIds?: Iterable<string>;
+};
+
+function envFlag(value?: string): boolean {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function cleanText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function jsonRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function records(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    : [];
+}
+
+function metaGraphVersion(): string {
+  return (process.env.META_GRAPH_VERSION || "v20.0").trim().replace(/^\/+/, "");
+}
+
+function metaSocialAccessToken(): string {
+  return cleanText(
+    process.env.META_SOCIAL_PAGE_ACCESS_TOKEN
+    || process.env.META_PAGE_ACCESS_TOKEN
+    || process.env.FACEBOOK_PAGE_ACCESS_TOKEN,
+  );
+}
+
+function absoluteMediaUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https:\/\//i.test(trimmed)) return trimmed;
+  const base = cleanText(process.env.PUBLIC_BASE_URL).replace(/\/$/, "");
+  if (!base || !trimmed.startsWith("/")) return trimmed;
+  return `${base}${trimmed}`;
+}
+
+function sendEndpoint(channel: MetaSocialChannel): string {
+  const custom = channel === "instagram"
+    ? cleanText(process.env.META_INSTAGRAM_SEND_ENDPOINT)
+    : cleanText(process.env.META_MESSENGER_SEND_ENDPOINT);
+  if (custom) return custom;
+  return `https://graph.facebook.com/${metaGraphVersion()}/me/messages`;
+}
+
+function channelFlag(channel: MetaSocialChannel): boolean {
+  return channel === "instagram"
+    ? envFlag(process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK)
+    : envFlag(process.env.ENABLE_MESSENGER_DIRECT_WEBHOOK);
+}
+
+export function metaSocialDirectEnabled(channel?: MetaSocialChannel): boolean {
+  const globalEnabled = envFlag(process.env.ENABLE_META_SOCIAL_WEBHOOKS);
+  if (channel) return channelFlag(channel) || globalEnabled;
+  return globalEnabled || channelFlag("instagram") || channelFlag("messenger");
+}
+
+export function verifyMetaSocialSignature(rawBody: string, signatureHeader: string | null): boolean {
+  const appSecret = cleanText(process.env.META_SOCIAL_APP_SECRET || process.env.META_APP_SECRET);
+  if (!appSecret) return true;
+  if (!signatureHeader?.startsWith("sha256=")) return false;
+  const expected = `sha256=${crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
+  if (signatureHeader.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expected));
+}
+
+export function metaSocialVerifyToken(): string {
+  return cleanText(process.env.META_SOCIAL_WEBHOOK_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN);
+}
+
+function attachmentTypeFrom(value: Record<string, unknown>, url: string): OmnichannelMedia["type"] {
+  const source = `${cleanText(value.type)} ${cleanText(value.mime_type)} ${cleanText(value.content_type)} ${url}`.toLowerCase();
+  if (source.includes("audio") || /\.(?:aac|m4a|mp3|mpeg|oga|ogg|opus|wav|webm)(?:$|[?#])/i.test(source)) return "audio";
+  if (source.includes("video") || /\.(?:mp4|mov|webm)(?:$|[?#])/i.test(source)) return "video";
+  if (source.includes("image") || /\.(?:avif|gif|jpeg|jpg|png|webp)(?:$|[?#])/i.test(source)) return "image";
+  if (source.includes("file")) return "file";
+  return "unknown";
+}
+
+function attachmentUrl(value: Record<string, unknown>): string {
+  const payload = jsonRecord(value.payload);
+  const imageData = jsonRecord(value.image_data);
+  const videoData = jsonRecord(value.video_data);
+  const audioData = jsonRecord(value.audio_data);
+  return [
+    value.url,
+    value.file_url,
+    value.attachment_url,
+    payload.url,
+    payload.src,
+    imageData.url,
+    videoData.url,
+    audioData.url,
+  ].map((item) => cleanText(item)).find(Boolean) || "";
+}
+
+function extractAttachments(value: unknown): OmnichannelMedia[] {
+  const media: OmnichannelMedia[] = [];
+  const seen = new Set<string>();
+  const visit = (input: unknown, depth: number) => {
+    if (!input || depth > 6) return;
+    if (Array.isArray(input)) {
+      for (const child of input) visit(child, depth + 1);
+      return;
+    }
+    if (typeof input !== "object") return;
+    const record = input as Record<string, unknown>;
+    const url = attachmentUrl(record);
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      media.push({
+        id: cleanText(record.id || record.attachment_id),
+        url,
+        type: attachmentTypeFrom(record, url),
+        contentType: cleanText(record.mime_type || record.content_type || record.contentType) || undefined,
+        filename: cleanText(record.name || record.filename) || undefined,
+      });
+    }
+    for (const [key, child] of Object.entries(record)) {
+      if (["sender", "recipient", "from", "to"].includes(key)) continue;
+      if (child && typeof child === "object") visit(child, depth + 1);
+    }
+  };
+  visit(value, 0);
+  return media;
+}
+
+function inferChannel(event: Record<string, unknown>, entryId: string, hints?: ConnectionHints): MetaSocialChannel | "" {
+  const lower = JSON.stringify(event).toLowerCase();
+  if (lower.includes("instagram")) return "instagram";
+  const senderId = cleanText(jsonRecord(event.sender).id || jsonRecord(event.from).id);
+  const recipientId = cleanText(jsonRecord(event.recipient).id || jsonRecord(event.to).id);
+  const instagramIds = new Set([...(hints?.instagramIds || [])].map((value) => cleanText(value)).filter(Boolean));
+  const messengerIds = new Set([...(hints?.messengerIds || [])].map((value) => cleanText(value)).filter(Boolean));
+  if ([entryId, senderId, recipientId].some((value) => instagramIds.has(value))) return "instagram";
+  if ([entryId, senderId, recipientId].some((value) => messengerIds.has(value))) return "messenger";
+  return "messenger";
+}
+
+function normalizeEvent(
+  event: Record<string, unknown>,
+  entryId: string,
+  hints?: ConnectionHints,
+): MetaSocialInboundMessage | null {
+  const channel = inferChannel(event, entryId, hints);
+  if (!channel) return null;
+  const sender = jsonRecord(event.sender || event.from);
+  const recipient = jsonRecord(event.recipient || event.to);
+  const message = jsonRecord(event.message);
+  if (message.is_echo === true || event.message_echo === true) return null;
+  const text = cleanText(message.text || event.text || jsonRecord(event.postback).title);
+  const senderId = cleanText(sender.id);
+  const recipientId = cleanText(recipient.id);
+  const messageId = cleanText(message.mid || message.id || event.mid || event.id);
+  const senderName = cleanText(sender.name || sender.username || senderId);
+  const senderUsername = cleanText(sender.username || sender.name || senderId);
+  const createdAt = String(event.timestamp || message.timestamp || Date.now());
+  const media = extractAttachments(message.attachments || event.attachments);
+  if (!senderId || !messageId || (!text && !media.length)) return null;
+  return {
+    channel,
+    senderId,
+    senderName,
+    senderUsername,
+    recipientId,
+    messageId,
+    createdTime: /^\d+$/.test(createdAt) ? new Date(Number(createdAt)).toISOString() : createdAt,
+    text,
+    media,
+    entryId,
+  };
+}
+
+export function extractMetaSocialMessages(payload: Record<string, unknown>, hints?: ConnectionHints): MetaSocialInboundMessage[] {
+  const messages: MetaSocialInboundMessage[] = [];
+  for (const entry of records(payload.entry)) {
+    const entryId = cleanText(entry.id);
+    for (const messaging of records(entry.messaging)) {
+      const normalized = normalizeEvent(messaging, entryId, hints);
+      if (normalized) messages.push(normalized);
+    }
+    for (const change of records(entry.changes)) {
+      const value = jsonRecord(change.value);
+      for (const messaging of records(value.messaging)) {
+        const normalized = normalizeEvent(messaging, entryId, hints);
+        if (normalized) messages.push(normalized);
+      }
+    }
+  }
+  return messages;
+}
+
+async function postMetaSocialMessage(
+  channel: MetaSocialChannel,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; id: string; error: string }> {
+  const token = metaSocialAccessToken();
+  if (!token) return { ok: false, id: "", error: "Missing META_SOCIAL_PAGE_ACCESS_TOKEN" };
+  const response = await fetch(sendEndpoint(channel), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    message_id?: string;
+    recipient_id?: string;
+    error?: { message?: string };
+  };
+  if (!response.ok) {
+    return {
+      ok: false,
+      id: "",
+      error: payload.error?.message || response.statusText || `Meta ${channel} send failed`,
+    };
+  }
+  return {
+    ok: true,
+    id: cleanText(payload.message_id || payload.recipient_id),
+    error: "",
+  };
+}
+
+function attachmentPayloadType(url: string): "image" | "audio" | "video" | "file" {
+  const lower = url.toLowerCase();
+  if (/\.(?:png|jpe?g|gif|webp)(?:$|[?#])/.test(lower)) return "image";
+  if (/\.(?:aac|m4a|mp3|mpeg|oga|ogg|opus|wav|webm)(?:$|[?#])/.test(lower)) return "audio";
+  if (/\.(?:mp4|mov|webm)(?:$|[?#])/.test(lower)) return "video";
+  return "file";
+}
+
+function sendableMediaUrls(mediaUrls: string[] = []): string[] {
+  return mediaUrls
+    .map((url) => absoluteMediaUrl(mediaProxyUrl(url)))
+    .map((url) => url.trim())
+    .filter((url) => /^https:\/\//i.test(url));
+}
+
+export async function sendMetaSocialMessage(input: {
+  channel: MetaSocialChannel;
+  to: string;
+  body: string;
+  mediaUrls?: string[];
+}): Promise<MetaSocialSendResult> {
+  if (!metaSocialDirectEnabled(input.channel)) {
+    return {
+      sent: false,
+      skipped: true,
+      messageIds: [],
+      error: `${input.channel} direct webhook/send mode is not enabled`,
+      deliveredBody: "",
+      deliveredMediaUrls: [],
+      droppedMediaUrls: input.mediaUrls ?? [],
+    };
+  }
+  const recipientId = cleanText(input.to);
+  const body = cleanText(input.body);
+  const mediaUrls = sendableMediaUrls(input.mediaUrls);
+  if (!recipientId || (!body && !mediaUrls.length)) {
+    return {
+      sent: false,
+      skipped: true,
+      messageIds: [],
+      error: "Missing Meta social recipient or content",
+      deliveredBody: "",
+      deliveredMediaUrls: [],
+      droppedMediaUrls: input.mediaUrls ?? [],
+    };
+  }
+
+  const messageIds: string[] = [];
+  if (body) {
+    const textResult = await postMetaSocialMessage(input.channel, {
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: { text: body },
+    });
+    if (!textResult.ok) {
+      return {
+        sent: false,
+        skipped: false,
+        messageIds,
+        error: textResult.error,
+        deliveredBody: "",
+        deliveredMediaUrls: [],
+        droppedMediaUrls: input.mediaUrls ?? [],
+      };
+    }
+    if (textResult.id) messageIds.push(textResult.id);
+  }
+
+  const deliveredMediaUrls: string[] = [];
+  for (const url of mediaUrls) {
+    const type = attachmentPayloadType(url);
+    const attachmentResult = await postMetaSocialMessage(input.channel, {
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: {
+        attachment: {
+          type: type === "file" ? "file" : type,
+          payload: { url, is_reusable: false },
+        },
+      },
+    });
+    if (!attachmentResult.ok) {
+      return {
+        sent: false,
+        skipped: false,
+        messageIds,
+        error: attachmentResult.error,
+        deliveredBody: body,
+        deliveredMediaUrls,
+        droppedMediaUrls: (input.mediaUrls ?? []).filter((candidate) => !deliveredMediaUrls.includes(candidate)),
+      };
+    }
+    deliveredMediaUrls.push(url);
+    if (attachmentResult.id) messageIds.push(attachmentResult.id);
+  }
+
+  return {
+    sent: true,
+    skipped: false,
+    messageIds,
+    error: "",
+    deliveredBody: body,
+    deliveredMediaUrls,
+    droppedMediaUrls: [],
+  };
+}

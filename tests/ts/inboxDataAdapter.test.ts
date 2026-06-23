@@ -223,6 +223,69 @@ test("adaptInboxData keeps social owner replies in the same sender thread", () =
   assert.equal(thread.messages[1]?.direction, "owner");
 });
 
+test("adaptInboxData renders social media from media_json even when the text body only logs send status", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "messenger",
+        direction: "outbound",
+        agent_name: "Owner",
+        source: "human_takeover",
+        full_name: "Martin",
+        phone: "messenger-user-1",
+        thread_ref: "messenger:thread-1",
+        gmail_message_id: "messenger:message-2",
+        message_text: "Sent the files you asked for.",
+        media_json: JSON.stringify([
+          { type: "audio", url: "https://cdn.example.com/voice-note.m4a", transcript: "I can send more options after this." },
+          { type: "image", url: "https://cdn.example.com/photo.jpg" },
+        ]),
+        event_at: "2026-06-22T12:06:17.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.messenger[0];
+  const message = thread.messages[0];
+
+  assert.equal(thread.preview, "Sent the files you asked for.");
+  assert.equal(message.media?.length, 2);
+  assert.equal(message.media?.[0].kind, "audio");
+  assert.equal(message.media?.[1].kind, "image");
+});
+
+test("adaptInboxData preserves email voice note attachments and transcript previews from media_json", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "email",
+        direction: "outbound",
+        email: "lead@example.com",
+        thread_ref: "gmail-thread-voice",
+        gmail_message_id: "gmail-msg-voice",
+        message_text: "Attached is the voice note recap for 4309 Fairway Path.",
+        media_json: JSON.stringify([
+          { type: "audio", url: "https://cdn.example.com/email-voice-note.m4a", transcript: "The seller is open to a same-week showing." },
+        ]),
+        event_at: "2026-06-22T12:10:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const message = model.emailThreads[0].messages[0];
+
+  assert.equal(message.media?.length, 1);
+  assert.equal(message.media?.[0].kind, "audio");
+  assert.equal(message.media?.[0].transcript, "The seller is open to a same-week showing.");
+  assert.equal(model.emailThreads[0].preview, "Attached is the voice note recap for 4309 Fairway Path.");
+});
+
 test("adaptInboxData sorts voice contacts and calls by actual call time", () => {
   const data = composeInboxData(
     [],

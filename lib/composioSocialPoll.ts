@@ -2,6 +2,7 @@ import { recordChannelInteraction } from "@/lib/channelIngest";
 import { listChannelConnections, type ChannelConnectionRecord } from "@/lib/channelConnections";
 import { composioExternalUserId, createComposioClient } from "@/lib/composioConnection";
 import { sendComposioSocialMessage, type ComposioSocialChannel } from "@/lib/composioSocial";
+import { metaSocialDirectEnabled } from "@/lib/metaSocial";
 import {
   claimEventDedupeInDatabase,
   conversationEventMessageIdExists,
@@ -640,7 +641,13 @@ export async function pollComposioSocial(input: {
 }): Promise<ComposioSocialPollResult> {
   const result: ComposioSocialPollResult = { ok: true, checked: 0, imported: 0, replied: 0, skipped: 0, errors: [] };
   const fallbackUserId = composioExternalUserId(input.userEmail);
-  const channels = new Set<PollChannel>(input.channels?.length ? input.channels : ["instagram", "messenger"]);
+  const requestedChannels: PollChannel[] = input.channels?.length ? input.channels : ["instagram", "messenger"];
+  const channels = new Set<PollChannel>(
+    requestedChannels.filter((channel) => !metaSocialDirectEnabled(channel)),
+  );
+  if (!channels.size) {
+    return result;
+  }
   const limit = Math.max(1, Math.min(input.limit || 10, 50));
   const sinceMinutes = Math.max(1, Math.min(input.sinceMinutes || Number(process.env.COMPOSIO_SOCIAL_POLL_LOOKBACK_MINUTES || 360), 60 * 24 * 30));
   const sinceMs = Date.now() - sinceMinutes * 60 * 1000;

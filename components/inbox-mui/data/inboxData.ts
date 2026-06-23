@@ -130,6 +130,7 @@ export interface EmailMessage {
   subject?: string;
   body?: string;
   html?: string;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string }>;
   cards?: PropertyCard[];
   showSchedule?: boolean;
   flag?: string;
@@ -155,7 +156,7 @@ export interface SmsMessage {
   time: string;
   body: string;
   html?: string;
-  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file' }>;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string }>;
 }
 
 export interface SmsThread {
