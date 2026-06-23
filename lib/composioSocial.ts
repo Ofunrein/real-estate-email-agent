@@ -82,6 +82,10 @@ function channelTextKey(args: Record<string, unknown>) {
   return hasTemplateOrValue(args, "message_text") ? "message_text" : "text";
 }
 
+function isAudioUrl(url: string): boolean {
+  return /\.(?:mp3|ogg|wav|m4a|aac|opus|webm)(?:[?#]|$)/i.test(url);
+}
+
 export function buildComposioSocialSendArguments(
   channel: ComposioSocialChannel,
   args: Record<string, unknown>,
@@ -90,23 +94,36 @@ export function buildComposioSocialSendArguments(
   const next = { ...args };
   next.to = input.to;
   next.recipient = input.to;
-  next.body = input.body;
-  next.message = input.body;
+
+  // Instagram text-only fallback: audio mediaUrls cannot be sent via the text tool.
+  // Append an indicator to the body and strip audio URLs so they don't reach the API.
+  let mediaUrls = input.mediaUrls;
+  let body = input.body;
+  if (channel === "instagram" && mediaUrls?.length) {
+    const audioUrls = mediaUrls.filter(isAudioUrl);
+    if (audioUrls.length > 0) {
+      body = body ? `${body}\n\n🎤 [Voice note sent via dashboard]` : "🎤 [Voice note sent via dashboard]";
+      mediaUrls = mediaUrls.filter((url) => !isAudioUrl(url));
+    }
+  }
+
+  next.body = body;
+  next.message = body;
   if (channel === "instagram") {
     next.recipient_id = input.to;
-    next[channelTextKey(next)] = input.body;
+    next[channelTextKey(next)] = body;
   } else if (channel === "messenger") {
     next.recipient_id = input.to;
-    next[channelTextKey(next)] = input.body;
+    next[channelTextKey(next)] = body;
   } else {
     next.to_number = input.to;
     next.recipient_id = input.to;
-    next[channelTextKey(next)] = input.body;
+    next[channelTextKey(next)] = body;
   }
-  if (input.mediaUrls?.length) {
-    next.media_url = input.mediaUrls[0];
-    next.media_urls = input.mediaUrls;
-    next.mediaUrls = input.mediaUrls;
+  if (mediaUrls?.length) {
+    next.media_url = mediaUrls[0];
+    next.media_urls = mediaUrls;
+    next.mediaUrls = mediaUrls;
   }
   if (input.threadRef) next.thread_ref = input.threadRef;
   return next;
