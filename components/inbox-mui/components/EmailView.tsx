@@ -308,7 +308,7 @@ function EmailBubble({
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none',
             bgcolor: outbound ?
             (theme) => theme.palette.mode === 'dark' ? '#6f63ff' : theme.palette.primary.main :
-            'background.default',
+            'background.paper',
             color: outbound ? '#fff' : 'text.primary'
           }}>
 
@@ -436,15 +436,35 @@ function EmailBubble({
                     mt: message.subject ? 0.5 : 0,
                     fontSize: '0.875rem',
                     lineHeight: 1.6,
-                    color: outbound ? '#fff' : 'text.secondary',
+                    color: outbound ? '#fff' : 'text.primary',
                     '& a, & a *': { color: outbound ? 'rgba(255,255,255,0.88) !important' : 'primary.main' },
                     '& img': { maxWidth: '100%', borderRadius: 1 },
                     '& p': { m: 0, mb: 0.75 },
                     '& ul, & ol': { pl: 2.5, my: 0.5 },
                     '& table': { borderCollapse: 'collapse', width: '100%', fontSize: '0.8125rem' },
                     '& td, & th': { border: '1px solid', borderColor: outbound ? 'rgba(255,255,255,0.18)' : 'divider', p: 0.75 },
-                    '& :not(img)': { color: outbound ? '#fff !important' : undefined },
-                    '& [style*=\"color\"]': { color: outbound ? '#fff !important' : undefined },
+                    '& :not(img)': {
+                      color: outbound
+                        ? '#fff !important'
+                        : (theme: any) => theme.palette.mode === 'dark'
+                          ? `${theme.palette.text.primary} !important`
+                          : undefined,
+                    },
+                    '& [style*="color"]': {
+                      color: outbound
+                        ? '#fff !important'
+                        : (theme: any) => theme.palette.mode === 'dark'
+                          ? `${theme.palette.text.primary} !important`
+                          : undefined,
+                    },
+                    // Section headers in email HTML (e.g. "SIMILAR OPTIONS")
+                    '& [style*="background"], & td[bgcolor], & table[bgcolor]': {
+                      backgroundColor: outbound
+                        ? 'rgba(255,255,255,0.1) !important'
+                        : (theme: any) => theme.palette.mode === 'dark'
+                          ? `${theme.palette.action.hover} !important`
+                          : undefined,
+                    },
                   }}
                   dangerouslySetInnerHTML={{ __html: clean }}
                 />
@@ -507,6 +527,7 @@ function EmailBubble({
           <PropertyCardInline
             key={i}
             card={c}
+            outbound={outbound}
             showSchedule={
             message.showSchedule && i === message.cards!.length - 1
             } />
