@@ -403,12 +403,10 @@ export function SmsBubble({
               sx={{
                 p: 0.75,
                 borderRadius: 3,
-                bgcolor: (theme) => isOutbound
-                  ? theme.palette.primary.main
-                  : theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.default,
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.paper,
                 border: '1px solid',
-                borderColor: (theme) => isOutbound ? 'rgba(255,255,255,0.18)' : theme.palette.divider,
-                boxShadow: isOutbound ? '0 8px 24px rgba(99,102,241,0.18)' : 'none',
+                borderColor: 'divider',
+                boxShadow: 'none',
                 '& audio': {
                   display: 'block',
                   width: { xs: 210, sm: 260 },
@@ -425,7 +423,7 @@ export function SmsBubble({
                   display: 'block',
                   mt: 0.65,
                   px: 0.5,
-                  color: isOutbound ? 'rgba(255,255,255,0.82)' : 'text.secondary',
+                  color: 'text.secondary',
                   lineHeight: 1.35,
                   whiteSpace: 'pre-wrap'
                 }}>
@@ -461,14 +459,12 @@ export function SmsBubble({
             borderBottomRightRadius: isOutbound ? '4px' : '16px',
             borderBottomLeftRadius: isOutbound ? '16px' : '4px',
             bgcolor: (theme) => isIris
-              ? theme.palette.primary.main
+              ? theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)'
               : isOwner
-                ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.16)' : theme.palette.text.primary
-                : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : theme.palette.background.paper,
-            color: (theme) => isOutbound
-              ? isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff'
-              : theme.palette.text.primary,
-            border: highlighted ? '1px solid' : isOutbound ? 'none' : '1px solid',
+                ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.16)' : theme.palette.action.hover
+                : theme.palette.action.hover,
+            color: 'text.primary',
+            border: highlighted ? '1px solid' : '1px solid',
             borderColor: highlighted ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
           }}>
@@ -478,18 +474,18 @@ export function SmsBubble({
             sx={{
               fontSize: '0.875rem',
               lineHeight: 1.5,
-              color: (theme) => isOutbound ? (isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff') : theme.palette.text.primary,
+              color: 'text.primary',
               overflowWrap: 'anywhere',
-              '& a': { color: isOutbound ? '#fff' : 'primary.main' },
+              '& a': { color: 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
               '& p': { m: 0, mb: 0.75 },
               '& :not(img)': {
-                color: (theme: any) => !isOutbound && theme.palette.mode === 'dark'
+                color: (theme: any) => theme.palette.mode === 'dark'
                   ? `${theme.palette.text.primary} !important`
                   : undefined,
               },
               '& [style*="color"]': {
-                color: (theme: any) => !isOutbound && theme.palette.mode === 'dark'
+                color: (theme: any) => theme.palette.mode === 'dark'
                   ? `${theme.palette.text.primary} !important`
                   : undefined,
               },
