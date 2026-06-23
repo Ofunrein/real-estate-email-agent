@@ -43,7 +43,7 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: isDark ? '#111115' : '#F4F4F7'
+            backgroundColor: 'var(--s-bg)'
           }
         }
       },

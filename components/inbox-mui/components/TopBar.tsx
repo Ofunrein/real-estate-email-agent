@@ -98,7 +98,7 @@ export function TopBar({
         py: 1.5,
         borderBottom: '1px solid',
         borderColor: 'divider',
-        bgcolor: 'background.paper',
+        backgroundColor: 'var(--s-sidebar-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

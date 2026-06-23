@@ -69,7 +69,7 @@ export function InboxPage() {
         sx={{
           width: '100%',
           minHeight: '100dvh',
-          bgcolor: 'background.default'
+          backgroundColor: 'var(--s-bg)'
         }}
       />
     );
@@ -87,7 +87,7 @@ export function InboxPage() {
           xs: '100dvh',
           lg: 'auto'
         },
-        bgcolor: 'background.default',
+        backgroundColor: 'var(--s-bg)',
         overflow: {
           xs: 'visible',
           lg: 'hidden'
