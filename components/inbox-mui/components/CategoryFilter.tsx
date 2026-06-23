@@ -135,12 +135,12 @@ function FilterChip({
         border: '1px solid',
         // Always color-coded: tinted bg + colored border, even when unselected.
         borderColor: selected ? color : withAlpha(color, 0.5),
-        bgcolor: selected ? color : withAlpha(color, 0.1),
+        bgcolor: selected ? withAlpha(color, 0.85) : withAlpha(color, 0.1),
         '& .MuiChip-label': {
           px: 1.25
         },
         '&:hover': {
-          bgcolor: selected ? color : withAlpha(color, 0.2),
+          bgcolor: selected ? withAlpha(color, 0.95) : withAlpha(color, 0.2),
           borderColor: color
         }
       }} />);
