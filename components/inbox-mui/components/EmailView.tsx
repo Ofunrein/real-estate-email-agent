@@ -304,12 +304,12 @@ function EmailBubble({
             p: 1.75,
             borderRadius: 2.5,
             border: '1px solid',
-            borderColor: highlighted ? 'primary.main' : outbound ? 'transparent' : 'divider',
+            borderColor: highlighted ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none',
-            bgcolor: outbound ?
-            (theme) => theme.palette.mode === 'dark' ? '#6f63ff' : theme.palette.primary.main :
-            'background.paper',
-            color: outbound ? '#fff' : 'text.primary'
+            bgcolor: outbound
+              ? (theme) => theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)'
+              : 'action.hover',
+            color: 'text.primary'
           }}>
 
           <Stack
@@ -344,7 +344,7 @@ function EmailBubble({
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: outbound ? '#fff' : isIris ? 'primary.main' : 'text.primary'
+                  color: isIris ? 'primary.main' : 'text.primary'
                 }}>
                 
                 {headerLabel}
@@ -354,7 +354,7 @@ function EmailBubble({
               variant="caption"
               sx={{
                 fontFamily: 'monospace',
-                color: outbound ? 'rgba(255,255,255,0.72)' : 'text.secondary'
+                color: 'text.secondary'
               }}>
               
               {message.time}
@@ -366,7 +366,7 @@ function EmailBubble({
             variant="body2"
             sx={{
               fontWeight: 700,
-              color: outbound ? '#fff' : 'text.primary',
+              color: 'text.primary',
               mb: 1
             }}>
 
@@ -381,11 +381,9 @@ function EmailBubble({
               sx={{
                 p: 0.75,
                 borderRadius: 3,
-                bgcolor: outbound ?
-                'rgba(255,255,255,0.12)' :
-                (theme) => theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.paper,
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.paper,
                 border: '1px solid',
-                borderColor: outbound ? 'rgba(255,255,255,0.2)' : 'divider',
+                borderColor: 'divider',
                 '& audio': {
                   display: 'block',
                   width: { xs: 210, sm: 260 },
@@ -402,7 +400,7 @@ function EmailBubble({
                   display: 'block',
                   mt: 0.65,
                   px: 0.5,
-                  color: outbound ? 'rgba(255,255,255,0.82)' : 'text.secondary',
+                  color: 'text.secondary',
                   lineHeight: 1.35,
                   whiteSpace: 'pre-wrap'
                 }}>
@@ -436,34 +434,28 @@ function EmailBubble({
                     mt: message.subject ? 0.5 : 0,
                     fontSize: '0.875rem',
                     lineHeight: 1.6,
-                    color: outbound ? '#fff' : 'text.primary',
-                    '& a, & a *': { color: outbound ? 'rgba(255,255,255,0.88) !important' : 'primary.main' },
+                    color: 'text.primary',
+                    '& a, & a *': { color: 'primary.main !important' },
                     '& img': { maxWidth: '100%', borderRadius: 1 },
                     '& p': { m: 0, mb: 0.75 },
                     '& ul, & ol': { pl: 2.5, my: 0.5 },
                     '& table': { borderCollapse: 'collapse', width: '100%', fontSize: '0.8125rem' },
-                    '& td, & th': { border: '1px solid', borderColor: outbound ? 'rgba(255,255,255,0.18)' : 'divider', p: 0.75 },
+                    '& td, & th': { border: '1px solid', borderColor: 'divider', p: 0.75 },
+                    // Override any inline color styles in HTML email for dark mode readability
                     '& :not(img)': {
-                      color: outbound
-                        ? '#fff !important'
-                        : (theme: any) => theme.palette.mode === 'dark'
-                          ? `${theme.palette.text.primary} !important`
-                          : undefined,
+                      color: (theme: any) => theme.palette.mode === 'dark'
+                        ? `${theme.palette.text.primary} !important`
+                        : undefined,
                     },
                     '& [style*="color"]': {
-                      color: outbound
-                        ? '#fff !important'
-                        : (theme: any) => theme.palette.mode === 'dark'
-                          ? `${theme.palette.text.primary} !important`
-                          : undefined,
+                      color: (theme: any) => theme.palette.mode === 'dark'
+                        ? `${theme.palette.text.primary} !important`
+                        : undefined,
                     },
-                    // Section headers in email HTML (e.g. "SIMILAR OPTIONS")
                     '& [style*="background"], & td[bgcolor], & table[bgcolor]': {
-                      backgroundColor: outbound
-                        ? 'rgba(255,255,255,0.1) !important'
-                        : (theme: any) => theme.palette.mode === 'dark'
-                          ? `${theme.palette.action.hover} !important`
-                          : undefined,
+                      backgroundColor: (theme: any) => theme.palette.mode === 'dark'
+                        ? `${theme.palette.action.hover} !important`
+                        : undefined,
                     },
                   }}
                   dangerouslySetInnerHTML={{ __html: clean }}
@@ -477,7 +469,7 @@ function EmailBubble({
                   whiteSpace: 'pre-line',
                   lineHeight: 1.6,
                   mt: message.subject ? 0.5 : 0,
-                  color: outbound ? '#fff' : 'text.primary',
+                  color: 'text.primary',
                 }}
               >
                 {message.body}
@@ -496,8 +488,8 @@ function EmailBubble({
               size="small"
               label={item.alt || 'Image attachment'}
               sx={{
-                color: outbound ? '#fff' : 'text.primary',
-                borderColor: outbound ? 'rgba(255,255,255,0.22)' : 'divider'
+                color: 'text.primary',
+                borderColor: 'divider'
               }}
               variant="outlined" />
 
@@ -515,8 +507,8 @@ function EmailBubble({
               size="small"
               label={item.alt || 'Attachment'}
               sx={{
-                color: outbound ? '#fff' : 'text.primary',
-                borderColor: outbound ? 'rgba(255,255,255,0.22)' : 'divider'
+                color: 'text.primary',
+                borderColor: 'divider'
               }}
               variant="outlined" />
 
