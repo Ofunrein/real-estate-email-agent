@@ -81,6 +81,11 @@ export const CONVERSATION_EVENTS_HEADERS = [
   "gmail_thread_id",
   "gmail_message_id",
   "thread_status",
+  "provider_message_id",
+  "provider_thread_id",
+  "media_json",
+  "provider_metadata",
+  "reply_job_id",
 ] as const;
 
 export type SheetRow = Record<string, string>;

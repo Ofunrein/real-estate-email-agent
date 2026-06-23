@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildComposioSocialSendArguments, composioSocialSendHealth } from "@/lib/composioSocial";
-import { socialPollInboundAlreadyHandledForTest } from "@/lib/composioSocialPoll";
+import {
+  extractComposioMessageMediaForTest,
+  socialPollInboundAlreadyHandledForTest,
+} from "@/lib/composioSocialPoll";
 
 test("buildComposioSocialSendArguments overwrites stale social recipient and body", () => {
   const args = buildComposioSocialSendArguments(
@@ -86,4 +89,22 @@ test("social poll retry is not suppressed by owner/manual outbound", () => {
 
   assert.equal(socialPollInboundAlreadyHandledForTest("instagram:mid_1", [inbound, owner] as any), false);
   assert.equal(socialPollInboundAlreadyHandledForTest("instagram:mid_1", [inbound, owner, iris] as any), true);
+});
+
+test("extractComposioMessageMediaForTest finds nested Instagram and Messenger attachments", () => {
+  const media = extractComposioMessageMediaForTest({
+    id: "mid_1",
+    attachments: {
+      data: [
+        { type: "audio", payload: { url: "https://cdn.example.com/voice.m4a" }, name: "voice.m4a" },
+        { type: "image", image_data: { url: "https://cdn.example.com/photo.jpg" } },
+      ],
+    },
+  });
+
+  assert.equal(media.length, 2);
+  assert.equal(media[0].url, "https://cdn.example.com/voice.m4a");
+  assert.equal(media[0].type, "audio");
+  assert.equal(media[1].url, "https://cdn.example.com/photo.jpg");
+  assert.equal(media[1].type, "image");
 });
