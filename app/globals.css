@@ -3191,8 +3191,19 @@ time,
 
   --s-stat-1: #8B7EFF;
   --s-stat-2: #FF8C5A;
-  --s-stat-3: #4ADE80;
+  --s-stat-3: #34C678;
   --s-stat-4: #60A5FA;
+}
+
+/* ── Bulletproof dark-mode surface overrides ── */
+/* MUI emotion SSR classes can lock in light values; override here */
+html.dark body,
+html.dark body > .MuiBox-root {
+  background-color: var(--s-bg) !important;
+}
+html.dark header {
+  background-color: var(--s-sidebar-bg) !important;
+  border-bottom-color: var(--s-sidebar-border) !important;
 }
 
 /* ── App shell (override old rules) ── */
