@@ -12,15 +12,17 @@ import {
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import HomeOutlinedIcon from '@mui/icons-material/HomeWorkOutlined';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
-import { calendarChannelMeta, contactsChannelMeta, importChannelMeta, type ChannelId } from '../data/inboxData';
+import { calendarChannelMeta, contactsChannelMeta, importChannelMeta, type ChannelId, type MessageChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
+import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 interface NavRailProps {
   active: ChannelId;
   onSelect: (id: ChannelId) => void;
   inDrawer?: boolean;
 }
 export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
-  const { channels } = useInboxModel();
+  const { channels, channelAccounts } = useInboxModel();
+  const { status: connectionStatus } = useChannelConnectionStatus(true);
   const ImportIcon = importChannelMeta.icon;
   const ContactsIcon = contactsChannelMeta.icon;
   const CalendarIcon = calendarChannelMeta.icon;
@@ -105,6 +107,14 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
         filter((c) => c.id !== 'all').
         map((c) => {
           const Icon = c.icon;
+          const account = channelAccounts?.[c.id];
+          const accountDisplay = displayForChannelConnection(
+            connectionStatus,
+            c.id as MessageChannelId,
+            account?.value || '',
+            account?.status || ''
+          );
+          const subtitle = accountDisplay.ready ? accountDisplay.value : undefined;
           return (
             <NavItem
               key={c.id}
@@ -113,7 +123,8 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
               count={c.count}
               active={active === c.id}
               onClick={() => onSelect(c.id)}
-              accent={c.accent} />);
+              accent={c.accent}
+              subtitle={subtitle} />);
 
 
         })}
@@ -203,6 +214,7 @@ interface NavItemProps {
   active: boolean;
   accent: string;
   onClick: () => void;
+  subtitle?: string;
 }
 function NavItem({
   label,
@@ -210,7 +222,8 @@ function NavItem({
   count,
   active,
   accent,
-  onClick
+  onClick,
+  subtitle
 }: NavItemProps) {
   return (
     <li>
@@ -228,7 +241,7 @@ function NavItem({
             }
           }
         }}>
-        
+
         <Box
           sx={{
             display: 'flex',
@@ -237,19 +250,35 @@ function NavItem({
             color: active ? accent : 'text.secondary',
             mr: 1.5
           }}>
-          
+
           {icon}
         </Box>
-        <Typography
-          variant="body2"
-          sx={{
-            flexGrow: 1,
-            fontWeight: active ? 600 : 500,
-            color: active ? 'text.primary' : 'text.secondary'
-          }}>
-          
-          {label}
-        </Typography>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: active ? 600 : 500,
+              color: active ? 'text.primary' : 'text.secondary',
+              lineHeight: subtitle ? 1.2 : undefined
+            }}>
+
+            {label}
+          </Typography>
+          {subtitle &&
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              color: 'text.disabled',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.3
+            }}>
+            {subtitle}
+          </Typography>
+          }
+        </Box>
         {count != null &&
         <Typography
           variant="caption"
@@ -257,7 +286,7 @@ function NavItem({
           sx={{
             fontWeight: 600
           }}>
-          
+
             {count}
           </Typography>
         }
