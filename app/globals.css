@@ -3196,13 +3196,13 @@ time,
 }
 
 /* ── Bulletproof dark-mode surface overrides ── */
-/* MUI emotion SSR classes can lock in light values; override here */
+/* Hard hex values avoid WKWebView CSS-var-in-important resolution bug */
 html.dark body,
 html.dark body > .MuiBox-root {
-  background-color: var(--s-bg) !important;
+  background-color: #0F0F12 !important;
 }
 html.dark header {
-  background-color: var(--s-sidebar-bg) !important;
+  background-color: #141417 !important;
   border-bottom-color: var(--s-sidebar-border) !important;
 }
 
