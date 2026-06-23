@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/composio-social?channels=instagram%2Cmessenger&sinceMinutes=65",
-      "schedule": "0 * * * *"
+      "path": "/api/cron/composio-social?channels=instagram%2Cmessenger&sinceMinutes=1440",
+      "schedule": "0 0 * * *"
     }
   ]
 }
