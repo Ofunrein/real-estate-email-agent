@@ -24,7 +24,7 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       },
       text: {
         primary: isDark ? '#EDEDF5' : '#0a0e1a',
-        secondary: isDark ? '#A8A8BC' : '#1e293b'
+        secondary: isDark ? '#D0D0E8' : '#1A1A2E'
       },
       divider: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
     },
