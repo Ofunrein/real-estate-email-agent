@@ -99,7 +99,7 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
           icon={<DashboardIcon fontSize="small" />}
           active={active === 'all'}
           onClick={() => onSelect('all')}
-          accent="#818cf8" />
+          accent="#9B8FFF" />
         
         {channels.
         filter((c) => c.id !== 'all').

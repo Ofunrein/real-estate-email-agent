@@ -56,7 +56,7 @@ export function CategoryFilter({
       <FilterChip
         label="All"
         count={totalCount}
-        color="#6366f1"
+        color="#7C6AF5"
         selected={value === 'all'}
         onClick={() => onChange('all')} />
       
