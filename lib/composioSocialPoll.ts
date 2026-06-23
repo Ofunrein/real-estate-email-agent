@@ -3,14 +3,18 @@ import { listChannelConnections, type ChannelConnectionRecord } from "@/lib/chan
 import { composioExternalUserId, createComposioClient } from "@/lib/composioConnection";
 import { sendComposioSocialMessage, type ComposioSocialChannel } from "@/lib/composioSocial";
 import {
+  claimEventDedupeInDatabase,
   conversationEventMessageIdExists,
   findCandidatePropertiesFromDatabase,
   findLeadInDatabase,
   findPropertiesByAddressesFromDatabase,
+  readReplyJobByDedupeKeyFromDatabase,
   readEventsForThreadFromDatabase,
   readEventsForThreadOrContactFromDatabase,
   readInboxSettingsFromDatabase,
+  upsertReplyJobInDatabase,
 } from "@/lib/database";
+import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import {
@@ -24,6 +28,7 @@ import { fetchStyleContext } from "@/lib/styleTraining";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 
 type PollChannel = Extract<SocialDmChannel, "instagram" | "messenger">;
 
@@ -38,6 +43,7 @@ type ComposioMessage = {
   senderUsername: string;
   recipientId: string;
   accountLabel: string;
+  media: OmnichannelMedia[];
 };
 
 export type ComposioSocialPollResult = {
@@ -95,6 +101,120 @@ function firstRecipientName(message: Record<string, unknown>): string {
     nestedString(message, ["to", "username"]),
     nestedString(message, ["to", "name"]),
   ].find(Boolean) || "";
+}
+
+function mediaTypeFrom(value: Record<string, unknown>, url: string): OmnichannelMedia["type"] {
+  const declared = String(value.type || value.media_type || value.mime_type || value.content_type || "").toLowerCase();
+  const contentType = String(value.mime_type || value.content_type || value.contentType || "").toLowerCase();
+  const source = `${declared} ${contentType} ${url}`.toLowerCase();
+  if (source.includes("audio") || /\.(?:aac|m4a|mp3|oga|ogg|opus|wav|webm)(?:$|[?#])/i.test(source)) return "audio";
+  if (source.includes("video") || /\.(?:mp4|mov|webm)(?:$|[?#])/i.test(source)) return "video";
+  if (source.includes("image") || /\.(?:avif|gif|jpeg|jpg|png|webp)(?:$|[?#])/i.test(source)) return "image";
+  if (source.includes("file")) return "file";
+  return "unknown";
+}
+
+function mediaUrlFrom(value: Record<string, unknown>): string {
+  return [
+    value.url,
+    value.file_url,
+    value.fileUrl,
+    value.media_url,
+    value.mediaUrl,
+    value.preview_url,
+    value.previewUrl,
+    nestedString(value, ["image_data", "url"]),
+    nestedString(value, ["video_data", "url"]),
+    nestedString(value, ["audio_data", "url"]),
+    nestedString(value, ["payload", "url"]),
+  ].map((item) => typeof item === "string" || typeof item === "number" ? String(item).trim() : "").find(Boolean) || "";
+}
+
+export function extractComposioMessageMediaForTest(value: unknown): OmnichannelMedia[] {
+  const media: OmnichannelMedia[] = [];
+  const seen = new Set<string>();
+  const visit = (item: unknown, depth: number) => {
+    if (!item || depth > 6) return;
+    if (Array.isArray(item)) {
+      for (const child of item) visit(child, depth + 1);
+      return;
+    }
+    if (typeof item !== "object") return;
+    const record = item as Record<string, unknown>;
+    const url = mediaUrlFrom(record);
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      media.push({
+        id: String(record.id || record.attachment_id || record.media_id || "").trim() || undefined,
+        url,
+        type: mediaTypeFrom(record, url),
+        contentType: String(record.mime_type || record.content_type || record.contentType || "").trim() || undefined,
+        filename: String(record.name || record.filename || "").trim() || undefined,
+        providerMetadata: {
+          type: record.type,
+          media_type: record.media_type,
+        },
+      });
+    }
+    for (const [key, child] of Object.entries(record)) {
+      if (["from", "to"].includes(key)) continue;
+      if (child && typeof child === "object") visit(child, depth + 1);
+    }
+  };
+  visit(value, 0);
+  return media;
+}
+
+function filenameFromMedia(media: OmnichannelMedia, index: number): string {
+  const fromUrl = media.url ? media.url.split(/[/?#]/).filter(Boolean).at(-1) : "";
+  const candidate = media.filename || fromUrl || `social-media-${index}`;
+  return candidate.includes(".") ? candidate : `${candidate}.${media.type === "video" ? "mp4" : "mp3"}`;
+}
+
+async function transcribeSocialMedia(media: OmnichannelMedia, index: number): Promise<OmnichannelMedia> {
+  if (!deepgramAudioEnabled() || !media.url || !isMediaTranscribable(media)) return media;
+  try {
+    const response = await fetch(media.url);
+    if (!response.ok) {
+      return {
+        ...media,
+        providerMetadata: {
+          ...media.providerMetadata,
+          transcription_error: `download_failed_${response.status}`,
+        },
+      };
+    }
+    const contentType = response.headers.get("content-type") || media.contentType || "application/octet-stream";
+    const file = new File([Buffer.from(await response.arrayBuffer())], filenameFromMedia(media, index), { type: contentType });
+    const transcript = await transcribeDeepgramAudio(file);
+    return {
+      ...media,
+      contentType,
+      filename: media.filename || file.name,
+      transcript: transcript.text,
+      providerMetadata: {
+        ...media.providerMetadata,
+        transcription: transcript.segments || { provider: "deepgram" },
+        duration: transcript.duration,
+      },
+    };
+  } catch (error) {
+    return {
+      ...media,
+      providerMetadata: {
+        ...media.providerMetadata,
+        transcription_error: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+}
+
+async function transcribeSocialMediaItems(media: OmnichannelMedia[]): Promise<OmnichannelMedia[]> {
+  const next: OmnichannelMedia[] = [];
+  for (let index = 0; index < media.length; index += 1) {
+    next.push(await transcribeSocialMedia(media[index], index));
+  }
+  return next;
 }
 
 function conversationIdFrom(record: Record<string, unknown>) {
@@ -166,6 +286,7 @@ async function instagramMessages(userId: string, connection: ChannelConnectionRe
         senderUsername,
         recipientId: firstRecipientId(message),
         accountLabel,
+        media: extractComposioMessageMediaForTest(message),
       });
     }
   }
@@ -190,7 +311,7 @@ async function messengerMessages(userId: string, connection: ChannelConnectionRe
       "FACEBOOK_GET_CONVERSATION_MESSAGES",
       userId,
       connection.connected_account_id,
-      { page_id: pageId, conversation_id: conversationId, limit: Math.min(limit, 25), fields: "id,created_time,from,to,message" },
+      { page_id: pageId, conversation_id: conversationId, limit: Math.min(limit, 25), fields: "id,created_time,from,to,message,attachments" },
     );
     for (const message of dataArray(result)) {
       const from = jsonRecord(message.from);
@@ -207,6 +328,7 @@ async function messengerMessages(userId: string, connection: ChannelConnectionRe
         senderUsername: senderName,
         recipientId: firstRecipientId(message),
         accountLabel,
+        media: extractComposioMessageMediaForTest(message),
       });
     }
   }
@@ -214,9 +336,10 @@ async function messengerMessages(userId: string, connection: ChannelConnectionRe
 }
 
 function socialPayloadFromMessage(message: ComposioMessage): SocialDmPayload {
+  const text = normalizedMessageText(message);
   return {
     channel: message.channel,
-    messageText: message.text,
+    messageText: text,
     contactId: message.senderId,
     threadId: message.conversationId,
     senderName: message.senderName,
@@ -300,10 +423,14 @@ async function findComposioSocialProperties(message: string, recentEvents: Await
 }
 
 async function processMessage(message: ComposioMessage, connection: ChannelConnectionRecord): Promise<"imported" | "replied" | "skipped"> {
-  if (!message.id || !message.text || !message.senderId) return "skipped";
+  if (!message.id || !message.senderId) return "skipped";
   if (isSelfMessage(message, connection)) return "skipped";
   const messageKey = `${message.channel}:${message.id}`;
+  const media = await transcribeSocialMediaItems(message.media || []);
+  const messageText = normalizedMessageText({ text: message.text, media });
+  if (!messageText) return "skipped";
   const payload = socialPayloadFromMessage(message);
+  payload.messageText = messageText;
   const guard = shouldTheoHandleSocialDm(payload);
   const threadRef = `${message.channel}:${message.conversationId}`;
   const sourceDetail = [
@@ -312,6 +439,26 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     message.recipientId ? `recipient_id ${message.recipientId}` : "",
     `message_id ${message.id}`,
   ].filter(Boolean).join("; ");
+  const existingJob = await readReplyJobByDedupeKeyFromDatabase(messageKey);
+  if (existingJob?.status === "sent") return "skipped";
+  const dedupe = await claimEventDedupeInDatabase({
+    dedupeKey: messageKey,
+    channel: message.channel,
+    provider: message.channel === "messenger" ? "facebook" : message.channel,
+    providerMessageId: message.id,
+    threadRef,
+    metadata: { connectionId: connection.id, accountLabel: message.accountLabel },
+  });
+  const replyJob = await upsertReplyJobInDatabase({
+    dedupeKey: messageKey,
+    channel: message.channel,
+    provider: "composio",
+    threadRef,
+    contactRef: message.senderId,
+    status: dedupe.inserted ? "received" : "duplicate_suppressed",
+    mediaJson: media,
+    metadata: { connectionId: connection.id, providerMessageId: message.id },
+  });
 
   const duplicate = await conversationEventMessageIdExists(messageKey);
   const result = duplicate
@@ -327,8 +474,8 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       sourceDetail,
       threadRef,
       eventType: `${message.channel}_inbound`,
-      messageText: message.text,
-      summary: `Inbound ${message.channel} DM: ${message.text}`,
+      messageText,
+      summary: `Inbound ${message.channel} DM: ${messageText}`,
       preferredChannel: message.channel,
       intent: guard.intent,
       aiAction: guard.allowed ? "social_dm_routed" : "social_dm_handoff",
@@ -337,14 +484,45 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       nextAction: guard.allowed ? "reply_with_iris" : "human_follow_up",
       status: guard.allowed ? "received" : "needs_human",
       gmailMessageId: messageKey,
+      providerMessageId: message.id,
+      providerThreadId: message.conversationId,
+      mediaJson: media,
+      providerMetadata: {
+        connectionId: connection.id,
+        senderId: message.senderId,
+        senderName: message.senderName,
+        senderUsername: message.senderUsername,
+        recipientId: message.recipientId,
+        accountLabel: message.accountLabel,
+      },
+      replyJobId: replyJob?.id || "",
     });
 
   if (!socialDmAgentEnabled()) {
+    await upsertReplyJobInDatabase({
+      dedupeKey: messageKey,
+      channel: message.channel,
+      provider: "composio",
+      threadRef,
+      contactRef: message.senderId,
+      status: "agent_disabled",
+      nextAction: "human_review",
+    });
     return duplicate ? "skipped" : "imported";
   }
 
   const settings = await readInboxSettingsFromDatabase();
   if (!guard.allowed || !channelEnabled(settings, message.channel) || await isTakeoverActive(threadRef)) {
+    await upsertReplyJobInDatabase({
+      dedupeKey: messageKey,
+      channel: message.channel,
+      provider: "composio",
+      threadRef,
+      contactRef: message.senderId,
+      status: guard.allowed ? "blocked" : "needs_human",
+      error: guard.allowed ? "Channel disabled or active human takeover." : guard.reason,
+      nextAction: "human_review",
+    });
     return duplicate ? "skipped" : "imported";
   }
 
@@ -357,14 +535,14 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     return "skipped";
   }
   const lead = await findLeadInDatabase({ full_name: message.senderName });
-  const properties = await findComposioSocialProperties(message.text, recentEvents);
+  const properties = await findComposioSocialProperties(messageText, recentEvents);
   const enriched = await enrichTheoData({
-    message: message.text,
+    message: messageText,
     lead: lead || result?.lead,
     properties,
   });
   const reply = await generateTheoReply({
-    message: message.text,
+    message: messageText,
     lead: lead || result?.lead,
     properties: enriched.properties,
     recentEvents,
@@ -380,6 +558,19 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     reason: reply.handoffReason,
   });
   if (!routeResult.should_send || !shouldAutoSendForChannel(settings, message.channel)) {
+    await upsertReplyJobInDatabase({
+      dedupeKey: messageKey,
+      channel: message.channel,
+      provider: "composio",
+      threadRef,
+      contactRef: message.senderId,
+      status: routeResult.needs_human ? "needs_human" : "review_ready",
+      modelClassify: "claude-3-5-haiku",
+      modelReply: "claude-sonnet-4-6",
+      replyText: routeResult.reply,
+      nextAction: "human_review",
+      metadata: { reason: routeResult.reason || "" },
+    });
     await recordChannelInteraction({
       channel: message.channel,
       direction: "outbound",
@@ -406,6 +597,19 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     body: routeResult.reply,
     mediaUrls: routeResult.media_urls,
     threadRef,
+  });
+  await upsertReplyJobInDatabase({
+    dedupeKey: messageKey,
+    channel: message.channel,
+    provider: "composio",
+    threadRef,
+    contactRef: message.senderId,
+    status: sendResult.ok ? "sent" : "send_failed",
+    modelClassify: "claude-3-5-haiku",
+    modelReply: "claude-sonnet-4-6",
+    replyText: routeResult.reply,
+    error: sendResult.ok ? "" : sendResult.error,
+    nextAction: sendResult.ok ? "monitor_reply" : "human_review",
   });
   await recordChannelInteraction({
     channel: message.channel,

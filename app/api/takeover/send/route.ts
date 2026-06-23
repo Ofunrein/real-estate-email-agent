@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const { threadId, channel, message } = await req.json();
+  const { threadId, channel } = await req.json().catch(() => ({}));
 
-  if (!threadId || !message) {
-    return NextResponse.json({ error: 'threadId and message required' }, { status: 400 });
-  }
-
-  // TODO: send message via Twilio (sms) or Gmail API (email), write event to DB
-  console.log('[takeover/send]', { threadId, channel, message });
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Deprecated endpoint. Use /api/threads/[threadRef]/reply so text, attachments, and media-only sends use the real provider path.",
+      replacement: threadId ? `/api/threads/${encodeURIComponent(threadId)}/reply` : "/api/threads/[threadRef]/reply",
+      channel: channel || "",
+    },
+    { status: 410 },
+  );
 }
