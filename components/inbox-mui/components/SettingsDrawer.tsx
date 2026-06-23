@@ -203,12 +203,12 @@ function ComposioConnectionGrid({
             if (ready) return;
             const target = event.target as HTMLElement;
             if (target.closest('button,a')) return;
-            window.location.href = connectUrl;
+            window.open(connectUrl, '_blank');
           }}
           onKeyDown={(event) => {
             if (ready || !['Enter', ' '].includes(event.key)) return;
             event.preventDefault();
-            window.location.href = connectUrl;
+            window.open(connectUrl, '_blank');
           }}
           sx={{
             minWidth: 0,
