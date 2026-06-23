@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/composio-social?channels=instagram%2Cmessenger&sinceMinutes=5",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
