@@ -94,7 +94,12 @@ function cleanRow(headers: readonly string[], row: Partial<SheetRow>): SheetRow 
 }
 
 function rowToStrings(headers: readonly string[], row: Record<string, unknown>): SheetRow {
-  return Object.fromEntries(headers.map((header) => [header, row[header] == null ? "" : String(row[header])]));
+  return Object.fromEntries(headers.map((header) => {
+    const value = row[header];
+    if (value == null) return [header, ""];
+    if (typeof value === "object") return [header, JSON.stringify(value)];
+    return [header, String(value)];
+  }));
 }
 
 function intDbValue(value: unknown): number {
@@ -121,6 +126,9 @@ function leadMemoryDbValue(header: string, value: unknown): unknown {
 
 function eventDbValue(header: string, value: unknown): unknown {
   if (header === "call_duration_seconds") return nullableIntDbValue(value);
+  if (header === "reply_job_id") return String(value ?? "").trim() || null;
+  if (header === "media_json") return String(value ?? "").trim() || "[]";
+  if (header === "provider_metadata") return String(value ?? "").trim() || "{}";
   return value ?? "";
 }
 
@@ -1670,6 +1678,247 @@ export async function appendConversationEventToDatabase(event: Partial<SheetRow>
     [clientId(), ...writableHeaders.map((header) => eventDbValue(header, cleaned[header]))],
   );
   return cleaned;
+}
+
+export type EventDedupeInput = {
+  dedupeKey: string;
+  channel: string;
+  provider?: string;
+  providerMessageId?: string;
+  threadRef?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export async function claimEventDedupeInDatabase(input: EventDedupeInput): Promise<{ inserted: boolean; dedupeKey: string }> {
+  const dedupeKey = input.dedupeKey.trim();
+  if (!dedupeKey || !await tableReady("event_dedupe")) return { inserted: true, dedupeKey };
+  await ensureClientInDatabase();
+  const metadata = JSON.stringify(input.metadata || {});
+  const inserted = await getPool().query(
+    `insert into event_dedupe (
+        client_id, dedupe_key, channel, provider, provider_message_id, thread_ref, metadata
+      ) values ($1, $2, $3, $4, $5, $6, $7::jsonb)
+      on conflict (client_id, dedupe_key) do nothing
+      returning id`,
+    [
+      clientId(),
+      dedupeKey,
+      input.channel || "",
+      input.provider || "",
+      input.providerMessageId || "",
+      input.threadRef || "",
+      metadata,
+    ],
+  );
+  const didInsert = (inserted.rowCount || 0) > 0;
+  if (!didInsert) {
+    await getPool().query(
+      `update event_dedupe
+          set last_seen_at = now(),
+              status = 'duplicate',
+              metadata = event_dedupe.metadata || $3::jsonb
+        where client_id = $1
+          and dedupe_key = $2`,
+      [clientId(), dedupeKey, metadata],
+    );
+  }
+  return { inserted: didInsert, dedupeKey };
+}
+
+export type ReplyJobInput = {
+  dedupeKey: string;
+  channel: string;
+  provider?: string;
+  threadRef: string;
+  contactRef?: string;
+  status?: string;
+  modelClassify?: string;
+  modelReply?: string;
+  replyText?: string;
+  mediaJson?: unknown[];
+  error?: string;
+  nextAction?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type ReplyJobRecord = ReplyJobInput & {
+  id: string;
+  attempts: number;
+  sentAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapReplyJob(row: Record<string, unknown>): ReplyJobRecord {
+  return {
+    id: String(row.id || ""),
+    dedupeKey: String(row.dedupe_key || ""),
+    channel: String(row.channel || ""),
+    provider: String(row.provider || ""),
+    threadRef: String(row.thread_ref || ""),
+    contactRef: String(row.contact_ref || ""),
+    status: String(row.status || ""),
+    attempts: intDbValue(row.attempts),
+    modelClassify: String(row.model_classify || ""),
+    modelReply: String(row.model_reply || ""),
+    replyText: String(row.reply_text || ""),
+    mediaJson: Array.isArray(row.media_json) ? row.media_json : [],
+    error: String(row.error || ""),
+    nextAction: String(row.next_action || ""),
+    metadata: jsonRecordFromDb(row.metadata),
+    sentAt: row.sent_at ? new Date(String(row.sent_at)).toISOString() : "",
+    createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
+    updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+function jsonRecordFromDb(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+export async function upsertReplyJobInDatabase(input: ReplyJobInput): Promise<ReplyJobRecord | null> {
+  const dedupeKey = input.dedupeKey.trim();
+  if (!dedupeKey || !await tableReady("reply_jobs")) return null;
+  await ensureClientInDatabase();
+  const status = input.status || "received";
+  const result = await getPool().query(
+    `insert into reply_jobs (
+        client_id, dedupe_key, channel, provider, thread_ref, contact_ref, status,
+        model_classify, model_reply, reply_text, media_json, error, next_action, metadata,
+        sent_at
+      ) values (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11::jsonb, $12, $13, $14::jsonb,
+        case when $7 = 'sent' then now() else null end
+      )
+      on conflict (client_id, dedupe_key) do update set
+        channel = excluded.channel,
+        provider = coalesce(nullif(excluded.provider, ''), reply_jobs.provider),
+        thread_ref = coalesce(nullif(excluded.thread_ref, ''), reply_jobs.thread_ref),
+        contact_ref = coalesce(nullif(excluded.contact_ref, ''), reply_jobs.contact_ref),
+        status = case when reply_jobs.status = 'sent' then reply_jobs.status else excluded.status end,
+        model_classify = coalesce(nullif(excluded.model_classify, ''), reply_jobs.model_classify),
+        model_reply = coalesce(nullif(excluded.model_reply, ''), reply_jobs.model_reply),
+        reply_text = coalesce(nullif(excluded.reply_text, ''), reply_jobs.reply_text),
+        media_json = case when excluded.media_json = '[]'::jsonb then reply_jobs.media_json else excluded.media_json end,
+        error = coalesce(nullif(excluded.error, ''), reply_jobs.error),
+        next_action = coalesce(nullif(excluded.next_action, ''), reply_jobs.next_action),
+        metadata = reply_jobs.metadata || excluded.metadata,
+        sent_at = case when reply_jobs.sent_at is not null then reply_jobs.sent_at when excluded.status = 'sent' then now() else null end,
+        updated_at = now()
+      returning *`,
+    [
+      clientId(),
+      dedupeKey,
+      input.channel || "",
+      input.provider || "",
+      input.threadRef || "",
+      input.contactRef || "",
+      status,
+      input.modelClassify || "",
+      input.modelReply || "",
+      input.replyText || "",
+      JSON.stringify(input.mediaJson || []),
+      input.error || "",
+      input.nextAction || "",
+      JSON.stringify(input.metadata || {}),
+    ],
+  );
+  return result.rows[0] ? mapReplyJob(result.rows[0]) : null;
+}
+
+export async function readReplyJobByDedupeKeyFromDatabase(dedupeKey: string): Promise<ReplyJobRecord | null> {
+  const key = dedupeKey.trim();
+  if (!key || !await tableReady("reply_jobs")) return null;
+  const result = await getPool().query(
+    `select *
+       from reply_jobs
+      where client_id = $1
+        and dedupe_key = $2
+      limit 1`,
+    [clientId(), key],
+  );
+  return result.rows[0] ? mapReplyJob(result.rows[0]) : null;
+}
+
+export async function upsertThreadSummaryInDatabase(input: {
+  threadRef: string;
+  channel?: string;
+  summary: string;
+  lastMessageAt?: string;
+  messageCount?: number;
+  model?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  if (!input.threadRef.trim() || !await tableReady("thread_summaries")) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into thread_summaries (
+        client_id, thread_ref, channel, summary, last_message_at, message_count, model, metadata
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      on conflict (client_id, thread_ref) do update set
+        channel = coalesce(nullif(excluded.channel, ''), thread_summaries.channel),
+        summary = excluded.summary,
+        last_message_at = excluded.last_message_at,
+        message_count = excluded.message_count,
+        model = coalesce(nullif(excluded.model, ''), thread_summaries.model),
+        metadata = thread_summaries.metadata || excluded.metadata,
+        updated_at = now()`,
+    [
+      clientId(),
+      input.threadRef,
+      input.channel || "",
+      input.summary,
+      input.lastMessageAt || null,
+      input.messageCount || 0,
+      input.model || "",
+      JSON.stringify(input.metadata || {}),
+    ],
+  );
+}
+
+export async function readToolResultCacheFromDatabase(cacheKey: string): Promise<Record<string, unknown> | null> {
+  const key = cacheKey.trim();
+  if (!key || !await tableReady("tool_result_cache")) return null;
+  const result = await getPool().query(
+    `select result_json
+       from tool_result_cache
+      where client_id = $1
+        and cache_key = $2
+        and (expires_at is null or expires_at > now())
+      limit 1`,
+    [clientId(), key],
+  );
+  return result.rows[0] ? jsonRecordFromDb(result.rows[0].result_json) : null;
+}
+
+export async function upsertToolResultCacheInDatabase(input: {
+  cacheKey: string;
+  toolName?: string;
+  result: Record<string, unknown>;
+  expiresAt?: string;
+}): Promise<void> {
+  if (!input.cacheKey.trim() || !await tableReady("tool_result_cache")) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into tool_result_cache (client_id, cache_key, tool_name, result_json, expires_at)
+     values ($1, $2, $3, $4::jsonb, $5)
+     on conflict (client_id, cache_key) do update set
+       tool_name = coalesce(nullif(excluded.tool_name, ''), tool_result_cache.tool_name),
+       result_json = excluded.result_json,
+       expires_at = excluded.expires_at,
+       updated_at = now()`,
+    [clientId(), input.cacheKey, input.toolName || "", JSON.stringify(input.result), input.expiresAt || null],
+  );
 }
 
 export type VoiceCallRecord = {

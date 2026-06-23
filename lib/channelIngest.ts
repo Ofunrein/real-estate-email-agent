@@ -38,6 +38,11 @@ export type ChannelIngestInput = {
   gmailThreadId?: string;
   gmailMessageId?: string;
   threadStatus?: string;
+  providerMessageId?: string;
+  providerThreadId?: string;
+  mediaJson?: unknown[];
+  providerMetadata?: Record<string, unknown>;
+  replyJobId?: string;
 };
 
 const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
@@ -139,6 +144,11 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     gmail_thread_id: input.gmailThreadId || "",
     gmail_message_id: input.gmailMessageId || "",
     thread_status: input.threadStatus || "",
+    provider_message_id: input.providerMessageId || "",
+    provider_thread_id: input.providerThreadId || "",
+    media_json: input.mediaJson ? JSON.stringify(input.mediaJson) : "",
+    provider_metadata: input.providerMetadata ? JSON.stringify(input.providerMetadata) : "",
+    reply_job_id: input.replyJobId || "",
   });
 
   return { event, lead };
