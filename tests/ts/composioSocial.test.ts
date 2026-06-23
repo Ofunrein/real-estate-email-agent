@@ -64,6 +64,28 @@ test("composioSocialSendHealth lets saved selected asset args override env defau
   assert.equal(messenger.arguments.page_id, "selected_page");
 });
 
+test("buildComposioSocialSendArguments strips Instagram audio from the text tool payload", () => {
+  const args = buildComposioSocialSendArguments(
+    "instagram",
+    {
+      recipient_id: "stale_recipient",
+      text: "stale",
+      media_url: "https://cdn.example.com/old.mp3",
+    },
+    {
+      to: "ig_123",
+      body: "Here is the update.",
+      mediaUrls: ["https://cdn.example.com/voice-note.mp3", "https://cdn.example.com/photo.jpg"],
+      threadRef: "instagram:thread_1",
+    },
+  );
+
+  assert.equal(args.recipient_id, "ig_123");
+  assert.match(String(args.text || ""), /Voice note attached in dashboard/);
+  assert.deepEqual(args.media_urls, ["https://cdn.example.com/photo.jpg"]);
+  assert.equal(args.media_url, "https://cdn.example.com/photo.jpg");
+});
+
 test("social poll retry is not suppressed by owner/manual outbound", () => {
   const inbound = {
     direction: "inbound",

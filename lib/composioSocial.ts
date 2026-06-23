@@ -2,6 +2,17 @@ import { composioExternalUserId, createComposioClient } from "@/lib/composioConn
 import { listChannelConnections, type ChannelConnectionRecord } from "@/lib/channelConnections";
 
 export type ComposioSocialChannel = "instagram" | "messenger" | "whatsapp";
+export type ComposioSocialSendResult =
+  | {
+    ok: true;
+    deliveredBody: string;
+    deliveredMediaUrls: string[];
+    droppedMediaUrls: string[];
+  }
+  | {
+    ok: false;
+    error: string;
+  };
 
 type SocialSenderConfig = {
   toolSlug: string;
@@ -86,7 +97,7 @@ function isAudioUrl(url: string): boolean {
   return /\.(?:mp3|ogg|wav|m4a|aac|opus|webm)(?:[?#]|$)/i.test(url);
 }
 
-export function buildComposioSocialSendArguments(
+function prepareComposioSocialSend(
   channel: ComposioSocialChannel,
   args: Record<string, unknown>,
   input: { to: string; body: string; mediaUrls?: string[]; threadRef?: string },
@@ -98,11 +109,13 @@ export function buildComposioSocialSendArguments(
   // Instagram text-only fallback: audio mediaUrls cannot be sent via the text tool.
   // Append an indicator to the body and strip audio URLs so they don't reach the API.
   let mediaUrls = input.mediaUrls;
+  let droppedMediaUrls: string[] = [];
   let body = input.body;
   if (channel === "instagram" && mediaUrls?.length) {
     const audioUrls = mediaUrls.filter(isAudioUrl);
     if (audioUrls.length > 0) {
-      body = body ? `${body}\n\n🎤 [Voice note sent via dashboard]` : "🎤 [Voice note sent via dashboard]";
+      body = body ? `${body}\n\n[Voice note attached in dashboard]` : "[Voice note attached in dashboard]";
+      droppedMediaUrls = audioUrls;
       mediaUrls = mediaUrls.filter((url) => !isAudioUrl(url));
     }
   }
@@ -126,7 +139,20 @@ export function buildComposioSocialSendArguments(
     next.mediaUrls = mediaUrls;
   }
   if (input.threadRef) next.thread_ref = input.threadRef;
-  return next;
+  return {
+    args: next,
+    body,
+    mediaUrls: mediaUrls || [],
+    droppedMediaUrls,
+  };
+}
+
+export function buildComposioSocialSendArguments(
+  channel: ComposioSocialChannel,
+  args: Record<string, unknown>,
+  input: { to: string; body: string; mediaUrls?: string[]; threadRef?: string },
+) {
+  return prepareComposioSocialSend(channel, args, input).args;
 }
 
 export function composioSocialSendHealth(
@@ -173,7 +199,7 @@ export async function sendComposioSocialMessage(input: {
   body: string;
   mediaUrls?: string[];
   threadRef?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<ComposioSocialSendResult> {
   const config = configFor(input.channel);
   if (!config) {
     const envPrefix = input.channel === "instagram"
@@ -200,12 +226,17 @@ export async function sendComposioSocialMessage(input: {
     mediaUrlsJson: JSON.stringify(input.mediaUrls || []),
     threadRef: input.threadRef || input.to,
   }) as Record<string, unknown>;
-  const args = buildComposioSocialSendArguments(input.channel, templatedArgs, input);
+  const prepared = prepareComposioSocialSend(input.channel, templatedArgs, input);
   await composio.tools.execute(config.toolSlug, {
     userId: saved?.external_user_id || config.userId,
     connectedAccountId: connectedAccountId || undefined,
-    arguments: args,
+    arguments: prepared.args,
     dangerouslySkipVersionCheck: true,
   });
-  return { ok: true };
+  return {
+    ok: true,
+    deliveredBody: prepared.body,
+    deliveredMediaUrls: prepared.mediaUrls,
+    droppedMediaUrls: prepared.droppedMediaUrls,
+  };
 }
