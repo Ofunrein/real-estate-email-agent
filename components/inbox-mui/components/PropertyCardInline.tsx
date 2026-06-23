@@ -9,23 +9,24 @@ interface PropertyCardInlineProps {
   card: PropertyCard;
   showSchedule?: boolean;
   onOpenModal?: () => void;
+  outbound?: boolean;
 }
 
-export function PropertyCardInline({ card, showSchedule, onOpenModal }: PropertyCardInlineProps) {
+export function PropertyCardInline({ card, showSchedule, onOpenModal, outbound }: PropertyCardInlineProps) {
   return (
-    <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.5, mt: 1.5 }}>
+    <Box sx={{ borderTop: '1px solid', borderColor: outbound ? 'rgba(255,255,255,0.2)' : 'divider', pt: 1.5, mt: 1.5 }}>
       <Box
         onClick={onOpenModal}
         sx={{
           display: 'flex',
           alignItems: 'stretch',
           border: '1px solid',
-          borderColor: 'divider',
+          borderColor: outbound ? 'rgba(255,255,255,0.25)' : 'divider',
           borderRadius: 2,
           overflow: 'hidden',
-          bgcolor: 'background.default',
+          bgcolor: outbound ? 'rgba(255,255,255,0.12)' : 'background.paper',
           cursor: onOpenModal ? 'pointer' : 'default',
-          '&:hover': onOpenModal ? { borderColor: 'primary.main', bgcolor: 'action.hover' } : {},
+          '&:hover': onOpenModal ? { borderColor: outbound ? 'rgba(255,255,255,0.5)' : 'primary.main', bgcolor: outbound ? 'rgba(255,255,255,0.18)' : 'action.hover' } : {},
           transition: 'border-color .2s, background-color .2s',
         }}
       >
@@ -58,16 +59,16 @@ export function PropertyCardInline({ card, showSchedule, onOpenModal }: Property
         <Box sx={{ p: 1.5, minWidth: 0, flex: 1 }}>
           <Typography
             variant="body2"
-            sx={{ fontWeight: 700, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{ fontWeight: 700, color: outbound ? '#fff' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {card.address}
           </Typography>
           {(card.beds || card.baths || card.sqft) && (
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>
+            <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.25, color: outbound ? 'rgba(255,255,255,0.75)' : 'text.secondary' }}>
               {[card.beds, card.baths, card.sqft].filter(Boolean).join(' · ')}
             </Typography>
           )}
-          <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main', mt: 0.75 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: outbound ? 'rgba(255,255,255,0.9)' : 'primary.main', mt: 0.75 }}>
             {card.price}
           </Typography>
         </Box>

@@ -464,10 +464,10 @@ export function SmsBubble({
               ? theme.palette.primary.main
               : isOwner
                 ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.16)' : theme.palette.text.primary
-                : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : theme.palette.background.default,
+                : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : theme.palette.background.paper,
             color: (theme) => isOutbound
               ? isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff'
-              : theme.palette.text.secondary,
+              : theme.palette.text.primary,
             border: highlighted ? '1px solid' : isOutbound ? 'none' : '1px solid',
             borderColor: highlighted ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
@@ -478,11 +478,21 @@ export function SmsBubble({
             sx={{
               fontSize: '0.875rem',
               lineHeight: 1.5,
-              color: (theme) => isOutbound ? isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff' : theme.palette.text.secondary,
+              color: (theme) => isOutbound ? (isOwner && theme.palette.mode === 'dark' ? theme.palette.text.primary : '#fff') : theme.palette.text.primary,
               overflowWrap: 'anywhere',
               '& a': { color: isOutbound ? '#fff' : 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },
-              '& p': { m: 0, mb: 0.75 }
+              '& p': { m: 0, mb: 0.75 },
+              '& :not(img)': {
+                color: (theme: any) => !isOutbound && theme.palette.mode === 'dark'
+                  ? `${theme.palette.text.primary} !important`
+                  : undefined,
+              },
+              '& [style*="color"]': {
+                color: (theme: any) => !isOutbound && theme.palette.mode === 'dark'
+                  ? `${theme.palette.text.primary} !important`
+                  : undefined,
+              },
             }}
             dangerouslySetInnerHTML={{ __html: cleanHtml }} /> :
           <Typography
