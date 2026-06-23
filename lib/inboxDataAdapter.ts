@@ -190,6 +190,8 @@ function stableEventHash(value: string): string {
   return hash.toString(36);
 }
 
+type ThreadMedia = { url: string; alt: string; kind?: "image" | "audio" | "file"; transcript?: string };
+
 function messageEventId(event: SheetRow, fallback: string): string {
   const direct = event.gmail_message_id || event.appointment_id || event.call_id;
   if (direct) return direct;
@@ -207,8 +209,8 @@ function messageEventId(event: SheetRow, fallback: string): string {
   return `${event.thread_ref || event.email || event.phone || "event"}-${stableEventHash(key || fallback)}`;
 }
 
-function smsTextAndMedia(raw: string): { body: string; html?: string; media: Array<{ url: string; alt: string; kind?: "image" | "audio" | "file" }> } {
-  const media: Array<{ url: string; alt: string; kind?: "image" | "audio" | "file" }> = [];
+function smsTextAndMedia(raw: string): { body: string; html?: string; media: ThreadMedia[] } {
+  const media: ThreadMedia[] = [];
   const seen = new Set<string>();
   const textLines: string[] = [];
 
@@ -256,6 +258,78 @@ function smsTextAndMedia(raw: string): { body: string; html?: string; media: Arr
     html: looksLikeHtml(body) ? rewriteEmailHtmlForInbox(body) : undefined,
     media,
   };
+}
+
+function jsonMediaArray(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+  }
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function eventMedia(event: SheetRow): ThreadMedia[] {
+  const media: ThreadMedia[] = [];
+  const seen = new Set<string>();
+  for (const item of jsonMediaArray((event as SheetRow & { media_json?: unknown }).media_json)) {
+    const rawUrl = String(item.url || "").trim();
+    if (!rawUrl) continue;
+    const url = isDisplayableImageUrl(rawUrl)
+      ? inboxImagePreviewUrl(rawUrl)
+      : isDisplayableAudioUrl(rawUrl)
+        ? inboxAudioPreviewUrl(rawUrl)
+        : rawUrl;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    const declaredType = String(item.type || item.contentType || item.content_type || "").toLowerCase();
+    const kind: ThreadMedia["kind"] = isDisplayableImageUrl(url) || declaredType.includes("image")
+      ? "image"
+      : isDisplayableAudioUrl(url) || declaredType.includes("audio") || declaredType.includes("video")
+        ? "audio"
+        : "file";
+    const transcript = String(item.transcript || "").trim() || undefined;
+    media.push({
+      url,
+      alt: kind === "audio" ? "Voice note" : kind === "image" ? "MMS image" : "Attachment",
+      kind,
+      transcript,
+    });
+  }
+  return media;
+}
+
+function mergedThreadMedia(...groups: ThreadMedia[][]): ThreadMedia[] {
+  const merged: ThreadMedia[] = [];
+  const seen = new Set<string>();
+  for (const group of groups) {
+    for (const item of group) {
+      if (!item?.url || seen.has(item.url)) continue;
+      seen.add(item.url);
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
+function mediaPreviewText(media: ThreadMedia[]): string {
+  if (!media.length) return "";
+  if (media.length === 1) {
+    if (media[0].kind === "audio") return "1 voice note";
+    if (media[0].kind === "image") return "1 MMS image";
+    return "1 attachment";
+  }
+  const allImages = media.every((item) => item.kind === "image");
+  const allAudio = media.every((item) => item.kind === "audio");
+  if (allImages) return `${media.length} MMS images`;
+  if (allAudio) return `${media.length} voice notes`;
+  return `${media.length} attachments`;
 }
 
 function isDisplayableAudioUrl(value: string): boolean {
@@ -413,6 +487,7 @@ function buildEmailMessages(events: SheetRow[], data: AgentInboxData): EmailMess
     // showing raw markup as plain text.
     const rawMessage = event.message_text || "";
     const html = looksLikeHtml(rawMessage) ? rewriteEmailHtmlForInbox(rawMessage, data.properties) : undefined;
+    const media = eventMedia(event);
     return {
       id: messageEventId(event, `${event.thread_ref || event.email || i}-${i}`),
       eventId: messageEventId(event, `${event.thread_ref || event.email || i}-${i}`),
@@ -422,6 +497,7 @@ function buildEmailMessages(events: SheetRow[], data: AgentInboxData): EmailMess
       subject,
       body: html ? undefined : (body || undefined),
       html,
+      media,
       showSchedule: !isInbound && !html && i === events.length - 1,
       flag: event.handoff_reason || undefined,
     };
@@ -435,12 +511,13 @@ function buildEmailThreads(data: AgentInboxData): EmailThread[] {
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
     const needsReview = events.some(eventNeedsHuman);
     const reason = [...events].reverse().find((e) => e.handoff_reason)?.handoff_reason;
+    const latestMedia = eventMedia(latest);
     return {
       id: key,
       contact: latest.email || key,
       name: latest.full_name || latest.email || key,
       time: formatEventTimeShort(latest.event_at),
-      preview: emailBodyPreview(latest).slice(0, 160),
+      preview: (emailBodyPreview(latest) || mediaPreviewText(latestMedia)).slice(0, 160),
       messageCount: events.length,
       needsReview,
       reviewReason: reason,
@@ -457,6 +534,7 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
     const messages: SmsMessage[] = events.map((event, i) => {
       const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
+      const media = mergedThreadMedia(parsed.media, eventMedia(event));
       const id = messageEventId(event, `${key}-${i}`);
       return {
         id,
@@ -465,15 +543,16 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
         time: formatEventTimeShort(event.event_at),
         body: parsed.body,
         html: parsed.html,
-        media: parsed.media,
+        media,
       };
     });
     const latestSms = smsTextAndMedia(eventText(latest) || latest.summary || "");
+    const latestMedia = mergedThreadMedia(latestSms.media, eventMedia(latest));
     return {
       id: key,
       contact: latest.phone || latest.full_name || key,
       time: formatEventTimeShort(latest.event_at),
-      preview: latestSms.body || (latestSms.media.length ? `${latestSms.media.length} MMS image${latestSms.media.length === 1 ? "" : "s"}` : (latest.summary || "").slice(0, 80)),
+      preview: latestSms.body || mediaPreviewText(latestMedia) || (latest.summary || "").slice(0, 80),
       messageCount: events.length,
       category,
       messages,
@@ -499,6 +578,7 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
       const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
       const messages: SmsMessage[] = sorted.map((event, i) => {
         const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
+        const media = mergedThreadMedia(parsed.media, eventMedia(event));
         const id = messageEventId(event, `${key}-${i}`);
         return {
           id,
@@ -507,10 +587,11 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
           time: formatEventTimeShort(event.event_at),
           body: parsed.body,
           html: parsed.html,
-          media: parsed.media,
+          media,
         };
       });
       const latestText = smsTextAndMedia(eventText(latest) || latest.summary || "");
+      const latestMedia = mergedThreadMedia(latestText.media, eventMedia(latest));
       return {
         sortValue: eventTimeValue(latest),
         thread: {
@@ -518,7 +599,7 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
         contact: threadIdentity(latest.thread_ref || key, sorted, eventChannel(latest)),
         replyTo: ["instagram", "messenger"].includes(eventChannel(latest)) ? latest.phone || "" : latest.phone || key,
         time: formatEventTimeShort(latest.event_at),
-        preview: latestText.body || (latestText.media.length ? `${latestText.media.length} image${latestText.media.length === 1 ? "" : "s"}` : (latest.summary || "").slice(0, 80)),
+        preview: latestText.body || mediaPreviewText(latestMedia) || (latest.summary || "").slice(0, 80),
         messageCount: sorted.length,
         category,
         messages,

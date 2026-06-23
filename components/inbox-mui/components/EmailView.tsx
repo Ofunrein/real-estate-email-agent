@@ -269,11 +269,15 @@ function EmailBubble({
   const isIris = message.direction === 'iris';
   const isOwner = message.direction === 'owner';
   const alignRight = isIris || isOwner;
+  const outbound = alignRight;
   const headerLabel = isIris ?
   'Iris sent' :
   isOwner ?
   'Owner sent' :
   `${senderName} received`;
+  const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
+  const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
+  const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
   return (
     <Box
       ref={registerTarget}
@@ -300,13 +304,12 @@ function EmailBubble({
             p: 1.75,
             borderRadius: 2.5,
             border: '1px solid',
-            borderColor: highlighted ? 'primary.main' : isIris ? 'transparent' : 'divider',
+            borderColor: highlighted ? 'primary.main' : outbound ? 'transparent' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none',
-            bgcolor: isIris ?
-            'action.selected' :
-            isOwner ?
-            'action.selected' :
-            'background.default'
+            bgcolor: outbound ?
+            (theme) => theme.palette.mode === 'dark' ? '#6f63ff' : theme.palette.primary.main :
+            'background.default',
+            color: outbound ? '#fff' : 'text.primary'
           }}>
 
           <Stack
@@ -341,7 +344,7 @@ function EmailBubble({
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: isIris ? 'primary.main' : 'text.primary'
+                  color: outbound ? '#fff' : isIris ? 'primary.main' : 'text.primary'
                 }}>
                 
                 {headerLabel}
@@ -349,9 +352,9 @@ function EmailBubble({
             </Stack>
             <Typography
               variant="caption"
-              color="text.secondary"
               sx={{
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                color: outbound ? 'rgba(255,255,255,0.72)' : 'text.secondary'
               }}>
               
               {message.time}
@@ -363,12 +366,53 @@ function EmailBubble({
             variant="body2"
             sx={{
               fontWeight: 700,
-              color: 'text.primary',
+              color: outbound ? '#fff' : 'text.primary',
               mb: 1
             }}>
 
               {message.subject}
             </Typography>
+          }
+          {!!audioMedia.length &&
+          <Stack spacing={0.75} sx={{ mt: message.subject ? 0.75 : 0, mb: (message.html || message.body || imageMedia.length || fileMedia.length) ? 0.9 : 0 }}>
+            {audioMedia.map((item, index) =>
+            <Box
+              key={`${item.url}-${index}`}
+              sx={{
+                p: 0.75,
+                borderRadius: 3,
+                bgcolor: outbound ?
+                'rgba(255,255,255,0.12)' :
+                (theme) => theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.12)' : theme.palette.background.paper,
+                border: '1px solid',
+                borderColor: outbound ? 'rgba(255,255,255,0.2)' : 'divider',
+                '& audio': {
+                  display: 'block',
+                  width: { xs: 210, sm: 260 },
+                  maxWidth: '100%',
+                  height: 34,
+                  colorScheme: (theme) => theme.palette.mode
+                }
+              }}>
+              <audio controls preload="metadata" src={item.url} />
+              {item.transcript &&
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  mt: 0.65,
+                  px: 0.5,
+                  color: outbound ? 'rgba(255,255,255,0.82)' : 'text.secondary',
+                  lineHeight: 1.35,
+                  whiteSpace: 'pre-wrap'
+                }}>
+                {item.transcript}
+              </Typography>
+              }
+            </Box>
+
+            )}
+          </Stack>
           }
           {(message.html || message.body) &&
           (() => {
@@ -392,13 +436,15 @@ function EmailBubble({
                     mt: message.subject ? 0.5 : 0,
                     fontSize: '0.875rem',
                     lineHeight: 1.6,
-                    color: 'text.secondary',
-                    '& a': { color: 'primary.main' },
+                    color: outbound ? '#fff' : 'text.secondary',
+                    '& a, & a *': { color: outbound ? 'rgba(255,255,255,0.88) !important' : 'primary.main' },
                     '& img': { maxWidth: '100%', borderRadius: 1 },
                     '& p': { m: 0, mb: 0.75 },
                     '& ul, & ol': { pl: 2.5, my: 0.5 },
                     '& table': { borderCollapse: 'collapse', width: '100%', fontSize: '0.8125rem' },
-                    '& td, & th': { border: '1px solid', borderColor: 'divider', p: 0.75 },
+                    '& td, & th': { border: '1px solid', borderColor: outbound ? 'rgba(255,255,255,0.18)' : 'divider', p: 0.75 },
+                    '& :not(img)': { color: outbound ? '#fff !important' : undefined },
+                    '& [style*=\"color\"]': { color: outbound ? '#fff !important' : undefined },
                   }}
                   dangerouslySetInnerHTML={{ __html: clean }}
                 />
@@ -407,12 +453,55 @@ function EmailBubble({
             return (
               <Typography
                 variant="body2"
-                sx={{ whiteSpace: 'pre-line', lineHeight: 1.6, mt: message.subject ? 0.5 : 0 }}
+                sx={{
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.6,
+                  mt: message.subject ? 0.5 : 0,
+                  color: outbound ? '#fff' : 'text.primary',
+                }}
               >
                 {message.body}
               </Typography>
             );
           })()
+          }
+          {!!imageMedia.length &&
+          <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: message.html || message.body || audioMedia.length ? 0.9 : 0 }}>
+            {imageMedia.map((item, index) =>
+            <Chip
+              key={`${item.url}-${index}`}
+              component="a"
+              href={item.url}
+              clickable
+              size="small"
+              label={item.alt || 'Image attachment'}
+              sx={{
+                color: outbound ? '#fff' : 'text.primary',
+                borderColor: outbound ? 'rgba(255,255,255,0.22)' : 'divider'
+              }}
+              variant="outlined" />
+
+            )}
+          </Stack>
+          }
+          {!!fileMedia.length &&
+          <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: imageMedia.length || message.html || message.body || audioMedia.length ? 0.9 : 0 }}>
+            {fileMedia.map((item, index) =>
+            <Chip
+              key={`${item.url}-${index}`}
+              component="a"
+              href={item.url}
+              clickable
+              size="small"
+              label={item.alt || 'Attachment'}
+              sx={{
+                color: outbound ? '#fff' : 'text.primary',
+                borderColor: outbound ? 'rgba(255,255,255,0.22)' : 'divider'
+              }}
+              variant="outlined" />
+
+            )}
+          </Stack>
           }
           {message.cards?.map((c, i) =>
           <PropertyCardInline

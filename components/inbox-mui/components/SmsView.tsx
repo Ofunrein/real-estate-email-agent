@@ -395,7 +395,9 @@ export function SmsBubble({
         }
         {!!audioMedia.length &&
         <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (visibleBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
-          {audioMedia.map((item, index) => (
+          {audioMedia.map((item, index) => {
+            const transcript = item.transcript || voiceTranscripts[index];
+            return (
             <Box
               key={`${item.url}-${index}`}
               sx={{
@@ -416,7 +418,7 @@ export function SmsBubble({
                 }
               }}>
               <audio controls preload="metadata" src={item.url} />
-              {voiceTranscripts[index] &&
+              {transcript &&
               <Typography
                 variant="caption"
                 sx={{
@@ -427,11 +429,12 @@ export function SmsBubble({
                   lineHeight: 1.35,
                   whiteSpace: 'pre-wrap'
                 }}>
-                {voiceTranscripts[index]}
+                {transcript}
               </Typography>
               }
             </Box>
-          ))}
+            );
+          })}
         </Stack>
         }
         {!!fileMedia.length &&

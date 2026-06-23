@@ -231,6 +231,7 @@ Hosted channel webhooks write to Neon and then appear in the dashboard:
 |---|---|---|
 | SMS | Theo | `/api/webhooks/theo-sms` |
 | WhatsApp | Theo | `/api/webhooks/theo-whatsapp` |
+| Instagram / Messenger direct | Theo | `/api/webhooks/theo-meta-social` |
 | Voice | Aria | `/api/webhooks/aria-voice` |
 | Website chat | Olivia | `/api/webhooks/olivia-website` |
 
@@ -244,6 +245,7 @@ Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret
 - Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
 - Theo WhatsApp uses Meta Cloud API when `ENABLE_WHATSAPP_AGENT=true`. Meta webhook verification is handled by `GET /api/webhooks/theo-whatsapp` with `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; inbound text/image/button messages are logged, passed through the same Claude/property/booking logic as SMS, sent with `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN`, and outbound replies are logged to the WhatsApp thread. If `META_APP_SECRET` is set, POST requests must pass Meta's `x-hub-signature-256` check.
 - Theo WhatsApp can send property images as native Meta image messages when `ENABLE_WHATSAPP_IMAGES=true`. It uses the same safe-photo selection as SMS, caps sends with `WHATSAPP_MAX_IMAGES`, and uses `/api/media/proxy` as an absolute URL when `PUBLIC_BASE_URL` is set.
+- Direct Instagram/Messenger webhook mode uses `ENABLE_META_SOCIAL_WEBHOOKS=true` or per-channel flags plus `META_SOCIAL_PAGE_ACCESS_TOKEN` and `META_SOCIAL_WEBHOOK_VERIFY_TOKEN`. When direct mode is enabled for a channel, the Composio social poller skips that channel and dashboard/manual sends prefer Meta direct send.
 - Voice and website chat remain logging/monitoring routes until those channel agents are enabled.
 
 Meta WhatsApp setup:

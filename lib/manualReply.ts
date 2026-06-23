@@ -1,5 +1,6 @@
 import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
 import { sendComposioSocialMessage } from "@/lib/composioSocial";
+import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 
 export type EmailAttachment = { filename: string; contentType: string; path?: string; data?: Buffer };
@@ -23,6 +24,9 @@ export type ManualReplyResult = {
   fallbackReason?: string;
   gmailThreadId?: string;
   gmailMessageId?: string;
+  deliveredBody?: string;
+  deliveredMediaUrls?: string[];
+  droppedMediaUrls?: string[];
 } | { ok: false; error: string };
 
 export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
@@ -30,7 +34,9 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
     switch (input.channel) {
       case "sms": {
         const r = await sendTheoSms(input.to, input.body, input.mediaUrls ?? []);
-        return r.sent ? { ok: true } : { ok: false, error: r.error || "SMS not sent" };
+        return r.sent
+          ? { ok: true, deliveredBody: input.body, deliveredMediaUrls: input.mediaUrls ?? [], droppedMediaUrls: [] }
+          : { ok: false, error: r.error || "SMS not sent" };
       }
       case "whatsapp":
         if ((process.env.WHATSAPP_PROVIDER || "").toLowerCase() === "composio") {
@@ -41,11 +47,34 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
             mediaUrls: input.mediaUrls,
             threadRef: input.threadId,
           });
-          return r.ok ? { ok: true } : r;
+          return r.ok
+            ? {
+              ok: true,
+              deliveredBody: r.deliveredBody,
+              deliveredMediaUrls: r.deliveredMediaUrls,
+              droppedMediaUrls: r.droppedMediaUrls,
+            }
+            : r;
         }
         return await sendWhatsApp(input);
       case "instagram":
       case "messenger": {
+        if (metaSocialDirectEnabled(input.channel)) {
+          const r = await sendMetaSocialMessage({
+            channel: input.channel,
+            to: input.to,
+            body: input.body,
+            mediaUrls: input.mediaUrls,
+          });
+          return r.sent
+            ? {
+              ok: true,
+              deliveredBody: r.deliveredBody,
+              deliveredMediaUrls: r.deliveredMediaUrls,
+              droppedMediaUrls: r.droppedMediaUrls,
+            }
+            : { ok: false, error: r.error || `${input.channel} not sent` };
+        }
         const r = await sendComposioSocialMessage({
           channel: input.channel,
           to: input.to,
@@ -53,7 +82,14 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
           mediaUrls: input.mediaUrls,
           threadRef: input.threadId,
         });
-        return r.ok ? { ok: true } : r;
+        return r.ok
+          ? {
+            ok: true,
+            deliveredBody: r.deliveredBody,
+            deliveredMediaUrls: r.deliveredMediaUrls,
+            droppedMediaUrls: r.droppedMediaUrls,
+          }
+          : r;
       }
       case "email":
         return await sendEmail(input);
@@ -94,7 +130,7 @@ async function sendWhatsApp(input: ManualReplyInput): Promise<ManualReplyResult>
     },
   );
   if (!res.ok) return { ok: false, error: `Twilio WhatsApp ${res.status}: ${await res.text()}` };
-  return { ok: true };
+  return { ok: true, deliveredBody: input.body, deliveredMediaUrls: input.mediaUrls ?? [], droppedMediaUrls: [] };
 }
 
 async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
@@ -110,5 +146,8 @@ async function sendEmail(input: ManualReplyInput): Promise<ManualReplyResult> {
     fallbackReason: result.fallbackReason,
     gmailThreadId: result.threadId,
     gmailMessageId: result.messageId,
+    deliveredBody: input.body,
+    deliveredMediaUrls: input.mediaUrls ?? [],
+    droppedMediaUrls: [],
   };
 }

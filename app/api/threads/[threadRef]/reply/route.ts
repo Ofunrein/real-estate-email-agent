@@ -29,6 +29,8 @@ type ReplyBody = {
   references?: string;
 };
 
+type ReplyMediaTranscript = NonNullable<ReplyBody["mediaTranscripts"]>[number];
+
 // Map public /uploads/<filename> URL → absolute disk path for email attachment reads.
 async function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["channel"]): Promise<EmailAttachment[]> {
   if (channel !== "email") return [];
@@ -74,7 +76,11 @@ function mediaLogLabel(channel: ReplyBody["channel"], url: string): string {
   return "MMS media";
 }
 
-function messageWithMediaLog(input: ReplyBody): string {
+function messageWithMediaLog(input: Pick<ReplyBody, "channel"> & {
+  body: string;
+  mediaUrls?: string[];
+  mediaTranscripts?: ReplyBody["mediaTranscripts"];
+}): string {
   const body = input.body?.trim() || "";
   const mediaLines = (input.mediaUrls || []).flatMap((url) => {
     const transcript = input.mediaTranscripts?.find((item) => item.url === url)?.text?.trim();
@@ -84,6 +90,39 @@ function messageWithMediaLog(input: ReplyBody): string {
     ].filter(Boolean);
   });
   return [body, ...mediaLines].filter(Boolean).join("\n\n");
+}
+
+function inferReplyMediaType(url: string): "audio" | "image" | "video" | "file" {
+  const clean = url.trim().toLowerCase();
+  if (/\.(?:png|jpe?g|gif|webp)(?:$|[?#])/.test(clean)) return "image";
+  if (/\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/.test(clean)) return "audio";
+  if (/\.(?:mov|mp4|webm)(?:$|[?#])/.test(clean)) return "video";
+  return "file";
+}
+
+function normalizeMediaTranscripts(
+  mediaUrls: string[],
+  mediaTranscripts: ReplyBody["mediaTranscripts"] = [],
+): ReplyMediaTranscript[] {
+  const allowed = new Set(mediaUrls);
+  return mediaTranscripts.filter((item): item is ReplyMediaTranscript =>
+    Boolean(item?.url && allowed.has(item.url) && item.text?.trim()),
+  );
+}
+
+function mediaJsonForReply(
+  mediaUrls: string[],
+  mediaTranscripts: ReplyBody["mediaTranscripts"] = [],
+) {
+  return mediaUrls.map((url) => {
+    const transcript = mediaTranscripts.find((item) => item.url === url)?.text?.trim() || "";
+    return {
+      url,
+      type: inferReplyMediaType(url),
+      transcript: transcript || undefined,
+      providerMetadata: { source: "manual_reply" },
+    };
+  });
 }
 
 function normalizeChannel(value: string): ReplyBody["channel"] | "" {
@@ -165,6 +204,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
   });
   if (!result.ok) return NextResponse.json(result, { status: 502 });
 
+  const deliveredBody = result.deliveredBody || input.body;
+  const deliveredMediaUrls = result.deliveredMediaUrls || input.mediaUrls || [];
+  const deliveredMediaTranscripts = normalizeMediaTranscripts(deliveredMediaUrls, input.mediaTranscripts);
+  const droppedMediaUrls = result.droppedMediaUrls || [];
+
   await recordChannelInteraction({
     channel: input.channel,
     direction: "outbound",
@@ -173,14 +217,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     phone: input.channel !== "email" ? input.to : undefined,
     email: input.channel === "email" ? input.to : undefined,
     threadRef: persistedThreadRef,
-    messageText: messageWithMediaLog(input),
-    status: result.ok && result.fallbackReason ? "sent_fresh" : "sent",
+    messageText: messageWithMediaLog({
+      channel: input.channel,
+      body: deliveredBody,
+      mediaUrls: deliveredMediaUrls,
+      mediaTranscripts: deliveredMediaTranscripts,
+    }),
+    status: droppedMediaUrls.length
+      ? "sent_with_fallback"
+      : result.fallbackReason
+        ? "sent_fresh"
+        : "sent",
     mailboxEmail: input.channel === "email" ? result.mailboxEmail : "",
     gmailThreadId: input.channel === "email" ? result.gmailThreadId : "",
     gmailMessageId: input.channel === "email" ? result.gmailMessageId : "",
     threadStatus: input.channel === "email"
       ? result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox"
       : "",
+    mediaJson: mediaJsonForReply(deliveredMediaUrls, deliveredMediaTranscripts),
   });
 
   if (databaseEnabled() && input.channel === "email" && result.ok) {
