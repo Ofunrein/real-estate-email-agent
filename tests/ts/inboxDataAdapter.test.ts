@@ -273,6 +273,7 @@ test("adaptInboxData keeps social owner replies in the same sender thread", () =
   assert.equal(model.textThreads.instagram.length, 1);
   assert.equal(thread.id, "1526516032549624");
   assert.equal(thread.contact, "martn.o");
+  assert.equal(model.channelStats.instagram.lastActivity?.contact, "martn.o");
   assert.equal(thread.messageCount, 2);
   assert.equal(thread.messages[1]?.direction, "owner");
 });
