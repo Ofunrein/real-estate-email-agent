@@ -50,10 +50,17 @@ async function exchangeCodeForLongLivedToken(code: string, redirectUri: string):
 }
 
 // Fetch all pages the user manages and return with their never-expiring page tokens.
-async function fetchManagedPages(userToken: string): Promise<{ pages: FacebookPageForMetaDirect[]; error: string }> {
+async function fetchManagedPages(
+  userToken: string,
+  channel: "messenger" | "instagram",
+  fieldsOverride?: string,
+): Promise<{ pages: FacebookPageForMetaDirect[]; error: string }> {
   const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/me/accounts`);
   url.searchParams.set("access_token", userToken);
-  url.searchParams.set("fields", "id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url}");
+  const fields = fieldsOverride || (channel === "instagram"
+    ? "id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url}"
+    : "id,name,access_token,category,tasks");
+  url.searchParams.set("fields", fields);
 
   const res = await fetch(url.toString());
   const json = await res.json().catch(() => ({})) as { data?: FacebookPageForMetaDirect[]; error?: { message?: string } };
@@ -111,9 +118,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: tokenError || "Token exchange failed" }, { status: 502 });
   }
 
-  let { pages, error: pagesError } = await fetchManagedPages(userToken);
+  let { pages, error: pagesError } = await fetchManagedPages(userToken, channel);
   if (!pagesError && !pages.length && shortToken) {
-    const fallback = await fetchManagedPages(shortToken);
+    const fallback = await fetchManagedPages(shortToken, channel);
+    pages = fallback.pages;
+    pagesError = fallback.error;
+  }
+  if (!pagesError && !pages.length) {
+    const fallback = await fetchManagedPages(userToken, channel, "id,name,access_token");
     pages = fallback.pages;
     pagesError = fallback.error;
   }
