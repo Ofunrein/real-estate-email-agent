@@ -64,11 +64,6 @@ function canServeInngest(): boolean {
 
 function staleFunctionResponse(fnId: string) {
   const retired = retiredInngestFunctionIds.has(fnId);
-  console.warn("[inngest] skipped stale function invocation", {
-    fnId,
-    retired,
-    reason: retired ? "retired_polling_function" : "unknown_function_id",
-  });
   return NextResponse.json(
     {
       ok: true,
