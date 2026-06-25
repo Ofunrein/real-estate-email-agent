@@ -105,8 +105,8 @@ export async function GET(request: NextRequest) {
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
   const scope = channel === "instagram"
-    ? "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
-    : "openid,pages_show_list,pages_messaging,pages_manage_metadata";
+    ? "openid,pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,instagram_basic,instagram_manage_messages"
+    : "openid,pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement";
   const configId = metaBusinessLoginConfigId(request, channel);
   const useSdk = ["1", "true", "yes"].includes(cleanText(request.nextUrl.searchParams.get("use_sdk")).toLowerCase());
 
