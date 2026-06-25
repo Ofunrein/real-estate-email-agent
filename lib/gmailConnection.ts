@@ -28,10 +28,14 @@ export type GmailClient = gmail_v1.Gmail;
 export const GMAIL_MODIFY_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 export const GMAIL_LABELS_SCOPE = "https://www.googleapis.com/auth/gmail.labels";
+export const GOOGLE_DRIVE_METADATA_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly";
+export const GOOGLE_SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 
 export const GMAIL_AGENT_SCOPES = [
   GMAIL_MODIFY_SCOPE,
   GMAIL_LABELS_SCOPE,
+  GOOGLE_SHEETS_SCOPE,
+  GOOGLE_DRIVE_METADATA_SCOPE,
 ] as const;
 
 export const GMAIL_AUTOSEND_SCOPES = [
@@ -52,6 +56,8 @@ export function emailCapabilitiesForScopes(scopes: string[] = []) {
     { scope: GMAIL_MODIFY_SCOPE, label: "Read, thread, draft, and label workflow", granted: granted.has(GMAIL_MODIFY_SCOPE) },
     { scope: GMAIL_LABELS_SCOPE, label: "Create/update Iris Gmail labels", granted: granted.has(GMAIL_LABELS_SCOPE) || granted.has(GMAIL_MODIFY_SCOPE) },
     { scope: GMAIL_SEND_SCOPE, label: "Auto-send Gmail replies", granted: granted.has(GMAIL_SEND_SCOPE) },
+    { scope: GOOGLE_SHEETS_SCOPE, label: "Read configured Google Sheets data", granted: granted.has(GOOGLE_SHEETS_SCOPE) },
+    { scope: GOOGLE_DRIVE_METADATA_SCOPE, label: "Receive configured Google Sheets file-change events", granted: granted.has(GOOGLE_DRIVE_METADATA_SCOPE) },
   ];
 }
 
