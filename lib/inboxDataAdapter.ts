@@ -61,9 +61,28 @@ const NON_REAL_ESTATE_EMAIL_RE = /\b(security alert|verification code|password r
 const REAL_ESTATE_EMAIL_RE = /\b(home|house|condo|property|listing|showing|tour|buy|buyer|sell|seller|rent|lease|realtor|real estate|bedroom|bath|mortgage|valuation|pre.?approved|appointment|zillow|mls)\b/i;
 const STREET_ADDRESS_RE = /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/i;
 const PROPERTY_DETAILS_RE = /^Here are the full details on (.+):$/i;
+const DISPLAY_TIME_ZONE = "America/Chicago";
+const eventTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: DISPLAY_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+const dayLabelFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: DISPLAY_TIME_ZONE,
+  month: "short",
+  day: "numeric",
+});
+const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return dayKeyFormatter.format(d);
 }
 
 function categorySlugToId(slug: string): LeadCategoryId {
@@ -113,7 +132,7 @@ function formatEventTimeShort(value?: string): string {
   if (!value) return "";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return eventTimeFormatter.format(parsed);
 }
 
 function formatResponseDuration(seconds: number, empty = "No replies"): string {
@@ -414,7 +433,7 @@ function buildDayBins(events: SheetRow[]) {
     d.setDate(d.getDate() - i);
     const key = dayKey(d);
     index.set(key, bins.length);
-    bins.push({ key, label: d.toLocaleDateString([], { month: "short", day: "numeric" }), events: 0, inbound: 0, outbound: 0, needReview: 0, contacts: new Set() });
+    bins.push({ key, label: dayLabelFormatter.format(d), events: 0, inbound: 0, outbound: 0, needReview: 0, contacts: new Set() });
   }
   for (const event of events) {
     const parsed = new Date(event.event_at || "");
