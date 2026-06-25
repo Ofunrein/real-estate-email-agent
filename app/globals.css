@@ -363,6 +363,9 @@ body {
 .login-auth-graphic .login-ripple-field span {
   width: calc(84px + var(--i) * 40px);
   height: calc(84px + var(--i) * 40px);
+  border-color: rgba(245, 247, 242, calc(0.2 - var(--i) * 0.011));
+  opacity: calc(0.38 - var(--i) * 0.026);
+  animation: login-auth-orbit-pulse 6.4s cubic-bezier(.45, 0, .2, 1) calc(var(--i) * -420ms) infinite;
 }
 
 .login-auth-graphic .login-tech-orbit {
@@ -862,8 +865,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-ripple-field span,
-  .login-orbit-chip,
   .login-auth-card,
   .login-auth-card::before,
   .login-ripple,
@@ -895,9 +896,28 @@ body {
   50% { transform: scale(0.92); }
 }
 
+@keyframes login-auth-orbit-pulse {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.12;
+  }
+  38% {
+    opacity: 0.34;
+  }
+  72% {
+    transform: scale(1.08);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.94);
+    opacity: 0.12;
+  }
+}
+
 @keyframes login-orbit-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  45% { transform: translate3d(4px, -10px, 0); }
+  72% { transform: translate3d(-3px, -4px, 0); }
 }
 
 @keyframes login-orbit-spin {
