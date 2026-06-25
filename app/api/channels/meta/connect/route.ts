@@ -13,8 +13,8 @@ function metaBusinessLoginConfigId(
   const queryConfigId = cleanText(request.nextUrl.searchParams.get("config_id"));
   if (queryConfigId) return queryConfigId;
 
-  const useDashboardConfig = cleanText(process.env.META_USE_BUSINESS_LOGIN_CONFIG);
-  if (!["1", "true", "yes"].includes(useDashboardConfig.toLowerCase())) return "";
+  const useDashboardConfig = cleanText(process.env.META_USE_BUSINESS_LOGIN_CONFIG).toLowerCase();
+  if (["0", "false", "no"].includes(useDashboardConfig)) return "";
 
   const channelConfigId = channel === "instagram"
     ? cleanText(process.env.META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID)
@@ -31,10 +31,6 @@ function metaGraphVersion(): string {
   return (process.env.META_GRAPH_VERSION || "v20.0").trim().replace(/^\/+/, "");
 }
 
-function jsString(value: string): string {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
-}
-
 function sdkConnectPage(input: {
   appId: string;
   channel: "messenger" | "instagram";
@@ -43,25 +39,13 @@ function sdkConnectPage(input: {
   scope: string;
   configId: string;
 }) {
-  const fbOptions = input.configId
-    ? {
-      config_id: input.configId,
-      response_type: "code",
-      override_default_response_type: true,
-      auth_type: "rerequest",
-    }
-    : {
-      scope: input.scope,
-      response_type: "code",
-      auth_type: "rerequest",
-      return_scopes: true,
-    };
   const fallbackUrl = new URL(`https://www.facebook.com/${metaGraphVersion()}/dialog/oauth`);
   fallbackUrl.searchParams.set("client_id", input.appId);
   fallbackUrl.searchParams.set("redirect_uri", input.redirectUri);
   if (input.configId) {
     fallbackUrl.searchParams.set("config_id", input.configId);
     fallbackUrl.searchParams.set("override_default_response_type", "true");
+    fallbackUrl.searchParams.set("scope", "openid");
   } else {
     fallbackUrl.searchParams.set("scope", input.scope);
   }
@@ -91,41 +75,9 @@ function sdkConnectPage(input: {
   <main>
     <h1>${title}</h1>
     <p>Grant Lumenosis access to the selected ${input.channel === "instagram" ? "Instagram business account" : "Facebook Page"} so Iris can receive and send messages through Meta.</p>
-    <button id="connect" type="button">Continue with Meta</button>
-    <a href="${fallbackUrl.toString()}">Open Meta directly</a>
+    <a href="${fallbackUrl.toString()}">Continue with Meta</a>
     <div id="status"></div>
   </main>
-  <script>
-    const statusEl = document.getElementById('status');
-    function setStatus(message) { statusEl.textContent = message || ''; }
-    window.fbAsyncInit = function() {
-      FB.init({
-        appId: ${jsString(input.appId)},
-        cookie: true,
-        xfbml: false,
-        version: ${jsString(metaGraphVersion())}
-      });
-      document.getElementById('connect').disabled = false;
-      setStatus('');
-    };
-    document.getElementById('connect').disabled = true;
-    document.getElementById('connect').addEventListener('click', function() {
-      setStatus('Opening Meta...');
-      FB.login(function(response) {
-        const auth = response && response.authResponse;
-        if (auth && auth.code) {
-          const callback = new URL(${jsString(input.redirectUri)});
-          callback.searchParams.set('code', auth.code);
-          callback.searchParams.set('state', ${jsString(input.state)});
-          window.location.href = callback.toString();
-          return;
-        }
-        const reason = response && response.status ? response.status : 'cancelled';
-        setStatus('Meta did not return an authorization code: ' + reason);
-      }, ${JSON.stringify(fbOptions)});
-    });
-  </script>
-  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
 </body>
 </html>`;
 }
@@ -151,8 +103,8 @@ export async function GET(request: NextRequest) {
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
   const scope = channel === "instagram"
-    ? "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
-    : "pages_show_list,pages_messaging,pages_manage_metadata";
+    ? "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
+    : "openid,pages_show_list,pages_messaging,pages_manage_metadata";
   const configId = metaBusinessLoginConfigId(request, channel);
   const useSdk = ["1", "true", "yes"].includes(cleanText(request.nextUrl.searchParams.get("use_sdk")).toLowerCase());
 
@@ -171,7 +123,7 @@ export async function GET(request: NextRequest) {
   if (configId) oauthUrl.searchParams.set("config_id", configId);
   // Facebook Login for Business configs already own the permission set.
   // Plain OAuth must still send scopes directly.
-  if (!configId) oauthUrl.searchParams.set("scope", scope);
+  oauthUrl.searchParams.set("scope", configId ? "openid" : scope);
   if (configId) oauthUrl.searchParams.set("override_default_response_type", "true");
   oauthUrl.searchParams.set("auth_type", "rerequest");
   oauthUrl.searchParams.set("response_type", "code");
