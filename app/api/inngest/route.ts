@@ -5,6 +5,7 @@ import { inngest } from "@/lib/inngest/client";
 import { messageReceived } from "@/lib/inngest/functions/messageReceived";
 import { messageReplyGenerate } from "@/lib/inngest/functions/messageReplyGenerate";
 import { messageReplySend } from "@/lib/inngest/functions/messageReplySend";
+import { sheetsChangedSync } from "@/lib/inngest/functions/sheetsChangedSync";
 import { threadSummaryRefresh } from "@/lib/inngest/functions/threadSummaryRefresh";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ const inngestHandler = serve({
     messageReceived,
     messageReplyGenerate,
     messageReplySend,
+    sheetsChangedSync,
     threadSummaryRefresh,
   ],
 });

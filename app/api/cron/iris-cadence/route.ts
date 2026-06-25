@@ -16,6 +16,11 @@ function authorized(request: NextRequest): boolean {
   const querySecret = request.nextUrl.searchParams.get("secret") || "";
   return header === `Bearer ${secret}` || querySecret === secret;
 }
+
+function cronEnabled(): boolean {
+  return process.env.ENABLE_LEGACY_IRIS_CADENCE_CRON === "1";
+}
+
 function eventKeys(event: SheetRow): string[] {
   return [leadIdentity({ phone: event.phone }), leadIdentity({ email: event.email }), leadIdentity({ full_name: event.full_name })]
     .filter(Boolean);
@@ -67,6 +72,13 @@ async function plan() {
 export async function GET(request: NextRequest) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (!cronEnabled()) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "Legacy Iris cadence cron is disabled. Cadence work should be triggered from explicit lead/message events.",
+    });
   }
   if (!process.env.DATABASE_URL) {
     return NextResponse.json({ ok: false, error: "DATABASE_URL is required" }, { status: 503 });

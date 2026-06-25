@@ -6,6 +6,10 @@ import { assertWebhookSecret } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
 
+function pollingEnabled(): boolean {
+  return process.env.ENABLE_LEGACY_COMPOSIO_SOCIAL_POLLING === "1";
+}
+
 async function authorized(request: NextRequest): Promise<string> {
   if (process.env.CHANNEL_WEBHOOK_SECRET) {
     try {
@@ -25,6 +29,13 @@ async function authorized(request: NextRequest): Promise<string> {
 async function run(request: NextRequest) {
   try {
     const userEmail = await authorized(request);
+    if (!pollingEnabled()) {
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: "Legacy Composio social polling is disabled. Direct Meta webhooks are the active inbound path.",
+      });
+    }
     const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
     const channelsParam = request.nextUrl.searchParams.get("channels") || "";
     const channels = Array.isArray(body.channels)

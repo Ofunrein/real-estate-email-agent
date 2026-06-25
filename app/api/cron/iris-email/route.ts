@@ -21,9 +21,21 @@ function intParam(value: string | null, fallback: number): number {
   return Number.isFinite(parsed) ? Math.round(parsed) : fallback;
 }
 
+function pollingEnabled(): boolean {
+  return process.env.ENABLE_LEGACY_IRIS_EMAIL_POLLING === "1";
+}
+
 async function run(request: NextRequest) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (!pollingEnabled()) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      channel: "email",
+      reason: "Legacy Iris email polling is disabled. Gmail Pub/Sub push is the intended inbound path.",
+    });
   }
 
   const dryRun = irisEmailCronDryRun(request.nextUrl.searchParams);

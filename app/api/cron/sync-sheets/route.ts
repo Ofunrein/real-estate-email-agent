@@ -13,9 +13,20 @@ function authorized(request: NextRequest): boolean {
   return header === `Bearer ${secret}` || querySecret === secret;
 }
 
+function syncEnabled(): boolean {
+  return process.env.ENABLE_LEGACY_SHEETS_SYNC_CRON === "1";
+}
+
 export async function GET(request: NextRequest) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (!syncEnabled()) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "Legacy Google Sheets sync cron is disabled. Writes should happen through explicit imports or channel events.",
+    });
   }
 
   try {

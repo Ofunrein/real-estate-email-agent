@@ -21,6 +21,7 @@
     "import:zillow": "node scripts/import-zillow-apify-properties.mjs",
     "normalize:rental-prices": "node scripts/normalize-rental-prices.mjs",
     "sync:sheets": "node scripts/sync-sheets-to-db.mjs",
+    "watch:sheets": "node scripts/register-google-sheets-drive-watch.mjs",
     "sync:db-to-sheets": "node scripts/sync-db-to-sheets.mjs",
     "backfill:neon": "python3 scripts/backfill_neon_from_sources.py --json",
     "import:tcad": "python3 scripts/import-tcad-assessor.py --download --json",
