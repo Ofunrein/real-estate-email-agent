@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { GET as connectMetaChannel } from "@/app/api/channels/meta/connect/route";
 import { GET as metaCallback } from "@/app/api/channels/meta/callback/route";
 import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
+import { configuredMetaPageId } from "@/lib/metaPageFallback";
 
 function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
   const prior = {
@@ -17,6 +18,9 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
     META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: process.env.META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID,
     META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: process.env.META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID,
     META_USE_BUSINESS_LOGIN_CONFIG: process.env.META_USE_BUSINESS_LOGIN_CONFIG,
+    META_FACEBOOK_PAGE_ID: process.env.META_FACEBOOK_PAGE_ID,
+    META_MESSENGER_PAGE_ID: process.env.META_MESSENGER_PAGE_ID,
+    META_INSTAGRAM_PAGE_ID: process.env.META_INSTAGRAM_PAGE_ID,
   };
   Object.assign(process.env, env);
   try {
@@ -53,6 +57,28 @@ test("Meta connect uses configured Business Login config by default", async () =
     assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
       channel: "instagram",
     });
+  });
+});
+
+test("Meta callback chooses channel-specific configured Page ID fallback", async () => {
+  await withMetaConnectEnv({
+    META_FACEBOOK_PAGE_ID: "shared_page",
+    META_MESSENGER_PAGE_ID: "messenger_page",
+    META_INSTAGRAM_PAGE_ID: "instagram_page",
+  }, async () => {
+    assert.equal(configuredMetaPageId("messenger"), "messenger_page");
+    assert.equal(configuredMetaPageId("instagram"), "instagram_page");
+  });
+});
+
+test("Meta callback falls back to shared configured Page ID", async () => {
+  await withMetaConnectEnv({
+    META_FACEBOOK_PAGE_ID: "shared_page",
+    META_MESSENGER_PAGE_ID: "",
+    META_INSTAGRAM_PAGE_ID: "",
+  }, async () => {
+    assert.equal(configuredMetaPageId("messenger"), "shared_page");
+    assert.equal(configuredMetaPageId("instagram"), "shared_page");
   });
 });
 
