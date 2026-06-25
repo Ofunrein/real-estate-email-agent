@@ -73,6 +73,22 @@ test("Meta connect can opt out of Business Login config for direct OAuth scopes"
   });
 });
 
+test("Meta connect does not use shared Business Login config for Messenger", async () => {
+  await withMetaConnectEnv({
+    META_APP_ID: "2482694768826545",
+    PUBLIC_BASE_URL: "https://app.lumenosis.com",
+    META_BUSINESS_LOGIN_CONFIG_ID: "instagram_only_config",
+  }, async () => {
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=messenger"));
+    const location = response.headers.get("location");
+    assert.ok(location);
+
+    const oauthUrl = new URL(location);
+    assert.equal(oauthUrl.searchParams.get("config_id"), null);
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata");
+  });
+});
+
 test("Meta connect only includes client id in state when explicitly requested", async () => {
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
