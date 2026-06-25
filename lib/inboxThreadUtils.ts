@@ -79,12 +79,58 @@ export function threadIdentity(threadRef: string, events: SheetRow[], channel?: 
   const latest = latestEvent(events);
   if (channel === "email") return latest.email || threadRef;
   if (["messenger", "instagram"].includes(channel || "")) {
-    return latest.full_name || latest.phone || threadRef;
+    const normalizedChannel = String(channel || "");
+    for (const event of [...events].reverse()) {
+      const candidate = socialContactCandidate(event);
+      if (candidate) return candidate;
+    }
+    return socialChannelLabel(normalizedChannel);
   }
   if (["sms", "whatsapp", "messenger", "instagram", "voice"].includes(channel || "")) {
     return latest.phone || latest.full_name || threadRef;
   }
   return latest.email || latest.phone || latest.full_name || threadRef;
+}
+
+function providerMetadataValue(event: SheetRow, keys: string[]): string {
+  if (!event.provider_metadata) return "";
+  try {
+    const parsed = JSON.parse(event.provider_metadata) as Record<string, unknown>;
+    for (const key of keys) {
+      const value = parsed[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+function opaqueSocialId(value: string): boolean {
+  const clean = value.trim().replace(/^(instagram|messenger):/i, "");
+  return /^\d{12,}$/.test(clean);
+}
+
+function socialChannelLabel(channel: string): string {
+  return channel === "messenger" ? "Messenger contact" : "Instagram contact";
+}
+
+function socialContactCandidate(event: SheetRow, fallback = ""): string {
+  const candidates = [
+    event.full_name,
+    providerMetadataValue(event, ["senderUsername", "sender_username", "username", "senderName", "sender_name", "name"]),
+    event.phone,
+    fallback,
+  ];
+  for (const candidate of candidates) {
+    const value = String(candidate || "").trim();
+    if (value && !opaqueSocialId(value)) return value;
+  }
+  return "";
+}
+
+export function socialContactIdentity(event: SheetRow, channel: Channel | string, fallback = ""): string {
+  return socialContactCandidate(event, fallback) || socialChannelLabel(String(channel || ""));
 }
 
 export function voiceCallKey(call: SheetRow): string {

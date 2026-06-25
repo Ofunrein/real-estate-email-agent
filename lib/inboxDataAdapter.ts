@@ -15,6 +15,7 @@ import {
   eventTimeValue,
   latestEvent,
   parseDraftKey,
+  socialContactIdentity,
   threadIdentity,
   voiceCallKey,
   voiceCallTimeValue,
@@ -733,6 +734,9 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
       const fallback = view === "voice" ? "Voice call recorded." : "";
       const threadId = conversationKey(event, rawChannel);
       const eventId = messageEventId(event, `event-${i}`);
+      const actor = ["instagram", "messenger"].includes(rawChannel)
+        ? socialContactIdentity(event, rawChannel)
+        : event.email || event.phone || event.full_name || "unknown";
       return {
         sortValue: eventTimeValue(event),
         event: {
@@ -742,7 +746,7 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
           threadRef: event.thread_ref || threadId,
           eventId,
           kind,
-          actor: event.email || event.phone || event.full_name || "unknown",
+          actor,
           intent: event.event_type || undefined,
           body: usableActivityText(body, fallback),
           time: formatEventTimeShort(event.event_at),
@@ -794,6 +798,8 @@ function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelI
     const aiReplies = events.filter((e) => e.direction !== "inbound").length;
     const latest = events[events.length - 1];
     const flagged = events.some(eventNeedsHuman);
+    const latestChannel = latest ? eventChannel(latest) : "";
+    const latestThreadId = latest ? conversationKey(latest, latestChannel) : "";
     result[view] = {
       events: events.length,
       threads: threadKeys.size,
@@ -801,7 +807,7 @@ function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelI
       aiReplies,
       lastActivity: latest
         ? {
-            contact: latest.email || latest.phone || latest.full_name || "unknown",
+            contact: threadIdentity(latest.thread_ref || latestThreadId, [latest], latestChannel),
             message: usableActivityText(eventText(latest) || latest.summary || "", latest.summary || ""),
             status: latest.direction === "inbound" ? "received" : "sent",
             when: formatEventTimeShort(latest.event_at),
