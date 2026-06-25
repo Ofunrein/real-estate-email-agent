@@ -6,11 +6,13 @@ import { GET as connectMetaChannel } from "@/app/api/channels/meta/connect/route
 import { GET as metaCallback } from "@/app/api/channels/meta/callback/route";
 import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import { configuredMetaPageId } from "@/lib/metaPageFallback";
+import { subscribeMetaPageToWebhooks, subscribedMetaPageFields } from "@/lib/metaWebhookSubscription";
 
 function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
   const prior = {
     META_APP_ID: process.env.META_APP_ID,
     FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,
+    META_GRAPH_VERSION: process.env.META_GRAPH_VERSION,
     PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
     AUTH_URL: process.env.AUTH_URL,
     CLIENT_ID: process.env.CLIENT_ID,
@@ -21,6 +23,7 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
     META_FACEBOOK_PAGE_ID: process.env.META_FACEBOOK_PAGE_ID,
     META_MESSENGER_PAGE_ID: process.env.META_MESSENGER_PAGE_ID,
     META_INSTAGRAM_PAGE_ID: process.env.META_INSTAGRAM_PAGE_ID,
+    META_PAGE_SUBSCRIBED_FIELDS: process.env.META_PAGE_SUBSCRIBED_FIELDS,
   };
   Object.assign(process.env, env);
   try {
@@ -57,6 +60,45 @@ test("Meta connect uses configured Business Login config by default", async () =
     assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
       channel: "instagram",
     });
+  });
+});
+
+test("Meta callback subscribes connected Pages to message webhook fields", async () => {
+  await withMetaConnectEnv({
+    META_GRAPH_VERSION: "v25.0",
+    META_PAGE_SUBSCRIBED_FIELDS: "messages,messaging_postbacks",
+  }, async () => {
+    const priorFetch = global.fetch;
+    const calls: string[] = [];
+    global.fetch = async (input) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    };
+    try {
+      const result = await subscribeMetaPageToWebhooks({
+        id: "page_123",
+        name: "Martn.ai",
+        access_token: "page_token",
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.fields, "messages,messaging_postbacks");
+      assert.equal(calls.length, 1);
+      const url = new URL(calls[0]);
+      assert.equal(url.origin + url.pathname, "https://graph.facebook.com/v25.0/page_123/subscribed_apps");
+      assert.equal(url.searchParams.get("access_token"), "page_token");
+      assert.equal(url.searchParams.get("subscribed_fields"), "messages,messaging_postbacks");
+    } finally {
+      global.fetch = priorFetch;
+    }
+  });
+});
+
+test("Meta callback uses default Page message webhook fields", () => {
+  withMetaConnectEnv({
+    META_PAGE_SUBSCRIBED_FIELDS: "",
+  }, () => {
+    assert.equal(subscribedMetaPageFields(), "messages,messaging_postbacks,message_reads,messaging_referrals,message_reactions");
   });
 });
 
