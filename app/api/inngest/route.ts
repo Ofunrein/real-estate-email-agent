@@ -2,8 +2,6 @@ import { serve } from "inngest/next";
 import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
-import { composioSocialMinutePoll } from "@/lib/inngest/functions/composioSocialMinutePoll";
-import { irisEmailMinutePoll } from "@/lib/inngest/functions/irisEmailMinutePoll";
 import { messageReceived } from "@/lib/inngest/functions/messageReceived";
 import { messageReplyGenerate } from "@/lib/inngest/functions/messageReplyGenerate";
 import { messageReplySend } from "@/lib/inngest/functions/messageReplySend";
@@ -16,8 +14,6 @@ export const runtime = "nodejs";
 const inngestHandler = serve({
   client: inngest,
   functions: [
-    irisEmailMinutePoll,
-    composioSocialMinutePoll,
     messageReceived,
     messageReplyGenerate,
     messageReplySend,
