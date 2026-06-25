@@ -27,9 +27,20 @@ function pollUserEmail(): string {
   );
 }
 
+function pollingEnabled(): boolean {
+  return process.env.ENABLE_LEGACY_COMPOSIO_SOCIAL_POLLING === "1";
+}
+
 async function run(request: NextRequest) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  if (!pollingEnabled()) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "Legacy Composio social polling is disabled. Direct Meta webhooks are the active inbound path.",
+    });
   }
 
   const channelsParam = request.nextUrl.searchParams.get("channels") || "";
