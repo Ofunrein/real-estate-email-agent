@@ -69,7 +69,7 @@ test("Meta connect can opt out of Business Login config for direct OAuth scopes"
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.searchParams.get("config_id"), null);
-    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,instagram_basic,instagram_manage_messages");
   });
 });
 
@@ -85,7 +85,7 @@ test("Meta connect does not use shared Business Login config for Messenger", asy
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.searchParams.get("config_id"), null);
-    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata");
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement");
   });
 });
 
@@ -136,7 +136,7 @@ test("Meta connect can render dashboard setup page", async () => {
 
     assert.match(html, /Continue with Meta/);
     assert.doesNotMatch(html, /FB\.login/);
-    assert.match(html, /scope=openid%2Cpages_show_list%2Cpages_messaging%2Cpages_manage_metadata/);
+    assert.match(html, /scope=openid%2Cpages_show_list%2Cpages_messaging%2Cpages_manage_metadata%2Cpages_read_engagement/);
     assert.match(html, /api%2Fchannels%2Fmeta%2Fcallback/);
   });
 });
