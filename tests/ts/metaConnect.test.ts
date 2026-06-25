@@ -45,7 +45,7 @@ test("Meta connect uses direct OAuth scopes by default", async () => {
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.origin, "https://www.facebook.com");
     assert.equal(oauthUrl.searchParams.get("config_id"), null);
-    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
+    assert.equal(oauthUrl.searchParams.get("scope"), "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
     assert.equal(oauthUrl.searchParams.get("redirect_uri"), "https://app.lumenosis.com/api/channels/meta/callback");
     assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
       channel: "instagram",
