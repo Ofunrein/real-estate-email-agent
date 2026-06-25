@@ -3,13 +3,46 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { google } from "googleapis";
 
+let dotenvCache;
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function dotenvValue(name) {
+  if (!dotenvCache) {
+    const filePath = path.resolve(process.cwd(), ".env");
+    dotenvCache = new Map();
+    if (fs.existsSync(filePath)) {
+      for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const index = trimmed.indexOf("=");
+        if (index < 0) continue;
+        const key = trimmed.slice(0, index).trim();
+        let value = trimmed.slice(index + 1).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        dotenvCache.set(key, value);
+      }
+    }
+  }
+  return dotenvCache.get(name) || "";
+}
+
+function envValue(name) {
+  return process.env[name] || dotenvValue(name);
+}
+
 function readJsonEnv(name) {
-  const value = process.env[name];
-  return value ? JSON.parse(value) : null;
+  const value = envValue(name);
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 function credentialPaths() {
@@ -20,15 +53,15 @@ function credentialPaths() {
 }
 
 function requiredEnv(name) {
-  const value = process.env[name];
+  const value = envValue(name);
   if (!value) throw new Error(`${name} is required`);
   return value;
 }
 
 function webhookAddress() {
-  const explicit = process.env.GOOGLE_SHEETS_DRIVE_WEBHOOK_URL;
+  const explicit = envValue("GOOGLE_SHEETS_DRIVE_WEBHOOK_URL");
   if (explicit) return explicit;
-  const base = process.env.AUTH_URL || process.env.NEXTAUTH_URL || "https://app.lumenosis.com";
+  const base = envValue("AUTH_URL") || envValue("NEXTAUTH_URL") || "https://app.lumenosis.com";
   return `${base.replace(/\/$/, "")}/api/webhooks/google-drive-sheets`;
 }
 
@@ -46,7 +79,7 @@ async function driveClient() {
 const drive = await driveClient();
 const fileId = requiredEnv("GOOGLE_SHEET_ID");
 const token = requiredEnv("GOOGLE_DRIVE_WEBHOOK_TOKEN");
-const id = process.env.GOOGLE_SHEETS_DRIVE_CHANNEL_ID || randomUUID();
+const id = envValue("GOOGLE_SHEETS_DRIVE_CHANNEL_ID") || randomUUID();
 
 const response = await drive.files.watch({
   fileId,
