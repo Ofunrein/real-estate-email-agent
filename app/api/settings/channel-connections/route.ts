@@ -7,10 +7,12 @@ import {
   getChannelConnection,
   listChannelConnections,
   upsertChannelConnection,
+  type ChannelConnectionRecord,
   type ChannelConnectionInput,
 } from "@/lib/channelConnections";
 import { syncComposioSocialConnections } from "@/lib/composioChannelSync";
 import { composioEnabled, createComposioClient } from "@/lib/composioConnection";
+import { metaSocialDirectEnabled } from "@/lib/metaSocial";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,48 @@ function payloadFromBody(body: unknown): ChannelConnectionInput {
     ? value.connection as Record<string, unknown>
     : value;
   return connection as ChannelConnectionInput;
+}
+
+function sanitizedMetadata(metadata: Record<string, unknown> | undefined) {
+  const {
+    page_access_token: _pageAccessToken,
+    access_token: _accessToken,
+    token: _token,
+    ...safeMetadata
+  } = metadata || {};
+  return safeMetadata;
+}
+
+function sanitizeConnectionForDashboard(connection: ChannelConnectionRecord) {
+  const metadata = connection.metadata || {};
+  return {
+    ...connection,
+    page_access_token: "",
+    has_page_access_token: Boolean(connection.page_access_token || metadata.page_access_token),
+    metadata: sanitizedMetadata(metadata),
+  };
+}
+
+function sanitizeStatusForDashboard(status: Awaited<ReturnType<typeof dashboardChannelConnectionStatus>>) {
+  const sanitizedConnections = status.connections.map(sanitizeConnectionForDashboard);
+  const byChannel = sanitizedConnections.reduce<Record<string, typeof sanitizedConnections>>((acc, connection) => {
+    (acc[connection.channel] ||= []).push(connection);
+    return acc;
+  }, {});
+  return {
+    ...status,
+    direct_meta_required: metaSocialDirectEnabled(),
+    connections: sanitizedConnections,
+    channels: Object.fromEntries(
+      Object.entries(status.channels).map(([channel, channelStatus]) => [
+        channel,
+        {
+          ...channelStatus,
+          connections: byChannel[channel] || [],
+        },
+      ]),
+    ),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -37,7 +81,7 @@ export async function GET(request: NextRequest) {
       : { checked: false, synced: 0, errors: ["No signed-in email available for Composio sync."] }
     : { checked: false, synced: 0, errors: [] };
   const status = await dashboardChannelConnectionStatus();
-  return NextResponse.json({ ...status, composio_sync: sync });
+  return NextResponse.json({ ...sanitizeStatusForDashboard(status), composio_sync: sync });
 }
 
 export async function POST(request: NextRequest) {

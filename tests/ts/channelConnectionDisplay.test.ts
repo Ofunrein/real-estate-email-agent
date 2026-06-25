@@ -279,3 +279,101 @@ test("social connection display does not expose opaque Composio account ids", ()
   assert.equal(display.value, "Connected account");
   assert.equal(display.status, "READY");
 });
+
+test("direct Meta mode ignores connected Composio rows for Instagram readiness", () => {
+  const status: ConnectionStatus = {
+    direct_meta_required: true,
+    channels: {
+      instagram: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "ig-composio",
+            channel: "instagram",
+            provider: "composio_instagram",
+            selected_asset_name: "Old Composio Instagram",
+            selected_asset_id: "ca_ig",
+            connected_account_id: "ca_ig",
+            status: "connected",
+            metadata: { composio_auth_configured: true },
+            updated_at: "2026-06-25T04:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "instagram", "@austin.realty", "READY");
+
+  assert.equal(display.ready, false);
+  assert.equal(display.value, "No account connected");
+  assert.equal(display.status, "SETUP NEEDED");
+  assert.equal(display.connection, undefined);
+});
+
+test("direct Meta mode requires a page token before Messenger is ready", () => {
+  const status: ConnectionStatus = {
+    direct_meta_required: true,
+    channels: {
+      messenger: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "fb-meta",
+            channel: "messenger",
+            provider: "meta_direct",
+            selected_asset_name: "Martn.ai",
+            selected_asset_id: "1223109270878513",
+            selected_asset_type: "page",
+            status: "connected",
+            has_page_access_token: false,
+            metadata: { page_id: "1223109270878513" },
+            updated_at: "2026-06-25T04:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "messenger", "", "");
+
+  assert.equal(display.ready, false);
+  assert.equal(display.value, "Martn.ai");
+  assert.equal(display.status, "SETUP NEEDED");
+  assert.equal(display.connection?.id, "fb-meta");
+});
+
+test("direct Meta mode marks Messenger ready when a page token is stored", () => {
+  const status: ConnectionStatus = {
+    direct_meta_required: true,
+    channels: {
+      messenger: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "fb-meta",
+            channel: "messenger",
+            provider: "meta_direct",
+            selected_asset_name: "Martn.ai",
+            selected_asset_id: "1223109270878513",
+            selected_asset_type: "page",
+            status: "connected",
+            has_page_access_token: true,
+            metadata: { page_id: "1223109270878513" },
+            updated_at: "2026-06-25T04:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "messenger", "", "");
+
+  assert.equal(display.ready, true);
+  assert.equal(display.value, "Martn.ai");
+  assert.equal(display.status, "READY");
+  assert.equal(display.connection?.id, "fb-meta");
+});
