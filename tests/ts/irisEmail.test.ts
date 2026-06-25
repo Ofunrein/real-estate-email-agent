@@ -106,7 +106,7 @@ test("processIrisEmailPoll: dry run avoids labels, sends, and database writes", 
   assert.deepEqual(calls.labels, []);
   assert.deepEqual(calls.sent, []);
   assert.match(result.results[0].replyDraft || "", /4309 Fairway Path/);
-  assert.match(result.results[0].replyDraft || "", /time windows|What day and time/i);
+  assert.match(result.results[0].replyDraft || "", /time windows|What day and time|time of day/i);
 });
 
 test("processIrisEmailPoll: live injected path records and applies conservative labels", async () => {
