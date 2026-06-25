@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
   const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
   const scope = channel === "instagram"
-    ? "openid,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
-    : "openid,pages_messaging,pages_manage_metadata";
+    ? "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
+    : "openid,pages_show_list,pages_messaging,pages_manage_metadata";
   const configId = metaBusinessLoginConfigId(request, channel);
 
   const oauthUrl = new URL("https://www.facebook.com/dialog/oauth");
