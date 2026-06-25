@@ -1,5 +1,6 @@
 import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
 import { sendComposioSocialMessage } from "@/lib/composioSocial";
+import { listChannelConnections } from "@/lib/channelConnections";
 import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 
@@ -60,11 +61,16 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
       case "instagram":
       case "messenger": {
         if (metaSocialDirectEnabled(input.channel)) {
+          const connection = await directMetaConnectionForChannel(input.channel);
+          if (!connection?.page_access_token) {
+            return { ok: false, error: `Connect ${input.channel} with Meta before sending. No page access token is stored for this channel.` };
+          }
           const r = await sendMetaSocialMessage({
             channel: input.channel,
             to: input.to,
             body: input.body,
             mediaUrls: input.mediaUrls,
+            pageAccessToken: connection.page_access_token,
           });
           return r.sent
             ? {
@@ -99,6 +105,18 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+async function directMetaConnectionForChannel(channel: "instagram" | "messenger") {
+  const { connections } = await listChannelConnections();
+  return connections
+    .filter((connection) =>
+      connection.channel === channel
+      && connection.provider === "meta_direct"
+      && connection.status === "connected"
+      && Boolean(connection.page_access_token)
+    )
+    .sort((a, b) => Date.parse(b.updated_at || "") - Date.parse(a.updated_at || ""))[0] || null;
 }
 
 // Twilio WhatsApp: To/From need a `whatsapp:` prefix. sendTheoSms can't do that
