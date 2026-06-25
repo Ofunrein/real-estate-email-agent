@@ -87,19 +87,13 @@ function metaGraphVersion(): string {
 }
 
 function metaSocialAccessToken(pageAccessToken?: string): string {
-  if (pageAccessToken && pageAccessToken.trim()) return pageAccessToken.trim();
-  return cleanText(
-    process.env.META_SOCIAL_PAGE_ACCESS_TOKEN
-    || process.env.META_PAGE_ACCESS_TOKEN
-    || process.env.FACEBOOK_PAGE_ACCESS_TOKEN,
-  );
+  return cleanText(pageAccessToken);
 }
 
 // Resolve per-page token from a channel_connections record metadata.
-// Falls back to env if not stored in DB.
 export function resolvePageAccessToken(connection?: { metadata?: Record<string, unknown>; page_access_token?: string } | null): string {
   const fromRecord = cleanText(connection?.page_access_token || String(connection?.metadata?.page_access_token || ""));
-  return metaSocialAccessToken(fromRecord);
+  return fromRecord;
 }
 
 function absoluteMediaUrl(value: string): string {
@@ -272,7 +266,7 @@ async function postMetaSocialMessage(
   pageAccessToken?: string,
 ): Promise<{ ok: boolean; id: string; error: string }> {
   const token = metaSocialAccessToken(pageAccessToken);
-  if (!token) return { ok: false, id: "", error: "Missing META_SOCIAL_PAGE_ACCESS_TOKEN" };
+  if (!token) return { ok: false, id: "", error: `Connect ${channel} with Meta before sending. No page access token is stored for this channel.` };
   const response = await fetch(sendEndpoint(channel), {
     method: "POST",
     headers: {

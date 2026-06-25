@@ -74,15 +74,20 @@ async function fetchManagedPages(userToken: string): Promise<{ pages: FacebookPa
 // Exchanges code → long-lived token → page tokens, stores each page in channel_connections.
 export async function GET(request: NextRequest) {
   const publicBaseUrl = cleanText(process.env.PUBLIC_BASE_URL || process.env.AUTH_URL).replace(/\/$/, "");
+  const appBaseUrl = publicBaseUrl || request.nextUrl.origin;
   const code = cleanText(request.nextUrl.searchParams.get("code"));
   const error = cleanText(request.nextUrl.searchParams.get("error"));
   const stateRaw = cleanText(request.nextUrl.searchParams.get("state"));
 
   if (error) {
-    return NextResponse.json({ ok: false, error: `Facebook denied access: ${error}` }, { status: 400 });
+    const nextUrl = new URL(appBaseUrl);
+    nextUrl.searchParams.set("metaConnectError", error);
+    return NextResponse.redirect(nextUrl);
   }
   if (!code) {
-    return NextResponse.json({ ok: false, error: "Missing authorization code" }, { status: 400 });
+    const nextUrl = new URL(appBaseUrl);
+    nextUrl.searchParams.set("metaConnectError", "missing_code");
+    return NextResponse.redirect(nextUrl);
   }
 
   let clientId = cleanText(process.env.CLIENT_ID);
@@ -95,7 +100,7 @@ export async function GET(request: NextRequest) {
     // state decode failure is non-fatal; fall back to defaults
   }
 
-  const redirectUri = `${publicBaseUrl}/api/channels/meta/callback`;
+  const redirectUri = `${appBaseUrl}/api/channels/meta/callback`;
   const { token: userToken, error: tokenError } = await exchangeCodeForLongLivedToken(code, redirectUri);
   if (tokenError || !userToken) {
     return NextResponse.json({ ok: false, error: tokenError || "Token exchange failed" }, { status: 502 });
@@ -134,7 +139,7 @@ export async function GET(request: NextRequest) {
     saved.push({ page_id: page.id, name: page.name });
   }
 
-  const nextUrl = new URL(publicBaseUrl || request.nextUrl.origin);
+  const nextUrl = new URL(appBaseUrl);
   nextUrl.searchParams.set("metaConnected", channel);
   nextUrl.searchParams.set("connectedPages", String(saved.length));
   return NextResponse.redirect(nextUrl);

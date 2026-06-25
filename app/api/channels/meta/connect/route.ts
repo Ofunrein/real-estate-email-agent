@@ -39,12 +39,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "PUBLIC_BASE_URL is not configured" }, { status: 503 });
   }
 
-  const clientId = cleanText(request.nextUrl.searchParams.get("client_id") || process.env.CLIENT_ID);
+  const requestedClientId = cleanText(request.nextUrl.searchParams.get("client_id"));
   const channel = cleanText(request.nextUrl.searchParams.get("channel") || "messenger") as "messenger" | "instagram";
   const redirectUri = `${publicBaseUrl}/api/channels/meta/callback`;
 
-  // Encode state so the callback can persist client_id + channel.
-  const state = Buffer.from(JSON.stringify({ clientId, channel })).toString("base64url");
+  // Keep the default dashboard OAuth URL tenant-neutral; callback falls back to CLIENT_ID.
+  const statePayload = requestedClientId ? { clientId: requestedClientId, channel } : { channel };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
 
   const scope = channel === "instagram"
     ? "openid,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
