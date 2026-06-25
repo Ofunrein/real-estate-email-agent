@@ -348,7 +348,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       const res = await fetch(`/api/settings/channel-connections?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) throw new Error(data.error || 'Could not disconnect account.');
-      await refreshConnections();
+      await refreshConnections({ force: true });
     } catch (error) {
       setDisconnectError(error instanceof Error ? error.message : 'Could not disconnect account.');
     } finally {

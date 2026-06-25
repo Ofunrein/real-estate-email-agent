@@ -8,7 +8,7 @@ import { ColorModeProvider } from "./theme/ColorModeContext";
 import { CategoryColorProvider } from "./theme/CategoryColorContext";
 import { InboxDataProvider } from "./InboxDataContext";
 
-const DASHBOARD_REFRESH_MS = 5000;
+const DASHBOARD_REFRESH_MS = 30_000;
 
 interface InboxAppProps {
   data: AgentInboxData;
@@ -20,12 +20,13 @@ interface InboxAppProps {
 export function InboxApp({ data }: InboxAppProps) {
   const [inboxData, setInboxData] = useState<AgentInboxData>(data);
 
-  // 5s poll /api/data for fresh AgentInboxData.
+  // Keep the dashboard fresh without hammering Vercel while the tab is hidden.
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
+      if (document.visibilityState === "hidden") return;
       try {
-        const res = await fetch(`/api/data?ts=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch("/api/data", { cache: "no-store" });
         if (!res.ok) return;
         const next = (await res.json()) as AgentInboxData;
         if (!cancelled && next) setInboxData(next);
@@ -35,15 +36,17 @@ export function InboxApp({ data }: InboxAppProps) {
     };
     refresh();
     const id = setInterval(refresh, DASHBOARD_REFRESH_MS);
+    document.addEventListener("visibilitychange", refresh);
     return () => {
       cancelled = true;
       clearInterval(id);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, []);
 
   const model = useMemo(() => adaptInboxData(inboxData), [inboxData]);
 
-  // Optimistic draft resolution after a review action so the 5s poll doesn't
+  // Optimistic draft resolution after a review action so the background poll doesn't
   // fight the UI: remove the draft from local state immediately.
   const handleDraftChanged = useCallback((key: string) => {
     setInboxData((current) => {
