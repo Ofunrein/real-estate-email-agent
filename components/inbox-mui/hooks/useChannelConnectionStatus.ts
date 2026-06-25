@@ -14,6 +14,8 @@ export type ChannelConnectionRecord = {
   connected_account_id?: string;
   status: string;
   health_reason?: string;
+  has_page_access_token?: boolean;
+  page_access_token?: string;
   metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
@@ -21,6 +23,7 @@ export type ChannelConnectionRecord = {
 
 export type ConnectionStatus = {
   fallback?: boolean;
+  direct_meta_required?: boolean;
   connections?: ChannelConnectionRecord[];
   channels?: Record<string, {
     connected: boolean;
@@ -62,8 +65,17 @@ function connectionLabel(connection?: ChannelConnectionRecord) {
   return selectedAssetLabel(connection) || (connection ? "Connected account" : "");
 }
 
-function outboundReady(connection?: ChannelConnectionRecord) {
+function socialRequiresDirectMeta(status: ConnectionStatus | null, channel: ChannelId) {
+  return Boolean(status?.direct_meta_required && (channel === "instagram" || channel === "messenger"));
+}
+
+function hasStoredPageAccessToken(connection?: ChannelConnectionRecord) {
+  return Boolean(connection?.has_page_access_token || connection?.page_access_token);
+}
+
+function outboundReady(connection: ChannelConnectionRecord | undefined, requiresDirectMeta = false) {
   if (!connection) return false;
+  if (requiresDirectMeta && !hasStoredPageAccessToken(connection)) return false;
   if (connection.metadata?.outbound_ready === false) return false;
   return true;
 }
@@ -106,8 +118,9 @@ function directMetaConnection(connection: ChannelConnectionRecord) {
   return connection.provider === "meta_direct";
 }
 
-function connectionEligibleForChannel(channel: ChannelId, connection: ChannelConnectionRecord) {
+function connectionEligibleForChannel(channel: ChannelId, connection: ChannelConnectionRecord, requiresDirectMeta = false) {
   if (channel === "instagram" || channel === "messenger") {
+    if (requiresDirectMeta) return directMetaConnection(connection);
     return directMetaConnection(connection) || composioConnection(connection);
   }
   if (channel === "whatsapp") return composioConnection(connection);
@@ -135,8 +148,10 @@ export function displayForChannelConnection(
     return { ready: ["READY", "SYNCED"].includes(fallbackStatus), value: fallbackValue, status: fallbackStatus };
   }
 
+  const requiresDirectMeta = socialRequiresDirectMeta(status, channel);
+  const allChannelConnections = status?.channels?.[channel]?.connections || [];
   const connections = (status?.channels?.[channel]?.connections || []).filter((connection) =>
-    connectionEligibleForChannel(channel, connection)
+    connectionEligibleForChannel(channel, connection, requiresDirectMeta)
   );
   const connected = [...connections]
     .filter((connection) => connection.status === "connected")
@@ -150,7 +165,7 @@ export function displayForChannelConnection(
   const label = connectionLabel(connected);
 
   if (connected && label) {
-    const ready = outboundReady(connected);
+    const ready = outboundReady(connected, requiresDirectMeta);
     return {
       ready,
       value: label,
@@ -158,6 +173,17 @@ export function displayForChannelConnection(
       subtitle: connectionSubtitle(connected),
       avatarUrl: connectionAvatarUrl(connected),
       connection: connected,
+    };
+  }
+
+  if (requiresDirectMeta && allChannelConnections.length > 0) {
+    return {
+      ready: false,
+      value: "No account connected",
+      status: "SETUP NEEDED",
+      subtitle: connectionSubtitle(connection),
+      avatarUrl: connectionAvatarUrl(connection),
+      connection,
     };
   }
 
