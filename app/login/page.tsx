@@ -54,7 +54,7 @@ export default async function LoginPage({
           </div>
           <div className="login-brand-copy">
             <span className="login-eyebrow">Lumenosis AI</span>
-            <h1>Iris lead desk</h1>
+            <h1>Iris Front Desk</h1>
             <p>
               One operating layer for approved teams to monitor leads, review drafts,
               and keep every real estate conversation moving.
