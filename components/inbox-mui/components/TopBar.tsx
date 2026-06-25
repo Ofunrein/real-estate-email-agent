@@ -108,6 +108,10 @@ export function TopBar({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: {
+          xs: 'wrap',
+          sm: 'nowrap'
+        },
         gap: {
           xs: 1,
           md: 2
@@ -119,7 +123,11 @@ export function TopBar({
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
-          minWidth: 0
+          minWidth: 0,
+          flex: {
+            xs: '1 1 100%',
+            sm: '1 1 auto'
+          }
         }}>
         
         {showNavToggle &&
@@ -136,8 +144,8 @@ export function TopBar({
             <MenuIcon fontSize="small" />
           </IconButton>
         }
-        <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
-          <Typography variant="h5" noWrap>
+        <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0} flex={1}>
+          <Typography variant="h5" noWrap sx={{ minWidth: 0 }}>
             {title}
           </Typography>
           <Chip
@@ -152,7 +160,10 @@ export function TopBar({
             label={agentReady ? 'Agent active' : 'Setup needed'}
             sx={{
               flexShrink: 0,
-              display: 'inline-flex',
+              display: {
+                xs: 'none',
+                sm: 'inline-flex'
+              },
               bgcolor: 'action.selected',
               color: agentReady ? 'success.main' : 'warning.main',
               '& .MuiChip-icon': {
@@ -169,7 +180,19 @@ export function TopBar({
           xs: 0.75,
           md: 1.5
         }}
-        alignItems="center">
+        alignItems="center"
+        sx={{
+          width: {
+            xs: '100%',
+            sm: 'auto'
+          },
+          minWidth: 0,
+          flexShrink: 0,
+          justifyContent: {
+            xs: 'space-between',
+            sm: 'flex-end'
+          }
+        }}>
         
         {/* Connected account headline */}
         <Box
@@ -247,16 +270,23 @@ export function TopBar({
           onClick={connectHref ? undefined : onOpenSettings}
           sx={{
             display: {
-              xs: 'none',
-              sm: 'inline-flex'
+              xs: 'inline-flex'
             },
             alignItems: 'center',
             justifyContent: 'center',
             minHeight: 32,
-            px: 1.75,
+            minWidth: {
+              xs: 72,
+              sm: 0
+            },
+            px: {
+              xs: 1.25,
+              sm: 1.75
+            },
             lineHeight: 1,
             borderRadius: 999,
-            fontWeight: 700
+            fontWeight: 700,
+            flexShrink: 0
           }}>
           
           {agentReady ? 'Change' : 'Set up'}
