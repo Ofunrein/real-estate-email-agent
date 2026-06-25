@@ -81,8 +81,8 @@ async function fetchConfiguredPage(
   const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/${encodeURIComponent(pageId)}`);
   url.searchParams.set("access_token", userToken);
   url.searchParams.set("fields", channel === "instagram"
-    ? "id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url}"
-    : "id,name,access_token,category,tasks");
+    ? "id,name,access_token,category,instagram_business_account{id,username,profile_picture_url}"
+    : "id,name,access_token,category");
 
   const res = await fetch(url.toString());
   const json = await res.json().catch(() => ({})) as FacebookPageForMetaDirect & { error?: { message?: string } };
