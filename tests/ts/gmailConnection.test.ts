@@ -6,6 +6,8 @@ import {
   GMAIL_AGENT_SCOPES,
   GMAIL_LABELS_SCOPE,
   GMAIL_SEND_SCOPE,
+  GOOGLE_DRIVE_METADATA_SCOPE,
+  GOOGLE_SHEETS_SCOPE,
   gmailScopesForMode,
   sendGmailReply,
   signedGmailOAuthState,
@@ -37,6 +39,8 @@ test("gmail scopes are tiered and draft-first by default", () => {
   assert.deepEqual([...GMAIL_AGENT_SCOPES], [
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/gmail.labels",
+    GOOGLE_SHEETS_SCOPE,
+    GOOGLE_DRIVE_METADATA_SCOPE,
   ]);
   assert.ok(!gmailScopesForMode("draft").includes(GMAIL_SEND_SCOPE));
   assert.ok(gmailScopesForMode("autosend").includes(GMAIL_SEND_SCOPE));

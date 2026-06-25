@@ -29,7 +29,17 @@ function deps(overrides: Partial<AriaToolDeps> = {}): AriaToolDeps {
     getCrm: () => null,
     calendarId: "cal_1",
     timezone: "America/Chicago",
+    queryAvailability: async () => [],
+    bookAppointment: async () => ({ success: true, appointment_id: "appt_vapi", neon_id: "neon_vapi", confirmed_time: "Friday, Jun 26 at 2:00 PM" }),
+    findUpcomingAppointmentByPhone: async () => null,
+    findAppointmentById: async () => null,
+    cancelAppointmentById: async () => false,
+    rescheduleAppointmentById: async () => null,
+    cancelGHLEvent: async () => false,
+    rescheduleGHLEvent: async () => ({ success: false, error: "not_configured" }),
     sendSms: async () => undefined,
+    notifyBooking: async () => undefined,
+    notifyTransfer: async () => undefined,
     ...overrides,
   };
 }
@@ -132,6 +142,53 @@ test("searchProperties: empty result action", async () => {
     searchProperties: async () => ({ properties: [], spoken: "I don't see matching listings right now." }),
   }));
   assert.equal(out.ingest.aiAction, "property_search_empty");
+});
+
+test("checkAvailability: returns available slots from repo calendar stack", async () => {
+  let requestedWindow: { from: string; to: string; durationMinutes?: number } | null = null;
+  const out = await runAriaTool("checkAvailability", { date: "2026-06-26", timeOfDay: "afternoon" }, ctx, deps({
+    queryAvailability: async (input) => {
+      requestedWindow = input;
+      return [
+        { start: "2026-06-26T19:00:00.000Z", end: "2026-06-26T19:30:00.000Z", durationMinutes: 30 },
+        { start: "2026-06-26T19:30:00.000Z", end: "2026-06-26T20:00:00.000Z", durationMinutes: 30 },
+      ];
+    },
+  }));
+  assert.equal(out.ingest.eventType, "voice_availability_checked");
+  assert.equal(out.ingest.aiAction, "availability_found");
+  assert.equal(requestedWindow!.durationMinutes, 30);
+  assert.match(requestedWindow!.from, /^2026-06-26T17:00:00/);
+  assert.match(out.result, /2:00 PM/);
+  assert.match(out.result, /Which one works best/);
+});
+
+test("checkAvailability: no slots asks for another time", async () => {
+  const out = await runAriaTool("checkAvailability", { date: "2026-06-26", timeOfDay: "morning" }, ctx, deps());
+  assert.equal(out.ingest.aiAction, "availability_empty");
+  assert.equal(out.ingest.status, "not_found");
+  assert.match(out.result, /another time/);
+});
+
+test("bookConsultation: maps Vapi appointment shape into server appointment booking", async () => {
+  let booked: { date?: string; time?: string; appointment_type?: string } | null = null;
+  const out = await runAriaTool("bookConsultation", {
+    appointmentTime: "2026-06-26T19:00:00.000Z",
+    callerName: "Sam Lee",
+    callerPhone: "+15125550000",
+    callerEmail: "sam@example.com",
+    propertyAddress: "123 Main St",
+  }, ctx, deps({
+    bookAppointment: async (input) => {
+      booked = input;
+      return { success: true, appointment_id: "appt_1", neon_id: "neon_1", confirmed_time: "Friday, Jun 26 at 2:00 PM" };
+    },
+  }));
+  assert.equal(booked!.date, "2026-06-26");
+  assert.equal(booked!.time, "2:00 PM");
+  assert.equal(booked!.appointment_type, "consultation");
+  assert.equal(out.ingest.aiAction, "appointment_booked");
+  assert.equal(out.ingest.appointmentId, "neon_1");
 });
 
 test("sendPropertyDetailsSms: sends listing details and photo media", async () => {
