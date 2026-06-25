@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782193493.8414268,
-    "ast_hash": "d99972e09bba386287b11d1808162e0e",
+    "mtime": 1782374784.0026677,
+    "ast_hash": "ed8b242c4991af6a13ed13dd8f8dfe76",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
@@ -2340,8 +2340,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782359577.0634577,
-    "ast_hash": "010b3bf91cdfec83fb56871ffa57c701",
+    "mtime": 1782375358.6442516,
+    "ast_hash": "9a5ed9046f02333b9d533f5d1a576d34",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
