@@ -156,6 +156,15 @@ body {
   padding: 0;
 }
 
+.login-panel-compact {
+  width: min(100%, 456px);
+  gap: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 .login-brand-card,
 .login-form-card {
   min-width: 0;
@@ -313,6 +322,14 @@ body {
   animation: login-card-in 560ms cubic-bezier(.22,1,.36,1) both;
 }
 
+.login-auth-card-single {
+  width: 100%;
+  min-height: 0;
+  align-content: start;
+  gap: clamp(14px, 2.5dvh, 18px);
+  padding: clamp(14px, 3.2vw, 22px);
+}
+
 .login-auth-card::before {
   content: "";
   position: absolute;
@@ -322,6 +339,61 @@ body {
     linear-gradient(90deg, transparent, rgba(19, 22, 25, 0.08), transparent);
   transform: translateX(-100%);
   animation: login-sheen 1400ms cubic-bezier(.22,1,.36,1) 180ms both;
+}
+
+.login-auth-graphic {
+  position: relative;
+  min-height: clamp(246px, 42dvh, 348px);
+  overflow: hidden;
+  border-radius: 4px;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(18px, 4.6vw, 26px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(245, 246, 243, 0.58)),
+    radial-gradient(circle at 50% 28%, rgba(19, 22, 25, 0.08), transparent 34%);
+}
+
+.login-auth-graphic .login-ripple-field {
+  z-index: 0;
+}
+
+.login-auth-graphic .login-ripple-field span {
+  width: calc(84px + var(--i) * 40px);
+  height: calc(84px + var(--i) * 40px);
+}
+
+.login-auth-graphic .login-tech-orbit {
+  z-index: 1;
+}
+
+.login-auth-graphic .login-orbit-word {
+  font-size: clamp(60px, 16vw, 96px);
+  transform: translateY(-8%);
+}
+
+.login-auth-graphic .login-brand-copy {
+  z-index: 2;
+  color: #15181b;
+}
+
+.login-panel .login-auth-graphic h1 {
+  max-width: 12ch;
+  margin: 0 0 8px;
+  color: #15181b;
+  font-size: clamp(33px, 9vw, 46px);
+  line-height: 0.94;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.login-panel .login-auth-graphic p {
+  max-width: 36ch;
+  color: #343a40;
+  font-size: clamp(12px, 3.2vw, 13.5px);
+  line-height: 1.45;
+  font-weight: 620;
 }
 
 .login-form-card h2,
@@ -526,6 +598,33 @@ body {
   background: #ffffff;
 }
 
+.login-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.login-forgot-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: right;
+  cursor: pointer;
+}
+
+.login-forgot-link:hover,
+.login-forgot-link:focus-visible {
+  color: #713016;
+  outline: 2px solid rgba(184, 92, 56, 0.22);
+  outline-offset: 3px;
+}
+
 .login-button {
   width: 100%;
   position: relative;
@@ -593,6 +692,7 @@ body {
 
 .login-button:disabled,
 .login-link-button:disabled,
+.login-forgot-link:disabled,
 .login-form input:disabled,
 .login-reset-form input:disabled {
   cursor: not-allowed;
@@ -663,7 +763,8 @@ body {
 
 @media (max-width: 560px) {
   .login-shell {
-    padding: 12px;
+    min-height: 100svh;
+    padding: 10px;
   }
 
   .login-panel-wide {
@@ -677,6 +778,42 @@ body {
 
   .login-brand-card {
     min-height: 360px;
+  }
+
+  .login-auth-card-single {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .login-auth-graphic {
+    min-height: min(42svh, 300px);
+    padding: 18px;
+  }
+
+  .login-auth-graphic .login-ripple-field span {
+    width: calc(70px + var(--i) * 34px);
+    height: calc(70px + var(--i) * 34px);
+  }
+
+  .login-auth-graphic .login-orbit-chip-one {
+    top: 22%;
+    left: 13%;
+  }
+
+  .login-auth-graphic .login-orbit-chip-two {
+    top: 18%;
+    right: 12%;
+  }
+
+  .login-auth-graphic .login-orbit-chip-three {
+    top: auto;
+    bottom: 32%;
+    left: 8%;
+  }
+
+  .login-auth-graphic .login-orbit-chip-four {
+    right: 8%;
+    bottom: 27%;
   }
 
   .login-orbit {

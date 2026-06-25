@@ -23,7 +23,8 @@ export async function signInWithPassword(formData: FormData) {
 
 export async function requestPasswordReset(formData: FormData) {
   try {
-    const result = await requestDashboardPasswordReset(formData.get("resetEmail"));
+    const resetEmail = formData.get("resetEmail") || formData.get("email");
+    const result = await requestDashboardPasswordReset(resetEmail);
     const params = new URLSearchParams({ reset: "sent" });
     if (result.devResetUrl) params.set("devReset", result.devResetUrl);
     redirect(`/login?${params.toString()}`);
