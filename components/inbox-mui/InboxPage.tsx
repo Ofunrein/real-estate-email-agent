@@ -26,9 +26,14 @@ export function InboxPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [responsiveReady, setResponsiveReady] = useState(false);
   const theme = useTheme();
-  const isLgUp = useMediaQuery(theme.breakpoints.up('lg'));
+  const isLgUpQuery = useMediaQuery(theme.breakpoints.up('lg'), { noSsr: true });
+  const isLgUp = responsiveReady ? isLgUpQuery : true;
   const showContextRail = channel !== 'properties' && channel !== 'imports' && channel !== 'calendar' && channel !== 'contacts';
+  React.useEffect(() => {
+    setResponsiveReady(true);
+  }, []);
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
