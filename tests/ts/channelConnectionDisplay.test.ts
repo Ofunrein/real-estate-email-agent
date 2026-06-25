@@ -53,6 +53,88 @@ test("social connection display prefers newest connected account over setup fall
   assert.equal(display.connection?.id, "ig-new");
 });
 
+test("social connection display prefers direct Meta Instagram over Composio fallback", () => {
+  const status: ConnectionStatus = {
+    channels: {
+      instagram: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "ig-composio",
+            channel: "instagram",
+            provider: "composio_instagram",
+            selected_asset_name: "Composio Instagram",
+            selected_asset_id: "ca_ig",
+            connected_account_id: "ca_ig",
+            status: "connected",
+            metadata: { composio_auth_configured: true },
+            updated_at: "2026-06-25T04:00:00.000Z",
+          },
+          {
+            id: "ig-meta",
+            channel: "instagram",
+            provider: "meta_direct",
+            selected_asset_name: "Lumenosis Instagram",
+            selected_asset_id: "17841400000000000",
+            status: "connected",
+            metadata: { page_id: "123", profile_url: "https://www.instagram.com/martn.ai/" },
+            updated_at: "2026-06-25T03:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "instagram", "", "");
+
+  assert.equal(display.ready, true);
+  assert.equal(display.value, "Lumenosis Instagram");
+  assert.equal(display.status, "READY");
+  assert.equal(display.connection?.id, "ig-meta");
+});
+
+test("social connection display prefers direct Meta Messenger over Composio fallback", () => {
+  const status: ConnectionStatus = {
+    channels: {
+      messenger: {
+        connected: true,
+        needs_config: false,
+        connections: [
+          {
+            id: "fb-composio",
+            channel: "messenger",
+            provider: "composio_facebook",
+            selected_asset_name: "Composio Page",
+            selected_asset_id: "ca_fb",
+            connected_account_id: "ca_fb",
+            status: "connected",
+            metadata: { composio_auth_configured: true },
+            updated_at: "2026-06-25T04:00:00.000Z",
+          },
+          {
+            id: "fb-meta",
+            channel: "messenger",
+            provider: "meta_direct",
+            selected_asset_name: "Lumenosis Messaging",
+            selected_asset_id: "123456789",
+            status: "connected",
+            metadata: { page_id: "123456789", page_category: "Real Estate" },
+            updated_at: "2026-06-25T03:00:00.000Z",
+          },
+        ],
+      },
+    },
+  };
+
+  const display = displayForChannelConnection(status, "messenger", "", "");
+
+  assert.equal(display.ready, true);
+  assert.equal(display.value, "Lumenosis Messaging");
+  assert.equal(display.status, "READY");
+  assert.equal(display.connection?.id, "fb-meta");
+});
+
 test("social connection display exposes avatar and subtitle metadata", () => {
   const status: ConnectionStatus = {
     channels: {
