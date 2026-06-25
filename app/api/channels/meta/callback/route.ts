@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { upsertChannelConnection } from "@/lib/channelConnections";
+import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
+import type { FacebookPageForMetaDirect } from "@/lib/metaDirectConnection";
 
 export const dynamic = "force-dynamic";
-
-type FacebookPage = {
-  id: string;
-  name: string;
-  access_token: string;
-  category?: string;
-  tasks?: string[];
-};
 
 function cleanText(value: unknown): string {
   return String(value ?? "").trim();
@@ -56,13 +50,13 @@ async function exchangeCodeForLongLivedToken(code: string, redirectUri: string):
 }
 
 // Fetch all pages the user manages and return with their never-expiring page tokens.
-async function fetchManagedPages(userToken: string): Promise<{ pages: FacebookPage[]; error: string }> {
+async function fetchManagedPages(userToken: string): Promise<{ pages: FacebookPageForMetaDirect[]; error: string }> {
   const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/me/accounts`);
   url.searchParams.set("access_token", userToken);
-  url.searchParams.set("fields", "id,name,access_token,category,tasks");
+  url.searchParams.set("fields", "id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url}");
 
   const res = await fetch(url.toString());
-  const json = await res.json().catch(() => ({})) as { data?: FacebookPage[]; error?: { message?: string } };
+  const json = await res.json().catch(() => ({})) as { data?: FacebookPageForMetaDirect[]; error?: { message?: string } };
   if (!res.ok) {
     return { pages: [], error: json.error?.message || "Failed to fetch managed pages" };
   }
@@ -117,26 +111,17 @@ export async function GET(request: NextRequest) {
   // Persist each page as a channel_connections row with its never-expiring page token.
   const saved: Array<{ page_id: string; name: string }> = [];
   for (const page of pages) {
-    if (!page.access_token || !page.id) continue;
-    await upsertChannelConnection({
-      channel,
-      provider: "meta_direct",
-      selected_asset_id: page.id,
-      selected_asset_name: page.name || page.id,
-      selected_asset_type: "page",
-      status: "connected",
-      health_reason: "Connected via Facebook OAuth.",
-      page_access_token: page.access_token,
-      // Keep a metadata copy for older databases before migration 016 is applied.
-      metadata: {
-        page_id: page.id,
-        page_name: page.name,
-        page_access_token: page.access_token,
-        category: page.category || "",
-        connected_at: new Date().toISOString(),
-      },
-    }, { clientId });
-    saved.push({ page_id: page.id, name: page.name });
+    const input = metaDirectConnectionInputForPage(page, channel);
+    if (!input) continue;
+    await upsertChannelConnection(input, { clientId });
+    saved.push({ page_id: page.id, name: cleanText(input.selected_asset_name) || page.name || page.id });
+  }
+
+  if (!saved.length) {
+    const errorMessage = channel === "instagram"
+      ? "No linked Instagram business accounts found for the selected Facebook Pages"
+      : "No usable Facebook Page access tokens found for this account";
+    return NextResponse.json({ ok: false, error: errorMessage }, { status: 400 });
   }
 
   const nextUrl = new URL(appBaseUrl);

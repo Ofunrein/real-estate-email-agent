@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
   oauthUrl.searchParams.set("client_id", appId);
   oauthUrl.searchParams.set("redirect_uri", redirectUri);
   if (configId) oauthUrl.searchParams.set("config_id", configId);
-  oauthUrl.searchParams.set("scope", scope);
+  // Facebook Login for Business configs already own the permission set.
+  // Plain OAuth must still send scopes directly.
+  if (!configId) oauthUrl.searchParams.set("scope", scope);
   oauthUrl.searchParams.set("response_type", "code");
   oauthUrl.searchParams.set("state", state);
 
