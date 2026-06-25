@@ -139,7 +139,7 @@ function SocialConnectionGrid({
   const channelForSlug = (slug: string) => slug;
   const connectUrlForSlug = (slug: string) =>
     slug === 'instagram' || slug === 'messenger'
-      ? `/api/channels/meta/connect?channel=${slug}`
+      ? `/api/channels/meta/connect?channel=${slug}&use_sdk=1`
       : `/api/settings/composio/connect/${slug}`;
   const missingSetup = (connection?: NonNullable<ConnectionStatus['connections']>[number]) => {
     const missing = connection?.metadata?.outbound_missing;

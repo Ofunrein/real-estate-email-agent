@@ -44,6 +44,7 @@ test("Meta connect uses direct OAuth scopes by default", async () => {
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.origin, "https://www.facebook.com");
+    assert.equal(oauthUrl.pathname, "/v20.0/dialog/oauth");
     assert.equal(oauthUrl.searchParams.get("config_id"), null);
     assert.equal(oauthUrl.searchParams.get("scope"), "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
     assert.equal(oauthUrl.searchParams.get("auth_type"), "rerequest");
@@ -82,9 +83,27 @@ test("Meta connect allows explicit config_id override", async () => {
     assert.ok(location);
 
     const oauthUrl = new URL(location);
+    assert.equal(oauthUrl.pathname, "/v20.0/dialog/oauth");
     assert.equal(oauthUrl.searchParams.get("config_id"), "override_123");
     assert.equal(oauthUrl.searchParams.get("scope"), null);
+    assert.equal(oauthUrl.searchParams.get("override_default_response_type"), "true");
     assert.equal(oauthUrl.searchParams.get("auth_type"), "rerequest");
+  });
+});
+
+test("Meta connect can render JS SDK login page for dashboard setup", async () => {
+  await withMetaConnectEnv({
+    META_APP_ID: "2482694768826545",
+    PUBLIC_BASE_URL: "https://app.lumenosis.com",
+  }, async () => {
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=messenger&use_sdk=1"));
+    assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
+    const html = await response.text();
+
+    assert.match(html, /Continue with Meta/);
+    assert.match(html, /FB\.login/);
+    assert.match(html, /pages_show_list,pages_messaging,pages_manage_metadata/);
+    assert.match(html, /api\/channels\/meta\/callback/);
   });
 });
 
