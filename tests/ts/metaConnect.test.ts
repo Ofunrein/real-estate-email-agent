@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 
 import { GET as connectMetaChannel } from "@/app/api/channels/meta/connect/route";
 import { GET as metaCallback } from "@/app/api/channels/meta/callback/route";
+import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 
 function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
   const prior = {
@@ -81,7 +82,7 @@ test("Meta connect allows explicit config_id override", async () => {
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.searchParams.get("config_id"), "override_123");
-    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata");
+    assert.equal(oauthUrl.searchParams.get("scope"), null);
   });
 });
 
@@ -97,4 +98,57 @@ test("Meta callback redirects cancelled auth back to the app", async () => {
     assert.equal(redirectUrl.origin, "https://app.lumenosis.com");
     assert.equal(redirectUrl.searchParams.get("metaConnectError"), "access_denied");
   });
+});
+
+test("Meta callback maps Instagram pages to Instagram business account assets", () => {
+  const input = metaDirectConnectionInputForPage({
+    id: "page_123",
+    name: "Martn.ai",
+    access_token: "page_token",
+    category: "Real Estate",
+    instagram_business_account: {
+      id: "17841400000000000",
+      username: "martn.ai",
+      profile_picture_url: "https://cdn.example.com/profile.jpg",
+    },
+  }, "instagram");
+
+  assert.ok(input);
+  assert.equal(input.provider, "meta_direct");
+  assert.equal(input.channel, "instagram");
+  assert.equal(input.selected_asset_id, "17841400000000000");
+  assert.equal(input.selected_asset_name, "martn.ai");
+  assert.equal(input.selected_asset_type, "instagram_business_account");
+  assert.equal(input.page_access_token, "page_token");
+  assert.equal(input.metadata?.page_id, "page_123");
+  assert.equal(input.metadata?.instagram_user_id, "17841400000000000");
+  assert.equal(input.metadata?.instagram_username, "martn.ai");
+});
+
+test("Meta callback skips Instagram pages with no linked business account", () => {
+  const input = metaDirectConnectionInputForPage({
+    id: "page_123",
+    name: "Martn.ai",
+    access_token: "page_token",
+  }, "instagram");
+
+  assert.equal(input, null);
+});
+
+test("Meta callback maps Messenger pages to Page assets", () => {
+  const input = metaDirectConnectionInputForPage({
+    id: "page_123",
+    name: "Martn.ai",
+    access_token: "page_token",
+    category: "Real Estate",
+  }, "messenger");
+
+  assert.ok(input);
+  assert.equal(input.provider, "meta_direct");
+  assert.equal(input.channel, "messenger");
+  assert.equal(input.selected_asset_id, "page_123");
+  assert.equal(input.selected_asset_name, "Martn.ai");
+  assert.equal(input.selected_asset_type, "page");
+  assert.equal(input.page_access_token, "page_token");
+  assert.equal(input.metadata?.page_id, "page_123");
 });
