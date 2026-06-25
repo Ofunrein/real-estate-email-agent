@@ -36,16 +36,15 @@ export function isProxiableImageUrl(value: string): boolean {
 
 export function mediaProxyPath(url: string): string {
   const raw = unwrapMediaProxyUrl(url.trim());
-  if (isGoogleStreetViewUrl(raw)) return raw;
-  if (!raw || !isProxiableImageUrl(raw)) return url;
-  return `/api/media/proxy?url=${encodeURIComponent(raw)}`;
+  if (!raw) return url;
+  // ponytail: serve directly — Zillow/Google/Unsplash are public CDNs, no auth needed.
+  // Routing through Vercel origin was consuming 30GB+/mo of Fast Origin Transfer.
+  if (isProxiableImageUrl(raw) || isGoogleStreetViewUrl(raw)) return raw;
+  return url;
 }
 
-export function mediaProxyUrl(url: string, baseUrl?: string): string {
-  const proxied = mediaProxyPath(url);
-  if (!proxied.startsWith("/api/media/proxy")) return url;
-  const base = (baseUrl || process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
-  return base ? `${base}${proxied}` : url;
+export function mediaProxyUrl(url: string, _baseUrl?: string): string {
+  return mediaProxyPath(url);
 }
 
 export function usableInboxPhotoUrl(value?: string): string {

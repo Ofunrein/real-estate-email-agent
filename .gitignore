@@ -1,5 +1,6 @@
 # Secrets — never commit these
 .env
+.env.local
 credentials.json
 token.json
 

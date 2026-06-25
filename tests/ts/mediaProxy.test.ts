@@ -21,28 +21,22 @@ test("isGoogleStreetViewUrl detects Google Street View URLs", () => {
   assert.equal(isGoogleStreetViewUrl(ZILLOW), false);
 });
 
-test("mediaProxyPath rewrites Zillow URLs through the inbox proxy", () => {
-  assert.match(
-    mediaProxyPath(ZILLOW),
-    /^\/api\/media\/proxy\?url=/,
-  );
+test("mediaProxyPath returns Zillow URLs directly (no proxy)", () => {
+  assert.equal(mediaProxyPath(ZILLOW), ZILLOW);
   assert.equal(mediaProxyPath(STREET_VIEW), STREET_VIEW);
 });
 
-test("mediaProxyUrl uses PUBLIC_BASE_URL for server-side sends", () => {
-  const proxied = mediaProxyUrl(ZILLOW, "https://app.example.com");
-  assert.equal(
-    proxied,
-    `https://app.example.com/api/media/proxy?url=${encodeURIComponent(ZILLOW)}`,
-  );
+test("mediaProxyUrl returns direct URL (no proxy)", () => {
+  const result = mediaProxyUrl(ZILLOW, "https://app.example.com");
+  assert.equal(result, ZILLOW);
 });
 
-test("rewriteEmailHtmlForInbox replaces Street View with sheet photo and proxies it", () => {
+test("rewriteEmailHtmlForInbox replaces Street View with sheet photo and serves directly", () => {
   const html = `<div><img src="${STREET_VIEW}" alt="Property photo" /><h2>4309 Fairway Path</h2></div>`;
   const properties = [{ address: "4309 Fairway Path", photo_url: ZILLOW }];
   const rewritten = rewriteEmailHtmlForInbox(html, properties);
   assert.doesNotMatch(rewritten, /maps\.googleapis\.com/);
-  assert.match(rewritten, /\/api\/media\/proxy\?url=/);
+  assert.match(rewritten, /zillowstatic\.com/);
   assert.match(rewritten, /4309 Fairway Path/);
 });
 
@@ -55,10 +49,11 @@ test("rewriteEmailHtmlForInbox shows placeholder when only Street View is availa
   assert.doesNotMatch(rewritten, /<img[^>]+streetview/i);
 });
 
-test("rewriteEmailHtmlForInbox proxies direct Zillow hero images", () => {
+test("rewriteEmailHtmlForInbox serves Zillow images directly", () => {
   const html = `<img src="${ZILLOW}" alt="Property photo" />`;
   const rewritten = rewriteEmailHtmlForInbox(html);
-  assert.match(rewritten, /\/api\/media\/proxy\?url=/);
+  assert.match(rewritten, /zillowstatic\.com/);
+  assert.doesNotMatch(rewritten, /\/api\/media\/proxy/);
 });
 
 test("extractPropertyAddressFromEmailHtml reads h2 address headings", () => {
@@ -84,5 +79,5 @@ test("resolvePropertyPhotoFromSheet ignores Street View sheet photos", () => {
 test("usableInboxPhotoUrl and inboxImagePreviewUrl skip Street View", () => {
   assert.equal(usableInboxPhotoUrl(STREET_VIEW), "");
   assert.equal(inboxImagePreviewUrl(STREET_VIEW), "");
-  assert.match(inboxImagePreviewUrl(ZILLOW), /^\/api\/media\/proxy\?url=/);
+  assert.equal(inboxImagePreviewUrl(ZILLOW), ZILLOW);
 });

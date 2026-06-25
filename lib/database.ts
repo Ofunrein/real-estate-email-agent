@@ -358,6 +358,8 @@ function channelConnectionFromRow(row: Record<string, unknown>): ChannelConnecti
     status: String(row.status || ""),
     health_reason: String(row.health_reason || ""),
     webhook_status: String(row.webhook_status || ""),
+    page_access_token: String(row.page_access_token || ""),
+    token_expires_at: row.token_expires_at ? new Date(String(row.token_expires_at)).toISOString() : "",
     metadata: jsonRecord(row.metadata),
     created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
     updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
@@ -390,16 +392,30 @@ function channelConnectionValues(input: ChannelConnectionInput) {
     status: cleanConnectionSlug(input.status || (selectedAssetId || connectedAccountId ? "connected" : "needs_config")),
     healthReason: cleanConnectionText(input.health_reason),
     webhookStatus: cleanConnectionSlug(input.webhook_status || ""),
+    pageAccessToken: cleanConnectionText(input.page_access_token),
+    tokenExpiresAt: cleanConnectionText(input.token_expires_at),
     metadata: jsonRecord(input.metadata),
   };
 }
 
+function channelConnectionSelectList(hasTokenColumns: boolean): string {
+  return `id, client_id, channel, provider, external_user_id, auth_config_id,
+            connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
+            status, health_reason, webhook_status,
+            ${hasTokenColumns ? "page_access_token, token_expires_at" : "''::text as page_access_token, null::timestamptz as token_expires_at"},
+            metadata, created_at, updated_at`;
+}
+
+async function channelConnectionHasTokenColumns(): Promise<boolean> {
+  const columns = await tableColumns("channel_connections");
+  return columns.has("page_access_token") && columns.has("token_expires_at");
+}
+
 export async function listChannelConnectionsFromDatabase(cid = clientId()): Promise<ChannelConnectionRecord[]> {
   if (!await tableReady("channel_connections")) return [];
+  const hasTokenColumns = await channelConnectionHasTokenColumns();
   const result = await getPool().query(
-    `select id, client_id, channel, provider, external_user_id, auth_config_id,
-            connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
-            status, health_reason, webhook_status, metadata, created_at, updated_at
+    `select ${channelConnectionSelectList(hasTokenColumns)}
        from channel_connections
       where client_id = $1
       order by channel asc, provider asc, selected_asset_name asc, updated_at desc`,
@@ -413,10 +429,9 @@ export async function getChannelConnectionFromDatabase(
   id: string,
 ): Promise<ChannelConnectionRecord | null> {
   if (!await tableReady("channel_connections")) return null;
+  const hasTokenColumns = await channelConnectionHasTokenColumns();
   const result = await getPool().query(
-    `select id, client_id, channel, provider, external_user_id, auth_config_id,
-            connected_account_id, selected_asset_id, selected_asset_name, selected_asset_type,
-            status, health_reason, webhook_status, metadata, created_at, updated_at
+    `select ${channelConnectionSelectList(hasTokenColumns)}
        from channel_connections
       where client_id = $1
         and id = $2
@@ -436,8 +451,51 @@ export async function upsertChannelConnectionInDatabase(
   await ensureClientInDatabase(cid, cid);
   const values = channelConnectionValues(input);
   const id = cleanConnectionText(input.id);
+  const hasTokenColumns = await channelConnectionHasTokenColumns();
 
   if (id) {
+    if (hasTokenColumns) {
+      const result = await getPool().query(
+        `update channel_connections
+            set channel = $3,
+                provider = $4,
+                external_user_id = $5,
+                auth_config_id = $6,
+                connected_account_id = $7,
+                selected_asset_id = $8,
+                selected_asset_name = $9,
+                selected_asset_type = $10,
+                status = $11,
+                health_reason = $12,
+                webhook_status = $13,
+                page_access_token = $14,
+                token_expires_at = nullif($15, '')::timestamptz,
+                metadata = $16::jsonb,
+                updated_at = now()
+          where client_id = $1
+            and id = $2
+          returning ${channelConnectionSelectList(true)}`,
+        [
+          cid,
+          id,
+          values.channel,
+          values.provider,
+          values.externalUserId,
+          values.authConfigId,
+          values.connectedAccountId,
+          values.selectedAssetId,
+          values.selectedAssetName,
+          values.selectedAssetType,
+          values.status,
+          values.healthReason,
+          values.webhookStatus,
+          values.pageAccessToken,
+          values.tokenExpiresAt,
+          JSON.stringify(values.metadata),
+        ],
+      );
+      if (result.rows[0]) return channelConnectionFromRow(result.rows[0]);
+    }
     const result = await getPool().query(
       `update channel_connections
           set channel = $3,
@@ -476,6 +534,48 @@ export async function upsertChannelConnectionInDatabase(
       ],
     );
     if (result.rows[0]) return channelConnectionFromRow(result.rows[0]);
+  }
+
+  if (hasTokenColumns) {
+    const result = await getPool().query(
+      `insert into channel_connections (
+          client_id, channel, provider, external_user_id, auth_config_id, connected_account_id,
+          selected_asset_id, selected_asset_name, selected_asset_type, status, health_reason,
+          webhook_status, page_access_token, token_expires_at, metadata
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, nullif($14, '')::timestamptz, $15::jsonb)
+        on conflict (client_id, channel, provider, selected_asset_id) do update set
+          external_user_id = excluded.external_user_id,
+          auth_config_id = excluded.auth_config_id,
+          connected_account_id = excluded.connected_account_id,
+          selected_asset_name = excluded.selected_asset_name,
+          selected_asset_type = excluded.selected_asset_type,
+          status = excluded.status,
+          health_reason = excluded.health_reason,
+          webhook_status = excluded.webhook_status,
+          page_access_token = excluded.page_access_token,
+          token_expires_at = excluded.token_expires_at,
+          metadata = channel_connections.metadata || excluded.metadata,
+          updated_at = now()
+        returning ${channelConnectionSelectList(true)}`,
+      [
+        cid,
+        values.channel,
+        values.provider,
+        values.externalUserId,
+        values.authConfigId,
+        values.connectedAccountId,
+        values.selectedAssetId,
+        values.selectedAssetName,
+        values.selectedAssetType,
+        values.status,
+        values.healthReason,
+        values.webhookStatus,
+        values.pageAccessToken,
+        values.tokenExpiresAt,
+        JSON.stringify(values.metadata),
+      ],
+    );
+    return channelConnectionFromRow(result.rows[0]);
   }
 
   const result = await getPool().query(

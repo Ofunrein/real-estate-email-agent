@@ -50,7 +50,8 @@ test("adaptInboxData renders email HTML through the inbox image proxy", () => {
 
   const model = adaptInboxData(data);
   const html = model.emailThreads[0].messages[0].html || "";
-  assert.match(html, /\/api\/media\/proxy\?url=/);
+  assert.match(html, /zillowstatic\.com/);
+  assert.doesNotMatch(html, /\/api\/media\/proxy/);
   assert.doesNotMatch(html, /<script/i);
 });
 
@@ -81,7 +82,7 @@ test("adaptInboxData splits SMS MMS image logs from visible body and preserves s
   const message = model.smsThreads[0].messages[0];
   assert.equal(message.body, "Here are the photos:\n\n4309 Fairway Path\n  3 beds");
   assert.equal(message.media?.length, 1);
-  assert.match(message.media?.[0].url || "", /\/api\/media\/proxy\?url=/);
+  assert.match(message.media?.[0].url || "", /zillowstatic\.com/);
 });
 
 test("adaptInboxData removes duplicated SMS property detail address lines", () => {

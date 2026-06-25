@@ -21,6 +21,8 @@ export type ChannelConnectionRecord = {
   status: string;
   health_reason: string;
   webhook_status: string;
+  page_access_token: string;
+  token_expires_at: string;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -103,6 +105,8 @@ export function normalizeChannelConnectionInput(
     status: cleanSlug(input.status || existing?.status || (hasSelectedAsset ? "connected" : "needs_config")),
     health_reason: cleanText(input.health_reason ?? existing?.health_reason),
     webhook_status: cleanSlug(input.webhook_status || existing?.webhook_status || ""),
+    page_access_token: cleanText(input.page_access_token ?? existing?.page_access_token),
+    token_expires_at: cleanText(input.token_expires_at ?? existing?.token_expires_at),
     metadata: {
       ...jsonRecord(existing?.metadata),
       ...jsonRecord(input.metadata),

@@ -339,7 +339,10 @@ function isDisplayableAudioUrl(value: string): boolean {
 function inboxAudioPreviewUrl(value: string): string {
   const raw = value.trim();
   if (!raw || raw.startsWith("/api/media/audio") || raw.startsWith("/api/media/uploads") || raw.startsWith("/uploads/")) return raw;
-  if (/^https:\/\/api\.twilio\.com\/2010-04-01\/Accounts\//i.test(raw) || /^https:\/\/(?:storage|recordings)\.vapi\.ai\//i.test(raw)) {
+  // ponytail: Vapi audio is publicly accessible — serve directly, skip Vercel proxy.
+  // Twilio requires Basic auth headers so it still needs the proxy.
+  if (/^https:\/\/(?:storage|recordings)\.vapi\.ai\//i.test(raw)) return raw;
+  if (/^https:\/\/api\.twilio\.com\/2010-04-01\/Accounts\//i.test(raw)) {
     return `/api/media/audio?url=${encodeURIComponent(raw)}`;
   }
   return raw;

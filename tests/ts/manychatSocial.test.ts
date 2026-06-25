@@ -99,7 +99,7 @@ test("formatManyChatDynamicBlock: marks Instagram content type", () => {
   assert.equal(block.content.messages?.[0]?.text, "Yes, it is available.");
 });
 
-test("socialMediaUrls: proxies and caps image URLs", () => {
+test("socialMediaUrls: caps image URLs and returns direct URLs", () => {
   const prior = process.env.SOCIAL_DM_MAX_IMAGES;
   process.env.SOCIAL_DM_MAX_IMAGES = "1";
   const urls = socialMediaUrls(
@@ -110,7 +110,7 @@ test("socialMediaUrls: proxies and caps image URLs", () => {
     "https://app.example.com",
   );
   assert.equal(urls.length, 1);
-  assert.match(urls[0], /^https:\/\/app\.example\.com\/api\/media\/proxy\?url=/);
+  assert.match(urls[0], /^https:\/\/photos\.zillowstatic\.com\//);
   if (prior == null) delete process.env.SOCIAL_DM_MAX_IMAGES;
   else process.env.SOCIAL_DM_MAX_IMAGES = prior;
 });

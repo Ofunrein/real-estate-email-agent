@@ -31,6 +31,8 @@ import {
   extractMetaSocialMessages,
   metaSocialDirectEnabled,
   metaSocialVerifyToken,
+  normalizeMetaMessage,
+  resolvePageAccessToken,
   sendMetaSocialMessage,
   verifyMetaSocialSignature,
   type MetaSocialChannel,
@@ -176,6 +178,7 @@ async function processInbound(input: {
   createdTime: string;
   text: string;
   media: OmnichannelMedia[];
+  pageAccessToken?: string;
 }) {
   const messageKey = `${input.channel}:${input.messageId}`;
   const threadRef = `${input.channel}:${input.senderId}`;
@@ -348,6 +351,7 @@ async function processInbound(input: {
     to: input.senderId,
     body: routeResult.reply,
     mediaUrls: routeResult.media_urls,
+    pageAccessToken: input.pageAccessToken,
   });
   await upsertReplyJobInDatabase({
     dedupeKey: messageKey,
@@ -427,12 +431,33 @@ export async function POST(request: NextRequest) {
   const inboundMessages = extractMetaSocialMessages(payload, { instagramIds, messengerIds });
   const results: Array<Record<string, unknown>> = [];
   for (const inbound of inboundMessages) {
+    const connection = connections.connections.find((candidate) => {
+      if (candidate.channel !== inbound.channel) return false;
+      const ids = stringMap([
+        candidate.selected_asset_id,
+        String(candidate.metadata?.page_id || ""),
+        String(candidate.metadata?.instagram_user_id || ""),
+      ]);
+      return ids.has(inbound.recipientId) || ids.has(inbound.entryId);
+    });
+    // Derive normalized type for logging; skip reactions and read receipts.
+    const rawEvent = payload as Record<string, unknown>;
+    const normalized = normalizeMetaMessage(
+      { sender: { id: inbound.senderId }, message: { text: inbound.text }, ...rawEvent },
+      inbound.recipientId,
+    );
+    const msgType = normalized?.type ?? "text";
+    if (msgType === "reaction" || msgType === "read_receipt") {
+      results.push({ message_id: inbound.messageId, channel: inbound.channel, action: "skipped", type: msgType });
+      continue;
+    }
     const media = await transcribeMediaItems(inbound.media || []);
-    const action = await processInbound({ ...inbound, media });
+    const action = await processInbound({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) });
     results.push({
       message_id: inbound.messageId,
       channel: inbound.channel,
       action,
+      type: msgType,
     });
   }
 

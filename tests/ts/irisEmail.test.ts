@@ -105,7 +105,8 @@ test("processIrisEmailPoll: dry run avoids labels, sends, and database writes", 
   assert.equal(recorded, 0);
   assert.deepEqual(calls.labels, []);
   assert.deepEqual(calls.sent, []);
-  assert.match(result.results[0].replyDraft || "", /What day and time works best/);
+  assert.match(result.results[0].replyDraft || "", /4309 Fairway Path/);
+  assert.match(result.results[0].replyDraft || "", /time windows|What day and time/i);
 });
 
 test("processIrisEmailPoll: live injected path records and applies conservative labels", async () => {
@@ -243,7 +244,7 @@ test("buildHtmlEmailReply: proxies usable photos and avoids duplicate property c
     } as SheetRow;
     const reply = buildHtmlEmailReply("Hello,\n\nI can help with details on 100 E 51st St.\n\nBest,\nIris", [property, { ...property }]);
 
-    assert.match(reply.html || "", /https:\/\/app\.example\.com\/api\/media\/proxy\?url=/);
+    assert.match(reply.html || "", /photos\.zillowstatic\.com/);
     assert.equal((reply.html || "").match(/<h3[^>]*>100 E 51st St #7<\/h3>/g)?.length, 1);
     assert.equal((reply.html || "").match(/3 beds, 3 baths, 1902 sqft Townhouse/g)?.length || 0, 0);
     assert.equal((reply.html || "").match(/View listing/g)?.length, 1);
