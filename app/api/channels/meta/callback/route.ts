@@ -15,10 +15,10 @@ function metaGraphVersion(): string {
 }
 
 // Exchange a short-lived code for a long-lived user token, then for page tokens.
-async function exchangeCodeForLongLivedToken(code: string, redirectUri: string): Promise<{ token: string; error: string }> {
+async function exchangeCodeForLongLivedToken(code: string, redirectUri: string): Promise<{ token: string; shortToken: string; error: string }> {
   const appId = cleanText(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID);
   const appSecret = cleanText(process.env.META_APP_SECRET || process.env.META_SOCIAL_APP_SECRET);
-  if (!appId || !appSecret) return { token: "", error: "META_APP_ID or META_APP_SECRET not configured" };
+  if (!appId || !appSecret) return { token: "", shortToken: "", error: "META_APP_ID or META_APP_SECRET not configured" };
 
   // Step 1: short-lived user token
   const shortLivedUrl = new URL(`https://graph.facebook.com/${metaGraphVersion()}/oauth/access_token`);
@@ -30,7 +30,7 @@ async function exchangeCodeForLongLivedToken(code: string, redirectUri: string):
   const shortRes = await fetch(shortLivedUrl.toString());
   const shortJson = await shortRes.json().catch(() => ({})) as { access_token?: string; error?: { message?: string } };
   if (!shortRes.ok || !shortJson.access_token) {
-    return { token: "", error: shortJson.error?.message || "Failed to exchange code for token" };
+    return { token: "", shortToken: "", error: shortJson.error?.message || "Failed to exchange code for token" };
   }
 
   // Step 2: exchange for long-lived user token (60-day)
@@ -43,10 +43,10 @@ async function exchangeCodeForLongLivedToken(code: string, redirectUri: string):
   const longRes = await fetch(longLivedUrl.toString());
   const longJson = await longRes.json().catch(() => ({})) as { access_token?: string; expires_in?: number; error?: { message?: string } };
   if (!longRes.ok || !longJson.access_token) {
-    return { token: "", error: longJson.error?.message || "Failed to exchange for long-lived token" };
+    return { token: "", shortToken: shortJson.access_token, error: longJson.error?.message || "Failed to exchange for long-lived token" };
   }
 
-  return { token: longJson.access_token, error: "" };
+  return { token: longJson.access_token, shortToken: shortJson.access_token, error: "" };
 }
 
 // Fetch all pages the user manages and return with their never-expiring page tokens.
@@ -61,6 +61,17 @@ async function fetchManagedPages(userToken: string): Promise<{ pages: FacebookPa
     return { pages: [], error: json.error?.message || "Failed to fetch managed pages" };
   }
   return { pages: json.data || [], error: "" };
+}
+
+async function fetchGrantedPermissions(userToken: string): Promise<string[]> {
+  const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/me/permissions`);
+  url.searchParams.set("access_token", userToken);
+  const res = await fetch(url.toString());
+  const json = await res.json().catch(() => ({})) as { data?: Array<{ permission?: string; status?: string }> };
+  if (!res.ok) return [];
+  return (json.data || [])
+    .filter((item) => item.status === "granted" && item.permission)
+    .map((item) => cleanText(item.permission));
 }
 
 // GET /api/channels/meta/callback?code=<code>&state=<state>
@@ -95,16 +106,27 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectUri = `${appBaseUrl}/api/channels/meta/callback`;
-  const { token: userToken, error: tokenError } = await exchangeCodeForLongLivedToken(code, redirectUri);
+  const { token: userToken, shortToken, error: tokenError } = await exchangeCodeForLongLivedToken(code, redirectUri);
   if (tokenError || !userToken) {
     return NextResponse.json({ ok: false, error: tokenError || "Token exchange failed" }, { status: 502 });
   }
 
-  const { pages, error: pagesError } = await fetchManagedPages(userToken);
+  let { pages, error: pagesError } = await fetchManagedPages(userToken);
+  if (!pagesError && !pages.length && shortToken) {
+    const fallback = await fetchManagedPages(shortToken);
+    pages = fallback.pages;
+    pagesError = fallback.error;
+  }
   if (pagesError) {
     return NextResponse.json({ ok: false, error: pagesError }, { status: 502 });
   }
   if (!pages.length) {
+    const grantedPermissions = await fetchGrantedPermissions(userToken);
+    console.warn("Meta direct callback returned no pages", {
+      channel,
+      clientId,
+      grantedPermissions,
+    });
     return NextResponse.json({ ok: false, error: "No Facebook Pages found for this account" }, { status: 400 });
   }
 
