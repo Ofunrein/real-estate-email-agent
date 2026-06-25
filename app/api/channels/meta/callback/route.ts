@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { upsertChannelConnection } from "@/lib/channelConnections";
 import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import type { FacebookPageForMetaDirect } from "@/lib/metaDirectConnection";
+import { configuredMetaPageId } from "@/lib/metaPageFallback";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,27 @@ async function fetchManagedPages(
   return { pages: json.data || [], error: "" };
 }
 
+async function fetchConfiguredPage(
+  userToken: string,
+  channel: "messenger" | "instagram",
+): Promise<{ pages: FacebookPageForMetaDirect[]; error: string; pageId: string }> {
+  const pageId = configuredMetaPageId(channel);
+  if (!pageId) return { pages: [], error: "", pageId: "" };
+
+  const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/${encodeURIComponent(pageId)}`);
+  url.searchParams.set("access_token", userToken);
+  url.searchParams.set("fields", channel === "instagram"
+    ? "id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url}"
+    : "id,name,access_token,category,tasks");
+
+  const res = await fetch(url.toString());
+  const json = await res.json().catch(() => ({})) as FacebookPageForMetaDirect & { error?: { message?: string } };
+  if (!res.ok) {
+    return { pages: [], error: json.error?.message || "Failed to fetch configured Facebook Page", pageId };
+  }
+  return { pages: json.id ? [json] : [], error: "", pageId };
+}
+
 async function fetchGrantedPermissions(userToken: string): Promise<string[]> {
   const url = new URL(`https://graph.facebook.com/${metaGraphVersion()}/me/permissions`);
   url.searchParams.set("access_token", userToken);
@@ -129,6 +151,13 @@ export async function GET(request: NextRequest) {
     pages = fallback.pages;
     pagesError = fallback.error;
   }
+  let configuredPageLookup: { pageId: string; error: string } | null = null;
+  if (!pagesError && !pages.length) {
+    const fallback = await fetchConfiguredPage(userToken, channel);
+    pages = fallback.pages;
+    pagesError = fallback.error;
+    configuredPageLookup = { pageId: fallback.pageId, error: fallback.error };
+  }
   if (pagesError) {
     return NextResponse.json({ ok: false, error: pagesError }, { status: 502 });
   }
@@ -138,6 +167,7 @@ export async function GET(request: NextRequest) {
       channel,
       clientId,
       grantedPermissions,
+      configuredPageLookup,
     });
     return NextResponse.json({ ok: false, error: "No Facebook Pages found for this account" }, { status: 400 });
   }
