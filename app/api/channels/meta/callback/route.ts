@@ -4,6 +4,7 @@ import { upsertChannelConnection } from "@/lib/channelConnections";
 import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import type { FacebookPageForMetaDirect } from "@/lib/metaDirectConnection";
 import { configuredMetaPageId } from "@/lib/metaPageFallback";
+import { subscribeMetaPageToWebhooks } from "@/lib/metaWebhookSubscription";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,15 @@ export async function GET(request: NextRequest) {
   for (const page of pages) {
     const input = metaDirectConnectionInputForPage(page, channel);
     if (!input) continue;
+    const webhookSubscription = await subscribeMetaPageToWebhooks(page);
+    input.webhook_status = webhookSubscription.ok ? "subscribed" : "failed";
+    input.metadata = {
+      ...(input.metadata || {}),
+      webhook_subscription_status: input.webhook_status,
+      webhook_subscribed_fields: webhookSubscription.fields,
+      webhook_subscription_error: webhookSubscription.error,
+      webhook_subscription_checked_at: new Date().toISOString(),
+    };
     await upsertChannelConnection(input, { clientId });
     saved.push({ page_id: page.id, name: cleanText(input.selected_asset_name) || page.name || page.id });
   }
