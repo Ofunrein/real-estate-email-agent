@@ -48,7 +48,7 @@ const composioConnectSlug: Partial<Record<ChannelId, string>> = {
 
 function channelConnectHref(channel: ChannelId) {
   if (channel === 'instagram' || channel === 'messenger') {
-    return `/api/channels/meta/connect?channel=${channel}`;
+    return `/api/channels/meta/connect?channel=${channel}&use_sdk=1`;
   }
   const connectSlug = composioConnectSlug[channel];
   return connectSlug ? `/api/settings/composio/connect/${connectSlug}` : undefined;
