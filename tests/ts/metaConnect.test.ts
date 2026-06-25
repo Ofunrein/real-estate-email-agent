@@ -29,7 +29,7 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
   }
 }
 
-test("Meta connect uses direct OAuth scopes by default", async () => {
+test("Meta connect uses configured Business Login config by default", async () => {
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
@@ -45,13 +45,31 @@ test("Meta connect uses direct OAuth scopes by default", async () => {
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.origin, "https://www.facebook.com");
     assert.equal(oauthUrl.pathname, "/v20.0/dialog/oauth");
-    assert.equal(oauthUrl.searchParams.get("config_id"), null);
-    assert.equal(oauthUrl.searchParams.get("scope"), "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
+    assert.equal(oauthUrl.searchParams.get("config_id"), "instagram_config");
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid");
+    assert.equal(oauthUrl.searchParams.get("override_default_response_type"), "true");
     assert.equal(oauthUrl.searchParams.get("auth_type"), "rerequest");
     assert.equal(oauthUrl.searchParams.get("redirect_uri"), "https://app.lumenosis.com/api/channels/meta/callback");
     assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
       channel: "instagram",
     });
+  });
+});
+
+test("Meta connect can opt out of Business Login config for direct OAuth scopes", async () => {
+  await withMetaConnectEnv({
+    META_APP_ID: "2482694768826545",
+    PUBLIC_BASE_URL: "https://app.lumenosis.com",
+    META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: "instagram_config",
+    META_USE_BUSINESS_LOGIN_CONFIG: "false",
+  }, async () => {
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram"));
+    const location = response.headers.get("location");
+    assert.ok(location);
+
+    const oauthUrl = new URL(location);
+    assert.equal(oauthUrl.searchParams.get("config_id"), null);
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
   });
 });
 
@@ -85,13 +103,13 @@ test("Meta connect allows explicit config_id override", async () => {
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.pathname, "/v20.0/dialog/oauth");
     assert.equal(oauthUrl.searchParams.get("config_id"), "override_123");
-    assert.equal(oauthUrl.searchParams.get("scope"), null);
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid");
     assert.equal(oauthUrl.searchParams.get("override_default_response_type"), "true");
     assert.equal(oauthUrl.searchParams.get("auth_type"), "rerequest");
   });
 });
 
-test("Meta connect can render JS SDK login page for dashboard setup", async () => {
+test("Meta connect can render dashboard setup page", async () => {
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
@@ -101,9 +119,9 @@ test("Meta connect can render JS SDK login page for dashboard setup", async () =
     const html = await response.text();
 
     assert.match(html, /Continue with Meta/);
-    assert.match(html, /FB\.login/);
-    assert.match(html, /pages_show_list,pages_messaging,pages_manage_metadata/);
-    assert.match(html, /api\/channels\/meta\/callback/);
+    assert.doesNotMatch(html, /FB\.login/);
+    assert.match(html, /scope=openid%2Cpages_show_list%2Cpages_messaging%2Cpages_manage_metadata/);
+    assert.match(html, /api%2Fchannels%2Fmeta%2Fcallback/);
   });
 });
 
