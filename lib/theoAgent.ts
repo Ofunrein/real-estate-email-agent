@@ -587,6 +587,23 @@ export function shouldTheoAutoReply(classification: TheoClassification, lead: Pa
 }
 
 export async function generateTheoReply(context: TheoReplyContext): Promise<TheoReplyResult> {
+  const localSafetyClassification = classifyTheoMessage(context.message);
+  if (
+    localSafetyClassification.intent === "human_required"
+    && localSafetyClassification.handoffReason !== "Lead requested a human"
+  ) {
+    return {
+      classification: localSafetyClassification,
+      reply: "I'm going to have a real person follow up on that so we handle it correctly.",
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "handoff_reply_ready",
+      handoffReason: localSafetyClassification.handoffReason,
+      status: "needs_human",
+      metrics: [],
+    };
+  }
+
   if (context.lead?.phone) {
     const appointmentResult = await handleTheoAppointmentMessage(
       context.lead.phone,
@@ -619,6 +636,18 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     metrics.push(...(classification.metrics || []));
   } catch {
     classification = classifyTheoMessage(context.message);
+  }
+  if (latestMessageHasSensitiveTopic(context.message) && classification.status !== "needs_human") {
+    const localClassification = classifyTheoMessage(context.message);
+    if (localClassification.status === "needs_human") {
+      classification = {
+        ...classification,
+        intent: localClassification.intent,
+        status: localClassification.status,
+        handoffReason: localClassification.handoffReason,
+        recommendedNextAction: "route_human",
+      };
+    }
   }
   if (asksForPropertyOptions(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
     classification = {
