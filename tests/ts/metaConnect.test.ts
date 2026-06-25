@@ -13,6 +13,7 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
     META_BUSINESS_LOGIN_CONFIG_ID: process.env.META_BUSINESS_LOGIN_CONFIG_ID,
     META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: process.env.META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID,
     META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: process.env.META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID,
+    META_USE_BUSINESS_LOGIN_CONFIG: process.env.META_USE_BUSINESS_LOGIN_CONFIG,
   };
   Object.assign(process.env, env);
   try {
@@ -25,13 +26,14 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
   }
 }
 
-test("Meta connect uses Lumenosis Facebook Login for Business config for production app", async () => {
+test("Meta connect uses direct OAuth scopes by default", async () => {
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
-    META_BUSINESS_LOGIN_CONFIG_ID: "",
-    META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: "",
-    META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: "",
+    META_BUSINESS_LOGIN_CONFIG_ID: "shared_config",
+    META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: "instagram_config",
+    META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: "messenger_config",
+    META_USE_BUSINESS_LOGIN_CONFIG: "",
   }, async () => {
     const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram"));
     const location = response.headers.get("location");
@@ -39,7 +41,7 @@ test("Meta connect uses Lumenosis Facebook Login for Business config for product
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.origin, "https://www.facebook.com");
-    assert.equal(oauthUrl.searchParams.get("config_id"), "884521007425365");
+    assert.equal(oauthUrl.searchParams.get("config_id"), null);
     assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
     assert.equal(oauthUrl.searchParams.get("redirect_uri"), "https://app.lumenosis.com/api/channels/meta/callback");
   });
