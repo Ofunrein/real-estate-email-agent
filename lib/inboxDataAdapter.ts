@@ -800,6 +800,12 @@ function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelI
     const flagged = events.some(eventNeedsHuman);
     const latestChannel = latest ? eventChannel(latest) : "";
     const latestThreadId = latest ? conversationKey(latest, latestChannel) : "";
+    const latestThreadEvents = latest
+      ? events.filter((event) => {
+          const channel = eventChannel(event);
+          return conversationKey(event, channel) === latestThreadId || (latest.thread_ref && event.thread_ref === latest.thread_ref);
+        })
+      : [];
     result[view] = {
       events: events.length,
       threads: threadKeys.size,
@@ -807,7 +813,7 @@ function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelI
       aiReplies,
       lastActivity: latest
         ? {
-            contact: threadIdentity(latest.thread_ref || latestThreadId, [latest], latestChannel),
+            contact: threadIdentity(latest.thread_ref || latestThreadId, latestThreadEvents, latestChannel),
             message: usableActivityText(eventText(latest) || latest.summary || "", latest.summary || ""),
             status: latest.direction === "inbound" ? "received" : "sent",
             when: formatEventTimeShort(latest.event_at),
