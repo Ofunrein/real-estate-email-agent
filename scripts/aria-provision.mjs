@@ -4,11 +4,26 @@
 //
 // Env: VAPI_API_KEY (required), VAPI_ASSISTANT_ID (update if set, else create),
 //      PUBLIC_BASE_URL or VERCEL_URL (tool/server webhook base), CHANNEL_WEBHOOK_SECRET.
+import fs from "node:fs";
 import { resolveClientConfig } from "../lib/clientConfig.ts";
 import { buildAriaAssistant } from "../lib/ariaAssistant.ts";
 import { fetchStyleContext } from "../lib/styleTraining.ts";
 
 const VAPI_BASE = "https://api.vapi.ai";
+
+function loadEnv(path = ".env") {
+  if (!fs.existsSync(path)) return;
+  for (const line of fs.readFileSync(path, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const index = trimmed.indexOf("=");
+    const key = trimmed.slice(0, index).trim();
+    const value = trimmed.slice(index + 1).trim().replace(/^['"]|['"]$/g, "");
+    process.env[key] = value;
+  }
+}
+
+loadEnv();
 
 function ariaToolUrl(publicUrl, secret, name) {
   const url = new URL(`/api/webhooks/aria-tools/${name}`, publicUrl);
@@ -141,18 +156,84 @@ function buildVapiPlatformTools(publicUrl, secret) {
       server: { url: ariaToolUrl(publicUrl, secret, "sendPropertyDetailsSms") },
     },
     {
-      type: "google.calendar.availability.check",
+      type: "function",
       function: {
         name: "checkAvailability",
-        description: "Find available 15-minute consultation slots on the connected calendar for a requested date or date range.",
+        description: "Find available consultation slots from Iris' server-side calendar for a requested date, date range, or time of day. Use before offering a specific appointment time.",
+        parameters: {
+          type: "object",
+          properties: {
+            date: {
+              type: "string",
+              description: "Requested date as YYYY-MM-DD when known, or words like today/tomorrow if that is all the caller gave.",
+            },
+            timeOfDay: {
+              type: "string",
+              enum: ["morning", "afternoon", "evening"],
+              description: "Requested daypart if the caller gave one.",
+            },
+            from: {
+              type: "string",
+              description: "Optional ISO start datetime for a custom availability window.",
+            },
+            to: {
+              type: "string",
+              description: "Optional ISO end datetime for a custom availability window.",
+            },
+            durationMinutes: {
+              type: "number",
+              description: "Appointment duration in minutes. Default 30.",
+            },
+          },
+        },
       },
+      server: { url: ariaToolUrl(publicUrl, secret, "checkAvailability") },
     },
     {
-      type: "google.calendar.event.create",
+      type: "function",
       function: {
         name: "bookConsultation",
-        description: "Book a 15-minute real estate consultation on the connected calendar and send the invite or email confirmation.",
+        description: "Book a real estate consultation through Iris' server-side appointment stack after the caller confirms a specific slot.",
+        parameters: {
+          type: "object",
+          properties: {
+            date: {
+              type: "string",
+              description: "Confirmed appointment date as YYYY-MM-DD.",
+            },
+            time: {
+              type: "string",
+              description: "Confirmed local appointment time, e.g. 2:30 PM.",
+            },
+            appointmentTime: {
+              type: "string",
+              description: "Optional combined date/time when Vapi parsed the slot as one value.",
+            },
+            callerName: {
+              type: "string",
+              description: "Confirmed caller name.",
+            },
+            callerPhone: {
+              type: "string",
+              description: "Confirmed best phone number.",
+            },
+            callerEmail: {
+              type: "string",
+              description: "Confirmed email address.",
+            },
+            propertyAddress: {
+              type: "string",
+              description: "Property address or context for the consultation.",
+            },
+            notes: {
+              type: "string",
+              description: "Brief appointment context for the agent.",
+            },
+          },
+          required: ["date", "time"],
+        },
       },
+      server: { url: ariaToolUrl(publicUrl, secret, "bookConsultation") },
     },
     {
       type: "slack.message.send",
@@ -424,7 +505,7 @@ async function main() {
     console.log(`Set VAPI_ASSISTANT_ID=${id} and bind a Vapi phone number to this assistant.`);
   }
   console.log(`Transfer destination: ${config.humanTransferNumber}`);
-  console.log("Tool host: Vapi platform tools plus Aria property search/lookup webhooks.");
+  console.log("Tool host: Vapi call controls plus Aria property/calendar webhook tools.");
 }
 
 main().catch((error) => {

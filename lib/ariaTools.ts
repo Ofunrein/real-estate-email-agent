@@ -47,12 +47,15 @@ import { buildCallerContextResponse, compileCallerContext } from "@/lib/ariaMemo
 import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { queryAvailability as queryCalendarAvailability, type AvailabilitySlot } from "@/lib/calendarOs";
 
 export type AriaToolName =
   | "getCallerContext"
   | "lookupProperty"
   | "searchProperties"
   | "sendPropertyDetailsSms"
+  | "checkAvailability"
+  | "bookConsultation"
   | "scheduleShowing"
   | "bookAppointment"
   | "cancelAppointment"
@@ -74,6 +77,7 @@ export type AriaToolDeps = {
   getCrm: () => CrmAdapter | null;
   calendarId: string;
   timezone: string;
+  queryAvailability: (input: { calendarId?: string; from: string; to: string; durationMinutes?: number; timezone?: string; limit?: number }) => Promise<AvailabilitySlot[]>;
   bookAppointment: (input: AppointmentInput) => Promise<{ success: boolean; appointment_id?: string; neon_id?: string; confirmed_time?: string; error?: string }>;
   findUpcomingAppointmentByPhone: (phone: string) => Promise<AppointmentRecord | null>;
   findAppointmentById: (id: string) => Promise<AppointmentRecord | null>;
@@ -94,6 +98,7 @@ const defaultDeps: AriaToolDeps = {
   getCrm: () => resolveCrmAdapter(),
   calendarId: process.env.GHL_CALENDAR_ID || "",
   timezone: process.env.CALENDAR_TIMEZONE || "America/Chicago",
+  queryAvailability: queryCalendarAvailability,
   bookAppointment: bookSharedAppointment,
   findUpcomingAppointmentByPhone,
   findAppointmentById,
@@ -204,6 +209,179 @@ function num(value: unknown): number | undefined {
   if (value == null || value === "") return undefined;
   const parsed = Number(String(value).replace(/[^\d.]/g, ""));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function zonedDateParts(date: Date, timezone: string): { year: string; month: string; day: string; hour: string; minute: string; second: string } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    year: map.year || "1970",
+    month: map.month || "01",
+    day: map.day || "01",
+    hour: map.hour === "24" ? "00" : map.hour || "00",
+    minute: map.minute || "00",
+    second: map.second || "00",
+  };
+}
+
+function isoDateInZone(date: Date, timezone: string): string {
+  const parts = zonedDateParts(date, timezone);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function timeZoneOffsetMs(date: Date, timezone: string): number {
+  const parts = zonedDateParts(date, timezone);
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return asUtc - date.getTime();
+}
+
+function zonedLocalToIso(date: string, time: string, timezone: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return "";
+  const timeMatch = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(time.trim());
+  if (!timeMatch) return "";
+  let hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2] || "0");
+  const meridiem = (timeMatch[3] || "").toLowerCase();
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  if (hour > 23 || minute > 59) return "";
+
+  const utcGuess = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, minute, 0);
+  let instant = utcGuess - timeZoneOffsetMs(new Date(utcGuess), timezone);
+  instant = utcGuess - timeZoneOffsetMs(new Date(instant), timezone);
+  return new Date(instant).toISOString();
+}
+
+function resolveRequestedDate(value: unknown, timezone: string): string {
+  const text = str(value).toLowerCase();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const now = new Date();
+  const base = new Date(zonedLocalToIso(isoDateInZone(now, timezone), "12:00", timezone) || now.toISOString());
+  if (/\btomorrow\b/.test(text)) {
+    base.setUTCDate(base.getUTCDate() + 1);
+    return isoDateInZone(base, timezone);
+  }
+  if (/\btoday\b/.test(text)) return isoDateInZone(base, timezone);
+  const parsed = Date.parse(str(value));
+  if (Number.isFinite(parsed)) return isoDateInZone(new Date(parsed), timezone);
+  return "";
+}
+
+function availabilityWindow(args: Record<string, unknown>, timezone: string): { from: string; to: string; date: string; label: string } {
+  const explicitFrom = str(args.from || args.start || args.startTime || args.start_time);
+  const explicitTo = str(args.to || args.end || args.endTime || args.end_time);
+  if (explicitFrom && explicitTo && Number.isFinite(Date.parse(explicitFrom)) && Number.isFinite(Date.parse(explicitTo))) {
+    return {
+      from: new Date(Date.parse(explicitFrom)).toISOString(),
+      to: new Date(Date.parse(explicitTo)).toISOString(),
+      date: isoDateInZone(new Date(Date.parse(explicitFrom)), timezone),
+      label: "requested window",
+    };
+  }
+
+  const date = resolveRequestedDate(args.date || args.day || args.requestedDate, timezone);
+  if (!date) return { from: "", to: "", date: "", label: "" };
+  const daypart = str(args.timeOfDay || args.time_of_day || args.period).toLowerCase();
+  const [start, end, label] = daypart.includes("morning")
+    ? ["09:00", "12:00", "morning"]
+    : daypart.includes("afternoon")
+      ? ["12:00", "17:00", "afternoon"]
+      : daypart.includes("evening")
+        ? ["17:00", "20:00", "evening"]
+        : ["09:00", "17:00", "business hours"];
+  return {
+    from: zonedLocalToIso(date, start, timezone),
+    to: zonedLocalToIso(date, end, timezone),
+    date,
+    label,
+  };
+}
+
+function formatSlot(slot: AvailabilitySlot, timezone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(slot.start));
+}
+
+function localDateAndTimeFromIso(value: string, timezone: string): { date: string; time: string } | null {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+  const parts = zonedDateParts(new Date(parsed), timezone);
+  const hour = Number(parts.hour);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const twelveHour = hour % 12 || 12;
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${twelveHour}:${parts.minute} ${suffix}`,
+  };
+}
+
+async function checkAvailabilityTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const window = availabilityWindow(args, deps.timezone);
+  const durationMinutes = num(args.durationMinutes ?? args.duration_minutes) || 30;
+  const ingestBase = { ...baseIngest(ctx), eventType: "voice_availability_checked" };
+
+  if (!window.from || !window.to) {
+    return {
+      result: "What day should I check?",
+      ingest: { ...ingestBase, aiAction: "availability_needs_date", status: "awaiting_response", summary: "Availability requested without a usable date or time window." },
+    };
+  }
+
+  try {
+    const slots = await deps.queryAvailability({
+      calendarId: deps.calendarId || undefined,
+      from: window.from,
+      to: window.to,
+      durationMinutes,
+      timezone: deps.timezone,
+      limit: 5,
+    });
+    if (!slots.length) {
+      return {
+        result: `I do not see an open ${durationMinutes}-minute slot for ${window.label} on ${window.date}. Want me to check another time that day?`,
+        ingest: { ...ingestBase, aiAction: "availability_empty", status: "not_found", summary: `No availability from ${window.from} to ${window.to}.` },
+      };
+    }
+    const choices = slots.slice(0, 3).map((slot) => formatSlot(slot, deps.timezone));
+    return {
+      result: `I have ${choices.join(", ")}. Which one works best?`,
+      ingest: {
+        ...ingestBase,
+        aiAction: "availability_found",
+        status: "available",
+        summary: `Found ${slots.length} available slot${slots.length === 1 ? "" : "s"} from ${window.from} to ${window.to}.`,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return {
+      result: "I cannot read live calendar availability right now, so I will flag it for the team to confirm directly.",
+      ingest: { ...ingestBase, aiAction: "availability_failed", status: "error", summary: `Availability check failed: ${message}` },
+    };
+  }
 }
 
 async function searchProperties(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
@@ -433,13 +611,21 @@ function appointmentType(value: unknown): AppointmentInput["appointment_type"] {
 }
 
 async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
-  const date = str(args.date);
-  const time = str(args.time);
-  const callerPhone = str(args.caller_phone || args.phone) || ctx.phone;
-  const callerName = str(args.caller_name || args.name) || str(ctx.lead?.full_name);
-  const callerEmail = str(args.caller_email || args.email) || str(ctx.lead?.email);
-  const propertyAddress = str(args.property_address || args.address || args.property) || str(ctx.lead?.property_interest);
-  const appointmentKind = appointmentType(args.appointment_type);
+  let date = str(args.date);
+  let time = str(args.time);
+  const appointmentTime = str(args.appointmentTime || args.appointment_time || args.scheduledAt || args.scheduled_at || args.slotStart || args.slot_start);
+  if ((!date || !time) && appointmentTime) {
+    const parsed = localDateAndTimeFromIso(appointmentTime, deps.timezone);
+    if (parsed) {
+      date ||= parsed.date;
+      time ||= parsed.time;
+    }
+  }
+  const callerPhone = str(args.caller_phone || args.callerPhone || args.phone) || ctx.phone;
+  const callerName = str(args.caller_name || args.callerName || args.name) || str(ctx.lead?.full_name);
+  const callerEmail = str(args.caller_email || args.callerEmail || args.email) || str(ctx.lead?.email);
+  const propertyAddress = str(args.property_address || args.propertyAddress || args.address || args.property) || str(ctx.lead?.property_interest);
+  const appointmentKind = appointmentType(args.appointment_type || args.appointmentType || "consultation");
   const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_booked" };
 
   if (!date || !time || !callerPhone) {
@@ -452,7 +638,7 @@ async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, un
   const result = await deps.bookAppointment({
     date,
     time,
-    duration_minutes: num(args.duration_minutes) || 30,
+    duration_minutes: num(args.duration_minutes ?? args.durationMinutes) || 30,
     property_address: propertyAddress,
     caller_name: callerName,
     caller_phone: callerPhone,
@@ -681,6 +867,10 @@ export async function runAriaTool(
       return searchProperties(await hydrateContext(ctx, deps), args, deps);
     case "sendPropertyDetailsSms":
       return sendPropertyDetailsSms(ctx, args, deps);
+    case "checkAvailability":
+      return checkAvailabilityTool(await hydrateContext(ctx, deps), args, deps);
+    case "bookConsultation":
+      return bookAppointmentTool(await hydrateContext(ctx, deps), args, deps);
     case "scheduleShowing":
       return scheduleShowingTool(await hydrateContext(ctx, deps), args, deps);
     case "bookAppointment":

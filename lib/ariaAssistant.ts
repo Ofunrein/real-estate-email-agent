@@ -3,10 +3,10 @@
 // code (not dashboard clicks) makes the prompt, tools, transfer destination and
 // voice reproducible and multi-tenant.
 //
-// The live Vapi assistant is Vapi-adapter first. Calendar, Slack, Twilio SMS,
-// transfer, and end-call actions are attached as Vapi tools during provisioning.
-// Repo webhook tools remain available for the internal inbox/runtime, but are
-// not attached to the production Vapi assistant by default.
+// The live Vapi assistant is Vapi-adapter first. Vapi owns the call runtime,
+// while property and calendar actions are attached as repo webhook tools so
+// per-client routing, auditing, and dashboard state stay in our backend.
+// Transfer, end-call, Slack, and SMS confirmation still run as Vapi tools.
 //
 // buildAriaAssistant() is pure (no IO) so it is unit-testable.
 
