@@ -43,10 +43,16 @@ interface TopBarProps {
 }
 
 const composioConnectSlug: Partial<Record<ChannelId, string>> = {
-  instagram: 'instagram',
-  messenger: 'facebook',
   whatsapp: 'whatsapp',
 };
+
+function channelConnectHref(channel: ChannelId) {
+  if (channel === 'instagram' || channel === 'messenger') {
+    return `/api/channels/meta/connect?channel=${channel}`;
+  }
+  const connectSlug = composioConnectSlug[channel];
+  return connectSlug ? `/api/settings/composio/connect/${connectSlug}` : undefined;
+}
 
 export function TopBar({
   channel,
@@ -81,7 +87,7 @@ export function TopBar({
     account?.status || ''
   );
   const agentReady = accountDisplay.ready;
-  const connectSlug = composioConnectSlug[channel];
+  const connectHref = channelConnectHref(channel);
   const accountMeta =
   channel === 'all' || channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ?
   undefined :
@@ -237,8 +243,8 @@ export function TopBar({
         <Button
           variant="outlined"
           size="small"
-          href={connectSlug ? `/api/settings/composio/connect/${connectSlug}` : undefined}
-          onClick={connectSlug ? undefined : onOpenSettings}
+          href={connectHref}
+          onClick={connectHref ? undefined : onOpenSettings}
           sx={{
             display: {
               xs: 'none',

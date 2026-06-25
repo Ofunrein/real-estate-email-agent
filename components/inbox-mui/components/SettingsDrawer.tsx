@@ -44,9 +44,9 @@ const channelAvailability = [
   ['messenger', 'Messenger'],
   ['instagram', 'Instagram DMs'],
 ] as const;
-const composioConnections = [
+const socialConnections = [
   ['instagram', 'Instagram DMs'],
-  ['facebook', 'Messenger'],
+  ['messenger', 'Messenger'],
   ['whatsapp', 'WhatsApp'],
 ] as const;
 
@@ -127,7 +127,7 @@ function ToggleGrid({
   );
 }
 
-function ComposioConnectionGrid({
+function SocialConnectionGrid({
   status,
   disconnectingId,
   onDisconnect
@@ -136,7 +136,11 @@ function ComposioConnectionGrid({
   disconnectingId: string;
   onDisconnect: (id: string) => void;
 }) {
-  const channelForSlug = (slug: string) => slug === 'facebook' ? 'messenger' : slug;
+  const channelForSlug = (slug: string) => slug;
+  const connectUrlForSlug = (slug: string) =>
+    slug === 'instagram' || slug === 'messenger'
+      ? `/api/channels/meta/connect?channel=${slug}`
+      : `/api/settings/composio/connect/${slug}`;
   const missingSetup = (connection?: NonNullable<ConnectionStatus['connections']>[number]) => {
     const missing = connection?.metadata?.outbound_missing;
     return Array.isArray(missing) ? missing.map(String).filter(Boolean) : [];
@@ -174,7 +178,7 @@ function ComposioConnectionGrid({
         gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 178px), 1fr))',
         gap: { xs: 0.75, sm: 1 }
       }}>
-      {composioConnections.map(([slug, label]) => (
+      {socialConnections.map(([slug, label]) => (
         (() => {
           const connection = connectionForSlug(slug);
           const connected = connection?.status === 'connected' && Boolean(connection.selected_asset_name || connection.selected_asset_id || connection.connected_account_id);
@@ -192,7 +196,7 @@ function ComposioConnectionGrid({
           const labelText = accountLabel(connection);
           const detail = connected ? labelText || 'Connected account' : authConfigured ? 'Choose account' : 'Needs setup';
           const actionLabel = connected ? 'Change' : 'Connect';
-          const connectUrl = `/api/settings/composio/connect/${slug}`;
+          const connectUrl = connectUrlForSlug(slug);
           return (
         <Box
           key={slug}
@@ -522,7 +526,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           Social inboxes Iris can operate.
         </Typography>
         {(connectionError || disconnectError) && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError || disconnectError}</Alert>}
-        <ComposioConnectionGrid
+        <SocialConnectionGrid
           status={connectionStatus}
           disconnectingId={disconnectingId}
           onDisconnect={disconnectConnection}

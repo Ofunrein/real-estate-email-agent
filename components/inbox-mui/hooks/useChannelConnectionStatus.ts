@@ -38,7 +38,7 @@ export type ChannelConnectionDisplay = {
   connection?: ChannelConnectionRecord;
 };
 
-const composioManagedChannels = new Set<ChannelId>(["instagram", "messenger", "whatsapp"]);
+const socialManagedChannels = new Set<ChannelId>(["instagram", "messenger", "whatsapp"]);
 const CONNECTION_STATUS_CACHE_MS = 60_000;
 
 let cachedStatus: ConnectionStatus | null = null;
@@ -102,22 +102,50 @@ function composioConnection(connection: ChannelConnectionRecord) {
   return connection.provider.startsWith("composio_");
 }
 
+function directMetaConnection(connection: ChannelConnectionRecord) {
+  return connection.provider === "meta_direct";
+}
+
+function connectionEligibleForChannel(channel: ChannelId, connection: ChannelConnectionRecord) {
+  if (channel === "instagram" || channel === "messenger") {
+    return directMetaConnection(connection) || composioConnection(connection);
+  }
+  if (channel === "whatsapp") return composioConnection(connection);
+  return true;
+}
+
+function providerRank(channel: ChannelId, connection: ChannelConnectionRecord) {
+  if ((channel === "instagram" || channel === "messenger") && directMetaConnection(connection)) return 0;
+  if (composioConnection(connection)) return 1;
+  return 10;
+}
+
+function byProviderPreference(channel: ChannelId) {
+  return (a: ChannelConnectionRecord, b: ChannelConnectionRecord) =>
+    providerRank(channel, a) - providerRank(channel, b) || byNewest(a, b);
+}
+
 export function displayForChannelConnection(
   status: ConnectionStatus | null,
   channel: ChannelId,
   fallbackValue: string,
   fallbackStatus: string,
 ): ChannelConnectionDisplay {
-  if (!composioManagedChannels.has(channel)) {
+  if (!socialManagedChannels.has(channel)) {
     return { ready: ["READY", "SYNCED"].includes(fallbackStatus), value: fallbackValue, status: fallbackStatus };
   }
 
-  const connections = (status?.channels?.[channel]?.connections || []).filter(composioConnection);
+  const connections = (status?.channels?.[channel]?.connections || []).filter((connection) =>
+    connectionEligibleForChannel(channel, connection)
+  );
   const connected = [...connections]
     .filter((connection) => connection.status === "connected")
-    .sort(byNewest)
+    .sort(byProviderPreference(channel))
     [0];
-  const configured = connections.find((connection) => connection.metadata?.composio_auth_configured);
+  const configured = [...connections]
+    .filter((connection) => connection.metadata?.composio_auth_configured)
+    .sort(byProviderPreference(channel))
+    [0];
   const connection = connected || configured || connections[0];
   const label = connectionLabel(connected);
 

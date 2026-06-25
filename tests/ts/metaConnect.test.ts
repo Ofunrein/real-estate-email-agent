@@ -33,14 +33,14 @@ test("Meta connect uses Lumenosis Facebook Login for Business config for product
     META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: "",
     META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: "",
   }, async () => {
-    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?client_id=ryse-realty&channel=instagram"));
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram"));
     const location = response.headers.get("location");
     assert.ok(location);
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.origin, "https://www.facebook.com");
     assert.equal(oauthUrl.searchParams.get("config_id"), "884521007425365");
-    assert.equal(oauthUrl.searchParams.get("scope"), null);
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages");
     assert.equal(oauthUrl.searchParams.get("redirect_uri"), "https://app.lumenosis.com/api/channels/meta/callback");
   });
 });
@@ -50,12 +50,12 @@ test("Meta connect allows explicit config_id override", async () => {
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
   }, async () => {
-    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?client_id=ryse-realty&channel=messenger&config_id=override_123"));
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=messenger&config_id=override_123"));
     const location = response.headers.get("location");
     assert.ok(location);
 
     const oauthUrl = new URL(location);
     assert.equal(oauthUrl.searchParams.get("config_id"), "override_123");
-    assert.equal(oauthUrl.searchParams.get("scope"), null);
+    assert.equal(oauthUrl.searchParams.get("scope"), "openid,pages_messaging,pages_manage_metadata");
   });
 });

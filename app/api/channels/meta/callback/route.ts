@@ -134,5 +134,8 @@ export async function GET(request: NextRequest) {
     saved.push({ page_id: page.id, name: page.name });
   }
 
-  return NextResponse.json({ ok: true, connected_pages: saved, channel });
+  const nextUrl = new URL(publicBaseUrl || request.nextUrl.origin);
+  nextUrl.searchParams.set("metaConnected", channel);
+  nextUrl.searchParams.set("connectedPages", String(saved.length));
+  return NextResponse.redirect(nextUrl);
 }
