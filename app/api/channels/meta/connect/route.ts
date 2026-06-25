@@ -21,6 +21,8 @@ function metaBusinessLoginConfigId(
     : cleanText(process.env.META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID);
   if (channelConfigId) return channelConfigId;
 
+  if (channel === "messenger") return "";
+
   const sharedConfigId = cleanText(process.env.META_BUSINESS_LOGIN_CONFIG_ID);
   if (sharedConfigId) return sharedConfigId;
 
