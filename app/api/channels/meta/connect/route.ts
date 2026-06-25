@@ -8,11 +8,13 @@ function cleanText(value: unknown): string {
 
 function metaBusinessLoginConfigId(
   request: NextRequest,
-  appId: string,
   channel: "messenger" | "instagram",
 ): string {
   const queryConfigId = cleanText(request.nextUrl.searchParams.get("config_id"));
   if (queryConfigId) return queryConfigId;
+
+  const useDashboardConfig = cleanText(process.env.META_USE_BUSINESS_LOGIN_CONFIG);
+  if (!["1", "true", "yes"].includes(useDashboardConfig.toLowerCase())) return "";
 
   const channelConfigId = channel === "instagram"
     ? cleanText(process.env.META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID)
@@ -21,10 +23,6 @@ function metaBusinessLoginConfigId(
 
   const sharedConfigId = cleanText(process.env.META_BUSINESS_LOGIN_CONFIG_ID);
   if (sharedConfigId) return sharedConfigId;
-
-  // Public dashboard config ID for the Lumenosis Messaging app. This is not a
-  // secret; it tells Meta which Facebook Login for Business config to invoke.
-  if (appId === "2482694768826545") return "884521007425365";
 
   return "";
 }
@@ -51,7 +49,7 @@ export async function GET(request: NextRequest) {
   const scope = channel === "instagram"
     ? "openid,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
     : "openid,pages_messaging,pages_manage_metadata";
-  const configId = metaBusinessLoginConfigId(request, appId, channel);
+  const configId = metaBusinessLoginConfigId(request, channel);
 
   const oauthUrl = new URL("https://www.facebook.com/dialog/oauth");
   oauthUrl.searchParams.set("client_id", appId);
