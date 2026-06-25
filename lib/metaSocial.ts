@@ -28,6 +28,37 @@ export type MetaSocialSendResult = {
   droppedMediaUrls: string[];
 };
 
+// Unified normalized message shape for all Meta webhook event types.
+export type MetaMessageType =
+  | "text"
+  | "image"
+  | "video"
+  | "audio"
+  | "file"
+  | "sticker"
+  | "reaction"
+  | "read_receipt"
+  | "postback"
+  | "quick_reply"
+  | "unknown";
+
+export type NormalizedMetaMessage = {
+  type: MetaMessageType;
+  content: string;
+  mediaUrl?: string;
+  mimeType?: string;
+  stickerId?: string;
+  reactionEmoji?: string;
+  reactionAction?: "react" | "unreact";
+  watermark?: number;
+  postbackPayload?: string;
+  quickReplyPayload?: string;
+  senderId: string;
+  pageId: string;
+  timestamp: number;
+  raw: Record<string, unknown>;
+};
+
 type ConnectionHints = {
   instagramIds?: Iterable<string>;
   messengerIds?: Iterable<string>;
@@ -55,12 +86,20 @@ function metaGraphVersion(): string {
   return (process.env.META_GRAPH_VERSION || "v20.0").trim().replace(/^\/+/, "");
 }
 
-function metaSocialAccessToken(): string {
+function metaSocialAccessToken(pageAccessToken?: string): string {
+  if (pageAccessToken && pageAccessToken.trim()) return pageAccessToken.trim();
   return cleanText(
     process.env.META_SOCIAL_PAGE_ACCESS_TOKEN
     || process.env.META_PAGE_ACCESS_TOKEN
     || process.env.FACEBOOK_PAGE_ACCESS_TOKEN,
   );
+}
+
+// Resolve per-page token from a channel_connections record metadata.
+// Falls back to env if not stored in DB.
+export function resolvePageAccessToken(connection?: { metadata?: Record<string, unknown>; page_access_token?: string } | null): string {
+  const fromRecord = cleanText(connection?.page_access_token || String(connection?.metadata?.page_access_token || ""));
+  return metaSocialAccessToken(fromRecord);
 }
 
 function absoluteMediaUrl(value: string): string {
@@ -230,8 +269,9 @@ export function extractMetaSocialMessages(payload: Record<string, unknown>, hint
 async function postMetaSocialMessage(
   channel: MetaSocialChannel,
   body: Record<string, unknown>,
+  pageAccessToken?: string,
 ): Promise<{ ok: boolean; id: string; error: string }> {
-  const token = metaSocialAccessToken();
+  const token = metaSocialAccessToken(pageAccessToken);
   if (!token) return { ok: false, id: "", error: "Missing META_SOCIAL_PAGE_ACCESS_TOKEN" };
   const response = await fetch(sendEndpoint(channel), {
     method: "POST",
@@ -280,6 +320,7 @@ export async function sendMetaSocialMessage(input: {
   to: string;
   body: string;
   mediaUrls?: string[];
+  pageAccessToken?: string;
 }): Promise<MetaSocialSendResult> {
   if (!metaSocialDirectEnabled(input.channel)) {
     return {
@@ -313,7 +354,7 @@ export async function sendMetaSocialMessage(input: {
       recipient: { id: recipientId },
       messaging_type: "RESPONSE",
       message: { text: body },
-    });
+    }, input.pageAccessToken);
     if (!textResult.ok) {
       return {
         sent: false,
@@ -340,7 +381,7 @@ export async function sendMetaSocialMessage(input: {
           payload: { url, is_reusable: false },
         },
       },
-    });
+    }, input.pageAccessToken);
     if (!attachmentResult.ok) {
       return {
         sent: false,
@@ -365,4 +406,148 @@ export async function sendMetaSocialMessage(input: {
     deliveredMediaUrls,
     droppedMediaUrls: [],
   };
+}
+
+// Send a single media attachment with optional text caption (sent as a separate message).
+export async function sendMediaMessage(input: {
+  channel: MetaSocialChannel;
+  to: string;
+  mediaType: "image" | "video" | "audio" | "file";
+  mediaUrl: string;
+  caption?: string;
+  pageAccessToken?: string;
+}): Promise<MetaSocialSendResult> {
+  const urls = input.caption
+    ? [input.mediaUrl]
+    : [input.mediaUrl];
+  const result = await sendMetaSocialMessage({
+    channel: input.channel,
+    to: input.to,
+    body: input.caption || "",
+    mediaUrls: urls,
+    pageAccessToken: input.pageAccessToken,
+  });
+  return result;
+}
+
+// Map any raw Meta webhook event object to a unified NormalizedMetaMessage.
+// Returns null for events that should not produce a message (e.g. echoes).
+export function normalizeMetaMessage(
+  event: Record<string, unknown>,
+  pageId: string,
+): NormalizedMetaMessage | null {
+  const sender = jsonRecord(event.sender || event.from);
+  const message = jsonRecord(event.message);
+  const senderId = cleanText(sender.id);
+  if (!senderId) return null;
+  if (message.is_echo === true || event.message_echo === true) return null;
+
+  const ts = Number(event.timestamp || message.timestamp || Date.now());
+
+  // Reaction
+  const reaction = jsonRecord(event.reaction);
+  if (reaction.mid || reaction.emoji) {
+    return {
+      type: "reaction",
+      content: cleanText(reaction.emoji),
+      reactionEmoji: cleanText(reaction.emoji),
+      reactionAction: String(reaction.action || "react") === "unreact" ? "unreact" : "react",
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Read receipt
+  const read = jsonRecord(event.read);
+  if (read.watermark !== undefined) {
+    return {
+      type: "read_receipt",
+      content: "",
+      watermark: Number(read.watermark),
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Postback
+  const postback = jsonRecord(event.postback);
+  if (postback.payload !== undefined || postback.title !== undefined) {
+    return {
+      type: "postback",
+      content: cleanText(postback.title || postback.payload),
+      postbackPayload: cleanText(postback.payload),
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Quick reply inside message
+  const quickReply = jsonRecord(message.quick_reply);
+  if (quickReply.payload !== undefined) {
+    return {
+      type: "quick_reply",
+      content: cleanText(message.text || quickReply.payload),
+      quickReplyPayload: cleanText(quickReply.payload),
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Sticker
+  const attachments = records(message.attachments);
+  const stickerAttachment = attachments.find((a) => cleanText(a.type) === "sticker");
+  if (stickerAttachment) {
+    const payload = jsonRecord(stickerAttachment.payload);
+    return {
+      type: "sticker",
+      content: "",
+      stickerId: cleanText(payload.sticker_id),
+      mediaUrl: cleanText(payload.url || stickerAttachment.url),
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Media attachments (image/video/audio/file)
+  if (attachments.length > 0) {
+    const first = attachments[0];
+    const url = attachmentUrl(first);
+    const mediaType = attachmentTypeFrom(first, url);
+    const validMedia: MetaMessageType = (["image", "video", "audio", "file"] as const).includes(mediaType as "image") ? mediaType as MetaMessageType : "file";
+    return {
+      type: validMedia,
+      content: cleanText(message.text),
+      mediaUrl: url || undefined,
+      mimeType: cleanText(first.mime_type || first.content_type) || undefined,
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  // Plain text
+  const text = cleanText(message.text || event.text);
+  if (text) {
+    return {
+      type: "text",
+      content: text,
+      senderId,
+      pageId,
+      timestamp: ts,
+      raw: event,
+    };
+  }
+
+  return null;
 }

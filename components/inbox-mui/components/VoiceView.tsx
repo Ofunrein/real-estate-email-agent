@@ -474,7 +474,11 @@ function RecordingPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasRecording = Boolean(recordingUrl);
-  const proxiedRecordingUrl = recordingUrl ? `/api/media/audio?url=${encodeURIComponent(recordingUrl)}` : '';
+  const proxiedRecordingUrl = recordingUrl
+    ? /^https:\/\/(?:storage|recordings)\.vapi\.ai\//i.test(recordingUrl)
+      ? recordingUrl
+      : `/api/media/audio?url=${encodeURIComponent(recordingUrl)}`
+    : '';
   const total = hasRecording ? audioTotal || fallbackTotal : fallbackTotal;
 
   // Real audio playback when a recording URL exists.

@@ -64,8 +64,10 @@ test("extractMetaSocialMessages infers Instagram when the recipient matches a sa
 test("metaSocialDirectEnabled respects global and per-channel flags", () => {
   const priorGlobal = process.env.ENABLE_META_SOCIAL_WEBHOOKS;
   const priorIg = process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK;
+  const priorMessenger = process.env.ENABLE_MESSENGER_DIRECT_WEBHOOK;
   delete process.env.ENABLE_META_SOCIAL_WEBHOOKS;
   delete process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK;
+  delete process.env.ENABLE_MESSENGER_DIRECT_WEBHOOK;
 
   assert.equal(metaSocialDirectEnabled("instagram"), false);
 
@@ -80,4 +82,6 @@ test("metaSocialDirectEnabled respects global and per-channel flags", () => {
   else process.env.ENABLE_META_SOCIAL_WEBHOOKS = priorGlobal;
   if (priorIg == null) delete process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK;
   else process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK = priorIg;
+  if (priorMessenger == null) delete process.env.ENABLE_MESSENGER_DIRECT_WEBHOOK;
+  else process.env.ENABLE_MESSENGER_DIRECT_WEBHOOK = priorMessenger;
 });
