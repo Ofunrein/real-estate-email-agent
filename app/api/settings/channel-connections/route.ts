@@ -22,17 +22,20 @@ function payloadFromBody(body: unknown): ChannelConnectionInput {
   return connection as ChannelConnectionInput;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const userEmail = session.user?.email || "";
-  const sync = userEmail
-    ? await syncComposioSocialConnections({ userEmail }).catch((error) => ({
-      checked: true,
-      synced: 0,
-      errors: [error instanceof Error ? error.message : String(error)],
-    }))
-    : { checked: false, synced: 0, errors: ["No signed-in email available for Composio sync."] };
+  const shouldSync = request.nextUrl.searchParams.get("sync") === "1";
+  const sync = shouldSync
+    ? userEmail
+      ? await syncComposioSocialConnections({ userEmail }).catch((error) => ({
+        checked: true,
+        synced: 0,
+        errors: [error instanceof Error ? error.message : String(error)],
+      }))
+      : { checked: false, synced: 0, errors: ["No signed-in email available for Composio sync."] }
+    : { checked: false, synced: 0, errors: [] };
   const status = await dashboardChannelConnectionStatus();
   return NextResponse.json({ ...status, composio_sync: sync });
 }

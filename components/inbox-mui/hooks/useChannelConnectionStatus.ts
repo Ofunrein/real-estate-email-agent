@@ -39,6 +39,11 @@ export type ChannelConnectionDisplay = {
 };
 
 const composioManagedChannels = new Set<ChannelId>(["instagram", "messenger", "whatsapp"]);
+const CONNECTION_STATUS_CACHE_MS = 60_000;
+
+let cachedStatus: ConnectionStatus | null = null;
+let cachedAt = 0;
+let inFlightStatus: Promise<ConnectionStatus> | null = null;
 
 function selectedAssetLabel(connection?: ChannelConnectionRecord) {
   return [
@@ -153,23 +158,38 @@ export function useChannelConnectionStatus(enabled = true) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [error, setError] = useState("");
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options?: { sync?: boolean; force?: boolean }) => {
     setError("");
-    const res = await fetch("/api/settings/channel-connections");
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `connection status failed (${res.status})`);
+    const now = Date.now();
+    if (!options?.force && !options?.sync && cachedStatus && now - cachedAt < CONNECTION_STATUS_CACHE_MS) {
+      setStatus(cachedStatus);
+      return cachedStatus;
+    }
+    if (!inFlightStatus || options?.force || options?.sync) {
+      const path = options?.sync ? "/api/settings/channel-connections?sync=1" : "/api/settings/channel-connections";
+      inFlightStatus = fetch(path)
+        .then(async (res) => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `connection status failed (${res.status})`);
+          cachedStatus = data as ConnectionStatus;
+          cachedAt = Date.now();
+          return cachedStatus;
+        })
+        .finally(() => {
+          inFlightStatus = null;
+        });
+    }
+    const data = await inFlightStatus;
     setStatus(data);
-    return data as ConnectionStatus;
+    return data;
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
     setError("");
-    void fetch("/api/settings/channel-connections")
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `connection status failed (${res.status})`);
+    void refresh()
+      .then((data) => {
         if (!cancelled) setStatus(data);
       })
       .catch((loadError) => {
@@ -178,7 +198,7 @@ export function useChannelConnectionStatus(enabled = true) {
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, refresh]);
 
   return useMemo(() => ({ status, error, refresh }), [status, error, refresh]);
 }
