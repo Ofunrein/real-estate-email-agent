@@ -187,6 +187,58 @@ test("adaptInboxData shows Instagram contact name but preserves platform recipie
   assert.equal(thread.messageCount, 2);
 });
 
+test("adaptInboxData hides opaque Instagram ids when no profile name is available", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        phone: "1526516032549624",
+        thread_ref: "instagram:1526516032549624",
+        gmail_message_id: "instagram:message-opaque",
+        message_text: "Can you send more listings?",
+        event_at: "2026-06-22T09:18:36.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.contact, "Instagram contact");
+  assert.equal(thread.replyTo, "1526516032549624");
+  assert.equal(model.channelStats.instagram.lastActivity?.contact, "Instagram contact");
+  assert.equal(model.activityEvents[0]?.actor, "Instagram contact");
+});
+
+test("adaptInboxData can read social profile identity from provider metadata", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        phone: "1526516032549624",
+        thread_ref: "instagram:1526516032549624",
+        provider_metadata: JSON.stringify({ senderUsername: "martn.ai" }),
+        gmail_message_id: "instagram:message-profile",
+        message_text: "Can you send more listings?",
+        event_at: "2026-06-22T09:18:36.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.contact, "martn.ai");
+  assert.equal(thread.replyTo, "1526516032549624");
+});
+
 test("adaptInboxData keeps social owner replies in the same sender thread", () => {
   const data = composeInboxData(
     [],
@@ -220,6 +272,7 @@ test("adaptInboxData keeps social owner replies in the same sender thread", () =
 
   assert.equal(model.textThreads.instagram.length, 1);
   assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.contact, "martn.o");
   assert.equal(thread.messageCount, 2);
   assert.equal(thread.messages[1]?.direction, "owner");
 });
