@@ -48,6 +48,7 @@ import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { queryAvailability as queryCalendarAvailability, type AvailabilitySlot } from "@/lib/calendarOs";
+import { resolveCalendarProvider } from "@/lib/calendar/resolver";
 
 export type AriaToolName =
   | "getCallerContext"
@@ -98,7 +99,7 @@ const defaultDeps: AriaToolDeps = {
   getCrm: () => resolveCrmAdapter(),
   calendarId: process.env.GHL_CALENDAR_ID || "",
   timezone: process.env.CALENDAR_TIMEZONE || "America/Chicago",
-  queryAvailability: queryCalendarAvailability,
+  queryAvailability: (input) => resolveCalendarProvider().queryAvailability(input),
   bookAppointment: bookSharedAppointment,
   findUpcomingAppointmentByPhone,
   findAppointmentById,

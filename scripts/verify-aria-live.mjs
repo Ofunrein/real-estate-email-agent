@@ -54,21 +54,31 @@ const tools = await resolveAssistantTools(assistant, apiKey);
 const names = tools.map((tool) => tool.function?.name || tool.name || tool.type).sort();
 const requiredTools = [
   "bookConsultation",
+  "cancelAppointment",
   "checkAvailability",
   "getCallerContext",
   "lookupProperty",
   "notifySlackLeadIssue",
+  "qualifyLead",
+  "rescheduleAppointment",
+  "scheduleShowing",
   "searchProperties",
   "sendPropertyDetailsSms",
   "sendBookingSmsConfirmation",
+  "syncToCrm",
 ].sort();
 const allowedServerTools = new Set([
   "bookConsultation",
+  "cancelAppointment",
   "checkAvailability",
   "getCallerContext",
   "lookupProperty",
+  "qualifyLead",
+  "rescheduleAppointment",
+  "scheduleShowing",
   "searchProperties",
   "sendPropertyDetailsSms",
+  "syncToCrm",
 ]);
 
 assert(assistant.model?.model === expectedModel, `Expected model ${expectedModel}, got ${assistant.model?.model}`);
