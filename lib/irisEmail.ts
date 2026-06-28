@@ -9,6 +9,7 @@ import {
   readConversationEventByGmailMessageId,
   readInboxCategoriesFromDatabase,
   updateInboxCategoryGmailLabelInDatabase,
+  upsertAiDraftInDatabase,
   upsertThreadLinkInDatabase,
   upsertLeadMemoryToDatabase,
 } from "@/lib/database";
@@ -892,6 +893,23 @@ export async function processIrisEmailPoll(
           );
         }
         sent = true;
+      } else if (!skippedDuplicate && !execution.canReply && replyDraft?.text && databaseEnabled()) {
+        // Fixer-style: store AI draft in review queue even when needsHuman=true.
+        // The draft appears in the dashboard and can be approved+sent or dismissed in one click.
+        const threadRef = message.threadId || message.id;
+        await upsertAiDraftInDatabase({
+          thread_ref: threadRef,
+          channel: "email",
+          body: replyDraft.text,
+          category_slug: categorySlug || "needs_human",
+          confidence: classification.confidence ?? 0.75,
+          reason: execution.handoffReason || "Human review — draft ready to send",
+          next_action: "review_send",
+          safe_to_auto_send: false,
+          needs_human: true,
+          model: "iris_email",
+          fingerprint: `iris-draft:${message.id}`,
+        }).catch(() => null);
       }
     }
 
@@ -1053,7 +1071,8 @@ async function syncGmailCategoryLabels(gmail: GmailClient, categories: InboxCate
   const synced: InboxCategory[] = [];
   for (const category of categories) {
     const labelName = category.gmail_label_name || `Iris/${category.name}`;
-    const labelId = await ensureGmailLabel(gmail, labelName);
+    // Pass category color so Gmail labels are color-coded to match the dashboard
+    const labelId = await ensureGmailLabel(gmail, labelName, category.color);
     const next = { ...category, gmail_label_id: labelId, gmail_label_name: labelName };
     synced.push(next);
     if (databaseEnabled() && (category.gmail_label_id !== labelId || category.gmail_label_name !== labelName)) {
