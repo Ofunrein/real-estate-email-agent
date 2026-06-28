@@ -2,6 +2,7 @@ import { clientConfig } from "@/lib/clientConfig";
 import { createAppointment, type AppointmentType } from "@/lib/appointmentStore";
 import { resolveCrmAdapter } from "@/lib/crm";
 import { sendTheoSms } from "@/lib/twilioSms";
+import { resolveCalendarProvider, activeCalendarProviderName } from "@/lib/calendar/resolver";
 
 export type AppointmentInput = {
   date: string;
@@ -91,15 +92,43 @@ async function bookGHL(input: AppointmentInput): Promise<AppointmentResult> {
 }
 
 export async function bookAppointment(input: AppointmentInput): Promise<AppointmentResult> {
-  const provider = (process.env.CALENDAR_PROVIDER || "ghl").toLowerCase();
-  const result = provider === "ghl"
-    ? await bookGHL(input)
-    : { success: false, provider_used: provider, error: `Calendar provider ${provider} not supported for direct booking` };
+  const timezone = input.timezone || process.env.CALENDAR_TIMEZONE || "America/Chicago";
+  const scheduledAt = parseLocalDateTime(input.date, input.time, timezone);
+  const endAt = addMinutes(scheduledAt, input.duration_minutes ?? 30);
+  const providerName = activeCalendarProviderName();
+
+  let result: AppointmentResult;
+
+  // Google / Outlook: use CalendarProvider abstraction
+  if (providerName === "google" || providerName === "outlook") {
+    const calendarProvider = resolveCalendarProvider();
+    const title = `${input.appointment_type === "showing" ? "Showing" : "Appointment"} — ${input.caller_name || input.caller_phone}`;
+    const booked = await calendarProvider.bookAppointment({
+      start: scheduledAt,
+      end: endAt,
+      timezone,
+      title,
+      description: input.notes,
+      attendeeEmail: input.caller_email,
+      attendeeName: input.caller_name,
+      attendeePhone: input.caller_phone,
+      propertyAddress: input.property_address,
+    });
+    result = {
+      success: booked.success,
+      appointment_id: booked.eventId,
+      confirmed_time: booked.confirmedStart ? new Date(booked.confirmedStart).toLocaleString("en-US", { timeZone: timezone }) : `${input.date} at ${input.time}`,
+      calendar_url: booked.htmlLink,
+      provider_used: providerName,
+      error: booked.error,
+    };
+  } else {
+    // GHL fallback
+    result = await bookGHL(input);
+  }
 
   if (!result.success) return result;
 
-  const timezone = input.timezone || process.env.CALENDAR_TIMEZONE || "America/Chicago";
-  const scheduledAt = parseLocalDateTime(input.date, input.time, timezone);
   const neonRecord = await createAppointment({
     caller_phone: input.caller_phone,
     caller_name: input.caller_name,

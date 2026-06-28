@@ -236,6 +236,102 @@ function buildVapiPlatformTools(publicUrl, secret) {
       server: { url: ariaToolUrl(publicUrl, secret, "bookConsultation") },
     },
     {
+      type: "function",
+      function: {
+        name: "qualifyLead",
+        description: "Save lead qualification fields to the omnichannel brain mid-call. Call as soon as the caller provides any field: name, role, budget, timeline, area, beds/baths, property interest, or contact/SMS consent. Do not wait until call end.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Caller's full name as confirmed." },
+            email: { type: "string", description: "Caller's email if provided." },
+            role: { type: "string", enum: ["buyer", "seller", "renter", "investor", "agent", "unknown"], description: "Lead role." },
+            budget: { type: "string", description: "Budget range or max price, e.g. '$500k' or '$400k-$600k'." },
+            timeline: { type: "string", description: "How soon they want to act, e.g. '1-2 months', 'ASAP', 'end of year'." },
+            area: { type: "string", description: "Preferred neighborhood, city, or ZIP." },
+            bedrooms: { type: "number", description: "Minimum bedrooms needed." },
+            bathrooms: { type: "number", description: "Minimum bathrooms needed." },
+            property: { type: "string", description: "Specific address or property they mentioned." },
+            preferred_channel: { type: "string", enum: ["sms", "email", "phone", "any"], description: "How they prefer to be contacted." },
+            call_consent: { type: "string", enum: ["yes", "no"], description: "Consents to receive calls." },
+            sms_consent: { type: "string", enum: ["yes", "no"], description: "Consents to receive SMS." },
+          },
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "qualifyLead") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "scheduleShowing",
+        description: "Book a property showing when the caller wants to view a specific home. Use after confirming address, date, time, and caller contact details.",
+        parameters: {
+          type: "object",
+          properties: {
+            action: { type: "string", enum: ["book", "cancel", "reschedule"], description: "What to do with the showing. Default 'book'." },
+            address: { type: "string", description: "Property address for the showing." },
+            startTime: { type: "string", description: "ISO datetime for the showing start." },
+            newStartTime: { type: "string", description: "New ISO datetime when rescheduling." },
+            callerName: { type: "string", description: "Confirmed caller name." },
+            callerPhone: { type: "string", description: "Confirmed caller phone." },
+            callerEmail: { type: "string", description: "Confirmed caller email." },
+            notes: { type: "string", description: "Any notes for the agent." },
+          },
+          required: ["address"],
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "scheduleShowing") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "cancelAppointment",
+        description: "Cancel the caller's existing upcoming appointment. Use when the caller explicitly asks to cancel a consultation or showing.",
+        parameters: {
+          type: "object",
+          properties: {
+            appointmentId: { type: "string", description: "Appointment ID if known." },
+            reason: { type: "string", description: "Brief reason for cancellation." },
+          },
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "cancelAppointment") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "rescheduleAppointment",
+        description: "Reschedule the caller's existing appointment to a new date and time. Confirm the new slot before calling.",
+        parameters: {
+          type: "object",
+          properties: {
+            new_date: { type: "string", description: "New appointment date as YYYY-MM-DD." },
+            new_time: { type: "string", description: "New appointment time, e.g. '3:00 PM'." },
+            appointmentId: { type: "string", description: "Appointment ID if known." },
+          },
+          required: ["new_date", "new_time"],
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "rescheduleAppointment") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "syncToCrm",
+        description: "Write the caller's contact and call context to the CRM after the call is complete or before transfer. Use when transferring to a human or at call end when no booking was made.",
+        parameters: {
+          type: "object",
+          properties: {
+            callerName: { type: "string", description: "Confirmed caller name." },
+            callerEmail: { type: "string", description: "Caller email if given." },
+            note: { type: "string", description: "Brief call summary for the CRM activity log." },
+            outcome: { type: "string", enum: ["QUALIFIED", "TRANSFERRED", "VOICEMAIL", "NOT_INTERESTED", "FOLLOW_UP"], description: "Call disposition." },
+          },
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "syncToCrm") },
+    },
+    {
       type: "slack.message.send",
       function: {
         name: "notifySlackLeadIssue",
