@@ -22,6 +22,7 @@
     "setup:gmail-push": "node scripts/setup-gmail-push.mjs",
     "inngest:sync": "npx -y inngest-cli@latest api sync-app --prod lumenosis-real-estate-agent --url https://app.lumenosis.com/api/inngest",
     "inngest:functions": "npx -y inngest-cli@latest api get-functions --prod lumenosis-real-estate-agent --raw",
+    "stress:email": "node --import tsx scripts/stress-iris-email.mjs",
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "aria:backfill": "node --import tsx scripts/backfill-vapi-voice-calls.mjs",
     "sms:backfill": "node scripts/backfill-twilio-sms-events.mjs",

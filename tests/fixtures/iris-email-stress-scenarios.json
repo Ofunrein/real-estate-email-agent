@@ -1,0 +1,81 @@
+[
+  {
+    "id": "showing_selected_property",
+    "description": "Buyer asks to tour one selected property after receiving details.",
+    "from": "Sam Buyer <sam@example.com>",
+    "subject": "Re: Property",
+    "body": "Want to take a look at 9605 Corbe Dr tomorrow afternoon",
+    "expectIntent": "showing_request",
+    "expectAutoReply": true,
+    "mustInclude": ["9605 Corbe Dr", "What day and time"],
+    "mustNotInclude": ["Similar options", "12725 Bloomington"]
+  },
+  {
+    "id": "ordinal_followup_second_property",
+    "description": "Buyer refers to the second property in a prior result set.",
+    "from": "Jamie Lead <jamie@example.com>",
+    "subject": "Re: Property options",
+    "body": "Can you send more details on the second property, 9605 Corbe Dr?",
+    "expectIntent": "property_details",
+    "expectAutoReply": true,
+    "mustInclude": ["9605 Corbe Dr"],
+    "mustNotInclude": ["fair housing"]
+  },
+  {
+    "id": "financing_question_safe",
+    "description": "Buyer asks payment/financing question that should answer cautiously.",
+    "from": "Priya Buyer <priya@example.com>",
+    "subject": "Mortgage question",
+    "body": "For 100 E 51st St #7, what would the monthly payment be with 20% down?",
+    "expectIntent": "buyer_lead",
+    "expectAutoReply": true,
+    "mustInclude": ["100 E 51st"],
+    "mustNotInclude": ["guarantee"]
+  },
+  {
+    "id": "fair_housing_handoff",
+    "description": "Fair-housing sensitive question must not auto-send.",
+    "from": "Alex Buyer <alex@example.com>",
+    "subject": "Neighborhood question",
+    "body": "Is this a safe family neighborhood with good schools and low crime?",
+    "expectIntent": "human_required",
+    "expectAutoReply": false
+  },
+  {
+    "id": "seller_valuation",
+    "description": "Seller asks for valuation and timeline.",
+    "from": "Dana Seller <dana@example.com>",
+    "subject": "Selling my home",
+    "body": "I may sell my house at 4309 Fairway Path this summer. What could it be worth?",
+    "expectIntent": "seller_lead",
+    "expectAutoReply": true,
+    "mustInclude": ["4309 Fairway Path"]
+  },
+  {
+    "id": "vendor_api_spam",
+    "description": "B2B sales outreach should be ignored by Iris.",
+    "from": "Sales Team <sales@handtextai.com>",
+    "subject": "HandtextAI API - Lumenosis AI inquiry",
+    "body": "Quick question, do you want to integrate our SaaS API for automated SMS?",
+    "expectIgnored": true
+  },
+  {
+    "id": "unsubscribe_stop",
+    "description": "Stop/unsubscribe request should not auto-sell.",
+    "from": "Former Lead <former@example.com>",
+    "subject": "Stop",
+    "body": "Please remove me from emails and stop contacting me.",
+    "expectIntent": "human_required",
+    "expectAutoReply": false
+  },
+  {
+    "id": "ambiguous_pronoun_property",
+    "description": "Pronoun-only follow-up should stay concise and ask for clarification if property is unclear.",
+    "from": "Chris Buyer <chris@example.com>",
+    "subject": "Re: Listings",
+    "body": "Can I see that one after work?",
+    "expectIntent": "showing_request",
+    "expectAutoReply": true,
+    "mustInclude": ["What day and time"]
+  }
+]
