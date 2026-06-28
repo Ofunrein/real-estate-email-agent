@@ -312,16 +312,25 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     intent = "spam";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
-  } else if (addresses.length || propertyUrls.length) {
-    intent = /(show|tour|see|visit|schedule|available today|open house)/i.test(clean) ? "showing_request" : "property_details";
-    role = "buyer";
-  } else if (/(showing|tour|open house|see it|view it|schedule|appointment)/i.test(clean)) {
-    intent = "showing_request";
-    role = "buyer";
-  } else if (/(sell|listing appointment|list my|home value|valuation|what is my house worth|cma)/i.test(clean)) {
+  } else if (/(sell|selling|listing appointment|list my|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(clean)) {
     intent = "seller_lead";
     role = "seller";
     opportunityTags.push("valuation_interest");
+  } else if (addresses.length || propertyUrls.length) {
+    if (/(show|tour|see|visit|schedule|available today|open house|take a look|look at|check out|walk through|view it|view this|see it)/i.test(clean)) {
+      intent = "showing_request";
+    } else if (/(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(clean)) {
+      intent = "buyer_lead";
+      opportunityTags.push("mortgage_interest");
+    } else {
+      intent = "property_details";
+    }
+    role = /(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(clean)
+      ? "mortgage_adjacent_lead"
+      : "buyer";
+  } else if (/(showing|tour|open house|see it|see that one|view it|schedule|appointment|take a look|look at it|check it out|after work)/i.test(clean)) {
+    intent = "showing_request";
+    role = "buyer";
   } else if (/(rent|lease|rental|tenant)/i.test(clean)) {
     intent = "renter_lead";
     role = "renter";
@@ -439,9 +448,21 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
     return [
       "Hello,",
       "",
-      "I can help you get a realistic read on value and next steps.",
+      `I can help you get a realistic read on value${classification.address ? ` for ${classification.address}` : ""} and next steps.`,
       "",
       question || "What address should I look at, and what timeline are you considering?",
+      "",
+      "Best,",
+      IRIS_AGENT_NAME,
+    ].join("\n");
+  }
+  if (classification.intent === "buyer_lead" && classification.address) {
+    return [
+      "Hello,",
+      "",
+      `I can help with ${classification.address} and keep the financing side practical without guessing.`,
+      "",
+      question || "What timeline are you working with, and do you already have a lender or pre-approval?",
       "",
       "Best,",
       IRIS_AGENT_NAME,
@@ -1089,6 +1110,35 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
   return messages;
 }
 
+async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailboxEmail = ""): Promise<IrisEmailMessage[]> {
+  const uniqueIds = [...new Set(messageIds.map((id) => id.trim()).filter(Boolean))].slice(0, 25);
+  const messages: IrisEmailMessage[] = [];
+  for (const id of uniqueIds) {
+    const detail = await gmail.users.messages.get({ userId: "me", id, format: "full" });
+    const labelIds = detail.data.labelIds || [];
+    if (!labelIds.includes("INBOX") || !labelIds.includes("UNREAD")) continue;
+    const payload = detail.data.payload as Record<string, unknown> | undefined;
+    const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
+    const message = {
+      id,
+      threadId: detail.data.threadId || id,
+      from: header(headers, "From"),
+      to: header(headers, "To"),
+      subject: header(headers, "Subject"),
+      body: bodyFromPayload(payload),
+      snippet: detail.data.snippet || "",
+      messageId: header(headers, "Message-ID"),
+      references: header(headers, "References"),
+      receivedAt: header(headers, "Date"),
+      mailboxEmail,
+    };
+    const sender = parseEmailContact(message.from).email;
+    if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;
+    if (isIrisEligibleEmail(message)) messages.push(message);
+  }
+  return messages;
+}
+
 async function applyGmailLabels(gmail: GmailClient, messageId: string, labels: string[]): Promise<void> {
   const addLabelIds = await Promise.all(labels.map((name) => ensureGmailLabel(gmail, name)));
   await gmail.users.messages.modify({
@@ -1153,4 +1203,44 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
       }, { mailboxEmail: session.accountEmail });
     },
   };
+}
+
+export async function processIrisEmailMessageIds(
+  messageIds: string[],
+  options: IrisEmailPollOptions = {},
+  deps: Omit<IrisEmailPollDeps, "emailClient"> = {},
+): Promise<IrisEmailPollResult> {
+  const session = await createIrisGmailSession();
+  const gmail = session.gmail;
+  const emailClient: IrisEmailClient = {
+    listUnreadMessages: () => listMessagesByIds(gmail, messageIds, session.accountEmail),
+    applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
+    syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
+    sendReply: (message, body, htmlBody) => {
+      return sendGmailReplyWithOptions(gmail, {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        htmlBody,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      }, { mailboxEmail: session.accountEmail });
+    },
+    createDraft: (message, body, htmlBody) => {
+      return createGmailReplyDraftWithOptions(gmail, {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        htmlBody,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      }, { mailboxEmail: session.accountEmail });
+    },
+  };
+  return processIrisEmailPoll(
+    { ...options, limit: Math.max(1, Math.min(messageIds.length || options.limit || 10, 25)) },
+    { ...deps, emailClient },
+  );
 }
