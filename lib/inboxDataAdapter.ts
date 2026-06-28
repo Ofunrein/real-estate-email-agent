@@ -62,6 +62,7 @@ const SYSTEM_PROMPT_RE = /\b(you are\s+(?:iris|arya|a real estate)|brand voice|a
 const NON_REAL_ESTATE_EMAIL_RE = /\b(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation)\b/i;
 const REAL_ESTATE_EMAIL_RE = /\b(home|house|condo|property|listing|showing|tour|buy|buyer|sell|seller|rent|lease|realtor|real estate|bedroom|bath|mortgage|valuation|pre.?approved|appointment|zillow|mls)\b/i;
 const STREET_ADDRESS_RE = /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/i;
+const SYNTHETIC_EMAIL_RE = /(?:^|[<\s])[^@\s<>]+@(?:lumenosis\.local|localhost)(?:[>\s]|$)/i;
 const PROPERTY_DETAILS_RE = /^Here are the full details on (.+):$/i;
 const DISPLAY_TIME_ZONE = "America/Chicago";
 const eventTimeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -178,7 +179,8 @@ function emailBodyPreview(event: SheetRow): string {
 }
 
 function isRealEstateEmailEvent(event: SheetRow): boolean {
-  const text = `${event.source_detail || ""}\n${event.event_type || ""}\n${event.summary || ""}\n${event.message_text || ""}`;
+  const text = `${event.email || ""}\n${event.thread_ref || ""}\n${event.gmail_message_id || ""}\n${event.source_detail || ""}\n${event.event_type || ""}\n${event.summary || ""}\n${event.message_text || ""}`;
+  if (SYNTHETIC_EMAIL_RE.test(text)) return false;
   if (NON_REAL_ESTATE_EMAIL_RE.test(text)) return false;
   return REAL_ESTATE_EMAIL_RE.test(text) || STREET_ADDRESS_RE.test(text);
 }

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { databaseEnabled, readInboxSettingsFromDatabase } from "@/lib/database";
-import { createIrisGmailSession } from "@/lib/gmailConnection";
-import { processIrisEmailPoll, type IrisEmailPollOptions } from "@/lib/irisEmail";
-import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
+import { inngest } from "@/lib/inngest/client";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,6 +13,8 @@ export const maxDuration = 60;
 // Env: GMAIL_PUBSUB_TOKEN (must match what you configured in Google Cloud Pub/Sub subscription push config)
 //
 // This replaces polling (ENABLE_LEGACY_IRIS_EMAIL_POLLING). It fires within ~10s of message arrival.
+// The webhook only validates and queues durable Inngest work; it does not run
+// Gmail processing after the HTTP response because Vercel can freeze the lambda.
 
 function authorized(request: NextRequest): boolean {
   const token = process.env.GMAIL_PUBSUB_TOKEN || process.env.CHANNEL_WEBHOOK_SECRET || "";
@@ -48,28 +47,9 @@ function decodePubSubData(data: string): GmailHistoryData {
   }
 }
 
-async function getNewMessageIdsSinceHistory(historyId: string): Promise<string[]> {
-  const session = await createIrisGmailSession();
-  const response = await session.gmail.users.history.list({
-    userId: "me",
-    startHistoryId: historyId,
-    historyTypes: ["messageAdded"],
-    labelId: "INBOX",
-  });
-  const history = response.data.history || [];
-  const ids: string[] = [];
-  for (const record of history) {
-    for (const added of record.messagesAdded || []) {
-      if (added.message?.id && !ids.includes(added.message.id)) {
-        ids.push(added.message.id);
-      }
-    }
-  }
-  return ids;
-}
-
 export async function POST(request: NextRequest) {
-  // Always return 200 to Pub/Sub — non-200 triggers retries
+  // ACK unauthorized/bad payloads to avoid retry storms. For valid Gmail events,
+  // return non-200 if durable queueing fails so Pub/Sub retries.
   const ack = () => NextResponse.json({ ok: true });
 
   if (!authorized(request)) {
@@ -99,46 +79,27 @@ export async function POST(request: NextRequest) {
 
   if (!historyId) return ack();
 
-  // Fire-and-forget processing so we ACK Pub/Sub immediately (must respond within 10s)
-  setImmediate(async () => {
-    try {
-      const settings = databaseEnabled() ? await readInboxSettingsFromDatabase() : undefined;
-      if (settings && !channelEnabled(settings, "email")) {
-        console.info("iris_gmail_push: email channel disabled, skipping");
-        return;
-      }
-      const sendReplies = !settings || shouldAutoSendForChannel(settings, "email");
-      const emailLive = process.env.IRIS_EMAIL_LIVE === "true";
-      const sendRepliesEnabled = process.env.IRIS_EMAIL_SEND_REPLIES === "true" && emailLive && sendReplies;
-
-      // Find new message IDs from Gmail history API
-      let messageIds: string[] = [];
-      try {
-        messageIds = await getNewMessageIdsSinceHistory(historyId);
-      } catch (err) {
-        // History may have expired or historyId is too old — fall back to poll
-        console.warn("iris_gmail_push: history fetch failed, falling back to poll", err instanceof Error ? err.message : err);
-      }
-
-      const pollOptions: IrisEmailPollOptions = {
-        dryRun: !emailLive,
-        sendReplies: sendRepliesEnabled,
-        limit: messageIds.length > 0 ? messageIds.length : 5,
-      };
-
-      const result = await processIrisEmailPoll(pollOptions);
-      console.info("iris_gmail_push_processed", JSON.stringify({
+  try {
+    await inngest.send({
+      name: "gmail.push.received",
+      data: {
         historyId,
-        processed: result.processed,
-        sent: result.sent,
-        dryRun: pollOptions.dryRun,
-      }));
-    } catch (err) {
-      console.error("iris_gmail_push_error", err instanceof Error ? err.message : err);
-    }
-  });
-
-  return ack();
+        emailAddress: historyData.emailAddress || "",
+        pubSubMessageId: payload.message?.messageId || "",
+        receivedAt: new Date().toISOString(),
+      },
+    });
+    console.info("iris_gmail_push_queued", JSON.stringify({
+      historyId,
+      emailAddress: historyData.emailAddress,
+      pubSubMessageId: payload.message?.messageId,
+    }));
+    return ack();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("iris_gmail_push_queue_error", message);
+    return NextResponse.json({ ok: false, error: "Unable to queue Gmail push" }, { status: 503 });
+  }
 }
 
 // GET: health check for Pub/Sub subscription verification

@@ -7,6 +7,8 @@ import { messageReplyGenerate } from "@/lib/inngest/functions/messageReplyGenera
 import { messageReplySend } from "@/lib/inngest/functions/messageReplySend";
 import { sheetsChangedSync } from "@/lib/inngest/functions/sheetsChangedSync";
 import { threadSummaryRefresh } from "@/lib/inngest/functions/threadSummaryRefresh";
+import { gmailWatchRenewal } from "@/lib/inngest/functions/gmailWatchRenewal";
+import { gmailPushReceived } from "@/lib/inngest/functions/gmailPushReceived";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,6 +22,8 @@ const inngestHandler = serve({
     messageReplySend,
     sheetsChangedSync,
     threadSummaryRefresh,
+    gmailWatchRenewal,
+    gmailPushReceived,
   ],
 });
 
@@ -31,6 +35,8 @@ const activeRawInngestFunctionIds = [
   "message-reply-send",
   "sheets-changed-sync",
   "thread-summary-refresh",
+  "gmail-watch-renewal",
+  "gmail-push-received",
 ];
 
 const retiredRawInngestFunctionIds = [
