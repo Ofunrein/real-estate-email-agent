@@ -65,7 +65,7 @@ export function isMediaTranscribable(media: Pick<OmnichannelMedia, "type" | "con
   const filename = String(media.filename || media.url || "").toLowerCase();
   if (media.type === "audio" || media.type === "video") return true;
   if (contentType.startsWith("audio/") || contentType.startsWith("video/")) return true;
-  return /\.(?:aac|m4a|mp3|mp4|mpeg|oga|ogg|opus|wav|webm|mov)(?:$|[?#])/i.test(filename);
+  return /\.(?:aac|caf|m4a|mp3|mp4|mpeg|oga|ogg|opus|wav|webm|mov)(?:$|[?#])/i.test(filename);
 }
 
 export function mediaLogLines(media: OmnichannelMedia[] = []): string[] {

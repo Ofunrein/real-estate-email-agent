@@ -29,6 +29,7 @@ const emptyModel: InboxModel = {
 interface InboxDataContextValue {
   model: InboxModel;
   onDraftChanged?: (key: string, status?: string) => void;
+  onDataRefresh?: () => Promise<void>;
 }
 
 const InboxDataContext = createContext<InboxDataContextValue>({ model: emptyModel });
@@ -36,13 +37,15 @@ const InboxDataContext = createContext<InboxDataContextValue>({ model: emptyMode
 export function InboxDataProvider({
   model,
   onDraftChanged,
+  onDataRefresh,
   children,
 }: {
   model: InboxModel;
   onDraftChanged?: (key: string, status?: string) => void;
+  onDataRefresh?: () => Promise<void>;
   children: React.ReactNode;
 }) {
-  const value = React.useMemo(() => ({ model, onDraftChanged }), [model, onDraftChanged]);
+  const value = React.useMemo(() => ({ model, onDraftChanged, onDataRefresh }), [model, onDraftChanged, onDataRefresh]);
   return <InboxDataContext.Provider value={value}>{children}</InboxDataContext.Provider>;
 }
 

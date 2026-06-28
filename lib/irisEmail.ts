@@ -13,7 +13,15 @@ import {
   upsertThreadLinkInDatabase,
   upsertLeadMemoryToDatabase,
 } from "@/lib/database";
-import { createIrisGmailSession, ensureGmailLabel, sendGmailReplyWithOptions, type GmailClient, type GmailReplyResult } from "@/lib/gmailConnection";
+import {
+  createGmailReplyDraftWithOptions,
+  createIrisGmailSession,
+  ensureGmailLabel,
+  sendGmailReplyWithOptions,
+  type GmailClient,
+  type GmailDraftResult,
+  type GmailReplyResult,
+} from "@/lib/gmailConnection";
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import type { SheetRow } from "@/lib/sheetSchema";
@@ -122,6 +130,7 @@ export type IrisEmailClient = {
   applyLabels(messageId: string, labels: string[]): Promise<void>;
   syncCategoryLabels?(categories: InboxCategory[]): Promise<InboxCategory[]>;
   sendReply?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailReplyResult | void>;
+  createDraft?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailDraftResult | void>;
 };
 
 export type IrisEmailReplyDraft = {
@@ -897,6 +906,9 @@ export async function processIrisEmailPoll(
         // Fixer-style: store AI draft in review queue even when needsHuman=true.
         // The draft appears in the dashboard and can be approved+sent or dismissed in one click.
         const threadRef = message.threadId || message.id;
+        const gmailDraft = emailClient.createDraft
+          ? await emailClient.createDraft(message, replyDraft.text, replyDraft.html).catch(() => null)
+          : null;
         await upsertAiDraftInDatabase({
           thread_ref: threadRef,
           channel: "email",
@@ -909,6 +921,11 @@ export async function processIrisEmailPoll(
           needs_human: true,
           model: "iris_email",
           fingerprint: `iris-draft:${message.id}`,
+          gmail_draft_id: gmailDraft?.draftId || "",
+          gmail_message_id: gmailDraft?.messageId || "",
+          gmail_thread_id: gmailDraft?.threadId || message.threadId || "",
+          gmail_mailbox_email: gmailDraft?.mailboxEmail || message.mailboxEmail || "",
+          gmail_draft_synced_at: gmailDraft?.draftId ? new Date().toISOString() : "",
         }).catch(() => null);
       }
     }
@@ -1100,6 +1117,17 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
     syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
     sendReply: (message, body, htmlBody) => {
       return sendGmailReplyWithOptions(gmail, {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        htmlBody,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      }, { mailboxEmail: session.accountEmail });
+    },
+    createDraft: (message, body, htmlBody) => {
+      return createGmailReplyDraftWithOptions(gmail, {
         to: parseEmailContact(message.from).email,
         subject: message.subject,
         body,

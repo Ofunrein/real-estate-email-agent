@@ -8,7 +8,7 @@ import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import { configuredMetaPageId } from "@/lib/metaPageFallback";
 import { subscribeMetaPageToWebhooks, subscribedMetaPageFields } from "@/lib/metaWebhookSubscription";
 
-function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
+async function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T | Promise<T>): Promise<T> {
   const prior = {
     META_APP_ID: process.env.META_APP_ID,
     FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,
@@ -25,9 +25,12 @@ function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
     META_INSTAGRAM_PAGE_ID: process.env.META_INSTAGRAM_PAGE_ID,
     META_PAGE_SUBSCRIBED_FIELDS: process.env.META_PAGE_SUBSCRIBED_FIELDS,
   };
+  for (const key of Object.keys(prior)) {
+    delete process.env[key];
+  }
   Object.assign(process.env, env);
   try {
-    return run();
+    return await run();
   } finally {
     for (const [key, value] of Object.entries(prior)) {
       if (value == null) delete process.env[key];

@@ -65,7 +65,8 @@ test("in-memory store upserts by client/channel/provider/selected asset and scop
 test("env fallback reports configured direct channels without exposing secrets", () => {
   const fallback = envFallbackChannelConnections({
     CLIENT_ID: "env-client",
-    GMAIL_TOKEN_JSON: "{\"refresh_token\":\"secret\"}",
+    GMAIL_OAUTH_CLIENT_ID: "client-id",
+    GMAIL_OAUTH_CLIENT_SECRET: "secret",
     TWILIO_ACCOUNT_SID: "AC123",
     TWILIO_AUTH_TOKEN: "secret",
     TWILIO_FROM: "+15125550123",
@@ -83,7 +84,8 @@ test("env fallback reports configured direct channels without exposing secrets",
 
   const byChannel = Object.fromEntries(fallback.map((connection) => [connection.channel, connection]));
   const whatsappMeta = fallback.find((connection) => connection.channel === "whatsapp" && connection.provider === "meta_cloud");
-  assert.equal(byChannel.email.status, "connected");
+  assert.equal(byChannel.email.status, "needs_config");
+  assert.equal(byChannel.email.metadata.oauth_configured, true);
   assert.equal(byChannel.sms.selected_asset_name, "+15125550123");
   assert.equal(byChannel.voice.status, "connected");
   assert.equal(whatsappMeta?.status, "connected");

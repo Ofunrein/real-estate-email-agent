@@ -119,31 +119,45 @@ Users can clone their own voice so the AI agent speaks in their voice on calls (
 | **Resemble AI** | 20 seconds | $0.006/second generated | Advanced control, SOC 2, watermarking | Python + REST |
 
 **Recommended stack:**
-- **Fish Audio** as default — cheapest per-call, 10-second sample, fast clone, no monthly commitment on pay-as-you-go
+- **Cartesia instant voice cloning** as default — browser-recorded sample upload, immediate cloned voice id, fast TTS generation for dashboard voice notes
 - **ElevenLabs Creator ($22/mo)** as the premium tier option for users who want hyper-realistic professional voice cloning (PVC — longer training sample, dramatically more natural output)
 
 #### Implementation: Voice Clone Onboarding for Your Users
 
 ```typescript
-// Fish Audio — clone a user's voice from a 10-second recording
-import FishAudio from 'fish-audio-sdk';
-
-const client = new FishAudio({ apiKey: process.env.FISH_AUDIO_API_KEY });
+// Cartesia — clone a user's voice from a browser recording
+const form = new FormData();
+form.set('clip', audioFile);
+form.set('name', `${user.name} - Cloned Voice`);
+form.set('language', 'en');
 
 // Step 1: User records 10s of clean audio (use the Voice Recorder UI below)
 // Step 2: Upload and create the voice model
-const model = await client.models.create({
-  title: `${user.name} - Cloned Voice`,
-  voices: [{ audio: audioBuffer, text: transcribedText }],  // reference audio + text
+const response = await fetch('https://api.cartesia.ai/voices/clone', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.CARTESIA_API_KEY}`,
+    'Cartesia-Version': '2026-03-01',
+  },
+  body: form,
 });
+const model = await response.json();
 
 // Step 3: Store model.id in user profile
 // Step 4: Generate speech in their voice
-const audioStream = await client.tts({
-  model_id: model._id,
-  text: "Hi, this is a reply from my AI assistant...",
-  format: 'mp3',
-  streaming: true,       // sub-300ms first byte
+const audioResponse = await fetch('https://api.cartesia.ai/tts/bytes', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.CARTESIA_API_KEY}`,
+    'Cartesia-Version': '2026-03-01',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model_id: 'sonic-2',
+    transcript: 'Hi, this is a reply from my AI assistant...',
+    voice: { mode: 'id', id: model.id },
+    output_format: { container: 'mp3', bit_rate: 128000, sample_rate: 44100 },
+  }),
 });
 ```
 
@@ -420,9 +434,9 @@ openclaw plugins install @emotion-machine/claw-messenger
 | WhatsApp | **Composio WhatsApp toolkit** OR **Twilio WhatsApp API** | Two-way WhatsApp Business messaging |
 | SMS | **Twilio Node SDK** (`twilio`) | Two-way SMS conversations |
 | Voice | **Vapi SDK** ⚡ Already built | Inbound/outbound AI phone calls |
-| Voice cloning (budget) | **Fish Audio SDK** (`fish-audio-sdk`) | 10s sample → cloned voice; $15/million chars; sub-300ms streaming |
+| Voice cloning (budget) | **Cartesia instant voice cloning** | Browser sample → cloned voice id; fast voice-note TTS from the dashboard |
 | Voice cloning (premium) | **ElevenLabs SDK** (`elevenlabs`) | Professional Voice Cloning (PVC); hyper-realistic; $22/mo Creator+ |
-| Voice synthesis (calls) | **ElevenLabs / Fish Audio** | Branded cloned voice for Vapi outbound calls |
+| Voice synthesis (calls) | **ElevenLabs / Cartesia** | Branded cloned voice for Vapi outbound calls |
 | STT / Transcription | **Deepgram SDK** (`@deepgram/sdk`) | Live streaming speech-to-text for voice recording UI |
 | Voice recording UI | **react-voice-visualizer** | Live waveform canvas, MediaRecorder, stop/send controls |
 | ManyChat | **ManyChat API** (REST) | Pause/resume subscriber flows |

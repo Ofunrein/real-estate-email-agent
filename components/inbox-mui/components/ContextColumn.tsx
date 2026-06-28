@@ -2,7 +2,9 @@
 import React from 'react';
 import {
   Box,
+  Button,
   Card,
+  CircularProgress,
   Stack,
   Typography,
   Chip,
@@ -22,7 +24,7 @@ import {
   type ChannelId,
   type MessageChannelId } from
 '../data/inboxData';
-import { useInboxModel } from '../InboxDataContext';
+import { useInboxData, useInboxModel } from '../InboxDataContext';
 
 const contextRailWidth = 'clamp(232px, 24vw, 312px)';
 
@@ -35,18 +37,39 @@ export function ContextColumn({
   inDrawer = false
 }: ContextColumnProps) {
   const { channelStats, reviewQueue, channelMeta, metrics } = useInboxModel();
+  const { onDataRefresh } = useInboxData();
+  const [resolvingReview, setResolvingReview] = React.useState<string>("");
+  const [resolveError, setResolveError] = React.useState("");
   const statsKey: "all" | MessageChannelId =
-  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ? 'all' : channel;
+  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' || channel === 'ops' ? 'all' : channel;
   const stats = channelStats[statsKey];
   const label =
   channel === 'all' ?
   'All channels' :
-  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' ?
+  channel === 'properties' || channel === 'imports' || channel === 'calendar' || channel === 'contacts' || channel === 'ops' ?
   'All channels' :
   channelMeta[channel as MessageChannelId]?.label ?? channel;
   const total = stats.inbound + stats.aiReplies;
   const approvalRate = total > 0 ? Math.round((stats.aiReplies / total) * 100) : 0;
   const suggestions = reviewQueue.slice(0, 3);
+  const clearReview = async (key: string, threadRef: string, reviewChannel: MessageChannelId) => {
+    setResolvingReview(key);
+    setResolveError("");
+    try {
+      const res = await fetch(`/api/threads/${encodeURIComponent(threadRef)}/review/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: reviewChannel, resolution: "resume_ai", releaseTakeover: true }),
+      });
+      const payload = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(payload.error || "Unable to clear review.");
+      await onDataRefresh?.();
+    } catch (error) {
+      setResolveError(error instanceof Error ? error.message : "Unable to clear review.");
+    } finally {
+      setResolvingReview("");
+    }
+  };
   return (
     <Stack
       spacing={2}
@@ -366,8 +389,22 @@ export function ContextColumn({
               
                   {r.reason}
                 </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={resolvingReview === r.key}
+                  onClick={() => void clearReview(r.key, r.threadRef, r.channel)}
+                  startIcon={resolvingReview === r.key ? <CircularProgress size={13} color="inherit" /> : undefined}
+                  sx={{ mt: 0.75 }}>
+                  Clear review
+                </Button>
               </Box>
           )}
+          {resolveError &&
+          <Typography variant="caption" color="error">
+            {resolveError}
+          </Typography>
+          }
           </Stack> :
 
         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>

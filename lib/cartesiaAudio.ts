@@ -1,11 +1,11 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { saveMediaUpload } from "@/lib/mediaUploads";
 
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
-const CARTESIA_VERSION = "2026-03-01";
+const CARTESIA_VERSION = process.env.CARTESIA_VERSION || "2026-03-01";
 
 type CartesiaCloneResponse = {
   id?: string;
+  voice_id?: string;
+  _id?: string;
   name?: string;
   title?: string;
   status?: string;
@@ -33,18 +33,27 @@ function cartesiaHeaders(extra?: HeadersInit): HeadersInit {
   if (!apiKey) throw new Error("CARTESIA_API_KEY is required");
   return {
     Authorization: `Bearer ${apiKey}`,
+    "X-API-Key": apiKey,
     "Cartesia-Version": CARTESIA_VERSION,
     ...extra,
   };
 }
 
-function publicUploadUrl(filename: string): string {
-  const base = (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
-  return `${base}/uploads/${filename}`;
-}
-
 function audioFilename(prefix: string, extension = "mp3"): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+}
+
+async function cartesiaErrorMessage(response: Response, fallback: string): Promise<string> {
+  const text = await response.text().catch(() => "");
+  if (!text) return fallback;
+  try {
+    const payload = JSON.parse(text) as { error?: unknown; message?: unknown; detail?: unknown };
+    const detail = payload.error || payload.message || payload.detail;
+    if (typeof detail === "string" && detail.trim()) return `${fallback}: ${detail.trim().slice(0, 240)}`;
+  } catch {
+    // Plain-text API errors are common for multipart validation.
+  }
+  return `${fallback}: ${text.trim().slice(0, 240)}`;
 }
 
 export async function cloneCartesiaVoice(input: {
@@ -58,7 +67,7 @@ export async function cloneCartesiaVoice(input: {
   const form = new FormData();
   form.set("clip", input.files[0]);
   form.set("name", input.title.trim() || "Lumenosis cloned voice");
-  form.set("language", input.language || "en");
+  form.set("language", input.language || process.env.CARTESIA_CLONE_LANGUAGE || "en");
   if (input.description?.trim()) form.set("description", input.description.trim());
 
   const response = await fetch("https://api.cartesia.ai/voices/clone", {
@@ -66,12 +75,12 @@ export async function cloneCartesiaVoice(input: {
     headers: cartesiaHeaders(),
     body: form,
   });
-  const payload = await response.json().catch(() => ({})) as CartesiaCloneResponse & { error?: string; message?: string };
   if (!response.ok) {
-    throw new Error(payload.error || payload.message || `Cartesia voice clone failed (${response.status})`);
+    throw new Error(await cartesiaErrorMessage(response, `Cartesia voice clone failed (${response.status})`));
   }
+  const payload = await response.json().catch(() => ({})) as CartesiaCloneResponse;
 
-  const id = payload.id || "";
+  const id = payload.id || payload.voice_id || payload._id || "";
   if (!id) throw new Error("Cartesia voice clone did not return a voice id");
   return {
     id,
@@ -83,7 +92,9 @@ export async function cloneCartesiaVoice(input: {
 export async function createCartesiaVoiceNote(input: {
   text: string;
   voiceId?: string;
-}): Promise<{ url: string; filename: string; contentType: string }> {
+  requestUrl: string;
+  threadRef?: string;
+}): Promise<{ url: string; filename: string; contentType: string; storage: string }> {
   const text = input.text.trim();
   if (!text) throw new Error("Voice note text is required");
   const voiceId = cartesiaVoiceId(input.voiceId);
@@ -93,7 +104,7 @@ export async function createCartesiaVoiceNote(input: {
     method: "POST",
     headers: cartesiaHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
-      model_id: process.env.CARTESIA_TTS_MODEL_ID || "sonic-3.5",
+      model_id: process.env.CARTESIA_TTS_MODEL_ID || "sonic-2",
       transcript: text,
       voice: {
         mode: "id",
@@ -108,13 +119,16 @@ export async function createCartesiaVoiceNote(input: {
   });
 
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`Cartesia voice note failed (${response.status})${detail ? `: ${detail.slice(0, 160)}` : ""}`);
+    throw new Error(await cartesiaErrorMessage(response, `Cartesia voice note failed (${response.status})`));
   }
 
   const bytes = Buffer.from(await response.arrayBuffer());
   const filename = audioFilename("cartesia-voice-note", "mp3");
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(join(UPLOAD_DIR, filename), bytes);
-  return { url: publicUploadUrl(filename), filename, contentType: "audio/mpeg" };
+  const file = new File([bytes], filename, { type: "audio/mpeg" });
+  const uploaded = await saveMediaUpload({
+    file,
+    threadRef: input.threadRef || "cartesia-voice-note",
+    requestUrl: input.requestUrl,
+  });
+  return { url: uploaded.url, filename: uploaded.filename, contentType: "audio/mpeg", storage: uploaded.storage };
 }

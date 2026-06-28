@@ -17,8 +17,19 @@ function shouldTranscodeForSmsAudio(file: File): boolean {
     && name.includes("manual-voice-note");
 }
 
-function m4aFilename(name: string): string {
-  return name.replace(/\.(webm|ogg)$/i, ".m4a") || `manual-voice-note-${Date.now()}.m4a`;
+function shouldTranscodeForVoiceClone(file: File): boolean {
+  const type = (file.type || "").toLowerCase();
+  const name = file.name.toLowerCase();
+  return type === "audio/webm"
+    || type === "video/webm"
+    || type === "audio/ogg"
+    || name.endsWith(".webm")
+    || name.endsWith(".ogg");
+}
+
+function m4aFilename(name: string, prefix = "manual-voice-note"): string {
+  const converted = name.replace(/\.(webm|ogg)$/i, ".m4a");
+  return converted === name ? `${prefix}-${Date.now()}.m4a` : converted;
 }
 
 async function resolveFfmpegPath(): Promise<string> {
@@ -38,9 +49,13 @@ async function resolveFfmpegPath(): Promise<string> {
   throw new Error("Audio conversion is not available on this server");
 }
 
-export async function normalizeManualVoiceUpload(file: File): Promise<File> {
-  if (!shouldTranscodeForSmsAudio(file)) return file;
-  const executable = await resolveFfmpegPath();
+async function transcodeToM4a(file: File, prefix: string): Promise<File> {
+  let executable = "";
+  try {
+    executable = await resolveFfmpegPath();
+  } catch {
+    return file;
+  }
 
   const id = randomUUID();
   const inputPath = join(tmpdir(), `${id}.webm`);
@@ -48,25 +63,43 @@ export async function normalizeManualVoiceUpload(file: File): Promise<File> {
 
   try {
     await writeFile(inputPath, Buffer.from(await file.arrayBuffer()));
-    await execFileAsync(executable, [
-      "-y",
-      "-i",
-      inputPath,
-      "-vn",
-      "-c:a",
-      "aac",
-      "-b:a",
-      "96k",
-      "-movflags",
-      "+faststart",
-      outputPath,
-    ]);
+    try {
+      await execFileAsync(executable, [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        inputPath,
+        "-vn",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "96k",
+        "-movflags",
+        "+faststart",
+        outputPath,
+      ], { timeout: 20_000, maxBuffer: 64 * 1024 });
+    } catch {
+      return file;
+    }
     const converted = await readFile(outputPath);
-    return new File([converted], m4aFilename(file.name), { type: "audio/mp4" });
+    if (!converted.length) return file;
+    return new File([converted], m4aFilename(file.name, prefix), { type: "audio/mp4" });
   } finally {
     await Promise.allSettled([
       rm(inputPath, { force: true }),
       rm(outputPath, { force: true }),
     ]);
   }
+}
+
+export async function normalizeManualVoiceUpload(file: File): Promise<File> {
+  if (!shouldTranscodeForSmsAudio(file)) return file;
+  return transcodeToM4a(file, "manual-voice-note");
+}
+
+export async function normalizeVoiceCloneSample(file: File): Promise<File> {
+  if (!shouldTranscodeForVoiceClone(file)) return file;
+  return transcodeToM4a(file, "voice-clone-sample");
 }
