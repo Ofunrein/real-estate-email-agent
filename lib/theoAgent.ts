@@ -207,8 +207,18 @@ function ordinalOnlyIndex(message: string): number | null {
   return null;
 }
 
+function ordinalReferenceIndex(message: string): number | null {
+  const only = ordinalOnlyIndex(message);
+  if (only != null) return only;
+  const normalized = normalizeFollowupText(message).toLowerCase().replace(/[^\w# ]+/g, " ").replace(/\s+/g, " ").trim();
+  if (/\b(?:the\s+)?(?:first|1st|#\s*1|number\s+1|option\s+1|property\s+1|listing\s+1)(?:\s+(?:one|option|property|listing))?\b/.test(normalized)) return 0;
+  if (/\b(?:the\s+)?(?:second|2nd|#\s*2|number\s+2|option\s+2|property\s+2|listing\s+2)(?:\s+(?:one|option|property|listing))?\b/.test(normalized)) return 1;
+  if (/\b(?:the\s+)?(?:third|3rd|#\s*3|number\s+3|option\s+3|property\s+3|listing\s+3)(?:\s+(?:one|option|property|listing))?\b/.test(normalized)) return 2;
+  return null;
+}
+
 function selectOrdinalProperties(message: string, properties: SheetRow[] = []): SheetRow[] {
-  const index = ordinalOnlyIndex(message);
+  const index = ordinalReferenceIndex(message);
   if (index == null) return properties;
   return properties[index] ? [properties[index]] : properties.slice(0, 1);
 }
@@ -336,15 +346,16 @@ function formatTheoPropertyLinks(properties: SheetRow[] = []): string {
   return `Here are the listing links:\n\n${lines.join("\n\n")}`;
 }
 
-function formatTheoPropertyPhotos(properties: SheetRow[] = []): string {
+function formatTheoPropertyPhotos(properties: SheetRow[] = [], maxCount = 3): string {
   const photographed = properties.filter((property) => usablePhotoUrl(property.photo_url));
   if (!photographed.length) return "";
-  const lines = photographed.slice(0, 3).flatMap((property, index) => [
+  const shown = photographed.slice(0, maxCount);
+  const lines = shown.flatMap((property, index) => [
     `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
     property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
   ].filter(Boolean));
-  const intro = photographed.length === 1 ? "Sending the property photo for:" : "Sending the property photos for:";
-  const serviceNote = outsideServiceArea(photographed)
+  const intro = shown.length === 1 ? "Sending the property photo for:" : "Sending the property photos for:";
+  const serviceNote = outsideServiceArea(shown)
     ? "This looks outside our main Austin-area coverage, but I found the listing media."
     : "";
   return [serviceNote, intro, lines.join("\n\n")].filter(Boolean).join("\n\n");
@@ -548,10 +559,14 @@ export function selectTheoMediaUrls(context: TheoReplyContext, classification: T
   if (!["on_request", "property_reply"].includes(mode)) return [];
 
   const maxImages = maxMediaImages(context.source);
+  // When asking for photos of "the property" (singular back-reference), send only the first match.
+  // Prevents sending 3 photos across 3 properties when caller meant one specific previously-mentioned property.
+  const singularPhotoRequest = /\bthe property\b|\bthe listing\b|\bthat property\b|\bthat listing\b|\bit\b/i.test(normalizeFollowupText(context.message));
+  const effectiveMax = singularPhotoRequest && (context.properties || []).length > 1 ? 1 : maxImages;
   return (context.properties || [])
     .map((property) => usablePhotoUrl(property.photo_url))
     .filter(Boolean)
-    .slice(0, maxImages);
+    .slice(0, effectiveMax);
 }
 
 export function classifyTheoMessage(message: string): TheoClassification {
@@ -725,7 +740,15 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   }
 
   const ordinalProperties = selectOrdinalProperties(context.message, context.properties);
-  if (ordinalOnlyIndex(context.message) != null && ordinalProperties.length && !latestMessageHasSensitiveTopic(context.message)) {
+  const hasOrdinalReference = ordinalReferenceIndex(context.message) != null;
+  const shouldUseOrdinalReply = ordinalOnlyIndex(context.message) != null || wantsPropertyImage(context.message);
+  if (hasOrdinalReference && shouldUseOrdinalReply && ordinalProperties.length && !latestMessageHasSensitiveTopic(context.message)) {
+    const mediaUrls = wantsPropertyImage(context.message)
+      ? selectTheoMediaUrls({ ...context, properties: ordinalProperties }, classification)
+      : [];
+    const reply = mediaUrls.length
+      ? formatTheoPropertyPhotos(ordinalProperties) || formatTheoPropertyDetails(ordinalProperties)
+      : formatTheoPropertyDetails(ordinalProperties);
     return {
       classification: {
         ...classification,
@@ -734,10 +757,10 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         handoffReason: "",
         recommendedNextAction: "reply_and_qualify",
       },
-      reply: truncateSms(formatTheoPropertyDetails(ordinalProperties), LINK_SMS_LIMIT),
-      mediaUrls: [],
+      reply: truncateSms(reply, LINK_SMS_LIMIT),
+      mediaUrls,
       shouldSend: true,
-      aiAction: "property_ordinal_reply_ready",
+      aiAction: mediaUrls.length ? "property_ordinal_photos_reply_ready" : "property_ordinal_reply_ready",
       handoffReason: "",
       status: "ready_to_reply",
       metrics,
@@ -802,7 +825,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
 
   if (wantsPropertyImage(context.message) && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))) {
     const mediaUrls = selectTheoMediaUrls(context, classification);
-    const photoReply = formatTheoPropertyPhotos(context.properties);
+    const photoReply = formatTheoPropertyPhotos(context.properties, Math.max(1, maxMediaImages(context.source)));
     if (mediaUrls.length && photoReply) {
       return {
         classification,

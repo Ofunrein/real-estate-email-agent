@@ -364,8 +364,10 @@ function humanHandoffReason(intent: IrisEmailIntent, flags: string[], noSignal: 
 }
 
 export function decideIrisEmailExecution(classification: IrisEmailClassification): IrisEmailExecution {
+  // Only route to human for genuine blockers: compliance flags, spam, explicit human_required.
+  // "review" recommended_next_action alone does NOT block auto-reply — Iris handles real estate
+  // follow-ups autonomously. Human review is reserved for truly sensitive situations.
   const needsHuman = classification.intent === "human_required" || classification.intent === "spam" ||
-    classification.recommended_next_action === "route_human" ||
     classification.compliance_flags.some((flag) => SENSITIVE_FLAGS.has(flag));
   if (classification.intent === "spam") {
     return {

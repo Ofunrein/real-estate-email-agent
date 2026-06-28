@@ -8,6 +8,7 @@ import {
   findCandidatePropertiesFromDatabase,
   findLeadInDatabase,
   findPropertiesByAddressesFromDatabase,
+  findSocialBrowserThreadByUsernameFromDatabase,
   readEventsForThreadFromDatabase,
   readEventsForThreadOrContactFromDatabase,
   readInboxSettingsFromDatabase,
@@ -21,6 +22,7 @@ import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoProperty
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { createRequestAudit } from "@/lib/requestAudit";
 import {
   buildSocialRouterResult,
   shouldTheoHandleSocialDm,
@@ -29,6 +31,7 @@ import {
 } from "@/lib/manychatSocial";
 import {
   extractMetaSocialMessages,
+  fetchMetaSocialSenderProfile,
   metaSocialDirectEnabled,
   metaSocialVerifyToken,
   normalizeMetaMessage,
@@ -55,6 +58,74 @@ function automatedOutboundEvent(event: Awaited<ReturnType<typeof readEventsForTh
   const agentName = String(event.agent_name || "").toLowerCase();
   if (source.includes("human") || source.includes("owner") || agentName === "owner") return false;
   return event.direction !== "inbound";
+}
+
+function webhookEventSummaries(payload: Record<string, unknown>) {
+  const summaries: Array<Record<string, unknown>> = [];
+  for (const entry of Array.isArray(payload.entry) ? payload.entry : []) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const entryRecord = entry as Record<string, unknown>;
+    const entryId = String(entryRecord.id || "").trim();
+    const appendMessaging = (event: Record<string, unknown>, source: string, field?: string) => {
+      const sender = event.sender && typeof event.sender === "object" && !Array.isArray(event.sender)
+        ? event.sender as Record<string, unknown>
+        : event.from && typeof event.from === "object" && !Array.isArray(event.from)
+          ? event.from as Record<string, unknown>
+          : {};
+      const recipient = event.recipient && typeof event.recipient === "object" && !Array.isArray(event.recipient)
+        ? event.recipient as Record<string, unknown>
+        : event.to && typeof event.to === "object" && !Array.isArray(event.to)
+          ? event.to as Record<string, unknown>
+          : {};
+      const message = event.message && typeof event.message === "object" && !Array.isArray(event.message)
+        ? event.message as Record<string, unknown>
+        : {};
+      const reaction = event.reaction && typeof event.reaction === "object" && !Array.isArray(event.reaction)
+        ? event.reaction as Record<string, unknown>
+        : {};
+      summaries.push({
+        source,
+        field: field || "",
+        entryId,
+        keys: Object.keys(event).sort(),
+        senderId: String(sender.id || ""),
+        recipientId: String(recipient.id || ""),
+        messageId: String(message.mid || message.id || event.mid || event.id || reaction.mid || ""),
+        hasText: Boolean(message.text || event.text),
+        attachmentCount: Array.isArray(message.attachments) ? message.attachments.length : Array.isArray(event.attachments) ? event.attachments.length : 0,
+        hasReaction: Boolean(reaction.mid || reaction.emoji),
+        isEcho: message.is_echo === true || event.message_echo === true,
+        hasRead: Boolean(event.read),
+        timestamp: event.timestamp || message.timestamp || "",
+      });
+    };
+    for (const messaging of Array.isArray(entryRecord.messaging) ? entryRecord.messaging : []) {
+      if (messaging && typeof messaging === "object" && !Array.isArray(messaging)) {
+        appendMessaging(messaging as Record<string, unknown>, "entry.messaging");
+      }
+    }
+    for (const change of Array.isArray(entryRecord.changes) ? entryRecord.changes : []) {
+      if (!change || typeof change !== "object" || Array.isArray(change)) continue;
+      const changeRecord = change as Record<string, unknown>;
+      const value = changeRecord.value && typeof changeRecord.value === "object" && !Array.isArray(changeRecord.value)
+        ? changeRecord.value as Record<string, unknown>
+        : {};
+      for (const messaging of Array.isArray(value.messaging) ? value.messaging : []) {
+        if (messaging && typeof messaging === "object" && !Array.isArray(messaging)) {
+          appendMessaging(messaging as Record<string, unknown>, "entry.changes.messaging", String(changeRecord.field || ""));
+        }
+      }
+      if (!Array.isArray(value.messaging)) {
+        summaries.push({
+          source: "entry.changes",
+          field: String(changeRecord.field || ""),
+          entryId,
+          keys: Object.keys(value).sort(),
+        });
+      }
+    }
+  }
+  return summaries.slice(0, 20);
 }
 
 function alreadyHandledInbound(messageKey: string, events: Awaited<ReturnType<typeof readEventsForThreadFromDatabase>>) {
@@ -87,6 +158,47 @@ function socialPayloadFromMessage(input: {
     campaign: "",
     listingAddress: "",
     sourceUrl: "",
+  };
+}
+
+function socialContactKey(threadRef: string, fallback: string): string {
+  const separator = threadRef.indexOf(":");
+  if (separator >= 0 && threadRef.slice(separator + 1).trim()) {
+    return threadRef.slice(separator + 1).trim();
+  }
+  return fallback;
+}
+
+function opaqueMetaId(value: string) {
+  return /^\d{12,}$/.test(value.trim().replace(/^@/, ""));
+}
+
+async function resolveInboundIdentity(input: {
+  channel: MetaSocialChannel;
+  senderId: string;
+  senderName: string;
+  senderUsername: string;
+  pageAccessToken?: string;
+}) {
+  const fallbackThreadRef = `${input.channel}:${input.senderId}`;
+  const profile = await fetchMetaSocialSenderProfile(input.channel, input.senderId, input.pageAccessToken).catch(() => null);
+  const senderUsername = profile?.username || (!opaqueMetaId(input.senderUsername) ? input.senderUsername : "");
+  const senderName = profile?.name || (!opaqueMetaId(input.senderName) ? input.senderName : "") || senderUsername || input.senderId;
+  const browserThread = senderUsername
+    ? await findSocialBrowserThreadByUsernameFromDatabase({
+      channel: input.channel,
+      username: senderUsername,
+    }).catch(() => null)
+    : null;
+  const threadRef = browserThread?.threadRef || fallbackThreadRef;
+  return {
+    senderName,
+    senderUsername: senderUsername || senderName,
+    profile,
+    threadRef,
+    webhookThreadRef: fallbackThreadRef,
+    contactKey: input.senderId,
+    displayName: browserThread?.displayName || (senderUsername ? `@${senderUsername.replace(/^@/, "")}` : senderName),
   };
 }
 
@@ -181,15 +293,19 @@ async function processInbound(input: {
   pageAccessToken?: string;
 }) {
   const messageKey = `${input.channel}:${input.messageId}`;
-  const threadRef = `${input.channel}:${input.senderId}`;
-  const messageText = normalizedMessageText({ text: input.text, media: input.media });
+  const identity = await resolveInboundIdentity(input);
+  const threadRef = identity.threadRef;
+  // Use media fallback so attachment-only DMs still get stored — without a conversation
+  // event the senderId is never persisted and the thread becomes un-repliable.
+  const messageText = normalizedMessageText({ text: input.text, media: input.media })
+    || (input.media.length > 0 ? `[${input.media[0]?.type || "attachment"}]` : "");
   if (!messageText) return "skipped" as const;
 
   const payload = socialPayloadFromMessage({
     channel: input.channel,
     senderId: input.senderId,
-    senderName: input.senderName,
-    senderUsername: input.senderUsername,
+    senderName: identity.senderName,
+    senderUsername: identity.senderUsername,
     messageText,
   });
   const guard = shouldTheoHandleSocialDm(payload);
@@ -202,7 +318,7 @@ async function processInbound(input: {
     provider: "meta_social",
     providerMessageId: input.messageId,
     threadRef,
-    metadata: { recipientId: input.recipientId },
+    metadata: { recipientId: input.recipientId, webhookThreadRef: identity.webhookThreadRef },
   });
   const replyJob = await upsertReplyJobInDatabase({
     dedupeKey: messageKey,
@@ -212,7 +328,7 @@ async function processInbound(input: {
     contactRef: input.senderId,
     status: dedupe.inserted ? "received" : "duplicate_suppressed",
     mediaJson: input.media,
-    metadata: { providerMessageId: input.messageId, recipientId: input.recipientId },
+    metadata: { providerMessageId: input.messageId, recipientId: input.recipientId, webhookThreadRef: identity.webhookThreadRef },
   });
 
   const duplicate = await conversationEventMessageIdExists(messageKey);
@@ -223,8 +339,8 @@ async function processInbound(input: {
       direction: "inbound",
       eventAt: input.createdTime || undefined,
       agentName: IRIS_AGENT_NAME,
-      phone: input.senderId,
-      fullName: input.senderUsername || input.senderName,
+      phone: identity.contactKey,
+      fullName: identity.displayName,
       source: "meta_social",
       sourceDetail: `recipient_id ${input.recipientId}; message_id ${input.messageId}`,
       threadRef,
@@ -244,9 +360,11 @@ async function processInbound(input: {
       mediaJson: input.media,
       providerMetadata: {
         senderId: input.senderId,
-        senderName: input.senderName,
-        senderUsername: input.senderUsername,
+        senderName: identity.senderName,
+        senderUsername: identity.senderUsername,
         recipientId: input.recipientId,
+        profilePic: identity.profile?.profilePic || "",
+        webhookThreadRef: identity.webhookThreadRef,
       },
       replyJobId: replyJob?.id || "",
     });
@@ -288,7 +406,7 @@ async function processInbound(input: {
     return "skipped" as const;
   }
 
-  const lead = await findLeadInDatabase({ full_name: input.senderName });
+  const lead = await findLeadInDatabase({ full_name: identity.senderName });
   const properties = await findSocialProperties(messageText, recentEvents);
   const enriched = await enrichTheoData({
     message: messageText,
@@ -330,8 +448,8 @@ async function processInbound(input: {
       channel: input.channel,
       direction: "outbound",
       agentName: IRIS_AGENT_NAME,
-      phone: input.senderId,
-      fullName: input.senderUsername || input.senderName,
+      phone: identity.contactKey,
+      fullName: identity.displayName,
       source: "meta_social",
       sourceDetail: `recipient_id ${input.recipientId}; message_id ${input.messageId}`,
       threadRef,
@@ -370,21 +488,134 @@ async function processInbound(input: {
     channel: input.channel,
     direction: "outbound",
     agentName: IRIS_AGENT_NAME,
-    phone: input.senderId,
-    fullName: input.senderUsername || input.senderName,
+    phone: identity.contactKey,
+    fullName: identity.displayName,
     source: "meta_social",
     sourceDetail: `recipient_id ${input.recipientId}; message_id ${input.messageId}`,
     threadRef,
-    eventType: `${input.channel}_ai_reply`,
+    eventType: routeResult.needs_human ? `${input.channel}_handoff_reply` : `${input.channel}_ai_reply`,
     messageText: sendResult.deliveredBody,
     summary: sendResult.sent ? "Iris replied to social DM through Meta webhook/send." : `Meta social send failed: ${sendResult.error}`,
     aiAction: sendResult.sent ? "social_dm_sent" : "social_dm_send_failed",
     status: sendResult.sent ? "sent" : "needs_human",
-    handoffReason: sendResult.sent ? "" : sendResult.error,
-    nextAction: sendResult.sent ? "monitor_reply" : "human_follow_up",
+    handoffReason: sendResult.sent ? routeResult.reason : sendResult.error,
+    handoffStatus: sendResult.sent && routeResult.needs_human ? "needs_human" : "",
+    nextAction: sendResult.sent ? routeResult.needs_human ? "human_follow_up" : "monitor_reply" : "human_follow_up",
   });
 
   return sendResult.sent ? "replied" as const : "imported" as const;
+}
+
+async function processOutboundEcho(input: {
+  channel: MetaSocialChannel;
+  senderId: string;
+  recipientId: string;
+  messageId: string;
+  createdTime: string;
+  text: string;
+  media: OmnichannelMedia[];
+  pageAccessToken?: string;
+}) {
+  const contactId = input.recipientId || input.senderId;
+  const messageKey = `${input.channel}:${input.messageId}`;
+  const identity = await resolveInboundIdentity({
+    channel: input.channel,
+    senderId: contactId,
+    senderName: contactId,
+    senderUsername: contactId,
+    pageAccessToken: input.pageAccessToken,
+  });
+  const messageText = normalizedMessageText({ text: input.text, media: input.media })
+    || (input.media.length > 0 ? `[${input.media[0]?.type || "attachment"}]` : "");
+  if (!messageText) return "skipped" as const;
+  if (await conversationEventMessageIdExists(messageKey)) return "skipped" as const;
+  await claimEventDedupeInDatabase({
+    dedupeKey: messageKey,
+    channel: input.channel,
+    provider: "meta_social_echo",
+    providerMessageId: input.messageId,
+    threadRef: identity.threadRef,
+    metadata: { recipientId: input.recipientId, senderId: input.senderId, webhookThreadRef: identity.webhookThreadRef },
+  });
+  await recordChannelInteraction({
+    channel: input.channel,
+    direction: "outbound",
+    eventAt: input.createdTime || undefined,
+    agentName: "Owner",
+    phone: identity.contactKey,
+    fullName: identity.displayName,
+    source: "meta_social_echo",
+    sourceDetail: `platform_sender_id ${input.senderId}; recipient_id ${input.recipientId}; message_id ${input.messageId}`,
+    threadRef: identity.threadRef,
+    eventType: `${input.channel}_platform_echo`,
+    messageText,
+    summary: `Owner sent ${input.channel} DM from the native platform.`,
+    status: "sent",
+    gmailMessageId: messageKey,
+    providerMessageId: input.messageId,
+    providerThreadId: identity.threadRef,
+    mediaJson: input.media,
+    providerMetadata: {
+      senderId: contactId,
+      platformSenderId: input.senderId,
+      recipientId: input.recipientId,
+      isEcho: true,
+      webhookThreadRef: identity.webhookThreadRef,
+    },
+  });
+  return "imported_echo" as const;
+}
+
+async function processReaction(input: {
+  channel: MetaSocialChannel;
+  senderId: string;
+  recipientId: string;
+  createdTime: string;
+  normalized: NonNullable<ReturnType<typeof normalizeMetaMessage>>;
+  isOwnerAction: boolean;
+  pageAccessToken?: string;
+}) {
+  const targetMessageId = input.normalized.reactionTargetMessageId || "";
+  if (!targetMessageId) return "skipped" as const;
+  const contactId = input.isOwnerAction ? input.recipientId : input.senderId;
+  const identity = await resolveInboundIdentity({
+    channel: input.channel,
+    senderId: contactId,
+    senderName: contactId,
+    senderUsername: contactId,
+    pageAccessToken: input.pageAccessToken,
+  });
+  const action = input.normalized.reactionAction || "react";
+  const emoji = input.normalized.reactionEmoji || "";
+  const messageKey = `${input.channel}:reaction:${targetMessageId}:${input.senderId}:${input.normalized.timestamp}`;
+  if (await conversationEventMessageIdExists(messageKey)) return "skipped" as const;
+  await recordChannelInteraction({
+    channel: input.channel,
+    direction: input.isOwnerAction ? "outbound" : "inbound",
+    eventAt: input.createdTime || undefined,
+    agentName: input.isOwnerAction ? "Owner" : IRIS_AGENT_NAME,
+    phone: identity.contactKey,
+    fullName: identity.displayName,
+    source: "meta_social",
+    sourceDetail: `reaction_to ${targetMessageId}; sender_id ${input.senderId}`,
+    threadRef: identity.threadRef,
+    eventType: `${input.channel}_reaction`,
+    messageText: action === "unreact" ? "Reaction removed" : `Reaction: ${emoji || "love"}`,
+    summary: `${input.isOwnerAction ? "Owner" : "Contact"} ${action === "unreact" ? "removed a reaction" : "reacted"} on ${input.channel}.`,
+    status: input.isOwnerAction ? "sent" : "received",
+    gmailMessageId: messageKey,
+    providerMessageId: messageKey,
+    providerThreadId: identity.threadRef,
+    providerMetadata: {
+      reactionTargetMessageId: targetMessageId,
+      reactionEmoji: emoji,
+      reactionAction: action,
+      senderId: contactId,
+      platformSenderId: input.senderId,
+      recipientId: input.recipientId,
+    },
+  });
+  return "imported_reaction" as const;
 }
 
 export async function GET(request: NextRequest) {
@@ -399,12 +630,28 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const audit = createRequestAudit({
+    headers: request.headers,
+    route: "/api/webhooks/theo-meta-social",
+    method: "POST",
+    provider: "meta_social",
+  });
+  await audit.write("received", "received");
   if (!metaSocialDirectEnabled()) {
+    await audit.write("blocked", "blocked", {
+      statusCode: 503,
+      errorMessage: "Meta social direct webhook mode is disabled",
+    });
     return NextResponse.json({ ok: false, error: "Meta social direct webhook mode is disabled" }, { status: 503 });
   }
 
   const rawBody = await request.text();
   if (!verifyMetaSocialSignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+    await audit.write("verify_signature", "failed", {
+      statusCode: 401,
+      errorCode: "invalid_signature",
+      errorMessage: "Invalid Meta signature",
+    });
     return NextResponse.json({ ok: false, error: "Invalid Meta signature" }, { status: 401 });
   }
 
@@ -429,6 +676,20 @@ export async function POST(request: NextRequest) {
   );
 
   const inboundMessages = extractMetaSocialMessages(payload, { instagramIds, messengerIds });
+  await audit.write("normalized", "received", {
+    metadata: {
+      object: String(payload.object || ""),
+      entries: Array.isArray(payload.entry) ? payload.entry.length : 0,
+      extracted: inboundMessages.length,
+      events: webhookEventSummaries(payload),
+    },
+  });
+  console.info("meta_social_webhook_received", JSON.stringify({
+    object: String(payload.object || ""),
+    entries: Array.isArray(payload.entry) ? payload.entry.length : 0,
+    extracted: inboundMessages.length,
+    events: webhookEventSummaries(payload),
+  }));
   const results: Array<Record<string, unknown>> = [];
   for (const inbound of inboundMessages) {
     const connection = connections.connections.find((candidate) => {
@@ -440,19 +701,50 @@ export async function POST(request: NextRequest) {
       ]);
       return ids.has(inbound.recipientId) || ids.has(inbound.entryId);
     });
-    // Derive normalized type for logging; skip reactions and read receipts.
-    const rawEvent = payload as Record<string, unknown>;
-    const normalized = normalizeMetaMessage(
-      { sender: { id: inbound.senderId }, message: { text: inbound.text }, ...rawEvent },
-      inbound.recipientId,
-    );
+    // Derive normalized type from the exact messaging event, not the webhook envelope.
+    const normalized = normalizeMetaMessage(inbound.raw, inbound.recipientId);
     const msgType = normalized?.type ?? "text";
-    if (msgType === "reaction" || msgType === "read_receipt") {
+    if (msgType === "read_receipt") {
+      await audit.write("message", "skipped", {
+        channel: inbound.channel,
+        providerMessageId: inbound.messageId,
+        statusCode: 200,
+        metadata: { type: msgType, reason: "read_receipt" },
+      });
       results.push({ message_id: inbound.messageId, channel: inbound.channel, action: "skipped", type: msgType });
       continue;
     }
+    const connectionIds = stringMap([
+      connection?.selected_asset_id,
+      String(connection?.metadata?.page_id || ""),
+      String(connection?.metadata?.instagram_user_id || ""),
+      inbound.entryId,
+    ]);
+    if (normalized && msgType === "reaction") {
+      const action = await processReaction({
+        channel: inbound.channel,
+        senderId: inbound.senderId,
+        recipientId: inbound.recipientId,
+        createdTime: inbound.createdTime,
+        normalized,
+        isOwnerAction: connectionIds.has(inbound.senderId),
+        pageAccessToken: resolvePageAccessToken(connection),
+      });
+      results.push({ message_id: inbound.messageId, channel: inbound.channel, action, type: msgType });
+      continue;
+    }
     const media = await transcribeMediaItems(inbound.media || []);
-    const action = await processInbound({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) });
+    const action = inbound.isEcho || normalized?.isEcho
+      ? await processOutboundEcho({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) })
+      : await processInbound({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) });
+    await audit.write("message", action === "replied" || action === "imported_echo" ? "sent" : action === "skipped" ? "skipped" : "received", {
+      channel: inbound.channel,
+      threadRef: `${inbound.channel}:${inbound.senderId}`,
+      contactRef: inbound.senderId,
+      providerMessageId: inbound.messageId,
+      statusCode: 200,
+      metadata: { action, type: msgType, isEcho: inbound.isEcho || normalized?.isEcho || false },
+    });
     results.push({
       message_id: inbound.messageId,
       channel: inbound.channel,
@@ -461,6 +753,14 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  console.info("meta_social_webhook_processed", JSON.stringify({
+    processed: results.length,
+    results,
+  }));
+  await audit.write("processed", "received", {
+    statusCode: 200,
+    metadata: { processed: results.length, results },
+  });
   return NextResponse.json({
     ok: true,
     processed: results.length,
