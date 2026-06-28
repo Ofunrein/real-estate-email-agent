@@ -110,6 +110,10 @@ async function renewAccountWatch(account: EmailAccountRecord, topicName: string)
   }
 }
 
+export async function registerGmailWatchForAccount(account: EmailAccountRecord): Promise<GmailWatchRenewalResult["results"][number]> {
+  return renewAccountWatch(account, gmailWatchTopicName());
+}
+
 export async function renewDueGmailWatches(options: {
   renewWithinHours?: number;
   limit?: number;
