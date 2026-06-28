@@ -4,6 +4,14 @@ import { recordChannelInteraction } from "@/lib/channelIngest";
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { databaseEnabled, readAiDraftFromDatabase, updateAiDraftStatusInDatabase, upsertAiDraftInDatabase, upsertThreadLinkInDatabase } from "@/lib/database";
 import { loadAgentInboxData } from "@/lib/dataSource";
+import {
+  createGmailReplyDraftWithOptions,
+  createIrisGmailSession,
+  sendGmailDraftWithOptions,
+  updateGmailReplyDraftWithOptions,
+  type GmailDraftResult,
+  type GmailReplyInput,
+} from "@/lib/gmailConnection";
 import { sendManualReply } from "@/lib/manualReply";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
@@ -58,6 +66,52 @@ function emailSubject(events: SheetRow[], override?: string): string {
   return (subjectMatch?.[1] || summary || "Real estate follow-up").slice(0, 160);
 }
 
+async function loadThreadEvents(threadRef: string, channel: string): Promise<SheetRow[]> {
+  const { events } = await loadAgentInboxData();
+  return events.filter((event) => eventChannel(event) === channel && eventConversationKey(event, channel) === threadRef);
+}
+
+function emailDraftInput(
+  events: SheetRow[],
+  draftBody: string,
+  overrides: { to?: string; subject?: string },
+): { to: string; input: GmailReplyInput } | null {
+  const latest = latestEvent(events);
+  const to = String(overrides.to || latest.email || "").trim();
+  if (!to) return null;
+  return {
+    to,
+    input: {
+      to,
+      body: draftBody,
+      subject: emailSubject(events, overrides.subject),
+      threadId: gmailThreadIdForEmail(events),
+    },
+  };
+}
+
+async function syncGmailDraft(input: {
+  existingDraftId?: string;
+  events: SheetRow[];
+  draftBody: string;
+  to?: string;
+  subject?: string;
+}): Promise<GmailDraftResult | null> {
+  const target = emailDraftInput(input.events, input.draftBody, {
+    to: input.to,
+    subject: input.subject,
+  });
+  if (!target) return null;
+  const session = await createIrisGmailSession();
+  const options = {
+    mailboxEmail: session.accountEmail,
+    fallbackUnthreadedOnMissingThread: true,
+  };
+  return input.existingDraftId
+    ? updateGmailReplyDraftWithOptions(session.gmail, input.existingDraftId, target.input, options)
+    : createGmailReplyDraftWithOptions(session.gmail, target.input, options);
+}
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
@@ -83,6 +137,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (body.action === "save_edit") {
     if (!draftBody) return NextResponse.json({ ok: false, error: "body is required" }, { status: 400 });
+    const threadEvents = channel === "email" ? await loadThreadEvents(threadRef, channel) : [];
+    const gmailDraft = channel === "email"
+      ? await syncGmailDraft({
+        existingDraftId: existingDraft?.gmail_draft_id,
+        events: threadEvents,
+        draftBody,
+        to: body.to,
+        subject: body.subject,
+      }).catch(() => null)
+      : null;
     const draft = await upsertAiDraftInDatabase({
       thread_ref: threadRef,
       channel,
@@ -95,25 +159,56 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       needs_human: true,
       model: existingDraft?.model || "manual_edit",
       fingerprint: existingDraft?.fingerprint || `manual-edit:${Date.now()}`,
+      gmail_draft_id: gmailDraft?.draftId || existingDraft?.gmail_draft_id || "",
+      gmail_message_id: gmailDraft?.messageId || existingDraft?.gmail_message_id || "",
+      gmail_thread_id: gmailDraft?.threadId || existingDraft?.gmail_thread_id || "",
+      gmail_mailbox_email: gmailDraft?.mailboxEmail || existingDraft?.gmail_mailbox_email || "",
+      gmail_draft_synced_at: gmailDraft?.draftId ? new Date().toISOString() : existingDraft?.gmail_draft_synced_at || "",
     });
     return NextResponse.json({ ok: true, draft });
   }
 
   if (!draftBody) return NextResponse.json({ ok: false, error: "No draft body to send" }, { status: 400 });
 
-  const { events } = await loadAgentInboxData();
-  const threadEvents = events.filter((event) => eventChannel(event) === channel && eventConversationKey(event, channel) === threadRef);
+  const threadEvents = await loadThreadEvents(threadRef, channel);
   const latest = latestEvent(threadEvents);
   const to = String(body.to || (channel === "email" ? latest.email : latest.phone) || "").trim();
   if (!to) return NextResponse.json({ ok: false, error: "No recipient found for this draft" }, { status: 400 });
 
-  const result = await sendManualReply({
-    channel,
-    to,
-    body: draftBody,
-    subject: channel === "email" ? emailSubject(threadEvents, body.subject) : undefined,
-    threadId: channel === "email" ? gmailThreadIdForEmail(threadEvents) : undefined,
-  });
+  const result = channel === "email" && existingDraft?.gmail_draft_id
+    ? await (async () => {
+      const target = emailDraftInput(threadEvents, draftBody, { to, subject: body.subject });
+      if (!target) return { ok: false as const, error: "No recipient found for this Gmail draft" };
+      const session = await createIrisGmailSession();
+      const syncedDraft = await updateGmailReplyDraftWithOptions(session.gmail, existingDraft.gmail_draft_id || "", target.input, {
+        mailboxEmail: session.accountEmail,
+        fallbackUnthreadedOnMissingThread: true,
+      });
+      const sent = await sendGmailDraftWithOptions(session.gmail, syncedDraft.draftId, {
+        mailboxEmail: session.accountEmail,
+      });
+      return {
+        ok: true as const,
+        threaded: sent.threaded,
+        mailboxEmail: sent.mailboxEmail,
+        fallbackReason: undefined,
+        gmailThreadId: sent.threadId,
+        gmailMessageId: sent.messageId,
+        deliveredBody: draftBody,
+        deliveredMediaUrls: [],
+        droppedMediaUrls: [],
+      };
+    })().catch((error: unknown) => ({
+      ok: false as const,
+      error: error instanceof Error ? error.message : String(error),
+    }))
+    : await sendManualReply({
+      channel,
+      to,
+      body: draftBody,
+      subject: channel === "email" ? emailSubject(threadEvents, body.subject) : undefined,
+      threadId: channel === "email" ? gmailThreadIdForEmail(threadEvents) : undefined,
+    });
   if (!result.ok) return NextResponse.json(result, { status: 502 });
 
   await recordChannelInteraction({

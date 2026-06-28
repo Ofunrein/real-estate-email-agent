@@ -19,6 +19,12 @@ interface InboxAppProps {
 
 export function InboxApp({ data }: InboxAppProps) {
   const [inboxData, setInboxData] = useState<AgentInboxData>(data);
+  const refreshData = useCallback(async () => {
+    const res = await fetch("/api/data", { cache: "no-store" });
+    if (!res.ok) return;
+    const next = (await res.json()) as AgentInboxData;
+    if (next) setInboxData(next);
+  }, []);
 
   // Keep the dashboard fresh without hammering Vercel while the tab is hidden.
   useEffect(() => {
@@ -26,10 +32,7 @@ export function InboxApp({ data }: InboxAppProps) {
     const refresh = async () => {
       if (document.visibilityState === "hidden") return;
       try {
-        const res = await fetch("/api/data", { cache: "no-store" });
-        if (!res.ok) return;
-        const next = (await res.json()) as AgentInboxData;
-        if (!cancelled && next) setInboxData(next);
+        if (!cancelled) await refreshData();
       } catch {
         // network blip — keep last data
       }
@@ -42,7 +45,7 @@ export function InboxApp({ data }: InboxAppProps) {
       clearInterval(id);
       document.removeEventListener("visibilitychange", refresh);
     };
-  }, []);
+  }, [refreshData]);
 
   const model = useMemo(() => adaptInboxData(inboxData), [inboxData]);
 
@@ -59,7 +62,7 @@ export function InboxApp({ data }: InboxAppProps) {
 
   return (
     <ColorModeProvider>
-      <InboxDataProvider model={model} onDraftChanged={handleDraftChanged}>
+      <InboxDataProvider model={model} onDraftChanged={handleDraftChanged} onDataRefresh={refreshData}>
         <CategoryColorProvider categories={model.leadCategories}>
           <InboxPage />
         </CategoryColorProvider>

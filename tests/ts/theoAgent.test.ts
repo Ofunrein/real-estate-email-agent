@@ -98,6 +98,28 @@ test("generateTheoReply: photo follow-up sends media when enabled", async () => 
   assert.match(result.reply, /Sending the property photo/i);
 });
 
+test("generateTheoReply: ordinal photo follow-up sends media for the selected listing", async () => {
+  const prior = process.env.ENABLE_SMS_IMAGES;
+  process.env.ENABLE_SMS_IMAGES = "true";
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "I need photos for the first one",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [
+      property({ address: "6814 E Riverside Dr Unit 44", photo_url: "https://photos.zillowstatic.com/fp/unit44-p_e.jpg" }),
+      property({ address: "6814 E Riverside Dr Unit 55", photo_url: "https://photos.zillowstatic.com/fp/unit55-p_e.jpg" }),
+    ],
+  }));
+  if (prior == null) delete process.env.ENABLE_SMS_IMAGES;
+  else process.env.ENABLE_SMS_IMAGES = prior;
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_ordinal_photos_reply_ready");
+  assert.deepEqual(result.mediaUrls, ["https://photos.zillowstatic.com/fp/unit44-p_e.jpg"]);
+  assert.match(result.reply, /6814 E Riverside Dr Unit 44/i);
+  assert.doesNotMatch(result.reply, /6814 E Riverside Dr Unit 55/i);
+});
+
 test("generateTheoReply: availability question answers from listing context instead of handoff", async () => {
   const result = await withoutOpenAi(() => generateTheoReply({
     message: "Is it still available?",

@@ -16,6 +16,7 @@ import {
   latestEvent,
   parseDraftKey,
   socialContactIdentity,
+  threadNeedsHuman,
   threadIdentity,
   voiceCallKey,
   voiceCallTimeValue,
@@ -210,7 +211,7 @@ function stableEventHash(value: string): string {
   return hash.toString(36);
 }
 
-type ThreadMedia = { url: string; alt: string; kind?: "image" | "audio" | "file"; transcript?: string };
+type ThreadMedia = { url: string; alt: string; kind?: "image" | "audio" | "file"; transcript?: string; label?: string; linkUrl?: string };
 
 function messageEventId(event: SheetRow, fallback: string): string {
   const direct = event.gmail_message_id || event.appointment_id || event.call_id;
@@ -295,6 +296,54 @@ function jsonMediaArray(value: unknown): Record<string, unknown>[] {
   }
 }
 
+function jsonObject(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function eventProviderMessageId(event: SheetRow): string {
+  const direct = String(event.provider_message_id || "").trim();
+  if (direct) return direct;
+  const gmail = String(event.gmail_message_id || "").trim();
+  const match = gmail.match(/^(?:instagram|messenger):(.+)$/);
+  return match?.[1]?.trim() || "";
+}
+
+function reactionTargetMessageId(event: SheetRow): string {
+  const metadata = jsonObject(event.provider_metadata);
+  return String(metadata.reactionTargetMessageId || metadata.reaction_target_message_id || "").trim();
+}
+
+function isReactionEvent(event: SheetRow): boolean {
+  return String(event.event_type || "").toLowerCase().includes("reaction") || Boolean(reactionTargetMessageId(event));
+}
+
+function reactionsByTarget(events: SheetRow[]) {
+  const map = new Map<string, SmsMessage["reactions"]>();
+  for (const event of events) {
+    const target = reactionTargetMessageId(event);
+    if (!target) continue;
+    const metadata = jsonObject(event.provider_metadata);
+    const action: "react" | "unreact" = String(metadata.reactionAction || metadata.reaction_action || "react") === "unreact" ? "unreact" : "react";
+    const emoji = String(metadata.reactionEmoji || metadata.reaction_emoji || "").trim() || (action === "unreact" ? "" : "love");
+    const entry = {
+      emoji,
+      by: event.direction === "inbound" ? "contact" as const : "owner" as const,
+      action,
+    };
+    map.set(target, [...(map.get(target) || []), entry]);
+  }
+  return map;
+}
+
 function eventMedia(event: SheetRow): ThreadMedia[] {
   const media: ThreadMedia[] = [];
   const seen = new Set<string>();
@@ -315,11 +364,19 @@ function eventMedia(event: SheetRow): ThreadMedia[] {
         ? "audio"
         : "file";
     const transcript = String(item.transcript || "").trim() || undefined;
+    const providerMetadata = item.providerMetadata && typeof item.providerMetadata === "object" && !Array.isArray(item.providerMetadata)
+      ? item.providerMetadata as Record<string, unknown>
+      : {};
+    const label = String(item.alt || item.filename || providerMetadata.title || "").trim();
+    const mediaLabel = String(item.label || providerMetadata.label || "").trim();
+    const linkUrl = String(item.linkUrl || item.link_url || providerMetadata.linkUrl || providerMetadata.targetUrl || "").trim();
     media.push({
       url,
-      alt: kind === "audio" ? "Voice note" : kind === "image" ? "MMS image" : "Attachment",
+      alt: label || (kind === "audio" ? "Voice note" : kind === "image" ? "MMS image" : "Attachment"),
       kind,
       transcript,
+      label: mediaLabel || undefined,
+      linkUrl: linkUrl || undefined,
     });
   }
   return media;
@@ -341,6 +398,7 @@ function mergedThreadMedia(...groups: ThreadMedia[][]): ThreadMedia[] {
 function mediaPreviewText(media: ThreadMedia[]): string {
   if (!media.length) return "";
   if (media.length === 1) {
+    if (media[0].label) return media[0].label;
     if (media[0].kind === "audio") return "1 voice note";
     if (media[0].kind === "image") return "1 MMS image";
     return "1 attachment";
@@ -353,7 +411,7 @@ function mediaPreviewText(media: ThreadMedia[]): string {
 }
 
 function isDisplayableAudioUrl(value: string): boolean {
-  return /\/api\/media\/audio\?url=/i.test(value) || /\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(value);
+  return /\/api\/media\/audio\?url=/i.test(value) || /\.(?:aac|caf|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(value);
 }
 
 function inboxAudioPreviewUrl(value: string): string {
@@ -532,7 +590,7 @@ function buildEmailThreads(data: AgentInboxData): EmailThread[] {
   return entries.map(([key, events]) => {
     const latest = latestEvent(events);
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
-    const needsReview = events.some(eventNeedsHuman);
+    const needsReview = threadNeedsHuman(events);
     const reason = [...events].reverse().find((e) => e.handoff_reason)?.handoff_reason;
     const latestMedia = eventMedia(latest);
     return {
@@ -550,11 +608,34 @@ function buildEmailThreads(data: AgentInboxData): EmailThread[] {
   });
 }
 
+function threadReadState(data: AgentInboxData, channel: string, threadRef: string) {
+  return data.threadReadStates?.[`${channel}:${threadRef}`] || data.threadReadStates?.[threadRef];
+}
+
+function unreadStateForEvents(data: AgentInboxData, channel: string, threadRef: string, events: SheetRow[]) {
+  const state = threadReadState(data, channel, threadRef);
+  const seenAt = Date.parse(state?.seenAt || state?.seenEventAt || "");
+  const lastSeenMs = Number.isFinite(seenAt) ? seenAt : 0;
+  const inboundEvents = events.filter((event) => event.direction === "inbound");
+  const unreadCount = inboundEvents.filter((event) => eventTimeValue(event) > lastSeenMs).length;
+  const lastInbound = inboundEvents.reduce<SheetRow | null>((latest, event) => {
+    if (!latest) return event;
+    return eventTimeValue(event) >= eventTimeValue(latest) ? event : latest;
+  }, null);
+  return {
+    unreadCount,
+    seen: unreadCount === 0,
+    lastSeenAt: state?.seenAt || "",
+    lastInboundAt: lastInbound?.event_at || "",
+  };
+}
+
 function buildSmsThreads(data: AgentInboxData): SmsThread[] {
   const entries = buildChannelThreads(data.events, "sms");
   return entries.map(([key, events]) => {
     const latest = latestEvent(events);
     const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
+    const unread = unreadStateForEvents(data, "sms", key, events);
     const messages: SmsMessage[] = events.map((event, i) => {
       const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
       const media = mergedThreadMedia(parsed.media, eventMedia(event));
@@ -577,6 +658,10 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
       time: formatEventTimeShort(latest.event_at),
       preview: latestSms.body || mediaPreviewText(latestMedia) || (latest.summary || "").slice(0, 80),
       messageCount: events.length,
+      unreadCount: unread.unreadCount,
+      seen: unread.seen,
+      lastSeenAt: unread.lastSeenAt,
+      lastInboundAt: unread.lastInboundAt,
       category,
       messages,
     };
@@ -584,11 +669,14 @@ function buildSmsThreads(data: AgentInboxData): SmsThread[] {
 }
 
 function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "messenger" | "whatsapp" | "website"): SmsThread[] {
-  const groups = data.events
-    .filter((event) => realChannelToView(event.channel || "") === view)
+  const viewEvents = data.events.filter((event) => realChannelToView(event.channel || "") === view);
+  const threadAliases = socialThreadAliases(viewEvents);
+  const groups = viewEvents
     .reduce<Record<string, SheetRow[]>>((acc, event) => {
       const rawChannel = eventChannel(event);
-      const key = conversationKey(event, rawChannel);
+      const rawThreadKey = socialRawThreadKey(event, rawChannel);
+      const eventKey = conversationKey(event, rawChannel);
+      const key = threadAliases[rawThreadKey] || threadAliases[eventKey] || eventKey;
       acc[key] ||= [];
       acc[key].push(event);
       return acc;
@@ -597,33 +685,45 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
   return Object.entries(groups)
     .map(([key, events]) => {
       const sorted = [...events].sort((a, b) => eventTimeValue(a) - eventTimeValue(b));
-      const latest = latestEvent(sorted);
+      const visibleEvents = sorted.filter((event) => !isReactionEvent(event));
+      const reactionMap = reactionsByTarget(sorted);
+      const latest = latestEvent(visibleEvents.length ? visibleEvents : sorted);
       const category = leadCategoryFor(data.threadCategories[key] || data.threadCategories[latest.thread_ref || ""], data.inboxCategories);
-      const messages: SmsMessage[] = sorted.map((event, i) => {
+      const messages: SmsMessage[] = visibleEvents.map((event, i) => {
         const parsed = smsTextAndMedia(eventText(event) || event.summary || "");
         const media = mergedThreadMedia(parsed.media, eventMedia(event));
         const id = messageEventId(event, `${key}-${i}`);
+        const providerMessageId = eventProviderMessageId(event);
         return {
           id,
           eventId: id,
+          providerMessageId,
           direction: smsMessageDirection(event),
           time: formatEventTimeShort(event.event_at),
           body: parsed.body,
           html: parsed.html,
           media,
+          reactions: providerMessageId ? reactionMap.get(providerMessageId) : undefined,
         };
       });
       const latestText = smsTextAndMedia(eventText(latest) || latest.summary || "");
       const latestMedia = mergedThreadMedia(latestText.media, eventMedia(latest));
+      const unread = unreadStateForEvents(data, view, key, sorted);
       return {
         sortValue: eventTimeValue(latest),
         thread: {
         id: key,
         contact: threadIdentity(latest.thread_ref || key, sorted, eventChannel(latest)),
-        replyTo: ["instagram", "messenger"].includes(eventChannel(latest)) ? latest.phone || "" : latest.phone || key,
+        replyTo: ["instagram", "messenger"].includes(eventChannel(latest))
+          ? socialReplyTarget(key, sorted, eventChannel(latest))
+          : latest.phone || key,
         time: formatEventTimeShort(latest.event_at),
         preview: latestText.body || mediaPreviewText(latestMedia) || (latest.summary || "").slice(0, 80),
-        messageCount: sorted.length,
+        messageCount: visibleEvents.length,
+        unreadCount: unread.unreadCount,
+        seen: unread.seen,
+        lastSeenAt: unread.lastSeenAt,
+        lastInboundAt: unread.lastInboundAt,
         category,
         messages,
         },
@@ -631,6 +731,129 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
     })
     .sort((a, b) => b.sortValue - a.sortValue)
     .map((entry) => entry.thread);
+}
+
+function socialRawThreadKey(event: SheetRow, channel: string): string {
+  const threadRef = String(event.thread_ref || "").trim();
+  const prefix = `${channel}:`;
+  if (threadRef.startsWith(prefix)) return threadRef.slice(prefix.length).trim();
+  return threadRef || String(event.phone || event.email || event.full_name || "").trim() || "unknown";
+}
+
+function socialThreadAliases(events: SheetRow[]): Record<string, string> {
+  const aliases: Record<string, string> = {};
+  for (const event of events) {
+    const channel = eventChannel(event);
+    if (!["instagram", "messenger"].includes(channel)) continue;
+    const rawThreadKey = socialRawThreadKey(event, channel);
+    const identityKey = conversationKey(event, channel);
+    if (!rawThreadKey || !identityKey || rawThreadKey === identityKey || identityKey === "unknown") continue;
+    aliases[rawThreadKey] = identityKey;
+  }
+  return aliases;
+}
+
+function metadataStringValue(value: unknown, keys: string[]): string {
+  if (!value) return "";
+  let parsed: unknown = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value) as unknown;
+    } catch {
+      return "";
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "";
+  const record = parsed as Record<string, unknown>;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return "";
+}
+
+const INSTAGRAM_SEND_TARGET_KEYS = [
+  "igScopedUserId",
+  "ig_scoped_user_id",
+  "scopedUserId",
+  "scoped_user_id",
+  "senderInstagramId",
+  "sender_instagram_id",
+  "senderId",
+  "sender_id",
+  "contactId",
+  "contact_id",
+];
+
+const MESSENGER_SEND_TARGET_KEYS = ["senderId", "sender_id", "contactId", "contact_id"];
+const BROWSER_IMPORT_SEND_TARGET_KEYS = [
+  "metaWebhookRecipientId",
+  "meta_webhook_recipient_id",
+  "igScopedUserId",
+  "ig_scoped_user_id",
+  "scopedUserId",
+  "scoped_user_id",
+  "contactId",
+  "contact_id",
+  "instagramUserId",
+  "instagram_user_id",
+  "senderId",
+  "sender_id",
+];
+const BROWSER_IMPORT_USERNAME_KEYS = ["senderUsername", "sender_username", "username"];
+
+function socialSendTargetKeys(channel: string): string[] {
+  return channel === "instagram" ? INSTAGRAM_SEND_TARGET_KEYS : MESSENGER_SEND_TARGET_KEYS;
+}
+
+function isBrowserImportedSocialEvent(event: SheetRow): boolean {
+  const source = String(event.source || "").toLowerCase();
+  const metadataSource = metadataStringValue(event.provider_metadata, ["source"]).toLowerCase();
+  return source.includes("browser_backfill") || metadataSource.includes("browser_backfill");
+}
+
+function isBrowserVerifiedSocialEvent(event: SheetRow): boolean {
+  if (!isBrowserImportedSocialEvent(event)) return false;
+  const status = String(event.status || event.thread_status || "").toLowerCase();
+  const metadata = jsonObject(event.provider_metadata);
+  const source = String(metadata.source || event.source || "").toLowerCase();
+  return status.includes("browser_backfill_verified_recipient") || source.includes("authenticated_browser");
+}
+
+function socialReplyTarget(threadKey: string, events: SheetRow[], channel: string): string {
+  let verifiedBrowserTarget = "";
+  let browserUsernameTarget = "";
+  let sawBrowserImport = false;
+  let sawNonBrowserImport = false;
+  for (const event of [...events].reverse()) {
+    if (isBrowserImportedSocialEvent(event)) {
+      sawBrowserImport = true;
+      if (!verifiedBrowserTarget && isBrowserVerifiedSocialEvent(event)) {
+        verifiedBrowserTarget = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS);
+      }
+      if (channel === "instagram" && !browserUsernameTarget) {
+        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
+        if (username) browserUsernameTarget = `@${username}`;
+      }
+      continue;
+    }
+    sawNonBrowserImport = true;
+    const metadataTarget = metadataStringValue(event.provider_metadata, socialSendTargetKeys(channel));
+    if (metadataTarget) return metadataTarget;
+    if (event.direction !== "inbound") continue;
+    const direct = String(event.phone || "").trim();
+    if (direct) return direct;
+    const threadRef = String(event.thread_ref || "").trim();
+    if (threadRef.startsWith(`${channel}:`)) {
+      const stripped = threadRef.slice(channel.length + 1).trim();
+      if (stripped) return stripped;
+    }
+  }
+  if (verifiedBrowserTarget) return verifiedBrowserTarget;
+  if (browserUsernameTarget) return browserUsernameTarget;
+  if (sawBrowserImport && !sawNonBrowserImport) return "";
+  if (threadKey.startsWith(`${channel}:`)) return threadKey.slice(channel.length + 1).trim();
+  return "";
 }
 
 function smsMessageDirection(event: SheetRow): SmsMessage["direction"] {
@@ -797,7 +1020,15 @@ function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelI
     const inbound = events.filter((e) => e.direction === "inbound").length;
     const aiReplies = events.filter((e) => e.direction !== "inbound").length;
     const latest = events[events.length - 1];
-    const flagged = events.some(eventNeedsHuman);
+    const flagged = Object.values(
+      events.reduce<Record<string, SheetRow[]>>((acc, event) => {
+        const channel = eventChannel(event);
+        const key = conversationKey(event, channel);
+        acc[key] ||= [];
+        acc[key].push(event);
+        return acc;
+      }, {}),
+    ).some(threadNeedsHuman);
     const latestChannel = latest ? eventChannel(latest) : "";
     const latestThreadId = latest ? conversationKey(latest, latestChannel) : "";
     const latestThreadEvents = latest
@@ -876,7 +1107,7 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
   return {
     channels: buildChannels(data),
     channelMeta,
-    channelAccounts,
+    channelAccounts: { ...channelAccounts, ...data.channelAccounts },
     leadCategories: data.inboxCategories.length
       ? data.inboxCategories.map((c) => ({
           id: categorySlugToId(c.slug),

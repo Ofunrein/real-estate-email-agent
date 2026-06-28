@@ -12,6 +12,7 @@ import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type 
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
+import { createRequestAudit } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -132,9 +133,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const requestStarted = nowMs();
+  const audit = createRequestAudit({
+    headers: request.headers,
+    route: "/api/webhooks/theo-whatsapp",
+    method: "POST",
+    channel: "whatsapp",
+    provider: "meta",
+  });
   try {
     const rawBody = await request.text();
+    await audit.write("received", "received", { metadata: { bytes: rawBody.length } });
     if (!verifyMetaSignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+      await audit.write("signature", "failed", { statusCode: 401, errorCode: "invalid_signature" });
       return NextResponse.json({ ok: false, error: "Invalid Meta signature" }, { status: 401 });
     }
     const payload = JSON.parse(rawBody || "{}") as Record<string, unknown>;
@@ -152,6 +162,11 @@ export async function POST(request: NextRequest) {
 
       if (isUnsafeSmsRecipient(inbound.from)) {
         logTheoWhatsApp("test inbound blocked", { from: inbound.from, messageId: inbound.messageId });
+        await audit.write("message", "skipped", {
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          metadata: { action: "blocked_test_number", messageType: inbound.messageType },
+        });
         results.push({ message_id: inbound.messageId, status: "skipped", action: "blocked_test_number", reply_sent: false });
         continue;
       }
@@ -164,8 +179,20 @@ export async function POST(request: NextRequest) {
         eventType: result.event.event_type,
         totalMs: elapsedMs(requestStarted),
       });
+      await audit.write("inbound_logged", "received", {
+        threadRef: result.event.thread_ref,
+        contactRef: leadPhone,
+        providerMessageId: inbound.messageId,
+        metadata: { eventType: result.event.event_type, messageType: inbound.messageType },
+      });
 
       if (controlAction === "stop") {
+        await audit.write("message", "skipped", {
+          threadRef: result.event.thread_ref,
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          metadata: { action: result.event.ai_action, status: result.event.status },
+        });
         results.push({ message_id: inbound.messageId, status: result.event.status, action: result.event.ai_action, reply_sent: false });
         continue;
       }
@@ -200,6 +227,13 @@ export async function POST(request: NextRequest) {
           handoffReason: sendResult.error,
           nextAction: controlAction === "help" ? "human_follow_up" : "await_response",
         });
+        await audit.write("control_reply", sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "failed", {
+          threadRef: result.event.thread_ref,
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          errorMessage: sendResult.error || handoffAlertError || "",
+          metadata: { controlAction, handoffAlertSent },
+        });
         results.push({
           message_id: inbound.messageId,
           status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -216,6 +250,12 @@ export async function POST(request: NextRequest) {
         logTheoWhatsApp("human takeover active - skipping AI reply", {
           leadPhone: inbound.from,
           threadRef: result.event.thread_ref,
+        });
+        await audit.write("message", "blocked", {
+          threadRef: result.event.thread_ref,
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          metadata: { action: "ai_skipped_human_takeover" },
         });
         results.push({ message_id: inbound.messageId, status: "human_takeover", action: "ai_skipped_human_takeover", reply_sent: false });
         continue;
@@ -311,6 +351,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (!reply.shouldSend) {
+        await audit.write("message", "blocked", {
+          threadRef: result.event.thread_ref,
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          metadata: { status: reply.status, action: reply.aiAction, handoffReason: reply.handoffReason },
+        });
         results.push({ message_id: inbound.messageId, status: reply.status, action: reply.aiAction, reply_sent: false });
         continue;
       }
@@ -336,6 +382,12 @@ export async function POST(request: NextRequest) {
           action: "reply_drafted",
           reply_sent: false,
           media_count: reply.mediaUrls.length,
+        });
+        await audit.write("message", "drafted", {
+          threadRef: result.event.thread_ref,
+          contactRef: leadPhone,
+          providerMessageId: inbound.messageId,
+          metadata: { reason: settings.draft_first ? "draft_first" : "auto_send_disabled", mediaCount: reply.mediaUrls.length },
         });
         continue;
       }
@@ -370,6 +422,19 @@ export async function POST(request: NextRequest) {
         handoffStatus: reply.status === "needs_human" ? "needs_human" : "",
         nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_response",
       });
+      await audit.write("message", sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "failed", {
+        threadRef: result.event.thread_ref,
+        contactRef: leadPhone,
+        providerMessageId: inbound.messageId,
+        errorMessage: sendResult.error || handoffAlertError || "",
+        metadata: {
+          status: reply.status,
+          intent: reply.classification.intent,
+          handoffReason: reply.handoffReason,
+          handoffAlertSent,
+          mediaCount: sendResult.mediaCount,
+        },
+      });
       results.push({
         message_id: inbound.messageId,
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -382,18 +447,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const responseBody = {
       ok: true,
       channel: "whatsapp",
       processed: results.length,
       results,
       total_ms: elapsedMs(requestStarted),
       session_cost: formatUsd(theoSessionCost()),
+    };
+    await audit.write("processed", results.some((result) => result.reply_sent) ? "sent" : "skipped", {
+      metadata: { processed: results.length },
     });
+    return NextResponse.json(responseBody);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Iris WhatsApp webhook.";
     logTheoWhatsApp("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("DATABASE_URL") ? 503 : 500;
+    await audit.write("processed", "failed", { statusCode: status, errorMessage: message });
     return NextResponse.json({ ok: false, error: message }, { status });
   }
 }

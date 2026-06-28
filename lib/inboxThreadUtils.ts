@@ -20,6 +20,9 @@ export function eventTimeValue(event: SheetRow): number {
 }
 
 export function eventNeedsHuman(event: SheetRow): boolean {
+  if (event.status === "review_resolved" || event.ai_action === "resume_ai" || /\breview_resolved\b/i.test(event.event_type || "")) {
+    return false;
+  }
   return (
     event.status === "needs_human" ||
     event.event_type === "sms_handoff_reply" ||
@@ -29,7 +32,16 @@ export function eventNeedsHuman(event: SheetRow): boolean {
 }
 
 export function threadNeedsHuman(events: SheetRow[]): boolean {
-  return events.some(eventNeedsHuman);
+  const latestResolvedAt = Math.max(
+    0,
+    ...events
+      .filter((event) => event.status === "review_resolved" || event.ai_action === "resume_ai" || /\breview_resolved\b/i.test(event.event_type || ""))
+      .map((event) => eventTimeValue(event)),
+  );
+  return events.some((event) => {
+    if (!eventNeedsHuman(event)) return false;
+    return !latestResolvedAt || eventTimeValue(event) > latestResolvedAt;
+  });
 }
 
 export function parseDraftKey(key: string): { channel: Channel; threadRef: string } | null {
@@ -44,7 +56,12 @@ export function parseDraftKey(key: string): { channel: Channel; threadRef: strin
 export function conversationKey(event: SheetRow, channel?: Channel | string): string {
   const normalizedChannel = channel || eventChannel(event);
   if (["messenger", "instagram"].includes(normalizedChannel)) {
-    return event.phone || event.thread_ref || event.email || event.full_name || "unknown";
+    const socialIdentity = socialContactCandidate(event);
+    if (socialIdentity) return socialIdentity.toLowerCase().replace(/^@+/, "");
+    const threadRef = String(event.thread_ref || "").trim();
+    const prefix = `${normalizedChannel}:`;
+    const threadKey = threadRef.startsWith(prefix) ? threadRef.slice(prefix.length) : threadRef;
+    return threadKey || event.phone || event.email || event.full_name || "unknown";
   }
   if (["sms", "whatsapp", "voice"].includes(normalizedChannel)) {
     return event.phone || event.thread_ref || event.email || "unknown";
@@ -116,9 +133,11 @@ function socialChannelLabel(channel: string): string {
 }
 
 function socialContactCandidate(event: SheetRow, fallback = ""): string {
+  const username = providerMetadataValue(event, ["senderUsername", "sender_username", "username"]);
+  if (username && !opaqueSocialId(username)) return username.startsWith("@") ? username : `@${username}`;
   const candidates = [
+    providerMetadataValue(event, ["senderName", "sender_name", "name"]),
     event.full_name,
-    providerMetadataValue(event, ["senderUsername", "sender_username", "username", "senderName", "sender_name", "name"]),
     event.phone,
     fallback,
   ];

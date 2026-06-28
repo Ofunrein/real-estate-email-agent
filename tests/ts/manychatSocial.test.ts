@@ -83,6 +83,32 @@ test("formatManyChatDynamicBlock: formats Messenger text plus image", () => {
   assert.equal(block.content.type, undefined);
 });
 
+test("buildSocialRouterResult: safe needs-human replies stay sendable and flagged", () => {
+  const result = buildSocialRouterResult({
+    channel: "instagram",
+    threadRef: "instagram:lead_1",
+    reply: {
+      shouldSend: true,
+      reply: "I can help with that. What area and budget should I use?",
+      mediaUrls: [],
+      status: "needs_human",
+      handoffReason: "lead requested nuanced guidance",
+      classification: {
+        intent: "property_details",
+        leadRole: "buyer",
+        handoffReason: "lead requested nuanced guidance",
+        status: "needs_human",
+      },
+    },
+  });
+
+  assert.equal(result.should_send, true);
+  assert.equal(result.needs_human, true);
+  assert.equal(result.status, "ready_to_send");
+  assert.equal(result.reply, "I can help with that. What area and budget should I use?");
+  assert.equal(result.reason, "lead requested nuanced guidance");
+});
+
 test("formatManyChatDynamicBlock: marks Instagram content type", () => {
   const result = buildSocialRouterResult({
     channel: "instagram",

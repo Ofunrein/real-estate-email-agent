@@ -32,6 +32,11 @@ export type AiDraft = {
   model: string;
   status: string;
   fingerprint: string;
+  gmail_draft_id?: string;
+  gmail_message_id?: string;
+  gmail_thread_id?: string;
+  gmail_mailbox_email?: string;
+  gmail_draft_synced_at?: string;
   updated_at: string;
 };
 
@@ -106,13 +111,45 @@ export function channelEnabled(settings: InboxSettings, channel: Exclude<Channel
 
 export function inferCategorySlug(events: SheetRow[], categories: InboxCategory[] = DEFAULT_INBOX_CATEGORIES): string {
   const latest = events[events.length - 1] || {};
-  const text = events
+  const latestReviewResolvedAt = Math.max(
+    0,
+    ...events
+      .filter((event) => event.status === "review_resolved" || event.ai_action === "resume_ai" || /\breview_resolved\b/i.test(event.event_type || ""))
+      .map((event) => Date.parse(event.event_at || event.created_at || ""))
+      .filter(Number.isFinite),
+  );
+  const latestInboundIndex = [...events].reverse().findIndex((event) => event.direction === "inbound");
+  const latestInbound = latestInboundIndex >= 0 ? events[events.length - 1 - latestInboundIndex] : {};
+  const latestInboundAt = Date.parse(latestInbound.event_at || latestInbound.created_at || "");
+  const inboundAfterReviewResolved = Number.isFinite(latestInboundAt) && latestInboundAt > latestReviewResolvedAt;
+  const latestOutboundAfterInbound = Number.isFinite(latestInboundAt)
+    ? events.some((event) => {
+      if (event.direction === "inbound") return false;
+      const eventAt = Date.parse(event.event_at || event.created_at || "");
+      return Number.isFinite(eventAt) && eventAt > latestInboundAt;
+    })
+    : false;
+  const categoryEvents = latestReviewResolvedAt
+    ? events.filter((event) => {
+      const eventAt = Date.parse(event.event_at || event.created_at || "");
+      return Number.isFinite(eventAt) ? eventAt > latestReviewResolvedAt : true;
+    })
+    : events;
+  const text = categoryEvents
     .slice(-6)
     .map((event) => `${event.status} ${event.event_type} ${event.ai_action} ${event.handoff_reason} ${event.summary} ${event.message_text}`)
     .join(" ")
     .toLowerCase();
+  const latestInboundText = `${latestInbound.status || ""} ${latestInbound.summary || ""} ${latestInbound.message_text || ""}`.toLowerCase();
+  const latestInboundIsSocial = ["instagram", "messenger"].includes(String(latestInbound.channel || "").toLowerCase());
   let slug = "needs_reply";
-  if (latest.status === "needs_human" || /\b(needs_human|handoff|fair housing|human review)\b/i.test(text)) slug = "needs_human";
+  if (
+    latestInboundIsSocial &&
+    inboundAfterReviewResolved &&
+    !latestOutboundAfterInbound &&
+    /\b(interested|property|home|house|listing|tour|showing|available|buy|sell|rent|smoking)\b/i.test(latestInboundText)
+  ) slug = "needs_human";
+  else if (latest.status === "needs_human" || /\b(needs_human|handoff|fair housing|human review)\b/i.test(text)) slug = "needs_human";
   else if (/\b(tour|showing|schedule|appointment|book)\b/i.test(text)) slug = "showing";
   else if (/\b(sell|seller|valuation|home value|list my)\b/i.test(text)) slug = "seller_valuation";
   else if (/\b(mortgage|loan|pre.?approved|down payment|credit score)\b/i.test(text)) slug = "financing";

@@ -12,7 +12,7 @@ import {
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import HomeOutlinedIcon from '@mui/icons-material/HomeWorkOutlined';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
-import { calendarChannelMeta, contactsChannelMeta, importChannelMeta, type ChannelId, type MessageChannelId } from '../data/inboxData';
+import { calendarChannelMeta, contactsChannelMeta, importChannelMeta, opsChannelMeta, type ChannelId, type MessageChannelId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 interface NavRailProps {
@@ -26,6 +26,7 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
   const ImportIcon = importChannelMeta.icon;
   const ContactsIcon = contactsChannelMeta.icon;
   const CalendarIcon = calendarChannelMeta.icon;
+  const OpsIcon = opsChannelMeta.icon;
   return (
     <Box
       component="nav"
@@ -152,6 +153,12 @@ export function NavRail({ active, onSelect, inDrawer = false }: NavRailProps) {
           active={active === 'imports'}
           onClick={() => onSelect('imports')}
           accent={importChannelMeta.accent} />
+        <NavItem
+          label={opsChannelMeta.label}
+          icon={<OpsIcon fontSize="small" />}
+          active={active === 'ops'}
+          onClick={() => onSelect('ops')}
+          accent={opsChannelMeta.accent} />
         
       </Stack>
 

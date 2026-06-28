@@ -16,6 +16,8 @@ export type MetaSocialInboundMessage = {
   text: string;
   media: OmnichannelMedia[];
   entryId: string;
+  isEcho?: boolean;
+  raw: Record<string, unknown>;
 };
 
 export type MetaSocialSendResult = {
@@ -26,6 +28,13 @@ export type MetaSocialSendResult = {
   deliveredBody: string;
   deliveredMediaUrls: string[];
   droppedMediaUrls: string[];
+};
+
+export type MetaSocialSenderProfile = {
+  id: string;
+  name: string;
+  username: string;
+  profilePic: string;
 };
 
 // Unified normalized message shape for all Meta webhook event types.
@@ -50,6 +59,8 @@ export type NormalizedMetaMessage = {
   stickerId?: string;
   reactionEmoji?: string;
   reactionAction?: "react" | "unreact";
+  reactionTargetMessageId?: string;
+  isEcho?: boolean;
   watermark?: number;
   postbackPayload?: string;
   quickReplyPayload?: string;
@@ -113,6 +124,33 @@ function sendEndpoint(channel: MetaSocialChannel): string {
   return `https://graph.facebook.com/${metaGraphVersion()}/me/messages`;
 }
 
+export async function fetchMetaSocialSenderProfile(
+  channel: MetaSocialChannel,
+  senderId: string,
+  pageAccessToken?: string,
+): Promise<MetaSocialSenderProfile | null> {
+  const id = cleanText(senderId);
+  const token = metaSocialAccessToken(pageAccessToken);
+  if (!id || !token) return null;
+  const fields = channel === "instagram"
+    ? "name,username,profile_pic"
+    : "name,first_name,last_name,profile_pic";
+  const response = await fetch(
+    `https://graph.facebook.com/${metaGraphVersion()}/${encodeURIComponent(id)}?fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(token)}`,
+  );
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) return null;
+  const firstName = cleanText(payload.first_name);
+  const lastName = cleanText(payload.last_name);
+  const joinedName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return {
+    id: cleanText(payload.id || id),
+    name: cleanText(payload.name || joinedName),
+    username: cleanText(payload.username),
+    profilePic: cleanText(payload.profile_pic),
+  };
+}
+
 function channelFlag(channel: MetaSocialChannel): boolean {
   return channel === "instagram"
     ? envFlag(process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK)
@@ -158,10 +196,24 @@ function attachmentUrl(value: Record<string, unknown>): string {
     value.attachment_url,
     payload.url,
     payload.src,
+    payload.share_url,
+    payload.permalink,
+    payload.link,
     imageData.url,
     videoData.url,
     audioData.url,
   ].map((item) => cleanText(item)).find(Boolean) || "";
+}
+
+function attachmentLabel(value: Record<string, unknown>, url: string): string {
+  const payload = jsonRecord(value.payload);
+  const direct = cleanText(value.title || value.name || value.filename || payload.title || payload.name);
+  if (direct) return direct;
+  const type = cleanText(value.type).toLowerCase();
+  if (type.includes("share") || /instagram\.com\/(?:p|reel|stories)\//i.test(url)) return "Shared Instagram post";
+  if (type.includes("story_mention")) return "Instagram story mention";
+  if (type.includes("fallback")) return "Shared link";
+  return "";
 }
 
 function extractAttachments(value: unknown): OmnichannelMedia[] {
@@ -178,12 +230,17 @@ function extractAttachments(value: unknown): OmnichannelMedia[] {
     const url = attachmentUrl(record);
     if (url && !seen.has(url)) {
       seen.add(url);
+      const label = attachmentLabel(record, url);
       media.push({
         id: cleanText(record.id || record.attachment_id),
         url,
         type: attachmentTypeFrom(record, url),
         contentType: cleanText(record.mime_type || record.content_type || record.contentType) || undefined,
-        filename: cleanText(record.name || record.filename) || undefined,
+        filename: label || cleanText(record.name || record.filename) || undefined,
+        providerMetadata: {
+          attachment_type: cleanText(record.type),
+          title: label,
+        },
       });
     }
     for (const [key, child] of Object.entries(record)) {
@@ -217,7 +274,6 @@ function normalizeEvent(
   const sender = jsonRecord(event.sender || event.from);
   const recipient = jsonRecord(event.recipient || event.to);
   const message = jsonRecord(event.message);
-  if (message.is_echo === true || event.message_echo === true) return null;
   const text = cleanText(message.text || event.text || jsonRecord(event.postback).title);
   const senderId = cleanText(sender.id);
   const recipientId = cleanText(recipient.id);
@@ -226,18 +282,24 @@ function normalizeEvent(
   const senderUsername = cleanText(sender.username || sender.name || senderId);
   const createdAt = String(event.timestamp || message.timestamp || Date.now());
   const media = extractAttachments(message.attachments || event.attachments);
-  if (!senderId || !messageId || (!text && !media.length)) return null;
+  const isEcho = message.is_echo === true || event.message_echo === true;
+  const reaction = jsonRecord(event.reaction);
+  const reactionTargetMessageId = cleanText(reaction.mid);
+  const reactionText = reactionTargetMessageId ? cleanText(reaction.emoji || reaction.action || "reaction") : "";
+  if (!senderId || (!messageId && !reactionTargetMessageId) || (!text && !media.length && !reactionText)) return null;
   return {
     channel,
     senderId,
     senderName,
     senderUsername,
     recipientId,
-    messageId,
+    messageId: messageId || reactionTargetMessageId,
     createdTime: /^\d+$/.test(createdAt) ? new Date(Number(createdAt)).toISOString() : createdAt,
-    text,
+    text: text || reactionText,
     media,
     entryId,
+    isEcho,
+    raw: event,
   };
 }
 
@@ -402,6 +464,59 @@ export async function sendMetaSocialMessage(input: {
   };
 }
 
+export async function sendMetaSocialReaction(input: {
+  channel: MetaSocialChannel;
+  to: string;
+  messageId: string;
+  reaction?: string;
+  action?: "react" | "unreact";
+  pageAccessToken?: string;
+}): Promise<MetaSocialSendResult> {
+  if (!metaSocialDirectEnabled(input.channel)) {
+    return {
+      sent: false,
+      skipped: true,
+      messageIds: [],
+      error: `${input.channel} direct webhook/send mode is not enabled`,
+      deliveredBody: "",
+      deliveredMediaUrls: [],
+      droppedMediaUrls: [],
+    };
+  }
+  const recipientId = cleanText(input.to);
+  const messageId = cleanText(input.messageId);
+  const action = input.action === "unreact" ? "unreact" : "react";
+  const reaction = cleanText(input.reaction || "love") || "love";
+  if (!recipientId || !messageId) {
+    return {
+      sent: false,
+      skipped: true,
+      messageIds: [],
+      error: "Missing Meta social recipient or message id",
+      deliveredBody: "",
+      deliveredMediaUrls: [],
+      droppedMediaUrls: [],
+    };
+  }
+  const payload = action === "unreact"
+    ? { message_id: messageId }
+    : { message_id: messageId, reaction };
+  const result = await postMetaSocialMessage(input.channel, {
+    recipient: { id: recipientId },
+    sender_action: action,
+    payload,
+  }, input.pageAccessToken);
+  return {
+    sent: result.ok,
+    skipped: false,
+    messageIds: result.id ? [result.id] : [],
+    error: result.error,
+    deliveredBody: action === "unreact" ? "Reaction removed" : `Reacted ${reaction}`,
+    deliveredMediaUrls: [],
+    droppedMediaUrls: [],
+  };
+}
+
 // Send a single media attachment with optional text caption (sent as a separate message).
 export async function sendMediaMessage(input: {
   channel: MetaSocialChannel;
@@ -425,7 +540,6 @@ export async function sendMediaMessage(input: {
 }
 
 // Map any raw Meta webhook event object to a unified NormalizedMetaMessage.
-// Returns null for events that should not produce a message (e.g. echoes).
 export function normalizeMetaMessage(
   event: Record<string, unknown>,
   pageId: string,
@@ -434,7 +548,7 @@ export function normalizeMetaMessage(
   const message = jsonRecord(event.message);
   const senderId = cleanText(sender.id);
   if (!senderId) return null;
-  if (message.is_echo === true || event.message_echo === true) return null;
+  const isEcho = message.is_echo === true || event.message_echo === true;
 
   const ts = Number(event.timestamp || message.timestamp || Date.now());
 
@@ -446,6 +560,8 @@ export function normalizeMetaMessage(
       content: cleanText(reaction.emoji),
       reactionEmoji: cleanText(reaction.emoji),
       reactionAction: String(reaction.action || "react") === "unreact" ? "unreact" : "react",
+      reactionTargetMessageId: cleanText(reaction.mid),
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -460,6 +576,7 @@ export function normalizeMetaMessage(
       type: "read_receipt",
       content: "",
       watermark: Number(read.watermark),
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -474,6 +591,7 @@ export function normalizeMetaMessage(
       type: "postback",
       content: cleanText(postback.title || postback.payload),
       postbackPayload: cleanText(postback.payload),
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -488,6 +606,7 @@ export function normalizeMetaMessage(
       type: "quick_reply",
       content: cleanText(message.text || quickReply.payload),
       quickReplyPayload: cleanText(quickReply.payload),
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -505,6 +624,7 @@ export function normalizeMetaMessage(
       content: "",
       stickerId: cleanText(payload.sticker_id),
       mediaUrl: cleanText(payload.url || stickerAttachment.url),
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -523,6 +643,7 @@ export function normalizeMetaMessage(
       content: cleanText(message.text),
       mediaUrl: url || undefined,
       mimeType: cleanText(first.mime_type || first.content_type) || undefined,
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,
@@ -536,6 +657,7 @@ export function normalizeMetaMessage(
     return {
       type: "text",
       content: text,
+      isEcho,
       senderId,
       pageId,
       timestamp: ts,

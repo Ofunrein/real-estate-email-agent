@@ -13,6 +13,7 @@ import {
   upsertThreadLinkInDatabase,
 } from "@/lib/database";
 import { readMediaUpload } from "@/lib/mediaUploads";
+import { createRequestAudit } from "@/lib/requestAudit";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ async function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["
     const contentTypeMap: Record<string, string> = {
       jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
       gif: "image/gif", webp: "image/webp", pdf: "application/pdf",
-      m4a: "audio/mp4", mp3: "audio/mpeg", ogg: "audio/ogg", opus: "audio/ogg",
+      caf: "audio/x-caf", m4a: "audio/mp4", mp3: "audio/mpeg", ogg: "audio/ogg", opus: "audio/ogg",
       wav: "audio/wav", webm: "audio/webm", mp4: "video/mp4",
     };
     attachments.push({
@@ -69,7 +70,7 @@ async function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["
 }
 
 function mediaLogLabel(channel: ReplyBody["channel"], url: string): string {
-  if (/\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(url)) return "Voice note";
+  if (/\.(?:aac|caf|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/i.test(url)) return "Voice note";
   if (channel === "whatsapp") return "WhatsApp media";
   if (channel === "instagram" || channel === "messenger") return "Social DM media";
   if (channel === "email") return "Attachment";
@@ -95,7 +96,7 @@ function messageWithMediaLog(input: Pick<ReplyBody, "channel"> & {
 function inferReplyMediaType(url: string): "audio" | "image" | "video" | "file" {
   const clean = url.trim().toLowerCase();
   if (/\.(?:png|jpe?g|gif|webp)(?:$|[?#])/.test(clean)) return "image";
-  if (/\.(?:aac|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/.test(clean)) return "audio";
+  if (/\.(?:aac|caf|m4a|mp3|mpeg|ogg|opus|wav|webm)(?:$|[?#])/.test(clean)) return "audio";
   if (/\.(?:mov|mp4|webm)(?:$|[?#])/.test(clean)) return "video";
   return "file";
 }
@@ -140,6 +141,143 @@ function normalizeTarget(channel: ReplyBody["channel"], value: string) {
   return clean;
 }
 
+function metadataStringValue(value: unknown, keys: string[]): string {
+  if (!value) return "";
+  let parsed: unknown = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value) as unknown;
+    } catch {
+      return "";
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "";
+  const record = parsed as Record<string, unknown>;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return "";
+}
+
+const INSTAGRAM_SEND_TARGET_KEYS = [
+  "igScopedUserId",
+  "ig_scoped_user_id",
+  "scopedUserId",
+  "scoped_user_id",
+  "senderInstagramId",
+  "sender_instagram_id",
+  "senderId",
+  "sender_id",
+  "contactId",
+  "contact_id",
+];
+
+const MESSENGER_SEND_TARGET_KEYS = ["senderId", "sender_id", "contactId", "contact_id"];
+const BROWSER_IMPORT_SEND_TARGET_KEYS = [
+  "metaWebhookRecipientId",
+  "meta_webhook_recipient_id",
+  "igScopedUserId",
+  "ig_scoped_user_id",
+  "scopedUserId",
+  "scoped_user_id",
+  "contactId",
+  "contact_id",
+  "instagramUserId",
+  "instagram_user_id",
+  "senderId",
+  "sender_id",
+];
+const BROWSER_IMPORT_USERNAME_KEYS = ["senderUsername", "sender_username", "username"];
+
+function socialSendTargetKeys(channel: ReplyBody["channel"]): string[] {
+  return channel === "instagram" ? INSTAGRAM_SEND_TARGET_KEYS : MESSENGER_SEND_TARGET_KEYS;
+}
+
+function isBrowserImportedSocialEvent(event: SheetRow): boolean {
+  const source = String(event.source || "").toLowerCase();
+  const metadataSource = metadataStringValue(event.provider_metadata, ["source"]).toLowerCase();
+  return source.includes("browser_backfill") || metadataSource.includes("browser_backfill");
+}
+
+function isBrowserVerifiedSocialEvent(event: SheetRow): boolean {
+  if (!isBrowserImportedSocialEvent(event)) return false;
+  const status = String(event.status || event.thread_status || "").toLowerCase();
+  const metadataSource = metadataStringValue(event.provider_metadata, ["source"]).toLowerCase();
+  return status.includes("browser_backfill_verified_recipient") || metadataSource.includes("authenticated_browser");
+}
+
+function addCandidate(candidates: Set<string>, value: unknown) {
+  const clean = String(value || "").trim();
+  if (clean) candidates.add(clean);
+}
+
+function socialReplyTarget(threadRef: string, channel: ReplyBody["channel"], events: SheetRow[]): string {
+  let verifiedBrowserTarget = "";
+  let browserUsernameTarget = "";
+  let sawBrowserImport = false;
+  let sawNonBrowserImport = false;
+  for (const event of [...events].reverse()) {
+    if (isBrowserImportedSocialEvent(event)) {
+      sawBrowserImport = true;
+      if (!verifiedBrowserTarget && isBrowserVerifiedSocialEvent(event)) {
+        verifiedBrowserTarget = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS);
+      }
+      if (channel === "instagram" && !browserUsernameTarget) {
+        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
+        if (username) browserUsernameTarget = `@${username}`;
+      }
+      continue;
+    }
+    sawNonBrowserImport = true;
+    const metadataTarget = metadataStringValue(event.provider_metadata, socialSendTargetKeys(channel));
+    if (metadataTarget) return metadataTarget;
+    if (event.direction !== "inbound") continue;
+    const direct = String(event.phone || "").trim();
+    if (direct) return direct;
+    const eventThreadRef = String(event.thread_ref || "").trim();
+    if (eventThreadRef.startsWith(`${channel}:`)) {
+      const stripped = eventThreadRef.slice(channel.length + 1).trim();
+      if (stripped) return stripped;
+    }
+  }
+  if (verifiedBrowserTarget) return verifiedBrowserTarget;
+  if (browserUsernameTarget) return browserUsernameTarget;
+  if (sawBrowserImport && !sawNonBrowserImport) return "";
+  if (threadRef.startsWith(`${channel}:`)) return threadRef.slice(channel.length + 1).trim();
+  return "";
+}
+
+function socialReplyTargetCandidates(
+  threadRef: string,
+  channel: ReplyBody["channel"],
+  events: SheetRow[],
+): Set<string> {
+  const candidates = new Set<string>();
+  addCandidate(candidates, socialReplyTarget(threadRef, channel, events));
+  const onlyBrowserImports = events.length > 0 && events.every(isBrowserImportedSocialEvent);
+  for (const event of events) {
+    if (isBrowserImportedSocialEvent(event)) {
+      if (isBrowserVerifiedSocialEvent(event)) {
+        addCandidate(candidates, metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS));
+      }
+      if (channel === "instagram") {
+        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
+        if (username) addCandidate(candidates, `@${username}`);
+      }
+      continue;
+    }
+    addCandidate(candidates, metadataStringValue(event.provider_metadata, socialSendTargetKeys(channel)));
+    if (event.direction === "inbound") addCandidate(candidates, event.phone);
+    const eventThreadRef = String(event.thread_ref || "").trim();
+    if (event.direction === "inbound" && eventThreadRef.startsWith(`${channel}:`)) {
+      addCandidate(candidates, eventThreadRef.slice(channel.length + 1));
+    }
+  }
+  if (!onlyBrowserImports && threadRef.startsWith(`${channel}:`)) addCandidate(candidates, threadRef.slice(channel.length + 1));
+  return candidates;
+}
+
 function threadReplyTarget(threadRef: string, events: SheetRow[]): { channel: ReplyBody["channel"]; to: string } | null {
   const latest = events[events.length - 1];
   if (!latest) return null;
@@ -149,7 +287,7 @@ function threadReplyTarget(threadRef: string, events: SheetRow[]): { channel: Re
     ? latest.email || threadRef
     : channel === "sms" || channel === "whatsapp"
       ? latest.phone || threadRef
-      : latest.phone || "";
+      : socialReplyTarget(threadRef, channel, events);
   return to ? { channel, to } : null;
 }
 
@@ -169,13 +307,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const { threadRef } = await params;
+  const audit = createRequestAudit({
+    headers: req.headers,
+    route: "/api/threads/[threadRef]/reply",
+    method: "POST",
+    provider: "dashboard",
+    threadRef,
+  });
+  await audit.write("received", "received");
   const input = (await req.json()) as ReplyBody;
 
   if (!input.channel || !input.to || (!input.body?.trim() && !input.mediaUrls?.length)) {
+    await audit.write("validate", "failed", {
+      channel: input.channel,
+      contactRef: input.to,
+      statusCode: 400,
+      errorCode: "missing_required_fields",
+      errorMessage: "channel, to, and body/media required",
+    });
     return NextResponse.json({ ok: false, error: "channel, to, and body/media required" }, { status: 400 });
   }
 
   if (!(await isTakeoverActive(threadRef))) {
+    await audit.write("takeover_guard", "blocked", {
+      channel: input.channel,
+      contactRef: input.to,
+      statusCode: 403,
+      errorCode: "no_active_takeover",
+      errorMessage: "No active takeover for this thread",
+    });
     return NextResponse.json({ ok: false, error: "No active takeover for this thread" }, { status: 403 });
   }
 
@@ -190,24 +350,69 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
   const persistedThreadRef = canonicalReplyThreadRef(threadRef, input.channel, recentEvents);
   if (resolvedTarget) {
     if (resolvedTarget.channel !== input.channel) {
+      await audit.write("validate_target", "failed", {
+        channel: input.channel,
+        contactRef: input.to,
+        statusCode: 409,
+        errorCode: "channel_mismatch",
+        errorMessage: "Reply channel does not match this thread",
+      });
       return NextResponse.json({ ok: false, error: "Reply channel does not match this thread" }, { status: 409 });
     }
-    if (normalizeTarget(input.channel, input.to) !== normalizeTarget(resolvedTarget.channel, resolvedTarget.to)) {
+    const normalizedInputTarget = normalizeTarget(input.channel, input.to);
+    const targetMatches = isSocialReplyChannel(input.channel)
+      ? [...socialReplyTargetCandidates(threadRef, input.channel, recentEvents)]
+        .some((candidate) => normalizeTarget(input.channel, candidate) === normalizedInputTarget)
+      : normalizedInputTarget === normalizeTarget(resolvedTarget.channel, resolvedTarget.to);
+    if (!targetMatches) {
+      await audit.write("validate_target", "failed", {
+        channel: input.channel,
+        contactRef: input.to,
+        statusCode: 409,
+        errorCode: "recipient_mismatch",
+        errorMessage: "Reply recipient does not match this thread",
+        metadata: { candidateCount: socialReplyTargetCandidates(threadRef, input.channel, recentEvents).size },
+      });
       return NextResponse.json({ ok: false, error: "Reply recipient does not match this thread" }, { status: 409 });
     }
     input.to = resolvedTarget.to;
+  } else if (isSocialReplyChannel(input.channel)) {
+    await audit.write("validate_target", "blocked", {
+      channel: input.channel,
+      contactRef: input.to,
+      statusCode: 409,
+      errorCode: "missing_meta_recipient",
+      errorMessage: "Missing Meta webhook recipient id for this thread.",
+    });
+    return NextResponse.json({
+      ok: false,
+      error: "Missing Meta webhook recipient id for this thread. Wait for a new inbound DM through the connected Meta webhook, then reply from the dashboard.",
+    }, { status: 409 });
   }
 
   const result = await sendManualReply({
     ...input,
     attachments: await resolveAttachments(input.mediaUrls, input.channel),
   });
-  if (!result.ok) return NextResponse.json(result, { status: 502 });
+  if (!result.ok) {
+    await audit.write("send", "failed", {
+      channel: input.channel,
+      contactRef: input.to,
+      statusCode: 502,
+      errorCode: "provider_send_failed",
+      errorMessage: result.error || "Provider send failed",
+      metadata: { mediaCount: input.mediaUrls?.length || 0 },
+    });
+    return NextResponse.json(result, { status: 502 });
+  }
 
   const deliveredBody = result.deliveredBody || input.body;
   const deliveredMediaUrls = result.deliveredMediaUrls || input.mediaUrls || [];
   const deliveredMediaTranscripts = normalizeMediaTranscripts(deliveredMediaUrls, input.mediaTranscripts);
   const droppedMediaUrls = result.droppedMediaUrls || [];
+  const socialProviderMessageId = isSocialReplyChannel(input.channel)
+    ? result.messageIds?.[0] || ""
+    : "";
 
   await recordChannelInteraction({
     channel: input.channel,
@@ -230,11 +435,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
         : "sent",
     mailboxEmail: input.channel === "email" ? result.mailboxEmail : "",
     gmailThreadId: input.channel === "email" ? result.gmailThreadId : "",
-    gmailMessageId: input.channel === "email" ? result.gmailMessageId : "",
+    gmailMessageId: input.channel === "email" ? result.gmailMessageId : socialProviderMessageId ? `${input.channel}:${socialProviderMessageId}` : "",
     threadStatus: input.channel === "email"
       ? result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox"
       : "",
+    providerMessageId: socialProviderMessageId,
+    providerThreadId: isSocialReplyChannel(input.channel) ? persistedThreadRef : "",
     mediaJson: mediaJsonForReply(deliveredMediaUrls, deliveredMediaTranscripts),
+    providerMetadata: socialProviderMessageId ? {
+      senderId: input.to,
+      manualSendMessageIds: result.messageIds || [],
+    } : undefined,
+  });
+
+  await audit.write("send", "sent", {
+    channel: input.channel,
+    contactRef: input.to,
+    providerMessageId: socialProviderMessageId,
+    statusCode: 200,
+    metadata: {
+      mediaCount: deliveredMediaUrls.length,
+      droppedMediaCount: droppedMediaUrls.length,
+      persistedThreadRef,
+    },
   });
 
   if (databaseEnabled() && input.channel === "email" && result.ok) {

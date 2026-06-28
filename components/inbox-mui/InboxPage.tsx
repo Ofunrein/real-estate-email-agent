@@ -12,6 +12,7 @@ import { EmptyChannelView } from './components/EmptyChannelView';
 import { TextChannelView } from './components/TextChannelView';
 import { PropertiesView } from './components/PropertiesView';
 import { ImportsView } from './components/ImportsView';
+import { OpsLogView } from './components/OpsLogView';
 import { CalendarOsView } from './components/CalendarOsView';
 import { ContactsOsView } from './components/ContactsOsView';
 import { SettingsDrawer } from './components/SettingsDrawer';
@@ -19,7 +20,7 @@ import { type ActivityEvent, type ChannelId } from './data/inboxData';
 import { persistActivityEventTarget } from './hooks/useActivityEventTarget';
 import { usePersistedSelection } from './hooks/usePersistedSelection';
 
-const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'calendar', 'contacts', 'properties', 'imports'];
+const CHANNEL_IDS: ChannelId[] = ['all', 'email', 'sms', 'voice', 'instagram', 'messenger', 'whatsapp', 'website', 'calendar', 'contacts', 'properties', 'imports', 'ops'];
 
 export function InboxPage() {
   const [channel, setChannel, channelReady] = usePersistedSelection<ChannelId>('iris.inbox.channel', 'all', CHANNEL_IDS);
@@ -30,7 +31,7 @@ export function InboxPage() {
   const theme = useTheme();
   const isLgUpQuery = useMediaQuery(theme.breakpoints.up('lg'), { noSsr: true });
   const isLgUp = responsiveReady ? isLgUpQuery : true;
-  const showContextRail = channel !== 'properties' && channel !== 'imports' && channel !== 'calendar' && channel !== 'contacts';
+  const showContextRail = channel !== 'properties' && channel !== 'imports' && channel !== 'calendar' && channel !== 'contacts' && channel !== 'ops';
   React.useEffect(() => {
     setResponsiveReady(true);
   }, []);
@@ -244,6 +245,8 @@ function ChannelContent({
       return <PropertiesView />;
     case 'imports':
       return <ImportsView />;
+    case 'ops':
+      return <OpsLogView />;
     default:
       return <EmptyChannelView channel={channel} />;
   }

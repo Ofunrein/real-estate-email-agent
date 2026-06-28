@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import { google, type gmail_v1 } from "googleapis";
 import type { NextRequest } from "next/server";
@@ -61,19 +60,6 @@ export function emailCapabilitiesForScopes(scopes: string[] = []) {
   ];
 }
 
-type OAuthCredentials = {
-  installed?: {
-    client_id?: string;
-    client_secret?: string;
-    redirect_uris?: string[];
-  };
-  web?: {
-    client_id?: string;
-    client_secret?: string;
-    redirect_uris?: string[];
-  };
-};
-
 export type GmailReplyInput = {
   to: string;
   subject?: string;
@@ -93,15 +79,9 @@ export type GmailReplyResult = {
   fallbackReason?: string;
 };
 
-function readJson<T>(filePath: string): T {
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
-}
-
-function readJsonEnv<T>(name: string): T | null {
-  const value = process.env[name];
-  if (!value) return null;
-  return JSON.parse(value) as T;
-}
+export type GmailDraftResult = GmailReplyResult & {
+  draftId: string;
+};
 
 function oauthSecret(): string {
   return process.env.EMAIL_ACCOUNT_OAUTH_STATE_SECRET
@@ -192,21 +172,6 @@ export function gmailConnectUrl(input: { request: NextRequest; operatorEmail: st
   });
 }
 
-function legacyOAuthClient() {
-  const credentialsPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.GMAIL_CREDENTIALS_PATH || "credentials.json");
-  const credentials = readJsonEnv<OAuthCredentials>("GMAIL_CREDENTIALS_JSON") || readJson<OAuthCredentials>(credentialsPath);
-  const app = credentials.installed || credentials.web;
-  if (!app?.client_id || !app.client_secret) {
-    throw new Error("Gmail credentials are missing OAuth client data");
-  }
-  return new google.auth.OAuth2(app.client_id, app.client_secret, app.redirect_uris?.[0]);
-}
-
-function legacyToken(): GmailTokenJson {
-  const tokenPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), process.env.GMAIL_TOKEN_PATH || "token.json");
-  return readJsonEnv<GmailTokenJson>("GMAIL_TOKEN_JSON") || readJson<GmailTokenJson>(tokenPath);
-}
-
 function normalizeGmailTokenJson(tokens: object): GmailTokenJson {
   return Object.fromEntries(
     Object.entries(tokens).filter(([, value]) => value !== null && value !== undefined),
@@ -257,13 +222,19 @@ export async function createIrisGmailClient(): Promise<GmailClient> {
 }
 
 export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; accountEmail: string; legacy: boolean }> {
-  if (databaseEnabled()) {
-    const account = await readDefaultEmailAccountFromDatabase();
-    if (account) {
-      const token = decryptEmailAccountToken<GmailTokenJson>(account.token_json_encrypted);
-      const oauth = createGmailOAuthClient(gmailOAuthRedirectUri());
-      return {
-        gmail: gmailClientFromToken({
+  if (!databaseEnabled()) {
+    throw new Error("Gmail OAuth requires DATABASE_URL so app-connected email accounts can be read.");
+  }
+
+  const account = await readDefaultEmailAccountFromDatabase();
+  if (!account) {
+    throw new Error("No connected Gmail account found. Connect Gmail from the dashboard OAuth flow.");
+  }
+
+  const token = decryptEmailAccountToken<GmailTokenJson>(account.token_json_encrypted);
+  const oauth = createGmailOAuthClient(gmailOAuthRedirectUri());
+  return {
+    gmail: gmailClientFromToken({
         token,
         oauth,
         onTokens: (tokens) => {
@@ -280,18 +251,9 @@ export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; ac
             markEmailAccountErrorInDatabase(account.email, message).catch(() => {});
           });
         },
-        }),
-        accountEmail: account.email,
-        legacy: false,
-      };
-    }
-  }
-
-  const oauth = legacyOAuthClient();
-  return {
-    gmail: gmailClientFromToken({ token: legacyToken(), oauth }),
-    accountEmail: "legacy token",
-    legacy: true,
+    }),
+    accountEmail: account.email,
+    legacy: false,
   };
 }
 
@@ -334,11 +296,7 @@ export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput)
   return sendGmailReplyWithOptions(gmail, input, { mailboxEmail: "" });
 }
 
-export async function sendGmailReplyWithOptions(
-  gmail: GmailClient,
-  input: GmailReplyInput,
-  options: { mailboxEmail?: string; fallbackUnthreadedOnMissingThread?: boolean } = {},
-): Promise<GmailReplyResult> {
+function buildGmailReplyMessage(input: GmailReplyInput): { raw: string; normalizedThreadId: string } {
   const subjectRaw = input.subject || "(no subject)";
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
   const boundary = `boundary_${Date.now().toString(36)}`;
@@ -401,8 +359,19 @@ export async function sendGmailReplyWithOptions(
     ].join("\r\n")).toString("base64url");
   }
 
+  return {
+    raw,
+    normalizedThreadId: validGmailThreadId(input.threadId) ? input.threadId?.trim() || "" : "",
+  };
+}
+
+export async function sendGmailReplyWithOptions(
+  gmail: GmailClient,
+  input: GmailReplyInput,
+  options: { mailboxEmail?: string; fallbackUnthreadedOnMissingThread?: boolean } = {},
+): Promise<GmailReplyResult> {
+  const { raw, normalizedThreadId } = buildGmailReplyMessage(input);
   const requestBody: { raw: string; threadId?: string } = { raw };
-  const normalizedThreadId = validGmailThreadId(input.threadId) ? input.threadId?.trim() : "";
   const mailboxEmail = options.mailboxEmail || "";
   const fallbackEnabled = options.fallbackUnthreadedOnMissingThread !== false;
 
@@ -432,9 +401,115 @@ export async function sendGmailReplyWithOptions(
     return {
       ...fresh,
       threaded: false,
-      fallbackReason: "Gmail thread was not found in the active sending mailbox, so Iris sent a fresh email.",
+    fallbackReason: "Gmail thread was not found in the active sending mailbox, so Iris sent a fresh email.",
     };
   }
+}
+
+export async function createGmailReplyDraftWithOptions(
+  gmail: GmailClient,
+  input: GmailReplyInput,
+  options: { mailboxEmail?: string; fallbackUnthreadedOnMissingThread?: boolean } = {},
+): Promise<GmailDraftResult> {
+  const { raw, normalizedThreadId } = buildGmailReplyMessage(input);
+  const mailboxEmail = options.mailboxEmail || "";
+  const fallbackEnabled = options.fallbackUnthreadedOnMissingThread !== false;
+
+  async function create(threadId?: string, fallbackReason?: string): Promise<GmailDraftResult> {
+    const message = threadId ? { raw, threadId } : { raw };
+    const result = await gmail.users.drafts.create({
+      userId: "me",
+      requestBody: { message },
+    });
+    return {
+      threaded: Boolean(threadId),
+      mailboxEmail,
+      draftId: String(result.data.id || ""),
+      messageId: String(result.data.message?.id || ""),
+      threadId: String(result.data.message?.threadId || threadId || ""),
+      fallbackReason,
+    };
+  }
+
+  if (!normalizedThreadId) {
+    return create();
+  }
+
+  try {
+    await verifyGmailThread(gmail, normalizedThreadId);
+    return await create(normalizedThreadId);
+  } catch (error) {
+    if (!fallbackEnabled || isGmailAuthOrScopeError(error) || !isGmailNotFoundError(error)) {
+      throw error;
+    }
+    return create(undefined, "Gmail thread was not found in the active sending mailbox, so Iris created an unthreaded draft.");
+  }
+}
+
+export async function updateGmailReplyDraftWithOptions(
+  gmail: GmailClient,
+  draftId: string,
+  input: GmailReplyInput,
+  options: { mailboxEmail?: string; fallbackUnthreadedOnMissingThread?: boolean } = {},
+): Promise<GmailDraftResult> {
+  const cleanDraftId = draftId.trim();
+  if (!cleanDraftId) return createGmailReplyDraftWithOptions(gmail, input, options);
+
+  const { raw, normalizedThreadId } = buildGmailReplyMessage(input);
+  const mailboxEmail = options.mailboxEmail || "";
+  const fallbackEnabled = options.fallbackUnthreadedOnMissingThread !== false;
+
+  async function update(threadId?: string, fallbackReason?: string): Promise<GmailDraftResult> {
+    const message = threadId ? { raw, threadId } : { raw };
+    const result = await gmail.users.drafts.update({
+      userId: "me",
+      id: cleanDraftId,
+      requestBody: { id: cleanDraftId, message },
+    });
+    return {
+      threaded: Boolean(threadId),
+      mailboxEmail,
+      draftId: String(result.data.id || cleanDraftId),
+      messageId: String(result.data.message?.id || ""),
+      threadId: String(result.data.message?.threadId || threadId || ""),
+      fallbackReason,
+    };
+  }
+
+  try {
+    if (normalizedThreadId) {
+      await verifyGmailThread(gmail, normalizedThreadId);
+      return await update(normalizedThreadId);
+    }
+    return await update();
+  } catch (error) {
+    if (isGmailNotFoundError(error)) {
+      return createGmailReplyDraftWithOptions(gmail, input, options);
+    }
+    if (!fallbackEnabled || isGmailAuthOrScopeError(error) || !isGmailNotFoundError(error)) {
+      throw error;
+    }
+    return update(undefined, "Gmail thread was not found in the active sending mailbox, so Iris updated the draft as unthreaded.");
+  }
+}
+
+export async function sendGmailDraftWithOptions(
+  gmail: GmailClient,
+  draftId: string,
+  options: { mailboxEmail?: string } = {},
+): Promise<GmailReplyResult> {
+  const cleanDraftId = draftId.trim();
+  if (!cleanDraftId) throw new Error("Gmail draft id is required");
+  const result = await gmail.users.drafts.send({
+    userId: "me",
+    requestBody: { id: cleanDraftId },
+  });
+  return {
+    threaded: true,
+    mailboxEmail: options.mailboxEmail || "",
+    messageId: String(result.data.id || ""),
+    threadId: String(result.data.threadId || ""),
+  };
 }
 
 // Gmail only accepts a fixed palette. Map app hex colors to nearest supported Gmail color.

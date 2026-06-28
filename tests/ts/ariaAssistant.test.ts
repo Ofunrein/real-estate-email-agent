@@ -137,7 +137,7 @@ test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {
 
 test("buildAriaAssistant: sets Vapi response delay", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
-  assert.deepEqual(assistant.startSpeakingPlan, { waitSeconds: 0.5 });
+  assert.deepEqual(assistant.startSpeakingPlan, { waitSeconds: 0.5, smartEndpointingEnabled: true });
 });
 
 test("buildAriaAssistant: supports ElevenLabs low-latency voice tuning", () => {

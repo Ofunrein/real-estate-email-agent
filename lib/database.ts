@@ -15,6 +15,7 @@ import {
   type InboxCategory,
   type InboxSettings,
 } from "@/lib/inboxSettings";
+import type { ThreadReadState } from "@/lib/inboxData";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mergeNonEmpty, normalizeEmail, normalizeName, normalizePhone } from "@/lib/leadIdentity";
 import {
@@ -962,7 +963,23 @@ function aiDraftFromRow(row: Record<string, unknown>): AiDraft {
     model: String(row.model || ""),
     status: String(row.status || ""),
     fingerprint: String(row.fingerprint || ""),
+    gmail_draft_id: String(row.gmail_draft_id || ""),
+    gmail_message_id: String(row.gmail_message_id || ""),
+    gmail_thread_id: String(row.gmail_thread_id || ""),
+    gmail_mailbox_email: String(row.gmail_mailbox_email || ""),
+    gmail_draft_synced_at: row.gmail_draft_synced_at ? new Date(String(row.gmail_draft_synced_at)).toISOString() : "",
     updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+function threadReadStateFromRow(row: Record<string, unknown>): ThreadReadState {
+  return {
+    channel: String(row.channel || ""),
+    threadRef: String(row.thread_ref || ""),
+    seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : "",
+    seenEventAt: row.seen_event_at ? new Date(String(row.seen_event_at)).toISOString() : "",
+    seenBy: String(row.seen_by || ""),
+    updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
   };
 }
 
@@ -1131,7 +1148,9 @@ export async function readActiveAiDraftsFromDatabase(): Promise<Record<string, A
   if (!await tableReady("ai_drafts")) return {};
   const result = await getPool().query(
     `select thread_ref, channel, body, category_slug, confidence, reason, next_action,
-            safe_to_auto_send, needs_human, model, status, fingerprint, updated_at
+            safe_to_auto_send, needs_human, model, status, fingerprint,
+            gmail_draft_id, gmail_message_id, gmail_thread_id, gmail_mailbox_email,
+            gmail_draft_synced_at, updated_at
        from ai_drafts
       where client_id = $1
         and status = 'draft'
@@ -1148,7 +1167,9 @@ export async function readAiDraftFromDatabase(input: { threadRef: string; channe
   if (!await tableReady("ai_drafts")) return null;
   const result = await getPool().query(
     `select thread_ref, channel, body, category_slug, confidence, reason, next_action,
-            safe_to_auto_send, needs_human, model, status, fingerprint, updated_at
+            safe_to_auto_send, needs_human, model, status, fingerprint,
+            gmail_draft_id, gmail_message_id, gmail_thread_id, gmail_mailbox_email,
+            gmail_draft_synced_at, updated_at
        from ai_drafts
       where client_id = $1
         and thread_ref = $2
@@ -1169,8 +1190,10 @@ export async function upsertAiDraftInDatabase(input: Omit<AiDraft, "updated_at" 
   const result = await getPool().query(
     `insert into ai_drafts (
         client_id, thread_ref, channel, body, category_slug, confidence, reason,
-        next_action, safe_to_auto_send, needs_human, model, status, fingerprint
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        next_action, safe_to_auto_send, needs_human, model, status, fingerprint,
+        gmail_draft_id, gmail_message_id, gmail_thread_id, gmail_mailbox_email,
+        gmail_draft_synced_at
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       on conflict (client_id, thread_ref, channel) where status = 'draft'
       do update set
         body = excluded.body,
@@ -1182,9 +1205,16 @@ export async function upsertAiDraftInDatabase(input: Omit<AiDraft, "updated_at" 
         needs_human = excluded.needs_human,
         model = excluded.model,
         fingerprint = excluded.fingerprint,
+        gmail_draft_id = excluded.gmail_draft_id,
+        gmail_message_id = excluded.gmail_message_id,
+        gmail_thread_id = excluded.gmail_thread_id,
+        gmail_mailbox_email = excluded.gmail_mailbox_email,
+        gmail_draft_synced_at = excluded.gmail_draft_synced_at,
         updated_at = now()
       returning thread_ref, channel, body, category_slug, confidence, reason, next_action,
-                safe_to_auto_send, needs_human, model, status, fingerprint, updated_at`,
+                safe_to_auto_send, needs_human, model, status, fingerprint,
+                gmail_draft_id, gmail_message_id, gmail_thread_id, gmail_mailbox_email,
+                gmail_draft_synced_at, updated_at`,
     [
       clientId(),
       input.thread_ref,
@@ -1199,6 +1229,11 @@ export async function upsertAiDraftInDatabase(input: Omit<AiDraft, "updated_at" 
       input.model,
       input.status || "draft",
       input.fingerprint,
+      input.gmail_draft_id || "",
+      input.gmail_message_id || "",
+      input.gmail_thread_id || "",
+      input.gmail_mailbox_email || "",
+      input.gmail_draft_synced_at || null,
     ],
   );
   return aiDraftFromRow(result.rows[0]);
@@ -1220,6 +1255,56 @@ export async function updateAiDraftStatusInDatabase(input: {
         and status = 'draft'`,
     [clientId(), input.threadRef, input.channel, input.status],
   );
+}
+
+export async function readThreadReadStatesFromDatabase(): Promise<Record<string, ThreadReadState>> {
+  if (!await tableReady("thread_read_states")) return {};
+  const result = await getPool().query(
+    `select thread_ref, channel, seen_at, seen_event_at, seen_by, updated_at
+       from thread_read_states
+      where client_id = $1
+      order by updated_at desc`,
+    [clientId()],
+  );
+  const states: Record<string, ThreadReadState> = {};
+  for (const row of result.rows) {
+    const state = threadReadStateFromRow(row);
+    states[`${state.channel}:${state.threadRef}`] = state;
+  }
+  return states;
+}
+
+export async function markThreadSeenInDatabase(input: {
+  threadRef: string;
+  channel: string;
+  seenBy?: string;
+  seenEventAt?: string;
+}): Promise<ThreadReadState> {
+  if (!await tableReady("thread_read_states")) {
+    const now = new Date().toISOString();
+    return {
+      channel: input.channel,
+      threadRef: input.threadRef,
+      seenAt: now,
+      seenEventAt: input.seenEventAt || "",
+      seenBy: input.seenBy || "owner",
+      updatedAt: now,
+    };
+  }
+  await ensureClientInDatabase();
+  const result = await getPool().query(
+    `insert into thread_read_states (
+        client_id, thread_ref, channel, seen_at, seen_event_at, seen_by, updated_at
+      ) values ($1, $2, $3, now(), nullif($4, '')::timestamptz, $5, now())
+      on conflict (client_id, thread_ref, channel) do update set
+        seen_at = now(),
+        seen_event_at = coalesce(nullif(excluded.seen_event_at::text, '')::timestamptz, thread_read_states.seen_event_at),
+        seen_by = excluded.seen_by,
+        updated_at = now()
+      returning thread_ref, channel, seen_at, seen_event_at, seen_by, updated_at`,
+    [clientId(), input.threadRef, input.channel, input.seenEventAt || "", input.seenBy || "owner"],
+  );
+  return threadReadStateFromRow(result.rows[0]);
 }
 
 export async function upsertThreadLinkInDatabase(input: {
@@ -1279,17 +1364,24 @@ export async function readEventsForThreadOrContactFromDatabase(input: {
   limit?: number;
 }): Promise<SheetRow[]> {
   const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
+  const prefix = `${input.channel}:`;
+  const contactRef = input.threadRef.startsWith(prefix) ? input.threadRef.slice(prefix.length) : input.threadRef;
+  const prefixedThreadRef = input.threadRef.startsWith(prefix) ? input.threadRef : `${prefix}${input.threadRef}`;
   const result = await getPool().query(
     `select ${columns}
        from conversation_events
       where client_id = $1
         and (
           thread_ref = $2
+          or thread_ref = $5
+          or thread_ref = $6
           or (
             channel = $3
             and (
               phone = $2
+              or phone = $5
               or email = $2
+              or email = $5
             )
           )
         )
@@ -1299,9 +1391,50 @@ export async function readEventsForThreadOrContactFromDatabase(input: {
         ) desc,
         id desc
       limit $4`,
-    [clientId(), input.threadRef, input.channel, input.limit || 12],
+    [clientId(), input.threadRef, input.channel, input.limit || 12, contactRef, prefixedThreadRef],
   );
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
+export async function findSocialBrowserThreadByUsernameFromDatabase(input: {
+  channel: string;
+  username: string;
+}): Promise<{ threadRef: string; contactRef: string; displayName: string } | null> {
+  const username = input.username.trim().replace(/^@+/, "").toLowerCase();
+  if (!username || !await tableReady("conversation_events")) return null;
+  const result = await getPool().query(
+    `select
+        thread_ref,
+        max(coalesce(nullif(event_at, '')::timestamptz, created_at)) as latest_at,
+        max(nullif(phone, '')) as contact_ref,
+        max(nullif(full_name, '')) as display_name,
+        count(*) as touch_count
+       from conversation_events
+      where client_id = $1
+        and channel = $2
+        and coalesce(thread_ref, '') <> ''
+        and (
+          source ilike '%browser_backfill%'
+          or coalesce(provider_metadata->>'source', '') ilike '%browser_backfill%'
+        )
+        and (
+          lower(trim(leading '@' from coalesce(provider_metadata->>'senderUsername', ''))) = $3
+          or lower(trim(leading '@' from coalesce(provider_metadata->>'sender_username', ''))) = $3
+          or lower(trim(leading '@' from coalesce(provider_metadata->>'username', ''))) = $3
+          or lower(trim(leading '@' from coalesce(full_name, ''))) = $3
+        )
+      group by thread_ref
+      order by touch_count desc, latest_at desc nulls last
+      limit 1`,
+    [clientId(), input.channel, username],
+  );
+  const row = result.rows[0];
+  if (!row?.thread_ref) return null;
+  return {
+    threadRef: String(row.thread_ref || ""),
+    contactRef: String(row.contact_ref || ""),
+    displayName: String(row.display_name || ""),
+  };
 }
 
 export async function hasNewerInboundForThreadInDatabase(threadRef: string, eventAt: string): Promise<boolean> {

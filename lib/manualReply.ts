@@ -28,7 +28,14 @@ export type ManualReplyResult = {
   deliveredBody?: string;
   deliveredMediaUrls?: string[];
   droppedMediaUrls?: string[];
+  messageIds?: string[];
 } | { ok: false; error: string };
+
+function instagramUsernameTarget(value: string): string {
+  const clean = value.trim();
+  if (!clean.startsWith("@")) return "";
+  return clean.replace(/^@+/, "").trim();
+}
 
 export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
   try {
@@ -60,6 +67,24 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
         return await sendWhatsApp(input);
       case "instagram":
       case "messenger": {
+        const usernameTarget = input.channel === "instagram" ? instagramUsernameTarget(input.to) : "";
+        if (usernameTarget) {
+          const r = await sendComposioSocialMessage({
+            channel: "instagram",
+            to: usernameTarget,
+            body: input.body,
+            mediaUrls: input.mediaUrls,
+            threadRef: input.threadId,
+          });
+          return r.ok
+            ? {
+              ok: true,
+              deliveredBody: r.deliveredBody,
+              deliveredMediaUrls: r.deliveredMediaUrls,
+              droppedMediaUrls: r.droppedMediaUrls,
+            }
+            : r;
+        }
         if (metaSocialDirectEnabled(input.channel)) {
           const connection = await directMetaConnectionForChannel(input.channel);
           if (!connection?.page_access_token) {
@@ -78,6 +103,7 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
               deliveredBody: r.deliveredBody,
               deliveredMediaUrls: r.deliveredMediaUrls,
               droppedMediaUrls: r.droppedMediaUrls,
+              messageIds: r.messageIds,
             }
             : { ok: false, error: r.error || `${input.channel} not sent` };
         }

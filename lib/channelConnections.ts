@@ -156,9 +156,8 @@ export function envFallbackChannelConnections(
   clientId = defaultClientId(),
 ): ChannelConnectionRecord[] {
   const publicBaseUrl = cleanText(env.PUBLIC_BASE_URL || env.AUTH_URL);
-  const gmailLegacyConfigured = configured(env.GMAIL_TOKEN_JSON)
-    || configured(env.GMAIL_TOKEN_PATH)
-    || configured(env.GMAIL_CREDENTIALS_JSON);
+  const gmailOAuthConfigured = configured(env.GMAIL_OAUTH_CLIENT_ID || env.AUTH_GOOGLE_ID || env.GOOGLE_CLIENT_ID)
+    && configured(env.GMAIL_OAUTH_CLIENT_SECRET || env.AUTH_GOOGLE_SECRET || env.GOOGLE_CLIENT_SECRET);
   const composioConfigured = configured(env.COMPOSIO_API_KEY);
   const smsConnected = configured(env.TWILIO_ACCOUNT_SID) && configured(env.TWILIO_AUTH_TOKEN) && configured(env.TWILIO_FROM);
   const voicePhoneId = cleanText(env.VAPI_PHONE_NUMBER_ID || env.ARIA_PHONE_NUMBER_ID);
@@ -181,10 +180,10 @@ export function envFallbackChannelConnections(
       clientId,
       channel: "email",
       provider: configured(env.COMPOSIO_GMAIL_AUTH_CONFIG_ID) ? "composio_gmail" : "gmail",
-      connected: gmailLegacyConfigured,
-      healthReason: gmailLegacyConfigured ? "Gmail credentials are configured from environment." : "Connect Gmail or provide hosted Gmail credentials.",
+      connected: false,
+      healthReason: gmailOAuthConfigured ? "Connect Gmail from the dashboard OAuth flow." : "Configure Google OAuth, then connect Gmail from the dashboard.",
       metadata: {
-        legacy_configured: gmailLegacyConfigured,
+        oauth_configured: gmailOAuthConfigured,
         composio_auth_configured: configured(env.COMPOSIO_GMAIL_AUTH_CONFIG_ID),
       },
     }),

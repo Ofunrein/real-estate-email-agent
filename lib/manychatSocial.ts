@@ -202,7 +202,7 @@ export function buildSocialRouterResult(input: {
 }): SocialDmRouterResult {
   const reply = input.reply;
   const needsHuman = Boolean(input.guard?.needsHuman || reply?.status === "needs_human" || reply?.handoffReason);
-  const sendable = Boolean(reply?.shouldSend && reply.reply && !needsHuman);
+  const sendable = Boolean(reply?.shouldSend && reply.reply);
   const mediaUrls = sendable ? socialMediaUrls(reply?.mediaUrls || [], input.baseUrl) : [];
   return {
     ok: true,

@@ -17,6 +17,8 @@ export interface ConversationListItem {
   time: string;
   preview: string;
   meta: string;
+  unreadCount?: number;
+  seen?: boolean;
   needsReview?: boolean;
   categoryLabel?: string;
   categoryColor?: string;
@@ -46,13 +48,13 @@ export function ConversationList({
       sx={{
         width: {
           xs: '100%',
-          sm: 240,
+          md: 240,
           lg: 300
         },
         flexShrink: 0,
         maxHeight: {
           xs: 240,
-          sm: 'none'
+          md: 'none'
         },
         display: 'flex',
         flexDirection: 'column',
@@ -143,7 +145,7 @@ export function ConversationList({
                 <Typography
                   variant="body2"
                   sx={{
-                    fontWeight: 600
+                    fontWeight: it.unreadCount ? 800 : 600
                   }}
                   noWrap>
                   
@@ -181,6 +183,18 @@ export function ConversationList({
                 <Typography variant="caption" color="text.secondary">
                   {it.meta}
                 </Typography>
+                {Boolean(it.unreadCount) &&
+                <Chip
+                  size="small"
+                  label={it.unreadCount}
+                  color="primary"
+                  sx={{
+                    height: 17,
+                    minWidth: 18,
+                    fontSize: 10,
+                    '& .MuiChip-label': { px: 0.6 }
+                  }} />
+                }
                 {it.categoryLabel &&
                 <Chip
                   size="small"

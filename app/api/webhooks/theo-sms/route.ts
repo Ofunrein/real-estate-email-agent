@@ -13,6 +13,7 @@ import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
+import { createRequestAudit, type RequestAuditInput } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -277,11 +278,42 @@ async function payloadWithVoiceTranscripts(payload: Record<string, string>): Pro
 
 export async function POST(request: NextRequest) {
   const requestStarted = nowMs();
+  const audit = createRequestAudit({
+    headers: request.headers,
+    route: "/api/webhooks/theo-sms",
+    method: "POST",
+    channel: "sms",
+    provider: "twilio",
+  });
+  const respond = async (
+    payload: Record<string, unknown>,
+    init: ResponseInit = {},
+    details: Partial<RequestAuditInput> & { stage?: string; outcome?: string } = {},
+  ) => {
+    const statusCode = init.status || (payload.ok === false ? 500 : 200);
+    const outcome = details.outcome || (statusCode >= 400 ? "failed" : payload.reply_sent ? "sent" : payload.status === "review_ready" ? "drafted" : payload.status === "skipped" || payload.reply_sent === false ? "skipped" : "received");
+    await audit.write(details.stage || "processed", outcome, {
+      ...details,
+      statusCode,
+      metadata: {
+        ...(details.metadata || {}),
+        status: payload.status,
+        action: payload.action,
+        replySent: payload.reply_sent,
+      },
+    });
+    return webhookResponse(request, payload, init);
+  };
   try {
     assertWebhookSecret(request);
     const parseStarted = nowMs();
     let payload = stringPayload(await parseWebhookPayload(request));
     const leadPhone = normalizeTwilioContactAddress(payload.From || "");
+    await audit.write("received", "received", {
+      contactRef: leadPhone,
+      providerMessageId: payload.MessageSid || "",
+      metadata: { to: payload.To, mediaCount: payload.NumMedia || "0" },
+    });
     logTheo("inbound received", {
       from: payload.From,
       to: payload.To,
@@ -296,7 +328,7 @@ export async function POST(request: NextRequest) {
         messageSid: payload.MessageSid || "",
         totalMs: elapsedMs(requestStarted),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: "sms",
         status: "skipped",
@@ -313,7 +345,7 @@ export async function POST(request: NextRequest) {
         bodyPreview: (payload.Body || "").slice(0, 60),
         totalMs: elapsedMs(requestStarted),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: "sms",
         status: "skipped",
@@ -340,11 +372,17 @@ export async function POST(request: NextRequest) {
       elapsedMs: elapsedMs(inboundWriteStarted),
       totalMs: elapsedMs(requestStarted),
     });
+    await audit.write("inbound_logged", "received", {
+      threadRef: result.event.thread_ref,
+      contactRef: leadPhone,
+      providerMessageId: payload.MessageSid || "",
+      metadata: { eventType: result.event.event_type },
+    });
     const controlAction = smsControlAction(payload.Body || "");
 
     if (controlAction === "stop") {
       logTheo("opt-out recorded", { from: payload.From, threadRef: result.event.thread_ref, totalMs: elapsedMs(requestStarted) });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: result.event.channel,
         status: result.event.status,
@@ -414,7 +452,7 @@ export async function POST(request: NextRequest) {
         totalMs: elapsedMs(requestStarted),
         sessionCost: formatUsd(theoSessionCost()),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: result.event.channel,
         status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -433,7 +471,7 @@ export async function POST(request: NextRequest) {
         threadRef: result.event.thread_ref,
         totalMs: elapsedMs(requestStarted),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: result.event.channel,
         status: "human_takeover",
@@ -460,7 +498,7 @@ export async function POST(request: NextRequest) {
           threadRef: result.event.thread_ref,
           totalMs: elapsedMs(requestStarted),
         });
-        return webhookResponse(request, {
+        return respond( {
           ok: true,
           channel: result.event.channel,
           status: "superseded",
@@ -616,7 +654,7 @@ export async function POST(request: NextRequest) {
         handoffReason: reply.handoffReason,
         totalMs: elapsedMs(requestStarted),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: result.event.channel,
         status: reply.status,
@@ -645,7 +683,7 @@ export async function POST(request: NextRequest) {
         reason: settings.draft_first ? "draft_first" : "auto_send_disabled",
         totalMs: elapsedMs(requestStarted),
       });
-      return webhookResponse(request, {
+      return respond( {
         ok: true,
         channel: result.event.channel,
         status: "review_ready",
@@ -735,7 +773,7 @@ export async function POST(request: NextRequest) {
       sessionCost: formatUsd(theoSessionCost()),
     });
 
-    return webhookResponse(request, {
+    return respond( {
       ok: true,
       channel: result.event.channel,
       status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
@@ -749,6 +787,6 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Unable to process Iris SMS webhook.";
     logTheo("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
-    return webhookResponse(request, { ok: false, error: message }, { status });
+    return respond( { ok: false, error: message }, { status });
   }
 }
