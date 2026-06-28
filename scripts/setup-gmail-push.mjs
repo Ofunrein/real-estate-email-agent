@@ -7,6 +7,7 @@
 // 2. A Pub/Sub topic (e.g. projects/YOUR_PROJECT/topics/gmail-iris-push)
 // 3. The Gmail service account / user must have "Publish" rights on the topic
 // 4. A push subscription pointed at: https://app.lumenosis.com/api/webhooks/iris-gmail-push?token=YOUR_TOKEN
+// 5. Inngest function gmail-watch-renewal registered for automatic watch renewal
 //
 // Run: npm run setup:gmail-push
 // Env: EMAIL_ACCOUNT_CLIENT_ID, GOOGLE_CLOUD_PROJECT_ID, GMAIL_PUBSUB_TOPIC, GMAIL_PUBSUB_TOKEN.
@@ -126,6 +127,39 @@ async function readConnectedGmailAccount() {
   }
 }
 
+async function updateConnectedGmailWatch(input) {
+  if (!databaseEnabled()) return;
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+  });
+  try {
+    const columns = await pool.query(
+      `select column_name
+         from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'email_accounts'
+          and column_name in ('gmail_watch_history_id', 'gmail_watch_expiration', 'gmail_watch_renewed_at')`,
+    );
+    if (columns.rows.length < 3) return;
+    await pool.query(
+      `update email_accounts
+          set gmail_watch_history_id = $3,
+              gmail_watch_expiration = $4::timestamptz,
+              gmail_watch_renewed_at = now(),
+              status = 'connected',
+              last_error = '',
+              updated_at = now()
+        where client_id = $1
+          and provider = 'gmail'
+          and email = $2`,
+      [EMAIL_ACCOUNT_CLIENT_ID, input.email, input.historyId, input.expiration],
+    );
+  } finally {
+    await pool.end();
+  }
+}
+
 async function buildAuth() {
   const connectedAccount = await readConnectedGmailAccount();
   if (connectedAccount?.token?.refresh_token) {
@@ -150,7 +184,7 @@ async function main() {
   const auth = await buildAuth();
   const gmail = google.gmail({ version: "v1", auth });
 
-  // Register the watch — expires every 7 days, auto-renewal via cron or re-running this script
+  // Register the watch. Gmail expires watches about every 7 days; Inngest renews them.
   const watch = await gmail.users.watch({
     userId: "me",
     requestBody: {
@@ -163,9 +197,18 @@ async function main() {
   const expiry = watch.data.expiration
     ? new Date(Number(watch.data.expiration)).toISOString()
     : "unknown";
+  const historyId = String(watch.data.historyId || "");
+
+  if (historyId && expiry !== "unknown") {
+    await updateConnectedGmailWatch({
+      email: (await gmail.users.getProfile({ userId: "me" })).data.emailAddress || "",
+      historyId,
+      expiration: expiry,
+    });
+  }
 
   console.log("✓ Gmail watch registered");
-  console.log("  historyId:", watch.data.historyId);
+  console.log("  historyId:", historyId);
   console.log("  Expires:", expiry);
   console.log("");
   console.log("Next steps:");
@@ -190,8 +233,8 @@ async function main() {
   console.log(`   GMAIL_PUBSUB_TOKEN=${pubSubToken || "<set CHANNEL_WEBHOOK_SECRET>"}`);
   console.log(`   GOOGLE_CLOUD_PROJECT_ID=${projectId}`);
   console.log("");
-  console.log("5. Watch expires every 7 days. Add a weekly cron to renew:");
-  console.log(`   0 9 * * 1 node scripts/setup-gmail-push.mjs`);
+  console.log("5. Watch expires every 7 days. Inngest renews connected Gmail accounts daily via:");
+  console.log("   gmail-watch-renewal");
   console.log("");
   console.log("Once active, disable legacy polling:");
   console.log("  Remove ENABLE_LEGACY_IRIS_EMAIL_POLLING=1 from .env");

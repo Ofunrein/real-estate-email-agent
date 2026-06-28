@@ -1033,11 +1033,17 @@ export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "su
   const contact = parseEmailContact(message.from);
   const sender = contact.email || message.from.toLowerCase();
   if (!sender) return false;
+  if (/@(?:lumenosis\.local|localhost)$/i.test(sender)) return false;
   if (/^(no-?reply|do-?not-?reply|donotreply|noreply|notification|notifications|mailer-daemon|postmaster)@/i.test(sender)) return false;
+  if (/^(sales|marketing|partnerships?|outreach|hello|team|founder|growth)@/i.test(sender)) return false;
   if (/@(?:.*\.)?(?:accounts\.google\.com|google\.com|gohighlevel\.com|github\.com|vercel\.com|calendly\.com|luckyfours\.com)$/i.test(sender)) return false;
   const text = `${message.subject || ""}\n${message.body || ""}`;
   if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run)/i.test(text)) return false;
   if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update)/i.test(text)) return false;
+  if (/\b(api|saas|software|platform|automation|cold email|lead gen|partnership|integrat(?:e|ion)|demo|quick re|quick question|checking in)\b/i.test(text)
+    && !/\b(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|real estate|bed(?:room)?|bath|mortgage|valuation|zillow|mls)\b/i.test(text)) {
+    return false;
+  }
   return true;
 }
 

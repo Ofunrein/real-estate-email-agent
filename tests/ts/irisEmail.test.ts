@@ -222,6 +222,16 @@ test("isIrisEligibleEmail: blocks system and no-reply senders before auto-send",
     body: "Book a demo. 400 N. Saint Paul St. Unsubscribe.",
   })), false);
   assert.equal(isIrisEligibleEmail(email({
+    from: "Sherzod from HandTextAI <sales@handtextai.com>",
+    subject: "Re: HandtextAI API - Lumenosis AI inquiry",
+    body: "Quick question about API automation for your SaaS workflow.",
+  })), false);
+  assert.equal(isIrisEligibleEmail(email({
+    from: "Codex Email Test Buyer <codex.email.test+1@lumenosis.local>",
+    subject: "Property",
+    body: "Can I see 9605 Corbe Dr?",
+  })), false);
+  assert.equal(isIrisEligibleEmail(email({
     from: "Sam Buyer <sam@example.com>",
     subject: "Tour request",
     body: "Can I tour 100 E 51st St #7 tomorrow?",
