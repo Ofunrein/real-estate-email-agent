@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireDashboardAuth } from "@/lib/authGuard";
 import { clientId } from "@/lib/database";
 import { connectGmailAccountFromCode, verifyGmailOAuthState } from "@/lib/gmailConnection";
+import { registerGmailWatchForAccount } from "@/lib/gmailWatchRenewal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,14 @@ export async function GET(request: NextRequest) {
       code,
       connectedBy: session.user.email,
     });
-    return redirectHome(request, { emailConnected: account.email });
+    const watch = await registerGmailWatchForAccount(account);
+    if (watch.status !== "renewed") {
+      return redirectHome(request, {
+        emailConnected: account.email,
+        emailError: `watch_failed:${(watch.error || "unknown").slice(0, 100)}`,
+      });
+    }
+    return redirectHome(request, { emailConnected: account.email, emailWatch: "active" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "gmail_connect_failed";
     return redirectHome(request, { emailError: message.slice(0, 120) });
