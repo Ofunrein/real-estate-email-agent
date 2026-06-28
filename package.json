@@ -20,6 +20,8 @@
     "setup:google-calendar": "node scripts/setup-google-calendar-auth.mjs",
     "setup:gmail-auth": "node scripts/setup-gmail-auth.mjs",
     "setup:gmail-push": "node scripts/setup-gmail-push.mjs",
+    "inngest:sync": "npx -y inngest-cli@latest api sync-app --prod lumenosis-real-estate-agent --url https://app.lumenosis.com/api/inngest",
+    "inngest:functions": "npx -y inngest-cli@latest api get-functions --prod lumenosis-real-estate-agent --raw",
     "aria:followup": "node --import tsx scripts/aria-followup-queue.mjs",
     "aria:backfill": "node --import tsx scripts/backfill-vapi-voice-calls.mjs",
     "sms:backfill": "node scripts/backfill-twilio-sms-events.mjs",
