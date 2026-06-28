@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782652695.7956102,
-    "ast_hash": "f288731042415a7eaddc905fd21e81cb",
+    "mtime": 1782666846.77312,
+    "ast_hash": "26697ec659de7d4b3e2d40329160c120",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782652820.6675498,
-    "ast_hash": "6b2b549aa9452c4f287659c646bb5ab8",
+    "mtime": 1782667331.7479892,
+    "ast_hash": "3e4c90b6188fae775a5bd6891b851158",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "tests/ts/irisEmail.test.ts": {
-    "mtime": 1782379609.298012,
-    "ast_hash": "c705e062595b36f856b39d783d9ec957",
+    "mtime": 1782667358.4672763,
+    "ast_hash": "57f470cb04b198f98a851b86e1bfe6d3",
     "semantic_hash": ""
   },
   "tests/ts/irisRyseTranscript.test.ts": {
@@ -2335,8 +2335,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782654546.0992813,
-    "ast_hash": "b90c512cb0436dd48c581fe5dee4c130",
+    "mtime": 1782667348.1206102,
+    "ast_hash": "b18958cadf2a1841fd6c45c4f16a1cd0",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
@@ -2480,8 +2480,8 @@
     "semantic_hash": ""
   },
   "app/api/inngest/route.ts": {
-    "mtime": 1782382368.982348,
-    "ast_hash": "91127e76d9c81ef8d9acbc400e160bb3",
+    "mtime": 1782667127.5196834,
+    "ast_hash": "cbcaa2a71e290b57ab0fa1658b4bcae3",
     "semantic_hash": ""
   },
   "lib/inngest/client.ts": {
@@ -3060,8 +3060,8 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/iris-gmail-push/route.ts": {
-    "mtime": 1782651515.2106738,
-    "ast_hash": "e4a6c66a898a696b8ca3ebd2d53ee613",
+    "mtime": 1782667167.1686616,
+    "ast_hash": "9f89f06fde0e6b56a57391cdf5ed4a4e",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OpsLogView.tsx": {
@@ -3130,8 +3130,8 @@
     "semantic_hash": ""
   },
   "scripts/setup-gmail-push.mjs": {
-    "mtime": 1782654973.9958003,
-    "ast_hash": "d63df3d04a2273a3401c4600a33352c7",
+    "mtime": 1782666831.578373,
+    "ast_hash": "6f795c6c5cedf6bb1c2b2bdf217a3e2a",
     "semantic_hash": ""
   },
   "scripts/setup-google-calendar-auth.mjs": {
@@ -3332,6 +3332,26 @@
   "lumenosis-site/public/images/logo-variations/logo-variations-preview.png": {
     "mtime": 1782635171.1568604,
     "ast_hash": "fe1df42b910db75315ceaa28ccf24a73",
+    "semantic_hash": ""
+  },
+  "db/migrations/020_email_account_gmail_watch_state.sql": {
+    "mtime": 1782666692.4286823,
+    "ast_hash": "debaf970c534e123defc1b7659cf5e69",
+    "semantic_hash": ""
+  },
+  "lib/gmailWatchRenewal.ts": {
+    "mtime": 1782666782.571142,
+    "ast_hash": "f1b5604c183f81e0a917c24ca95828dc",
+    "semantic_hash": ""
+  },
+  "lib/inngest/functions/gmailPushReceived.ts": {
+    "mtime": 1782667119.142329,
+    "ast_hash": "f8efbe848cfa9907372a5b7892cc262e",
+    "semantic_hash": ""
+  },
+  "lib/inngest/functions/gmailWatchRenewal.ts": {
+    "mtime": 1782666792.4158387,
+    "ast_hash": "10ca990ee78c322808f0f59b954adc0b",
     "semantic_hash": ""
   }
 }

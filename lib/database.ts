@@ -234,6 +234,9 @@ export type EmailAccountRecord = {
   connected_by: string;
   last_error: string;
   last_used_at: string;
+  gmail_watch_history_id: string;
+  gmail_watch_expiration: string;
+  gmail_watch_renewed_at: string;
   created_at: string;
   updated_at: string;
 };
@@ -262,6 +265,9 @@ function emailAccountFromRow(row: Record<string, unknown>): EmailAccountRecord {
     connected_by: String(row.connected_by || ""),
     last_error: String(row.last_error || ""),
     last_used_at: row.last_used_at ? new Date(String(row.last_used_at)).toISOString() : "",
+    gmail_watch_history_id: String(row.gmail_watch_history_id || ""),
+    gmail_watch_expiration: row.gmail_watch_expiration ? new Date(String(row.gmail_watch_expiration)).toISOString() : "",
+    gmail_watch_renewed_at: row.gmail_watch_renewed_at ? new Date(String(row.gmail_watch_renewed_at)).toISOString() : "",
     created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
     updated_at: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
   };
@@ -831,9 +837,14 @@ export async function readLeadImportItemsFromDatabase(batchId: string, limit = 5
 
 export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
   if (!await emailAccountsTableReady()) return [];
+  const columns = await tableColumns("email_accounts");
+  const watchColumns = columns.has("gmail_watch_history_id")
+    ? `, gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
+    : `, '' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
   const result = await getPool().query(
     `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
             is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
+            ${watchColumns}
        from email_accounts
       where client_id = $1
       order by is_default desc, updated_at desc`,
@@ -844,9 +855,14 @@ export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecor
 
 export async function readDefaultEmailAccountFromDatabase(): Promise<EmailAccountRecord | null> {
   if (!await emailAccountsTableReady()) return null;
+  const columns = await tableColumns("email_accounts");
+  const watchColumns = columns.has("gmail_watch_history_id")
+    ? `, gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
+    : `, '' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
   const result = await getPool().query(
     `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
             is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
+            ${watchColumns}
        from email_accounts
       where client_id = $1
         and provider = 'gmail'
@@ -857,6 +873,45 @@ export async function readDefaultEmailAccountFromDatabase(): Promise<EmailAccoun
     [clientId()],
   );
   return result.rows[0] ? emailAccountFromRow(result.rows[0]) : null;
+}
+
+export async function readConnectedGmailAccountsForWatchRenewal(options: {
+  renewWithinHours?: number;
+  limit?: number;
+  force?: boolean;
+} = {}): Promise<EmailAccountRecord[]> {
+  if (!await emailAccountsTableReady()) return [];
+  const columns = await tableColumns("email_accounts");
+  const hasWatchColumns = columns.has("gmail_watch_history_id");
+  const renewWithinHours = Math.max(1, Math.min(options.renewWithinHours || 48, 24 * 6));
+  const limit = Math.max(1, Math.min(options.limit || 100, 500));
+  const watchColumns = hasWatchColumns
+    ? `gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
+    : `'' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
+  const dueClause = !hasWatchColumns || options.force
+    ? ""
+    : `and (
+         gmail_watch_expiration is null
+         or gmail_watch_expiration < now() + ($1::int || ' hours')::interval
+       )`;
+  const orderBy = hasWatchColumns
+    ? "coalesce(gmail_watch_expiration, 'epoch'::timestamptz) asc, updated_at desc"
+    : "updated_at desc";
+  const params = hasWatchColumns && !options.force ? [renewWithinHours, limit] : [limit];
+  const result = await getPool().query(
+    `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
+            is_default, status, connected_by, last_error, last_used_at, created_at, updated_at,
+            ${watchColumns}
+       from email_accounts
+      where provider = 'gmail'
+        and status = 'connected'
+        and is_default = true
+        ${dueClause}
+      order by ${orderBy}
+      limit $${params.length}`,
+    params,
+  );
+  return result.rows.map(emailAccountFromRow);
 }
 
 export async function upsertEmailAccountInDatabase(input: {
@@ -922,6 +977,46 @@ export async function updateEmailAccountTokenInDatabase(email: string, tokenJson
   );
 }
 
+export async function updateEmailAccountTokenForClientInDatabase(clientIdValue: string, email: string, tokenJsonEncrypted: string): Promise<void> {
+  if (!clientIdValue.trim() || !email.trim()) return;
+  await getPool().query(
+    `update email_accounts
+        set token_json_encrypted = $3,
+            status = 'connected',
+            last_error = '',
+            last_used_at = now(),
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $2`,
+    [clientIdValue, email.trim().toLowerCase(), tokenJsonEncrypted],
+  );
+}
+
+export async function updateEmailAccountGmailWatchInDatabase(input: {
+  clientId: string;
+  email: string;
+  historyId: string;
+  expiration: string;
+}): Promise<void> {
+  if (!input.clientId.trim() || !input.email.trim() || !await emailAccountsTableReady()) return;
+  const columns = await tableColumns("email_accounts");
+  if (!columns.has("gmail_watch_history_id")) return;
+  await getPool().query(
+    `update email_accounts
+        set gmail_watch_history_id = $3,
+            gmail_watch_expiration = $4::timestamptz,
+            gmail_watch_renewed_at = now(),
+            status = 'connected',
+            last_error = '',
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $2`,
+    [input.clientId, input.email.trim().toLowerCase(), input.historyId, input.expiration],
+  );
+}
+
 export async function markEmailAccountErrorInDatabase(email: string, error: string): Promise<void> {
   if (!email.trim() || !await emailAccountsTableReady()) return;
   await getPool().query(
@@ -933,6 +1028,20 @@ export async function markEmailAccountErrorInDatabase(email: string, error: stri
         and provider = 'gmail'
         and email = $3`,
     [clientId(), error.slice(0, 500), email.trim().toLowerCase()],
+  );
+}
+
+export async function markEmailAccountErrorForClientInDatabase(clientIdValue: string, email: string, error: string): Promise<void> {
+  if (!clientIdValue.trim() || !email.trim() || !await emailAccountsTableReady()) return;
+  await getPool().query(
+    `update email_accounts
+        set status = 'error',
+            last_error = $3,
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $2`,
+    [clientIdValue, email.trim().toLowerCase(), error.slice(0, 500)],
   );
 }
 
