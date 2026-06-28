@@ -181,7 +181,7 @@ test("adaptInboxData shows Instagram contact name but preserves platform recipie
   const model = adaptInboxData(data);
   const thread = model.textThreads.instagram[0];
 
-  assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.id, "martn.o");
   assert.equal(thread.contact, "martn.o");
   assert.equal(thread.replyTo, "1526516032549624");
   assert.equal(thread.messageCount, 2);
@@ -235,7 +235,204 @@ test("adaptInboxData can read social profile identity from provider metadata", (
   const model = adaptInboxData(data);
   const thread = model.textThreads.instagram[0];
 
-  assert.equal(thread.contact, "martn.ai");
+  assert.equal(thread.contact, "@martn.ai");
+  assert.equal(thread.replyTo, "1526516032549624");
+});
+
+test("adaptInboxData does not use browser-imported Instagram ids as Meta reply targets", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "instagram_direct_v2_browser_backfill",
+        full_name: "@oje.o",
+        phone: "118140786245822",
+        thread_ref: "instagram:118140786245822",
+        provider_metadata: JSON.stringify({
+          senderId: "118140786245822",
+          contactId: "118140786245822",
+          threadKey: "118140786245822",
+          instagramUserId: "2112135625",
+          senderUsername: "oje.o",
+        }),
+        gmail_message_id: "instagram:oje-message-1",
+        message_text: "I'm interested in a property",
+        event_at: "2026-06-26T21:55:38.014Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.id, "oje.o");
+  assert.equal(thread.contact, "@oje.o");
+  assert.equal(thread.replyTo, "@oje.o");
+});
+
+test("adaptInboxData marks browser-synced inbound Instagram leads as needs human", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "instagram_direct_v2_browser_backfill",
+        full_name: "@oje.o",
+        phone: "118140786245822",
+        thread_ref: "instagram:118140786245822",
+        provider_metadata: JSON.stringify({
+          senderUsername: "oje.o",
+          source: "instagram_direct_v2_browser_backfill",
+        }),
+        gmail_message_id: "instagram:oje-message-1",
+        message_text: "I’m interested in a property",
+        status: "browser_backfill_verified_recipient",
+        event_at: "2026-06-26T21:55:38.014Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.contact, "@oje.o");
+  assert.equal(thread.replyTo, "@oje.o");
+  assert.equal(thread.category, "needs-human");
+});
+
+test("adaptInboxData uses authenticated browser Instagram user ids as Meta reply targets", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "instagram_direct_v2_browser_backfill",
+        full_name: "@oje.o",
+        phone: "118140786245822",
+        thread_ref: "instagram:118140786245822",
+        provider_metadata: JSON.stringify({
+          source: "instagram_direct_v2_authenticated_browser",
+          senderId: "2112135625",
+          contactId: "2112135625",
+          instagramUserId: "2112135625",
+          browserRecipientId: "118140786245822",
+          senderUsername: "oje.o",
+        }),
+        gmail_message_id: "instagram:oje-message-verified",
+        message_text: "I’m interested in a property",
+        status: "browser_backfill_verified_recipient",
+        event_at: "2026-06-26T21:55:38.014Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.contact, "@oje.o");
+  assert.equal(thread.replyTo, "2112135625");
+  assert.equal(thread.category, "needs-human");
+});
+
+test("adaptInboxData unlocks browser-merged Instagram thread after Meta webhook event", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "instagram_direct_v2_browser_backfill",
+        full_name: "@oje.o",
+        phone: "118140786245822",
+        thread_ref: "instagram:118140786245822",
+        provider_metadata: JSON.stringify({
+          source: "instagram_direct_v2_authenticated_browser",
+          senderId: "2112135625",
+          contactId: "2112135625",
+          browserRecipientId: "118140786245822",
+          senderUsername: "oje.o",
+        }),
+        gmail_message_id: "instagram:oje-message-browser",
+        message_text: "I’m interested in a property",
+        status: "browser_backfill_verified_recipient",
+        event_at: "2026-06-26T21:55:38.014Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "meta_social",
+        full_name: "@oje.o",
+        phone: "178998877665544",
+        thread_ref: "instagram:118140786245822",
+        provider_metadata: JSON.stringify({
+          senderId: "178998877665544",
+          senderUsername: "oje.o",
+          webhookThreadRef: "instagram:178998877665544",
+        }),
+        gmail_message_id: "instagram:oje-message-webhook",
+        message_text: "Hi again",
+        event_at: "2026-06-27T18:01:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.id, "oje.o");
+  assert.equal(thread.contact, "@oje.o");
+  assert.equal(thread.replyTo, "178998877665544");
+  assert.equal(thread.messageCount, 2);
+});
+
+test("adaptInboxData ignores stale outbound social phone values when resolving reply target", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "meta_social",
+        full_name: "@martn.o",
+        phone: "116105473108942",
+        thread_ref: "instagram:116105473108942",
+        provider_metadata: JSON.stringify({
+          senderId: "1526516032549624",
+          senderUsername: "martn.o",
+          webhookThreadRef: "instagram:1526516032549624",
+        }),
+        gmail_message_id: "instagram:martn-webhook-inbound",
+        message_text: "I need photos for the first one",
+        event_at: "2026-06-27T07:57:54.286Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "outbound",
+        source: "meta_social",
+        agent_name: "Iris",
+        full_name: "@martn.o",
+        phone: "116105473108942",
+        thread_ref: "instagram:116105473108942",
+        gmail_message_id: "instagram:legacy-outbound",
+        message_text: "I found the listing.",
+        event_at: "2026-06-27T07:58:01.259Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const thread = adaptInboxData(data).textThreads.instagram[0];
+
+  assert.equal(thread.id, "martn.o");
+  assert.equal(thread.contact, "@martn.o");
   assert.equal(thread.replyTo, "1526516032549624");
 });
 
@@ -259,7 +456,7 @@ test("adaptInboxData keeps social owner replies in the same sender thread", () =
         agent_name: "Owner",
         source: "human_takeover",
         phone: "1526516032549624",
-        thread_ref: "1526516032549624",
+        thread_ref: "instagram:thread-abc",
         message_text: "I can help",
         event_at: "2026-06-22T12:06:17.000Z",
       } as SheetRow,
@@ -271,11 +468,186 @@ test("adaptInboxData keeps social owner replies in the same sender thread", () =
   const thread = model.textThreads.instagram[0];
 
   assert.equal(model.textThreads.instagram.length, 1);
-  assert.equal(thread.id, "1526516032549624");
+  assert.equal(thread.id, "martn.o");
   assert.equal(thread.contact, "martn.o");
   assert.equal(model.channelStats.instagram.lastActivity?.contact, "martn.o");
   assert.equal(thread.messageCount, 2);
   assert.equal(thread.messages[1]?.direction, "owner");
+});
+
+test("adaptInboxData merges Meta webhook rows into canonical Instagram browser thread", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "instagram_direct_v2_browser_backfill",
+        full_name: "@martn.o",
+        phone: "116105473108942",
+        thread_ref: "instagram:116105473108942",
+        provider_metadata: JSON.stringify({ senderUsername: "martn.o", source: "instagram_direct_v2_browser_backfill" }),
+        gmail_message_id: "instagram:old-browser-message",
+        message_text: "Hey, I'm interested in looking at a property.",
+        event_at: "2026-06-26T21:57:00.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "inbound",
+        source: "meta_social",
+        full_name: "@martn.o",
+        phone: "1526516032549624",
+        thread_ref: "instagram:116105473108942",
+        provider_metadata: JSON.stringify({
+          senderId: "1526516032549624",
+          senderUsername: "martn.o",
+          webhookThreadRef: "instagram:1526516032549624",
+        }),
+        gmail_message_id: "instagram:new-webhook-message",
+        message_text: "Hi there",
+        event_at: "2026-06-27T06:39:04.189Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(model.textThreads.instagram.length, 1);
+  assert.equal(thread.id, "martn.o");
+  assert.equal(thread.contact, "@martn.o");
+  assert.equal(thread.replyTo, "1526516032549624");
+  assert.equal(thread.messageCount, 2);
+  assert.equal(thread.preview, "Hi there");
+});
+
+test("adaptInboxData resolves social reply target from earlier thread events", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "oje.o",
+        phone: "igsid-oje",
+        thread_ref: "instagram:igsid-oje",
+        provider_metadata: JSON.stringify({ senderId: "igsid-oje", senderUsername: "oje.o" }),
+        gmail_message_id: "instagram:message-1",
+        message_text: "I'm interested in a property",
+        event_at: "2026-06-26T21:53:00.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "outbound",
+        agent_name: "Iris",
+        source: "meta_social",
+        thread_ref: "instagram:igsid-oje",
+        gmail_message_id: "instagram:reply-ready-1",
+        message_text: "I can help with Austin options.",
+        event_at: "2026-06-26T21:54:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const thread = model.textThreads.instagram[0];
+
+  assert.equal(thread.id, "oje.o");
+  assert.equal(thread.contact, "@oje.o");
+  assert.equal(thread.replyTo, "igsid-oje");
+  assert.equal(thread.messageCount, 2);
+});
+
+test("adaptInboxData keeps social threads unread until manually marked seen", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "Oje Ofunrein",
+        thread_ref: "instagram-browser:118140786245822:oje.o",
+        message_text: "Smoking in the house",
+        event_at: "2026-06-26T21:53:00.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "Oje Ofunrein",
+        thread_ref: "instagram-browser:118140786245822:oje.o",
+        message_text: "I'm interested in a property",
+        event_at: "2026-06-26T21:54:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const unreadThread = adaptInboxData(data).textThreads.instagram[0];
+  assert.equal(unreadThread.id, "oje ofunrein");
+  assert.equal(unreadThread.unreadCount, 2);
+  assert.equal(unreadThread.seen, false);
+  assert.equal(unreadThread.replyTo, "");
+
+  const markedData = composeInboxData(data.leads, data.events, data.properties, data.voiceCalls, {
+    threadReadStates: {
+      "instagram:oje ofunrein": {
+        channel: "instagram",
+        threadRef: "oje ofunrein",
+        seenAt: "2026-06-26T22:00:00.000Z",
+        seenEventAt: "",
+        seenBy: "owner",
+        updatedAt: "2026-06-26T22:00:00.000Z",
+      },
+    },
+  });
+  const seenThread = adaptInboxData(markedData).textThreads.instagram[0];
+  assert.equal(seenThread.unreadCount, 0);
+  assert.equal(seenThread.seen, true);
+});
+
+test("adaptInboxData folds social reactions onto the target message", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "@martn.o",
+        phone: "igsid-martn",
+        thread_ref: "instagram:igsid-martn",
+        gmail_message_id: "instagram:mid.inbound.1",
+        provider_message_id: "mid.inbound.1",
+        message_text: "Hi there",
+        event_at: "2026-06-27T06:39:00.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "outbound",
+        full_name: "@martn.o",
+        phone: "igsid-martn",
+        thread_ref: "instagram:igsid-martn",
+        event_type: "instagram_reaction",
+        gmail_message_id: "instagram:reaction:mid.inbound.1:owner:1",
+        provider_metadata: JSON.stringify({
+          reactionTargetMessageId: "mid.inbound.1",
+          reactionEmoji: "love",
+          reactionAction: "react",
+        }),
+        message_text: "Reaction: love",
+        event_at: "2026-06-27T06:40:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const thread = adaptInboxData(data).textThreads.instagram[0];
+  assert.equal(thread.messageCount, 1);
+  assert.equal(thread.messages.length, 1);
+  assert.equal(thread.messages[0].providerMessageId, "mid.inbound.1");
+  assert.equal(thread.messages[0].reactions?.[0]?.emoji, "love");
+  assert.equal(thread.messages[0].reactions?.[0]?.by, "owner");
 });
 
 test("adaptInboxData renders social media from media_json even when the text body only logs send status", () => {
@@ -310,6 +682,40 @@ test("adaptInboxData renders social media from media_json even when the text bod
   assert.equal(message.media?.length, 2);
   assert.equal(message.media?.[0].kind, "audio");
   assert.equal(message.media?.[1].kind, "image");
+});
+
+test("adaptInboxData labels Instagram shared posts from media metadata", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "oje.o",
+        phone: "igsid-oje",
+        thread_ref: "instagram:igsid-oje",
+        gmail_message_id: "instagram:shared-post-1",
+        message_text: "Attachment",
+        media_json: JSON.stringify([
+          {
+            type: "file",
+            url: "https://www.instagram.com/reel/example/",
+            filename: "Shared Instagram post",
+            providerMetadata: { title: "Shared Instagram post" },
+          },
+        ]),
+        event_at: "2026-06-26T21:53:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const message = model.textThreads.instagram[0].messages[0];
+
+  assert.equal(message.media?.length, 1);
+  assert.equal(message.media?.[0].kind, "file");
+  assert.equal(message.media?.[0].alt, "Shared Instagram post");
 });
 
 test("adaptInboxData preserves email voice note attachments and transcript previews from media_json", () => {

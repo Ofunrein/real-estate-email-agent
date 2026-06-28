@@ -24,7 +24,18 @@ export type AgentInboxData = {
   inboxSettings: InboxSettings;
   drafts: Record<string, AiDraft>;
   emailCapabilities: EmailCapability[];
+  threadReadStates: Record<string, ThreadReadState>;
+  channelAccounts: Record<string, { label: string; value: string; status: string }>;
   propertyHealth: ReturnType<typeof buildPropertyHealth>;
+};
+
+export type ThreadReadState = {
+  channel: string;
+  threadRef: string;
+  seenAt: string;
+  seenEventAt: string;
+  seenBy: string;
+  updatedAt: string;
 };
 
 export function channelFor(event: SheetRow): Channel {
@@ -51,7 +62,9 @@ export function buildMetrics(leads: SheetRow[], events: SheetRow[]) {
     return counts;
   }, {});
   const needsHumanLeads = leads.filter((lead) => lead.handoff_status === "needs_human").length;
-  const needsHumanEvents = events.filter((event) => event.status === "needs_human").length;
+  const needsHumanEvents = Object.values(groupEventsByThread(events))
+    .filter((threadEvents) => inferCategorySlug(threadEvents) === "needs_human")
+    .length;
   const outboundReplies = events.filter((event) => event.direction === "outbound").length;
   const inboundMessages = events.filter((event) => event.direction === "inbound").length;
   return {
@@ -194,7 +207,7 @@ export function composeInboxData(
   events: SheetRow[],
   properties: SheetRow[],
   voiceCalls: SheetRow[] = [],
-  extras: Partial<Pick<AgentInboxData, "inboxCategories" | "inboxSettings" | "drafts" | "emailCapabilities">> = {},
+  extras: Partial<Pick<AgentInboxData, "inboxCategories" | "inboxSettings" | "drafts" | "emailCapabilities" | "threadReadStates" | "channelAccounts">> = {},
 ): AgentInboxData {
   const visibleLeads = leads.filter((lead) => !isReservedTestRow(lead)).map(normalizeInboxRow);
   const visibleEvents = events.filter((event) => !isReservedTestRow(event) && !isInternalVoiceEvent(event)).map(normalizeInboxRow);
@@ -220,6 +233,8 @@ export function composeInboxData(
     inboxSettings: extras.inboxSettings || DEFAULT_INBOX_SETTINGS,
     drafts: extras.drafts || {},
     emailCapabilities: extras.emailCapabilities || [],
+    threadReadStates: extras.threadReadStates || {},
+    channelAccounts: extras.channelAccounts || {},
     propertyHealth: buildPropertyHealth(properties),
   };
 }

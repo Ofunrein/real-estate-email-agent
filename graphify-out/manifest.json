@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "app/api/data/route.ts": {
-    "mtime": 1782035168.910653,
-    "ast_hash": "fefbea115020e08ad10520daa128c2f1",
+    "mtime": 1782651515.3006725,
+    "ast_hash": "bc2ebfb61e7de4e4db7afef8e24f13ed",
     "semantic_hash": ""
   },
   "app/api/leads/route.ts": {
@@ -85,18 +85,18 @@
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/reply/route.ts": {
-    "mtime": 1782204614.5127513,
-    "ast_hash": "c1219b4511331e37c2014d6da23a0ae1",
+    "mtime": 1782651515.3015804,
+    "ast_hash": "19bb6022778fab92569a0eaa1ddf19ac",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/takeover/route.ts": {
-    "mtime": 1781759084.566998,
-    "ast_hash": "2bb054c01fb6f839e97f381a03be5967",
+    "mtime": 1782651515.3017669,
+    "ast_hash": "f6f181966009d0617e08c1107d048822",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/upload/route.ts": {
-    "mtime": 1782110267.9373589,
-    "ast_hash": "6fecf461075ef2809d94534e74549bf5",
+    "mtime": 1782651515.3019133,
+    "ast_hash": "266136ef4644e7f38812e53a2e99be2f",
     "semantic_hash": ""
   },
   "app/api/webhooks/aria-sms-control/route.ts": {
@@ -125,18 +125,18 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-sms/route.ts": {
-    "mtime": 1782110267.905029,
-    "ast_hash": "66b6397d76291b699241385cd8157854",
+    "mtime": 1782651515.302209,
+    "ast_hash": "daef985fd28a6e5584c84802a1a108e5",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-social-router/route.ts": {
-    "mtime": 1782036465.2666159,
-    "ast_hash": "72a42c971f9f3a0e6e4676ca67882a38",
+    "mtime": 1782651515.3028324,
+    "ast_hash": "270f547554955e9a70e86544a1df3538",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-whatsapp/route.ts": {
-    "mtime": 1782036500.960151,
-    "ast_hash": "5f81141e9ae859fb22f7cf62aae0f259",
+    "mtime": 1782651515.3030732,
+    "ast_hash": "520ab9d1fc27dd4dbd43a49c148fa597",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -255,13 +255,13 @@
     "semantic_hash": ""
   },
   "lib/ariaAssistant.ts": {
-    "mtime": 1782379442.2612772,
-    "ast_hash": "3c028829929f7d1c6ee437b344041cb7",
+    "mtime": 1782638586.9269404,
+    "ast_hash": "9a1ed8e201ab5e456501d80344aee524",
     "semantic_hash": ""
   },
   "lib/ariaCalendar.ts": {
-    "mtime": 1781816913.9540784,
-    "ast_hash": "308bd4b01fcc89fd1f5619e305f9310e",
+    "mtime": 1782638932.7273335,
+    "ast_hash": "dbd2188d59b4be12408a1725b312d45b",
     "semantic_hash": ""
   },
   "lib/ariaData.ts": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "lib/ariaTools.ts": {
-    "mtime": 1782379424.7045543,
-    "ast_hash": "36b0904a6095b9946e4ba69cb56b6d42",
+    "mtime": 1782638271.5891902,
+    "ast_hash": "4211a106a4a51cb1acf32f79588f7692",
     "semantic_hash": ""
   },
   "lib/ariaWebhook.ts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/crm/index.ts": {
-    "mtime": 1781218676.1250505,
-    "ast_hash": "fcf7521caf3875c514ab67d0f07f9f04",
+    "mtime": 1782638435.941688,
+    "ast_hash": "11cfa17671d926ec8d74e11f6137e787",
     "semantic_hash": ""
   },
   "lib/crm/types.ts": {
@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782367638.6807165,
-    "ast_hash": "ca25c8a43a97927cd756b9febb2638c3",
+    "mtime": 1782652695.7956102,
+    "ast_hash": "f288731042415a7eaddc905fd21e81cb",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -365,13 +365,13 @@
     "semantic_hash": ""
   },
   "lib/inboxData.ts": {
-    "mtime": 1781950241.2399545,
-    "ast_hash": "a690560a0793bf94c2b1df93970846f1",
+    "mtime": 1782651515.3231125,
+    "ast_hash": "5caa18eebba8130bec780c2e65533176",
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782167783.3407888,
-    "ast_hash": "232e3fe56e00683253686fcef20bffe2",
+    "mtime": 1782652820.6675498,
+    "ast_hash": "6b2b549aa9452c4f287659c646bb5ab8",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "lib/manualReply.ts": {
-    "mtime": 1782388859.5850284,
-    "ast_hash": "22a7e6ae22e040381d42c27442c75e9b",
+    "mtime": 1782651515.3241246,
+    "ast_hash": "41f90e35741ec92d286274103cbe8005",
     "semantic_hash": ""
   },
   "lib/manychatApi.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "lib/manychatSocial.ts": {
-    "mtime": 1782124741.7527125,
-    "ast_hash": "4b48ed60d85f9c70e761d008e66a5714",
+    "mtime": 1782651515.3243778,
+    "ast_hash": "ebf5047401f51716e03888720dca7cf1",
     "semantic_hash": ""
   },
   "lib/mediaProxy.ts": {
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "lib/theoAgent.ts": {
-    "mtime": 1782367914.8923283,
-    "ast_hash": "3627d0e2aea50a84de5886eed40a7c1d",
+    "mtime": 1782647747.4952009,
+    "ast_hash": "668ff3d07ddcaf786136384abe7de3cf",
     "semantic_hash": ""
   },
   "lib/theoAppointments.ts": {
@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "lib/twilioSms.ts": {
-    "mtime": 1782103375.0175445,
-    "ast_hash": "b4b20547d01c6322d627a678a20fd4f4",
+    "mtime": 1782651515.325052,
+    "ast_hash": "f37cffe69a3e8df0b5175b63efa3227a",
     "semantic_hash": ""
   },
   "lib/vapi.ts": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1782377674.3017519,
-    "ast_hash": "631033006f12ab3720ac8a788b956831",
+    "mtime": 1782653462.4275138,
+    "ast_hash": "5db5300a8c6b3d9102e61e78a36fffc3",
     "semantic_hash": ""
   },
   "personalities/__init__.py": {
@@ -695,8 +695,8 @@
     "semantic_hash": ""
   },
   "scripts/aria-provision.mjs": {
-    "mtime": 1782380418.5495553,
-    "ast_hash": "87d424cc21bd6957a71d0da4c0ea6140",
+    "mtime": 1782639067.6769512,
+    "ast_hash": "750a8dd4c97b77c131270ade0ea5a93b",
     "semantic_hash": ""
   },
   "scripts/audit-apify-zillow-import.mjs": {
@@ -830,8 +830,8 @@
     "semantic_hash": ""
   },
   "scripts/verify-aria-live.mjs": {
-    "mtime": 1782380424.8674204,
-    "ast_hash": "e5858b84c4e970690c82152bcdf79ca8",
+    "mtime": 1782635730.75728,
+    "ast_hash": "e6461653d375d3a95a0dfec6f6f4e0e6",
     "semantic_hash": ""
   },
   "tests/fixtures/ryse-remi-google-voice.json": {
@@ -855,8 +855,8 @@
     "semantic_hash": ""
   },
   "tests/test_aria_voice_contract.py": {
-    "mtime": 1781920139.055944,
-    "ast_hash": "d9fb5452be87fc642c1c9d5a31a65747",
+    "mtime": 1782635968.579774,
+    "ast_hash": "447a7060a13d0e3a1f2ae482f490a1be",
     "semantic_hash": ""
   },
   "tests/test_backfill_gmail_sent_events.py": {
@@ -930,8 +930,8 @@
     "semantic_hash": ""
   },
   "tests/ts/ariaAssistant.test.ts": {
-    "mtime": 1782032986.6099234,
-    "ast_hash": "ffce3a9bac6aaf7c2af7591728677281",
+    "mtime": 1782651515.3265955,
+    "ast_hash": "ccc1233853993f4b91962e1612ad6a19",
     "semantic_hash": ""
   },
   "tests/ts/ariaData.test.ts": {
@@ -1010,8 +1010,8 @@
     "semantic_hash": ""
   },
   "tests/ts/manychatSocial.test.ts": {
-    "mtime": 1782360025.7447493,
-    "ast_hash": "d40643e24470b15e2f15945f5be78197",
+    "mtime": 1782651515.3270357,
+    "ast_hash": "aa898f158ff1e39e8324e4263a4cc6f9",
     "semantic_hash": ""
   },
   "tests/ts/mediaProxy.test.ts": {
@@ -1040,8 +1040,8 @@
     "semantic_hash": ""
   },
   "tests/ts/theoAgent.test.ts": {
-    "mtime": 1781950624.613181,
-    "ast_hash": "fa602428df5f8266e05304973ba7541e",
+    "mtime": 1782651515.3278859,
+    "ast_hash": "c6c703d9fa912292854dd153c7ec686d",
     "semantic_hash": ""
   },
   "tests/ts/theoSocialRouter.test.ts": {
@@ -1360,13 +1360,13 @@
     "semantic_hash": ""
   },
   "lumenosis-site/app/layout.tsx": {
-    "mtime": 1782169514.9691699,
-    "ast_hash": "c6b38075286e9868031177a166960b2b",
+    "mtime": 1782644396.9012692,
+    "ast_hash": "fb70f5bb3e17046817564a24629ca8ad",
     "semantic_hash": ""
   },
   "lumenosis-site/app/page.tsx": {
-    "mtime": 1782129348.0235364,
-    "ast_hash": "e743ae79f4d58c59e6c3ff5f5fe8f16b",
+    "mtime": 1782545193.6680856,
+    "ast_hash": "2e56fd75720080d9e69604ae337477ed",
     "semantic_hash": ""
   },
   "lumenosis-site/biome.json": {
@@ -1385,12 +1385,12 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/aurora-background.tsx": {
-    "mtime": 1781935130.946752,
-    "ast_hash": "622ee12db094696030dec6f49246f491",
+    "mtime": 1782532381.9735928,
+    "ast_hash": "19e934ae7c839e13012845aa96be706e",
     "semantic_hash": ""
   },
   "lumenosis-site/components/aurora.tsx": {
-    "mtime": 1781935130.9468775,
+    "mtime": 1782528415.1404123,
     "ast_hash": "1edef1f190b04734c71c4d9a19f30623",
     "semantic_hash": ""
   },
@@ -1400,17 +1400,17 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/ghl-calendar.tsx": {
-    "mtime": 1781935130.9471014,
+    "mtime": 1782528415.1419783,
     "ast_hash": "6a44436fef382195918a36920698e24e",
     "semantic_hash": ""
   },
   "lumenosis-site/components/glass-stat-callout.tsx": {
-    "mtime": 1781935130.947299,
+    "mtime": 1782528415.1450644,
     "ast_hash": "a7edc62fcf1539830888fc38013d8b3d",
     "semantic_hash": ""
   },
   "lumenosis-site/components/magnet.tsx": {
-    "mtime": 1781935130.9473927,
+    "mtime": 1782528415.1463113,
     "ast_hash": "a1a0f3d724b3a0d7d11995327fc3cef9",
     "semantic_hash": ""
   },
@@ -1425,48 +1425,48 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/rotating-text.tsx": {
-    "mtime": 1782127129.7221305,
-    "ast_hash": "83e39c5900d1f0cea270b3e9e19d9517",
+    "mtime": 1782647680.593037,
+    "ast_hash": "58a9198169d133e201a06349f239ae5d",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/aria-deep-dive.tsx": {
-    "mtime": 1782127129.7229528,
-    "ast_hash": "d420201b9644094c9b9abb23253b99e1",
+    "mtime": 1782548637.8361955,
+    "ast_hash": "39248ea973d6de5d208579966820bc03",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/calendar-cta.tsx": {
-    "mtime": 1782127129.7234921,
-    "ast_hash": "2a5d05e9f19156072e14d6cb014e158c",
+    "mtime": 1782538545.7807636,
+    "ast_hash": "6564301211c10517bab645bb6521046b",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/case-study-wall.tsx": {
-    "mtime": 1782127129.723996,
+    "mtime": 1782528415.1613429,
     "ast_hash": "bf7ac29235bb3a55a22d3107ab600ff5",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/faq.tsx": {
-    "mtime": 1782127129.7245016,
-    "ast_hash": "f430d498ccf0608ee8dfac0d0ddd9895",
+    "mtime": 1782538545.7711673,
+    "ast_hash": "561d7ca297098d5e23e334e5c45f2ba7",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/final-cta.tsx": {
-    "mtime": 1782181512.2770925,
-    "ast_hash": "83674c8e8b999b11204da1588ad0eac3",
+    "mtime": 1782538545.763934,
+    "ast_hash": "23450896960acc961082aecca58bae77",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/footer.tsx": {
-    "mtime": 1782181512.2764995,
-    "ast_hash": "25ac27ce0c556ff52e2badcc2e662782",
+    "mtime": 1782538545.7751532,
+    "ast_hash": "37f6ac8fcd6a2fdb949972b03483194b",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/founder-vsl.tsx": {
-    "mtime": 1782181512.277764,
+    "mtime": 1782528415.1993833,
     "ast_hash": "759e7e2fcee84591117836eafb1314f7",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/hero.tsx": {
-    "mtime": 1782186108.3490717,
-    "ast_hash": "eb80b93a765411986f34f1e486e3e4fd",
+    "mtime": 1782643451.6970887,
+    "ast_hash": "ddf93841c6a2d0885462ec7652930daa",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/meet-the-team.tsx": {
@@ -1480,13 +1480,13 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/pull-quote.tsx": {
-    "mtime": 1782041052.4528522,
-    "ast_hash": "7f0c2cfd4a25a4b603dc0023d90b1cfc",
+    "mtime": 1782536886.5617118,
+    "ast_hash": "6c3d9890b793fe45a546a7acf2384df0",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/sticky-cta-bar.tsx": {
-    "mtime": 1782186066.1285665,
-    "ast_hash": "6c2fdd2eb5f2dc7957ef9e0ccf69f41a",
+    "mtime": 1782545810.928592,
+    "ast_hash": "e628d91e1ddb1a487099f9e64bad5c69",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/timeline-30day.tsx": {
@@ -1495,33 +1495,28 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/topbar.tsx": {
-    "mtime": 1782181512.2738342,
-    "ast_hash": "1202c70ddbb74b1ba4e79d0eb9d3dcf9",
+    "mtime": 1782643309.049505,
+    "ast_hash": "60f98e67df3339f8bc5b99510fd1e601",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/trust-strip.tsx": {
-    "mtime": 1782129348.0238936,
-    "ast_hash": "5346b962ad94d16b2978bcf444b5d15e",
+    "mtime": 1782532103.4843261,
+    "ast_hash": "5e67251186bf85b1c291e5dd6d54cddd",
     "semantic_hash": ""
   },
   "lumenosis-site/components/sections/two-ways-in.tsx": {
-    "mtime": 1782181512.278124,
-    "ast_hash": "8583b86dfbde3d902d977d5e5192179c",
+    "mtime": 1782543381.3742177,
+    "ast_hash": "93e143e321a45c31c9e37a1fec0bf88b",
     "semantic_hash": ""
   },
   "lumenosis-site/components/spotlight-button.tsx": {
-    "mtime": 1781935130.9533446,
+    "mtime": 1782528415.2338629,
     "ast_hash": "5bc7d13508d4e253c04e168af8c651ee",
     "semantic_hash": ""
   },
   "lumenosis-site/components/spotlight-card.tsx": {
-    "mtime": 1781935130.953452,
-    "ast_hash": "408c6f1aac2c7a0ddeb3979ba6c4a6b0",
-    "semantic_hash": ""
-  },
-  "lumenosis-site/components/star-button.tsx": {
-    "mtime": 1781935130.9535673,
-    "ast_hash": "31a0aa0c783c2cc10239b8c92e52a061",
+    "mtime": 1782544607.0944633,
+    "ast_hash": "945b8627497315bfd3a18c084937fbb8",
     "semantic_hash": ""
   },
   "lumenosis-site/components/ui/accordion.tsx": {
@@ -1550,12 +1545,12 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/ui/creative-pricing.tsx": {
-    "mtime": 1782022256.5402422,
+    "mtime": 1782528415.2408779,
     "ast_hash": "982fb94a2d834381fa4914d61276a4cc",
     "semantic_hash": ""
   },
   "lumenosis-site/components/ui/glowing-effect-card.tsx": {
-    "mtime": 1781935130.9551558,
+    "mtime": 1782528415.2556918,
     "ast_hash": "42d4783e5bf7436c2089206c4dcf1a79",
     "semantic_hash": ""
   },
@@ -1575,7 +1570,7 @@
     "semantic_hash": ""
   },
   "lumenosis-site/components/ui/star-button.tsx": {
-    "mtime": 1781935130.955694,
+    "mtime": 1782528415.2627506,
     "ast_hash": "1f18267e9928c528868ac91c34ba5d45",
     "semantic_hash": ""
   },
@@ -1725,7 +1720,7 @@
     "semantic_hash": ""
   },
   "lumenosis-site/pnpm-workspace.yaml": {
-    "mtime": 1781935130.9650633,
+    "mtime": 1782528415.265246,
     "ast_hash": "d2bc6e928998a0548e5216a11e58e132",
     "semantic_hash": ""
   },
@@ -1920,8 +1915,8 @@
     "semantic_hash": ""
   },
   "app/api/settings/email-account/route.ts": {
-    "mtime": 1781940306.7512167,
-    "ast_hash": "e9d404237296d75fd3b2903af974da0b",
+    "mtime": 1782654781.5045865,
+    "ast_hash": "be47033c75d24f9b7c4d7fa6bbeb236e",
     "semantic_hash": ""
   },
   "db/migrations/007_email_accounts.sql": {
@@ -1935,8 +1930,8 @@
     "semantic_hash": ""
   },
   "lib/gmailConnection.ts": {
-    "mtime": 1782378612.829995,
-    "ast_hash": "f47fd83354e8613372e9e625e79a00a3",
+    "mtime": 1782654746.8216615,
+    "ast_hash": "176c8cd2419ed153e473616ce7cf180b",
     "semantic_hash": ""
   },
   "tests/ts/gmailConnection.test.ts": {
@@ -1960,13 +1955,13 @@
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/category/route.ts": {
-    "mtime": 1781950437.8798995,
-    "ast_hash": "15b8f7b25423f59777e506b694a9a9d7",
+    "mtime": 1782651515.3013842,
+    "ast_hash": "8fb240f40ed4b58b84134615f740d2e8",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/draft/route.ts": {
-    "mtime": 1781950419.6690657,
-    "ast_hash": "44a3fdb4fe4ea446dcfccd838fbf1aa7",
+    "mtime": 1782652916.1892848,
+    "ast_hash": "d0b98f8e6205823adcb41549984013ea",
     "semantic_hash": ""
   },
   "db/migrations/008_inbox_settings.sql": {
@@ -1975,8 +1970,8 @@
     "semantic_hash": ""
   },
   "lib/inboxSettings.ts": {
-    "mtime": 1782036413.80292,
-    "ast_hash": "b8f3ba5e090f9b2fd8c71a974bc84a34",
+    "mtime": 1782652656.210013,
+    "ast_hash": "a0bcfc35753e9fd66f3e21a91c43a433",
     "semantic_hash": ""
   },
   "lib/irisConversationBrain.ts": {
@@ -1985,8 +1980,8 @@
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/draft/action/route.ts": {
-    "mtime": 1781952963.5693161,
-    "ast_hash": "dc0c982420e0c49f6b3c99e7c799ece1",
+    "mtime": 1782653014.4817512,
+    "ast_hash": "fac4c54ea237799c5e3102c4c571f8f5",
     "semantic_hash": ""
   },
   "db/migrations/009_gmail_thread_ownership.sql": {
@@ -1995,8 +1990,8 @@
     "semantic_hash": ""
   },
   "app/api/takeover/handback/route.ts": {
-    "mtime": 1782003696.619565,
-    "ast_hash": "3074641e211c860ef892fafd97b83bd9",
+    "mtime": 1782651515.3012218,
+    "ast_hash": "88266999a04c903fe695d79253d0f705",
     "semantic_hash": ""
   },
   "app/api/takeover/send/route.ts": {
@@ -2020,18 +2015,18 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxApp.tsx": {
-    "mtime": 1782374243.4607942,
-    "ast_hash": "1a105675512d89514248fc7508eb9259",
+    "mtime": 1782651515.3032825,
+    "ast_hash": "57e097b08f1db257b775de60286ab3d5",
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxDataContext.tsx": {
-    "mtime": 1782089275.0371258,
-    "ast_hash": "150d68aa55b78c90147d07567a24dde2",
+    "mtime": 1782651515.304038,
+    "ast_hash": "286430fa51222a7928f782bbdf1d7c2f",
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
-    "mtime": 1782374784.0026677,
-    "ast_hash": "ed8b242c4991af6a13ed13dd8f8dfe76",
+    "mtime": 1782651515.3043094,
+    "ast_hash": "34e8a27c9944753fa69bc91cf7939b0b",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ActivityChart.tsx": {
@@ -2055,13 +2050,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ContextColumn.tsx": {
-    "mtime": 1782134956.065529,
-    "ast_hash": "998c45e1a6eb8f55a7e5a22eb8acf7d5",
+    "mtime": 1782651515.3045142,
+    "ast_hash": "808298a257b1e8169a9b7009a3e23597",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ConversationList.tsx": {
-    "mtime": 1782046952.549237,
-    "ast_hash": "391583edba7363feac59da47fe01c953",
+    "mtime": 1782651515.3056247,
+    "ast_hash": "d317b6429d5a026be6a795913b237f08",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
@@ -2080,8 +2075,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/NavRail.tsx": {
-    "mtime": 1782194389.28816,
-    "ast_hash": "d8edbf3aa7d66ca57093d129ce71eb87",
+    "mtime": 1782651515.305903,
+    "ast_hash": "167c1549359c763d61a63632ba77cf57",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
@@ -2105,8 +2100,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ReaderFooter.tsx": {
-    "mtime": 1782110389.1862817,
-    "ast_hash": "4cac8cce9e70515493776426843ea4b4",
+    "mtime": 1782651515.3061223,
+    "ast_hash": "a2df0215377df6d02e087f0ce9f1a706",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ReviewPanel.tsx": {
@@ -2120,8 +2115,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782243755.9991503,
-    "ast_hash": "59d548abe5dd1833b18da0160dffe5cc",
+    "mtime": 1782651515.306526,
+    "ast_hash": "7c2506ee262b2c12a10c5027b78c8295",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2145,8 +2140,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/data/inboxData.ts": {
-    "mtime": 1782207721.183037,
-    "ast_hash": "392a4d941315b8394281a48ed80d7b25",
+    "mtime": 1782651515.3073366,
+    "ast_hash": "c6a5906b86b0a96ac92ac4f68e16dbce",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/CategoryColorContext.tsx": {
@@ -2340,28 +2335,28 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782395519.3863754,
-    "ast_hash": "c9451dee5f697a20430818f1ed6acfc7",
+    "mtime": 1782654546.0992813,
+    "ast_hash": "b90c512cb0436dd48c581fe5dee4c130",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
-    "mtime": 1782394799.992121,
-    "ast_hash": "4593ca86ca504bf773eb53c1c144d99e",
+    "mtime": 1782654497.3336625,
+    "ast_hash": "5700274208d06cab9e9a6f4f90381956",
     "semantic_hash": ""
   },
   "lumenosis-site/components/theme-provider.tsx": {
-    "mtime": 1782018789.2185528,
+    "mtime": 1782532642.6704297,
     "ast_hash": "94fcbf19321368d78d2d3c255a5a13d0",
     "semantic_hash": ""
   },
   "lumenosis-site/next-env.d.ts": {
-    "mtime": 1782096237.6359653,
+    "mtime": 1782639930.7862892,
     "ast_hash": "2a74d3909800ca5467fa83b0ab4a4890",
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782395539.3763726,
-    "ast_hash": "2c4e3f023a7b3a111634e9b85e6d1262",
+    "mtime": 1782654580.2238588,
+    "ast_hash": "6e0be8555c7b8bd7e93939ebd764cee3",
     "semantic_hash": ""
   },
   ".github/workflows/build-check.yml": {
@@ -2380,8 +2375,8 @@
     "semantic_hash": ""
   },
   "docs/omnichannel_front_desk_ai_agent_PRD.md": {
-    "mtime": 1782090350.0503197,
-    "ast_hash": "736449bb023a475d0311730703d564d0",
+    "mtime": 1782651515.3077877,
+    "ast_hash": "e9307064cd845940da420c9fc7a2f249",
     "semantic_hash": ""
   },
   "lumenosis-site/COPY_INSIGHTS.md": {
@@ -2565,13 +2560,13 @@
     "semantic_hash": ""
   },
   "app/api/media/voice-clone/route.ts": {
-    "mtime": 1782110433.2283378,
-    "ast_hash": "d56232e9a811613ace74fd040fa42710",
+    "mtime": 1782651515.3008761,
+    "ast_hash": "36368c90b5d2f505b83d4b404050e9fd",
     "semantic_hash": ""
   },
   "app/api/media/voice-note/route.ts": {
-    "mtime": 1782110433.2287998,
-    "ast_hash": "8e6fe9830ae4d8ee19c47444e3c6d73d",
+    "mtime": 1782651515.301051,
+    "ast_hash": "ac1602959be5f85729b91c643f6532c3",
     "semantic_hash": ""
   },
   "app/api/settings/composio/connect/[channel]/route.ts": {
@@ -2580,18 +2575,13 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/TextChannelView.tsx": {
-    "mtime": 1782124788.3181682,
-    "ast_hash": "48dbc2ac565c84973e99d1455dcc9547",
+    "mtime": 1782651515.3070645,
+    "ast_hash": "32ca0a5a57f4efda58ad6924ec84bb7e",
     "semantic_hash": ""
   },
   "lib/composioSocial.ts": {
     "mtime": 1782204572.4877036,
     "ast_hash": "0db157d1154e985e4390fdc09440f012",
-    "semantic_hash": ""
-  },
-  "lib/fishAudio.ts": {
-    "mtime": 1782092392.9700718,
-    "ast_hash": "4978ed407c9a51a41707720517b49e2b",
     "semantic_hash": ""
   },
   "tests/ts/theoAppointments.test.ts": {
@@ -2615,13 +2605,13 @@
     "semantic_hash": ""
   },
   "lib/channelConnections.ts": {
-    "mtime": 1782367581.8822625,
-    "ast_hash": "d07197835c6001deb2923d1a6caac73d",
+    "mtime": 1782654756.9751232,
+    "ast_hash": "d41a905e9d7850bb732952a07d7fe4f3",
     "semantic_hash": ""
   },
   "tests/ts/channelConnections.test.ts": {
-    "mtime": 1782125970.0818427,
-    "ast_hash": "234329c94b871d241735861bc5181b87",
+    "mtime": 1782654770.7852147,
+    "ast_hash": "e6c0001c7107caa5d488211cd48fd297",
     "semantic_hash": ""
   },
   "app/api/calendar/appointments/route.ts": {
@@ -2835,8 +2825,8 @@
     "semantic_hash": ""
   },
   "lib/audioTranscode.ts": {
-    "mtime": 1782110336.4962907,
-    "ast_hash": "ae8b2db5e667d497d8c9b828e7624b31",
+    "mtime": 1782651515.3221967,
+    "ast_hash": "2fea0a03c12561d8a1708923de7834c8",
     "semantic_hash": ""
   },
   "lib/calendarContactsSync.ts": {
@@ -2850,8 +2840,8 @@
     "semantic_hash": ""
   },
   "lib/cartesiaAudio.ts": {
-    "mtime": 1782110193.4627795,
-    "ast_hash": "6152089c5b380340defe9fb77faf7ad0",
+    "mtime": 1782651515.322487,
+    "ast_hash": "0daf7843e2eda078352facc8a9c47ad6",
     "semantic_hash": ""
   },
   "lib/composioChannelSync.ts": {
@@ -2900,8 +2890,8 @@
     "semantic_hash": ""
   },
   "lib/omnichannelEvents.ts": {
-    "mtime": 1782179263.826205,
-    "ast_hash": "3a45a552c4a1495817521cefafe6dcf4",
+    "mtime": 1782651515.3248286,
+    "ast_hash": "a61cd797a2c9ce0a29cd498e682026de",
     "semantic_hash": ""
   },
   "lib/providerConnections.ts": {
@@ -2940,18 +2930,18 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-meta-social/route.ts": {
-    "mtime": 1782367657.4263291,
-    "ast_hash": "bf1d84cbbe197a00dbef0ddcb0ff9d0d",
+    "mtime": 1782648162.2139306,
+    "ast_hash": "936e320500bd7fd39d6a13a2c1492ee8",
     "semantic_hash": ""
   },
   "lib/metaSocial.ts": {
-    "mtime": 1782388839.5773683,
-    "ast_hash": "bb0df06e17be1dceadd391bcce11f2e3",
+    "mtime": 1782651515.3245914,
+    "ast_hash": "da48bc2aefbf433368b2b22197ac7a66",
     "semantic_hash": ""
   },
   "tests/ts/metaSocial.test.ts": {
-    "mtime": 1782367666.1925972,
-    "ast_hash": "226f110149107e8417eb3713fe2cb979",
+    "mtime": 1782651515.3276784,
+    "ast_hash": "d40aec416f53395ac6dd3a8a0878d932",
     "semantic_hash": ""
   },
   ".sc/last-chat-settings.json": {
@@ -2970,8 +2960,8 @@
     "semantic_hash": ""
   },
   "tests/ts/metaConnect.test.ts": {
-    "mtime": 1782417861.443246,
-    "ast_hash": "9b10d711c28869c205024a8d3072d1d1",
+    "mtime": 1782651515.3274722,
+    "ast_hash": "33aed5449530c643aa5d74558909503f",
     "semantic_hash": ""
   },
   "app/api/webhooks/google-drive-sheets/route.ts": {
@@ -3007,6 +2997,341 @@
   "tests/ts/manualReply.test.ts": {
     "mtime": 1782388908.9907963,
     "ast_hash": "002896670f7ae6a421337d4bf75d2f15",
+    "semantic_hash": ""
+  },
+  "scripts/backfill-meta-messenger-conversations.mjs": {
+    "mtime": 1782528056.766508,
+    "ast_hash": "2faccccaa05c5003827111118311d94d",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/star-button.tsx": {
+    "mtime": 1782528415.238798,
+    "ast_hash": "31a0aa0c783c2cc10239b8c92e52a061",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/seen/route.ts": {
+    "mtime": 1782624963.0643008,
+    "ast_hash": "ee69909592839af4bb594045128b4a9b",
+    "semantic_hash": ""
+  },
+  "db/migrations/017_thread_read_states.sql": {
+    "mtime": 1782531769.5261753,
+    "ast_hash": "ac9a1ebb18e6bc8a637eaa47907b2b89",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/components/sections/process.tsx": {
+    "mtime": 1782538545.7563286,
+    "ast_hash": "f8bef207354295e5d434c035d2d1e297",
+    "semantic_hash": ""
+  },
+  "scripts/import-instagram-direct-thread.mjs": {
+    "mtime": 1782538374.7835674,
+    "ast_hash": "871e19934c262a14326f6b62274c0a7b",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/reaction/route.ts": {
+    "mtime": 1782624963.0620892,
+    "ast_hash": "2b80b87ebac1b9761f7a180469cf1d32",
+    "semantic_hash": ""
+  },
+  "tmp/thread-trim-backups/2026-06-27T21-00-04-784Z-martn-instagram-trim.json": {
+    "mtime": 1782594005.7090547,
+    "ast_hash": "e161c1b462e69858707f4a391c3a5e8b",
+    "semantic_hash": ""
+  },
+  "tests/ts/audioTranscode.test.ts": {
+    "mtime": 1782600829.2179885,
+    "ast_hash": "f0488d3fce18ac97c41eec29a710cf97",
+    "semantic_hash": ""
+  },
+  "tests/ts/cartesiaAudio.test.ts": {
+    "mtime": 1782601718.8660066,
+    "ast_hash": "d6e94f580591008b0f3d16ec97ad73c0",
+    "semantic_hash": ""
+  },
+  "app/api/ops/audit/route.ts": {
+    "mtime": 1782624772.0778232,
+    "ast_hash": "4dbfbc8449aa6228c1b59498377a839f",
+    "semantic_hash": ""
+  },
+  "app/api/threads/[threadRef]/review/resolve/route.ts": {
+    "mtime": 1782625355.5417502,
+    "ast_hash": "7b49c2f5c69f1acaa2a7721aac487414",
+    "semantic_hash": ""
+  },
+  "app/api/webhooks/iris-gmail-push/route.ts": {
+    "mtime": 1782651515.2106738,
+    "ast_hash": "e4a6c66a898a696b8ca3ebd2d53ee613",
+    "semantic_hash": ""
+  },
+  "components/inbox-mui/components/OpsLogView.tsx": {
+    "mtime": 1782625509.5332453,
+    "ast_hash": "270df925e749e5225f530abd90098dcd",
+    "semantic_hash": ""
+  },
+  "db/migrations/018_request_audit_events.sql": {
+    "mtime": 1782624745.0453472,
+    "ast_hash": "4e9952e0b09cf1796a92a6c8becf84ca",
+    "semantic_hash": ""
+  },
+  "db/migrations/019_ai_drafts_gmail_draft_refs.sql": {
+    "mtime": 1782652665.820945,
+    "ast_hash": "38041ade6bccdba47496b3feecdd7fdc",
+    "semantic_hash": ""
+  },
+  "lib/calendar/google.ts": {
+    "mtime": 1782638405.605262,
+    "ast_hash": "257877eb20f4a6662de94558625a0b81",
+    "semantic_hash": ""
+  },
+  "lib/calendar/neon.ts": {
+    "mtime": 1782638427.1246061,
+    "ast_hash": "ddbc91c0e315a8d5a535abcd726892d4",
+    "semantic_hash": ""
+  },
+  "lib/calendar/outlook.ts": {
+    "mtime": 1782638205.2013595,
+    "ast_hash": "da0cad08c7ceba66e6f5dcb42269bebc",
+    "semantic_hash": ""
+  },
+  "lib/calendar/resolver.ts": {
+    "mtime": 1782638232.7709768,
+    "ast_hash": "c2bc066f61041e23b9d6d969218c0ff2",
+    "semantic_hash": ""
+  },
+  "lib/calendar/types.ts": {
+    "mtime": 1782638125.5984225,
+    "ast_hash": "517e54ddaf2ae9d2dc0cfead2edc6b83",
+    "semantic_hash": ""
+  },
+  "lib/crm/followupboss.ts": {
+    "mtime": 1782638915.2869685,
+    "ast_hash": "15fa589e395b24f90d4a806cb820f389",
+    "semantic_hash": ""
+  },
+  "lib/crm/kvcore.ts": {
+    "mtime": 1782638890.428729,
+    "ast_hash": "931bf7dbda4046791e784e717b8da119",
+    "semantic_hash": ""
+  },
+  "lib/requestAudit.ts": {
+    "mtime": 1782624745.0636988,
+    "ast_hash": "9fc360cb5e0d7c3071cdd9c995b015af",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/lib/theme-transition.ts": {
+    "mtime": 1782643309.0487223,
+    "ast_hash": "4b19901c318883fe4d6ed5905c0dd3d2",
+    "semantic_hash": ""
+  },
+  "scripts/setup-gmail-auth.mjs": {
+    "mtime": 1782654206.8701682,
+    "ast_hash": "3c261aab27246839fc5953c9676fba96",
+    "semantic_hash": ""
+  },
+  "scripts/setup-gmail-push.mjs": {
+    "mtime": 1782654973.9958003,
+    "ast_hash": "d63df3d04a2273a3401c4600a33352c7",
+    "semantic_hash": ""
+  },
+  "scripts/setup-google-calendar-auth.mjs": {
+    "mtime": 1782642462.033702,
+    "ast_hash": "34032ec81481b098f8477bb19fde2efa",
+    "semantic_hash": ""
+  },
+  "scripts/test-call.mjs": {
+    "mtime": 1782644288.9972844,
+    "ast_hash": "59319cfad7295de71b885925ec5544c3",
+    "semantic_hash": ""
+  },
+  "tests/ts/calendarProvider.test.ts": {
+    "mtime": 1782638815.0066397,
+    "ast_hash": "55366ba714519e9c5ed4f66162ec826d",
+    "semantic_hash": ""
+  },
+  "tests/ts/inboxReviewResolution.test.ts": {
+    "mtime": 1782629442.647064,
+    "ast_hash": "812efeb8fe90ecd0c3fe37d25594d2fc",
+    "semantic_hash": ""
+  },
+  "tests/ts/requestAudit.test.ts": {
+    "mtime": 1782629416.424821,
+    "ast_hash": "a342479c54f98071bed103176e5e2cd4",
+    "semantic_hash": ""
+  },
+  "docs/client-onboarding.md": {
+    "mtime": 1782638677.9272535,
+    "ast_hash": "9f6be5937af405151fb4e15ac81609b6",
+    "semantic_hash": ""
+  },
+  "docs/google-calendar-setup.md": {
+    "mtime": 1782644783.6041267,
+    "ast_hash": "ee67ede68b0b5ec8bbd52ae6defeb16f",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-black-on-white.png": {
+    "mtime": 1782631632.5100067,
+    "ast_hash": "d39d094342e2d342650c20d134c6a472",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-black-on-white.svg": {
+    "mtime": 1782631632.5104022,
+    "ast_hash": "796d825a50671e5c2c3d38748e419d32",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-gradient-on-black.png": {
+    "mtime": 1782631809.4594517,
+    "ast_hash": "7f8d4fdce2ca69e12f6a0ad9dea97a11",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-gradient-on-black.svg": {
+    "mtime": 1782631809.6141016,
+    "ast_hash": "54d2abe84fcc8c60c6ce4b24f9d51444",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-on-black.png": {
+    "mtime": 1782631808.8176794,
+    "ast_hash": "7c3ddf899b9ab7e22bf49daf7d6ed38e",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-on-black.svg": {
+    "mtime": 1782631809.6136699,
+    "ast_hash": "addb41b71cd1916a7408fac804153b1b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-on-charcoal.png": {
+    "mtime": 1782631808.89204,
+    "ast_hash": "eabe253d538d9a08a7df3defdfacac9c",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-gold-on-charcoal.svg": {
+    "mtime": 1782631809.6139865,
+    "ast_hash": "d92bb4fb910a36137594d38ef3032afc",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-purple-on-black.png": {
+    "mtime": 1782631632.5113833,
+    "ast_hash": "14196034f246ba4bdbdec43d1045ddda",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-purple-on-black.svg": {
+    "mtime": 1782631632.5120008,
+    "ast_hash": "9ac13a2b6895f5b278c9ed9562ce0de9",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-purple-on-charcoal.png": {
+    "mtime": 1782631632.5129092,
+    "ast_hash": "803af9605b3a57f11af1c0df2c2b8be7",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-purple-on-charcoal.svg": {
+    "mtime": 1782631632.5138152,
+    "ast_hash": "d69a2f1fdd717926043145e2ea5de555",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-two-tone-purple.png": {
+    "mtime": 1782631632.5150113,
+    "ast_hash": "c0ccea8b6007c108f5d0a1d01696ab72",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-two-tone-purple.svg": {
+    "mtime": 1782631632.5153432,
+    "ast_hash": "19ad3ae7e046ced02fa229ea2068a660",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-white-on-black.png": {
+    "mtime": 1782631632.5162184,
+    "ast_hash": "ec207193aa2f723188a1852e383372c9",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/flat-white-on-black.svg": {
+    "mtime": 1782631632.5165954,
+    "ast_hash": "bf9d81031d27e3648d8613c4e6a31a40",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-black-on-white-2048.png": {
+    "mtime": 1782631632.521361,
+    "ast_hash": "e9a657bd2e46e56fc3e733f6cb5e1e28",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-black-on-white.png": {
+    "mtime": 1782631632.5232418,
+    "ast_hash": "366095370b2e7447819607f523f79c71",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-charcoal-purple-badge-2048.png": {
+    "mtime": 1782631632.5293984,
+    "ast_hash": "5b368719e84581bc1fb8b5df2252cca0",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-charcoal-purple-badge.png": {
+    "mtime": 1782631632.535332,
+    "ast_hash": "648456ab029d4153128caba4d7192b29",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-gold-on-black-2048.png": {
+    "mtime": 1782631807.0407379,
+    "ast_hash": "cbc44896721c4f035c6fbd67a1ec37d3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-gold-on-black.png": {
+    "mtime": 1782631806.5803335,
+    "ast_hash": "510e15ae5fe0596c4b2bb47b35d6bad6",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-gold-on-charcoal-2048.png": {
+    "mtime": 1782635159.6134057,
+    "ast_hash": "bfa05ea5d86d852db420347c1b3a7941",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-gold-on-charcoal.png": {
+    "mtime": 1782635157.493794,
+    "ast_hash": "02800061f63a1d9563b67d6d22ad62b5",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-purple-on-black-2048.png": {
+    "mtime": 1782631632.539365,
+    "ast_hash": "d21832f70cb5ce02e181b3ea9b57bd2d",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-purple-on-black.png": {
+    "mtime": 1782631632.5483942,
+    "ast_hash": "ca646b0b985e6dabd8a1ef60d0d8a6a0",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-purple-on-charcoal-2048.png": {
+    "mtime": 1782635155.8424804,
+    "ast_hash": "c56789e16a880a319399329868a7a07b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-purple-on-charcoal.png": {
+    "mtime": 1782635148.3647094,
+    "ast_hash": "5f1201901216fe8ed2160048e97b50a1",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-two-tone-purple-2048.png": {
+    "mtime": 1782631632.5550504,
+    "ast_hash": "93714e49ae731296a3a38c84da6b486b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-two-tone-purple.png": {
+    "mtime": 1782631632.5590084,
+    "ast_hash": "dc291b1df732b50a22a4f30b5752f36b",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-white-on-black-2048.png": {
+    "mtime": 1782631632.5635052,
+    "ast_hash": "10d74bc7f6f2c168e655535befa95ce1",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/gpt-white-on-black.png": {
+    "mtime": 1782631632.564921,
+    "ast_hash": "1f07e2b46273fc6da04ff65596a761f3",
+    "semantic_hash": ""
+  },
+  "lumenosis-site/public/images/logo-variations/logo-variations-preview.png": {
+    "mtime": 1782635171.1568604,
+    "ast_hash": "fe1df42b910db75315ceaa28ccf24a73",
     "semantic_hash": ""
   }
 }

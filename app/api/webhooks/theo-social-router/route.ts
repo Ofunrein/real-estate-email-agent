@@ -24,6 +24,7 @@ import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type 
 import { sendTheoHandoffAlert } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { createRequestAudit } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -171,12 +172,30 @@ async function findSocialProperties(input: SocialDmPayload, messageForReply: str
 
 export async function POST(request: NextRequest) {
   const requestStarted = nowMs();
+  const audit = createRequestAudit({
+    route: "/api/webhooks/theo-social-router",
+    method: request.method,
+    provider: "manychat",
+    headers: request.headers,
+  });
   try {
     assertWebhookSecret(request);
     const payload = await parseWebhookPayload(request);
     const input = normalizeManyChatPayload(payload);
     const threadRef = socialThreadRef(input);
     const guard = shouldTheoHandleSocialDm(input);
+    await audit.write("received", "received", {
+      channel: input.channel,
+      threadRef,
+      contactRef: input.senderName,
+      metadata: {
+        routeReason: input.routeReason,
+        bodyPreview: input.messageText.slice(0, 160),
+        intent: guard.intent,
+        allowed: guard.allowed,
+        needsHuman: guard.needsHuman,
+      },
+    });
     logTheoSocial("inbound received", {
       channel: input.channel,
       threadRef,
@@ -185,6 +204,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!socialDmAgentEnabled()) {
+      await audit.write("terminal", "skipped", {
+        channel: input.channel,
+        threadRef,
+        contactRef: input.senderName,
+        statusCode: 200,
+        metadata: { reason: "ENABLE_SOCIAL_DM_AGENT is not true" },
+      });
       return routerResponse(request, {
         ok: true,
         channel: input.channel,
@@ -205,6 +231,13 @@ export async function POST(request: NextRequest) {
     const settings = await readInboxSettingsFromDatabase();
 
     if (!guard.allowed) {
+      await audit.write("terminal", "blocked", {
+        channel: input.channel,
+        threadRef: result.event.thread_ref,
+        contactRef: input.senderName,
+        statusCode: 200,
+        metadata: { reason: guard.reason, intent: guard.intent, needsHuman: guard.needsHuman },
+      });
       return routerResponse(request, buildSocialRouterResult({
         channel: input.channel,
         threadRef: result.event.thread_ref,
@@ -214,6 +247,13 @@ export async function POST(request: NextRequest) {
 
     const socialChannel = input.channel as SocialDmChannel;
     if (!channelEnabled(settings, socialChannel)) {
+      await audit.write("terminal", "skipped", {
+        channel: socialChannel,
+        threadRef: result.event.thread_ref,
+        contactRef: input.senderName,
+        statusCode: 200,
+        metadata: { reason: `${socialChannel} channel disabled in inbox settings` },
+      });
       return routerResponse(request, {
         ok: true,
         channel: socialChannel,
@@ -230,6 +270,13 @@ export async function POST(request: NextRequest) {
     }
     if (await isTakeoverActive(result.event.thread_ref)) {
       const takeoverGuard = { allowed: false, needsHuman: true, reason: "Human takeover active", intent: guard.intent };
+      await audit.write("terminal", "blocked", {
+        channel: socialChannel,
+        threadRef: result.event.thread_ref,
+        contactRef: input.senderName,
+        statusCode: 200,
+        metadata: { reason: takeoverGuard.reason, intent: takeoverGuard.intent },
+      });
       return routerResponse(request, buildSocialRouterResult({
         channel: input.channel,
         threadRef: result.event.thread_ref,
@@ -319,11 +366,31 @@ export async function POST(request: NextRequest) {
       sessionCost: formatUsd(theoSessionCost()),
     });
 
+    await audit.write("terminal", routeResult.should_send ? "drafted" : routeResult.needs_human ? "blocked" : "skipped", {
+      channel: socialChannel,
+      threadRef: result.event.thread_ref,
+      contactRef: input.senderName,
+      statusCode: 200,
+      metadata: {
+        status: routeResult.status,
+        shouldSend: routeResult.should_send,
+        needsHuman: routeResult.needs_human,
+        reason: routeResult.reason,
+        mediaCount: routeResult.media_count,
+        handoffAlertSent,
+        handoffAlertError,
+      },
+    });
     return routerResponse(request, routeResult);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Iris social DM webhook.";
     logTheoSocial("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
     const status = message.includes("secret") ? 401 : message.includes("DATABASE_URL") ? 503 : 500;
+    await audit.write("terminal", "failed", {
+      statusCode: status,
+      errorMessage: message,
+      metadata: { sessionCost: formatUsd(theoSessionCost()) },
+    });
     const result: SocialDmRouterResult = {
       ok: false,
       channel: "",

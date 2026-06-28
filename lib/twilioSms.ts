@@ -52,7 +52,7 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
 
 function mediaLogLabel(url: string): string {
   const lower = url.toLowerCase();
-  if (/\.(?:m4a|mp3|aac|wav|ogg|webm)(?:[?#]|$)/i.test(lower) || /(?:audio|voice)/i.test(lower)) {
+  if (/\.(?:caf|m4a|mp3|aac|wav|ogg|webm)(?:[?#]|$)/i.test(lower) || /(?:audio|voice)/i.test(lower)) {
     return "MMS audio";
   }
   if (/\.(?:jpg|jpeg|png|gif|webp|heic)(?:[?#]|$)/i.test(lower) || /(?:photo|image)/i.test(lower)) {

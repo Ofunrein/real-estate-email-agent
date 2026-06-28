@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractMetaSocialMessages, metaSocialDirectEnabled } from "@/lib/metaSocial";
+import { extractMetaSocialMessages, fetchMetaSocialSenderProfile, metaSocialDirectEnabled } from "@/lib/metaSocial";
 
 test("extractMetaSocialMessages parses Messenger-style messaging webhook payloads", () => {
   const messages = extractMetaSocialMessages({
@@ -59,6 +59,100 @@ test("extractMetaSocialMessages infers Instagram when the recipient matches a sa
   assert.equal(messages.length, 1);
   assert.equal(messages[0].channel, "instagram");
   assert.equal(messages[0].senderUsername, "martn.o");
+  assert.equal(messages[0].raw.message && typeof messages[0].raw.message === "object", true);
+});
+
+test("extractMetaSocialMessages preserves Instagram shared post attachments", () => {
+  const messages = extractMetaSocialMessages({
+    entry: [
+      {
+        id: "ig-business-1",
+        messaging: [
+          {
+            sender: { id: "igsid-1", username: "oje.o" },
+            recipient: { id: "ig-business-1" },
+            timestamp: 1782511020000,
+            message: {
+              mid: "mid.ig.share.1",
+              attachments: [
+                {
+                  type: "share",
+                  payload: {
+                    url: "https://www.instagram.com/reel/example/",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }, {
+    instagramIds: ["ig-business-1"],
+  });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].text, "");
+  assert.equal(messages[0].media.length, 1);
+  assert.equal(messages[0].media[0]?.url, "https://www.instagram.com/reel/example/");
+  assert.equal(messages[0].media[0]?.filename, "Shared Instagram post");
+  assert.equal(messages[0].media[0]?.providerMetadata?.title, "Shared Instagram post");
+});
+
+test("extractMetaSocialMessages preserves platform-sent echo messages", () => {
+  const messages = extractMetaSocialMessages({
+    entry: [
+      {
+        id: "ig-business-1",
+        messaging: [
+          {
+            sender: { id: "ig-business-1" },
+            recipient: { id: "igsid-1" },
+            timestamp: 1782511020000,
+            message: {
+              mid: "mid.owner.1",
+              text: "Sent from Instagram directly",
+              is_echo: true,
+            },
+          },
+        ],
+      },
+    ],
+  }, {
+    instagramIds: ["ig-business-1"],
+  });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].channel, "instagram");
+  assert.equal(messages[0].isEcho, true);
+  assert.equal(messages[0].senderId, "ig-business-1");
+  assert.equal(messages[0].recipientId, "igsid-1");
+  assert.equal(messages[0].text, "Sent from Instagram directly");
+});
+
+test("fetchMetaSocialSenderProfile reads Instagram username from Graph profile", async (t) => {
+  const priorFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = priorFetch;
+  });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    assert.equal(url.includes("/1526516032549624?"), true);
+    assert.equal(url.includes("fields=name%2Cusername%2Cprofile_pic"), true);
+    return new Response(JSON.stringify({
+      id: "1526516032549624",
+      name: "martin",
+      username: "martn.o",
+      profile_pic: "https://cdn.example.com/profile.jpg",
+    }), { status: 200 });
+  };
+
+  const profile = await fetchMetaSocialSenderProfile("instagram", "1526516032549624", "page-token");
+
+  assert.equal(profile?.id, "1526516032549624");
+  assert.equal(profile?.name, "martin");
+  assert.equal(profile?.username, "martn.o");
+  assert.equal(profile?.profilePic, "https://cdn.example.com/profile.jpg");
 });
 
 test("metaSocialDirectEnabled respects global and per-channel flags", () => {

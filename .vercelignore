@@ -12,6 +12,7 @@ agent.log
 .superpowers/
 .playwright-mcp/
 .tmp/
+tmp/
 .playwright-cli/
 
 __pycache__/

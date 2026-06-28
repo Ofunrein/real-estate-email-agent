@@ -8,6 +8,7 @@ import WebsiteIcon from '@mui/icons-material/LanguageOutlined';
 import ReopenIcon from '@mui/icons-material/AutoAwesomeMotionOutlined';
 import CalendarIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ContactsIcon from '@mui/icons-material/ContactsOutlined';
+import OpsIcon from '@mui/icons-material/ManageSearchOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { InboxSettings } from '@/lib/inboxSettings';
 
@@ -27,9 +28,10 @@ export type ChannelId =
   | 'calendar'
   | 'contacts'
   | 'properties'
-  | 'imports';
+  | 'imports'
+  | 'ops';
 
-export type OperatingTabId = 'calendar' | 'contacts' | 'properties' | 'imports';
+export type OperatingTabId = 'calendar' | 'contacts' | 'properties' | 'imports' | 'ops';
 export type MessageChannelId = Exclude<ChannelId, 'all' | OperatingTabId>;
 
 export interface Channel {
@@ -152,11 +154,13 @@ export interface EmailThread {
 export interface SmsMessage {
   id: string;
   eventId: string;
+  providerMessageId?: string;
   direction: 'inbound' | 'iris' | 'owner';
   time: string;
   body: string;
   html?: string;
-  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string }>;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string; label?: string; linkUrl?: string }>;
+  reactions?: Array<{ emoji: string; by: 'contact' | 'owner'; action?: 'react' | 'unreact' }>;
 }
 
 export interface SmsThread {
@@ -166,6 +170,10 @@ export interface SmsThread {
   time: string;
   preview: string;
   messageCount: number;
+  unreadCount?: number;
+  seen?: boolean;
+  lastSeenAt?: string;
+  lastInboundAt?: string;
   category: LeadCategoryId;
   messages: SmsMessage[];
 }
@@ -305,11 +313,13 @@ export const channelAccounts: Record<ChannelId, ConnectedAccount> = {
   contacts: { label: 'Contacts OS', value: 'Lead directory', status: 'READY' },
   properties: { label: 'Property data', value: 'Austin Realty sheet', status: 'SYNCED' },
   imports: { label: 'Lead Reopen', value: 'Import queue', status: 'READY' },
+  ops: { label: 'Ops Log', value: 'Audit trail', status: 'READY' },
 };
 
 export const importChannelMeta = { label: 'Lead Reopen', icon: ReopenIcon, accent: '#a855f7' };
 export const calendarChannelMeta = { label: 'Calendar', icon: CalendarIcon, accent: '#38bdf8' };
 export const contactsChannelMeta = { label: 'Contacts', icon: ContactsIcon, accent: '#14b8a6' };
+export const opsChannelMeta = { label: 'Ops Log', icon: OpsIcon, accent: '#f59e0b' };
 
 export const leadCategories: LeadCategory[] = [
   { id: 'needs-reply', label: 'Needs Reply', color: '#8b5cf6' },

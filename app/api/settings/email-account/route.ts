@@ -9,16 +9,15 @@ export async function GET() {
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
 
-  const legacyConfigured = Boolean(
-    process.env.GMAIL_TOKEN_JSON
-      || process.env.GMAIL_TOKEN_PATH
-      || process.env.GMAIL_CREDENTIALS_JSON,
+  const oauthConfigured = Boolean(
+    (process.env.GMAIL_OAUTH_CLIENT_ID || process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID)
+      && (process.env.GMAIL_OAUTH_CLIENT_SECRET || process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET),
   );
   if (!databaseEnabled()) {
     return NextResponse.json({
       connected: false,
       accounts: [],
-      legacy_configured: legacyConfigured,
+      oauth_configured: oauthConfigured,
       database_enabled: false,
     });
   }
@@ -27,7 +26,7 @@ export async function GET() {
   return NextResponse.json({
     connected: accounts.some((account) => account.is_default && account.status === "connected"),
     database_enabled: true,
-    legacy_configured: legacyConfigured,
+    oauth_configured: oauthConfigured,
     accounts: accounts.map((account) => ({
       email: account.email,
       display_name: account.display_name,

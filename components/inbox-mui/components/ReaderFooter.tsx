@@ -2,11 +2,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Chip, Stack, Typography, Button, TextField, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFileOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import CircleIcon from '@mui/icons-material/Circle';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoiceOutlined';
 import MicIcon from '@mui/icons-material/MicOutlined';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOverOutlined';
+import RestartAltIcon from '@mui/icons-material/RestartAltOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToyOutlined';
 import StopCircleIcon from '@mui/icons-material/StopCircleOutlined';
@@ -21,7 +23,20 @@ interface ReaderFooterProps {
   disabledReason?: string;
 }
 
-type QueuedAttachment = { url: string; filename: string; transcript?: string };
+type QueuedAttachment = { url: string; filename: string; transcript?: string; kind?: 'voice-note' | 'file' };
+
+const VOICE_CLONE_ID_KEY = 'iris.operator.cartesiaVoiceId';
+const VOICE_CLONE_META_KEY = 'iris.operator.cartesiaVoiceMeta';
+
+type SavedVoiceCloneMeta = {
+  title?: string;
+  state?: string;
+  savedAt?: string;
+};
+
+function shortVoiceId(id: string): string {
+  return id.length > 10 ? `${id.slice(0, 8)}...` : id;
+}
 
 function RecordingWaveform({ seconds }: { seconds: number }) {
   return (
@@ -78,7 +93,9 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const [cloningVoice, setCloningVoice] = useState(false);
   const [voiceCloneStatus, setVoiceCloneStatus] = useState('');
   const [voiceCloneId, setVoiceCloneId] = useState('');
+  const [voiceCloneMeta, setVoiceCloneMeta] = useState<SavedVoiceCloneMeta | null>(null);
   const [handingBack, setHandingBack] = useState(false);
+  const [loadingTakeover, setLoadingTakeover] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,13 +108,51 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const sendTarget = to || threadId || '';
 
   useEffect(() => {
-    const savedVoiceId = window.localStorage.getItem('iris.operator.cartesiaVoiceId');
+    const savedVoiceId = window.localStorage.getItem(VOICE_CLONE_ID_KEY);
     if (savedVoiceId) setVoiceCloneId(savedVoiceId);
+    const savedMeta = window.localStorage.getItem(VOICE_CLONE_META_KEY);
+    if (savedMeta) {
+      try {
+        setVoiceCloneMeta(JSON.parse(savedMeta) as SavedVoiceCloneMeta);
+      } catch {
+        window.localStorage.removeItem(VOICE_CLONE_META_KEY);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    setTakenOver(false);
+    setMessage('');
+    setAttachments([]);
+    setError('');
+    if (!threadId) return undefined;
+
+    const controller = new AbortController();
+    setLoadingTakeover(true);
+    fetch(`/api/threads/${encodeURIComponent(threadId)}/takeover`, { signal: controller.signal })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not read takeover state.');
+        setTakenOver(Boolean(data.isActive));
+      })
+      .catch((takeoverStateError) => {
+        if (controller.signal.aborted) return;
+        setError(takeoverStateError instanceof Error ? takeoverStateError.message : 'Could not read takeover state.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingTakeover(false);
+      });
+
+    return () => controller.abort();
+  }, [threadId]);
 
   const handleTakeOver = async () => {
     if (!threadId) {
       setError('Thread is not ready for takeover.');
+      return;
+    }
+    if (disabledReason) {
+      setError(disabledReason);
       return;
     }
     setError('');
@@ -127,6 +182,18 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     return () => window.clearInterval(interval);
   }, [recordingVoice]);
 
+  useEffect(() => {
+    if (!takenOver || !disabledReason || !threadId) return;
+    setTakenOver(false);
+    setMessage('');
+    setAttachments([]);
+    void fetch(`/api/threads/${encodeURIComponent(threadId)}/takeover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'release', channel }),
+    }).catch(() => {});
+  }, [channel, disabledReason, takenOver, threadId]);
+
   const uploadFiles = async (files: FileList | File[]): Promise<QueuedAttachment[]> => {
     if (!threadId || !files.length) return [];
     setUploading(true);
@@ -139,7 +206,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
         const res = await fetch(`/api/threads/${encodeURIComponent(threadId)}/upload`, { method: 'POST', body });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.ok) throw new Error(data.error || `Could not upload ${file.name}`);
-        uploaded.push({ url: data.url, filename: data.filename || file.name });
+        uploaded.push({ url: data.url, filename: data.filename || file.name, kind: 'file' });
       }
       setAttachments((current) => [...current, ...uploaded]);
       return uploaded;
@@ -200,14 +267,17 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       const res = await fetch('/api/media/voice-note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId: voiceCloneId || undefined }),
+        body: JSON.stringify({ text, voiceId: voiceCloneId || undefined, threadRef: threadId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false || !data.url) throw new Error(data.error || 'Voice note could not be generated.');
       setAttachments((current) => [...current, {
         url: String(data.url),
         filename: String(data.filename || 'voice-note.mp3'),
+        transcript: text,
+        kind: 'voice-note',
       }]);
+      setMessage('');
     } catch (voiceError) {
       setError(voiceError instanceof Error ? voiceError.message : 'Voice note could not be generated.');
     } finally {
@@ -237,7 +307,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     if (!uploaded) return;
     const transcript = await transcribeBlob(blob);
     if (!transcript) return;
-    setAttachments((current) => current.map((attachment) => attachment.url === uploaded.url ? { ...attachment, transcript } : attachment));
+    setAttachments((current) => current.map((attachment) => attachment.url === uploaded.url ? { ...attachment, transcript, kind: 'voice-note' } : attachment));
   };
 
   const cleanupRecordingStream = () => {
@@ -313,15 +383,30 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false || !data.voiceId) throw new Error(data.error || 'Voice clone could not be created.');
       const nextVoiceId = String(data.voiceId);
+      const nextMeta: SavedVoiceCloneMeta = {
+        title: String(data.title || 'Operator voice'),
+        state: data.state ? String(data.state) : undefined,
+        savedAt: new Date().toISOString(),
+      };
       setVoiceCloneId(nextVoiceId);
-      window.localStorage.setItem('iris.operator.cartesiaVoiceId', nextVoiceId);
-      setVoiceCloneStatus(`Voice clone ready: ${String(data.voiceId).slice(0, 8)}...`);
+      setVoiceCloneMeta(nextMeta);
+      window.localStorage.setItem(VOICE_CLONE_ID_KEY, nextVoiceId);
+      window.localStorage.setItem(VOICE_CLONE_META_KEY, JSON.stringify(nextMeta));
+      setVoiceCloneStatus(`Voice clone saved: ${shortVoiceId(nextVoiceId)}`);
     } catch (cloneError) {
       setError(cloneError instanceof Error ? cloneError.message : 'Voice clone could not be created.');
     } finally {
       setCloningVoice(false);
       if (voiceCloneInputRef.current) voiceCloneInputRef.current.value = '';
     }
+  };
+
+  const handleResetVoiceClone = () => {
+    setVoiceCloneId('');
+    setVoiceCloneMeta(null);
+    setVoiceCloneStatus('Saved voice clone cleared.');
+    window.localStorage.removeItem(VOICE_CLONE_ID_KEY);
+    window.localStorage.removeItem(VOICE_CLONE_META_KEY);
   };
 
   const handleHandBack = async () => {
@@ -349,7 +434,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
@@ -373,8 +458,14 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
               AI active
             </Typography>
           </Stack>
-          <Button variant="outlined" size="small" onClick={handleTakeOver} disabled={!threadId || Boolean(disabledReason)}>
-            Take over
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleTakeOver}
+            disabled={!threadId || loadingTakeover || Boolean(disabledReason)}
+            startIcon={loadingTakeover ? <CircularProgress size={12} /> : undefined}
+          >
+            {loadingTakeover ? 'Checking' : 'Take over'}
           </Button>
         </Box>
       {(error || disabledReason) && (
@@ -386,7 +477,21 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
     );
   }
 
-  const sendDisabled = (!message.trim() && !attachments.length) || sending || uploading || generatingVoice || recordingVoice || !threadId || !sendTarget || !canSendChannel;
+  const sendDisabled = (!message.trim() && !attachments.length)
+    || sending
+    || uploading
+    || generatingVoice
+    || recordingVoice
+    || !threadId
+    || !sendTarget
+    || !canSendChannel
+    || Boolean(disabledReason);
+  const hasQueuedVoiceNote = attachments.some((attachment) => attachment.kind === 'voice-note');
+  const sendTooltip = hasQueuedVoiceNote && !message.trim()
+    ? 'Send queued voice note'
+    : hasQueuedVoiceNote
+      ? 'Send message and queued voice note'
+      : 'Send message';
 
   return (
     <Box
@@ -423,26 +528,96 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
         </Tooltip>
       </Stack>
 
-      {error && <Alert severity="warning" sx={{ mx: 1.25, mt: 1 }}>{error}</Alert>}
+      {(error || disabledReason) && <Alert severity="warning" sx={{ mx: 1.25, mt: 1 }}>{error || disabledReason}</Alert>}
       {voiceCloneStatus && <Alert severity="success" sx={{ mx: 1.25, mt: 1 }}>{voiceCloneStatus}</Alert>}
       {!canSendChannel && <Alert severity="info" sx={{ mx: 1.25, mt: 1 }}>Website chat manual send is not wired yet.</Alert>}
+
+      {voiceCloneId && (
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ px: 1.25, pt: 1 }}>
+          <Tooltip title={`Saved Cartesia clone ${shortVoiceId(voiceCloneId)}${voiceCloneMeta?.state ? ` (${voiceCloneMeta.state})` : ''}. Generated voice notes use this voice until reset.`}>
+            <Chip
+              size="small"
+              color="success"
+              variant="outlined"
+              icon={<CheckCircleIcon />}
+              label={voiceCloneMeta?.title || 'Voice saved'}
+              sx={{
+                maxWidth: 220,
+                '& .MuiChip-label': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                },
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Reset saved clone and use the default Cartesia voice">
+            <span>
+              <IconButton
+                size="small"
+                onClick={handleResetVoiceClone}
+                disabled={generatingVoice || cloningVoice || recordingVoice}
+                aria-label="Reset saved voice clone"
+                sx={{
+                  width: 28,
+                  height: 28,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1.25,
+                  '&:hover': {
+                    borderColor: 'warning.main',
+                    color: 'warning.main',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)',
+                  },
+                }}>
+                <RestartAltIcon sx={{ fontSize: 15 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+      )}
 
       {!!attachments.length && (
         <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ px: 1.25, pt: 1 }}>
           {attachments.map((attachment) => (
-            <Chip
+            <Tooltip
               key={attachment.url}
-              size="small"
-              label={attachment.transcript ? `${attachment.filename} · transcript ready` : attachment.filename}
-              onDelete={() => setAttachments((current) => current.filter((item) => item.url !== attachment.url))}
-              deleteIcon={<CloseIcon />}
-            />
+              title={attachment.kind === 'voice-note' ? 'Voice note is ready. Press the send arrow to deliver it.' : attachment.filename}
+            >
+              <Chip
+                size="small"
+                color={attachment.kind === 'voice-note' ? 'primary' : 'default'}
+                variant={attachment.kind === 'voice-note' ? 'outlined' : 'filled'}
+                icon={attachment.kind === 'voice-note' ? <SendIcon /> : undefined}
+                label={attachment.kind === 'voice-note'
+                  ? 'Voice note ready to send'
+                  : attachment.transcript
+                    ? `${attachment.filename} · transcript ready`
+                    : attachment.filename}
+                onDelete={() => setAttachments((current) => current.filter((item) => item.url !== attachment.url))}
+                deleteIcon={<CloseIcon />}
+                sx={{
+                  maxWidth: attachment.kind === 'voice-note' ? 210 : 260,
+                  borderColor: attachment.kind === 'voice-note' ? 'primary.main' : undefined,
+                  '& .MuiChip-label': {
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  },
+                }}
+              />
+            </Tooltip>
           ))}
         </Stack>
       )}
 
       {/* Message input */}
-      <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ p: 1.25 }}>
+      <Box
+        component="form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSend();
+        }}
+        sx={{ p: 1.25, display: 'flex', gap: 1, alignItems: 'flex-end' }}
+      >
         <input
           ref={fileInputRef}
           hidden
@@ -493,25 +668,48 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="Generate cloned AI voice note from typed reply">
+        <Tooltip title={voiceCloneId ? `Generate voice note with saved clone ${shortVoiceId(voiceCloneId)}` : 'Generate voice note with the default Cartesia voice'}>
           <span>
             <IconButton
               size="small"
               onClick={handleGenerateVoiceNote}
               disabled={generatingVoice || recordingVoice || !message.trim() || !threadId || !canSendChannel}
-              sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, width: 34, height: 34 }}
+              sx={{
+                flexShrink: 0,
+                border: '1px solid',
+                borderColor: voiceCloneId ? 'success.main' : 'divider',
+                borderRadius: 1.5,
+                width: 34,
+                height: 34,
+                '&:hover': {
+                  borderColor: voiceCloneId ? 'success.main' : 'primary.main',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(124,92,255,0.12)' : 'rgba(124,92,255,0.08)',
+                },
+              }}
               aria-label="Generate cloned AI voice note">
               {generatingVoice ? <CircularProgress size={14} /> : <KeyboardVoiceIcon sx={{ fontSize: 16 }} />}
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="Clone or update operator voice">
+        <Tooltip title={voiceCloneId ? 'Replace saved operator voice clone' : 'Clone and save operator voice from an audio sample'}>
           <span>
             <IconButton
               size="small"
               onClick={() => voiceCloneInputRef.current?.click()}
               disabled={cloningVoice || recordingVoice || !threadId || !canSendChannel}
-              sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, width: 34, height: 34 }}
+              sx={{
+                flexShrink: 0,
+                border: '1px solid',
+                borderColor: voiceCloneId ? 'success.main' : 'divider',
+                borderRadius: 1.5,
+                width: 34,
+                height: 34,
+                '&:hover': {
+                  borderColor: 'success.main',
+                  color: 'success.main',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)',
+                },
+              }}
               aria-label="Clone operator voice">
               {cloningVoice ? <CircularProgress size={14} /> : <RecordVoiceOverIcon sx={{ fontSize: 16 }} />}
             </IconButton>
@@ -530,17 +728,34 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
           fullWidth
           sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         />}
-        <IconButton
-          onClick={handleSend}
-          disabled={sendDisabled}
-          size="small"
-          color="primary"
-          sx={{ flexShrink: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, width: 34, height: 34 }}
-          aria-label="Send message"
-        >
-          {sending ? <CircularProgress size={14} /> : <SendIcon sx={{ fontSize: 16 }} />}
-        </IconButton>
-      </Stack>
+        <Tooltip title={sendTooltip}>
+          <span>
+            <IconButton
+              type="submit"
+              disabled={sendDisabled}
+              size="small"
+              color="primary"
+              sx={{
+                flexShrink: 0,
+                border: '1px solid',
+                borderColor: hasQueuedVoiceNote ? 'primary.main' : 'divider',
+                bgcolor: hasQueuedVoiceNote ? 'primary.main' : 'transparent',
+                color: hasQueuedVoiceNote ? 'primary.contrastText' : 'inherit',
+                borderRadius: 1.5,
+                width: 34,
+                height: 34,
+                '&:hover': {
+                  bgcolor: hasQueuedVoiceNote ? 'primary.dark' : undefined,
+                  borderColor: 'primary.main',
+                },
+              }}
+              aria-label={sendTooltip}
+            >
+              {sending ? <CircularProgress size={14} /> : <SendIcon sx={{ fontSize: 16 }} />}
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
     </Box>
   );
 }

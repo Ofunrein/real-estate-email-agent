@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeManualVoiceUpload } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
+import { createRequestAudit } from "@/lib/requestAudit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ const ALLOWED = new Set([
   "image/gif",
   "image/webp",
   "audio/aac",
+  "audio/caf",
   "audio/m4a",
   "audio/mpeg",
   "audio/mp3",
@@ -20,26 +22,52 @@ const ALLOWED = new Set([
   "audio/ogg",
   "audio/wav",
   "audio/webm",
+  "audio/x-caf",
   "video/mp4",
   "video/webm",
   "application/pdf",
 ]);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const { threadRef } = await params;
+  const audit = createRequestAudit({
+    headers: req.headers,
+    route: "/api/threads/[threadRef]/upload",
+    method: "POST",
+    provider: "dashboard",
+    threadRef,
+  });
+  await audit.write("received", "received");
   try {
-    const { threadRef } = await params;
     const form = await req.formData();
     const file = form.get("file");
-    if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "No file" }, { status: 400 });
-    if (!file.size) return NextResponse.json({ ok: false, error: "File is empty" }, { status: 400 });
-    if (file.size > MAX_SIZE) return NextResponse.json({ ok: false, error: "File too large (max 10MB)" }, { status: 413 });
-    if (!ALLOWED.has(file.type)) return NextResponse.json({ ok: false, error: `Type not allowed: ${file.type || "unknown"}` }, { status: 415 });
+    if (!(file instanceof File)) {
+      await audit.write("upload", "failed", { statusCode: 400, errorMessage: "No file" });
+      return NextResponse.json({ ok: false, error: "No file" }, { status: 400 });
+    }
+    if (!file.size) {
+      await audit.write("upload", "failed", { statusCode: 400, errorMessage: "File is empty" });
+      return NextResponse.json({ ok: false, error: "File is empty" }, { status: 400 });
+    }
+    if (file.size > MAX_SIZE) {
+      await audit.write("upload", "failed", { statusCode: 413, errorMessage: "File too large (max 10MB)", metadata: { size: file.size, type: file.type } });
+      return NextResponse.json({ ok: false, error: "File too large (max 10MB)" }, { status: 413 });
+    }
+    if (!ALLOWED.has(file.type)) {
+      await audit.write("upload", "failed", { statusCode: 415, errorMessage: `Type not allowed: ${file.type || "unknown"}`, metadata: { size: file.size, type: file.type } });
+      return NextResponse.json({ ok: false, error: `Type not allowed: ${file.type || "unknown"}` }, { status: 415 });
+    }
 
     const normalizedFile = await normalizeManualVoiceUpload(file);
     const uploaded = await saveMediaUpload({ file: normalizedFile, threadRef, requestUrl: req.url });
+    await audit.write("upload", "sent", {
+      statusCode: 200,
+      metadata: { filename: normalizedFile.name, type: normalizedFile.type, size: normalizedFile.size },
+    });
     return NextResponse.json({ ok: true, ...uploaded });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed";
+    await audit.write("upload", "failed", { statusCode: 500, errorCode: "upload_failed", errorMessage: message });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
