@@ -437,13 +437,54 @@ export async function sendGmailReplyWithOptions(
   }
 }
 
-export async function ensureGmailLabel(gmail: GmailClient, name: string): Promise<string> {
+// Gmail only accepts a fixed palette. Map app hex colors to nearest supported Gmail color.
+// Full palette: https://developers.google.com/gmail/api/reference/rest/v1/users.labels
+const GMAIL_LABEL_COLORS: Record<string, { backgroundColor: string; textColor: string }> = {
+  "#7c3aed": { backgroundColor: "#8e63ce", textColor: "#ffffff" }, // needs_reply (purple)
+  "#dc2626": { backgroundColor: "#cc3a21", textColor: "#ffffff" }, // hot_lead (red)
+  "#ea580c": { backgroundColor: "#e66550", textColor: "#ffffff" }, // showing (orange-red)
+  "#0f766e": { backgroundColor: "#0b804b", textColor: "#ffffff" }, // seller/valuation (teal)
+  "#2563eb": { backgroundColor: "#285bac", textColor: "#ffffff" }, // financing (blue)
+  "#be123c": { backgroundColor: "#a61c00", textColor: "#ffffff" }, // needs_human (dark red)
+  "#64748b": { backgroundColor: "#999999", textColor: "#ffffff" }, // nurture (gray)
+  "#334155": { backgroundColor: "#444444", textColor: "#ffffff" }, // closed (dark gray)
+};
+
+function gmailLabelColor(hexColor?: string): { backgroundColor: string; textColor: string } | undefined {
+  if (!hexColor) return undefined;
+  return GMAIL_LABEL_COLORS[hexColor.toLowerCase()] || GMAIL_LABEL_COLORS["#64748b"];
+}
+
+export async function ensureGmailLabel(
+  gmail: GmailClient,
+  name: string,
+  color?: string,
+): Promise<string> {
   const labels = await gmail.users.labels.list({ userId: "me" });
   const existing = labels.data.labels?.find((label) => label.name === name);
-  if (existing?.id) return existing.id;
+  if (existing?.id) {
+    // Update color if it changed
+    if (color) {
+      const c = gmailLabelColor(color);
+      if (c) {
+        await gmail.users.labels.patch({
+          userId: "me",
+          id: existing.id,
+          requestBody: { color: c },
+        }).catch(() => null);
+      }
+    }
+    return existing.id;
+  }
+  const c = color ? gmailLabelColor(color) : undefined;
   const created = await gmail.users.labels.create({
     userId: "me",
-    requestBody: { name, labelListVisibility: "labelShow", messageListVisibility: "show" },
+    requestBody: {
+      name,
+      labelListVisibility: "labelShow",
+      messageListVisibility: "show",
+      ...(c ? { color: c } : {}),
+    },
   });
   if (!created.data.id) throw new Error(`Unable to create Gmail label ${name}`);
   return created.data.id;
