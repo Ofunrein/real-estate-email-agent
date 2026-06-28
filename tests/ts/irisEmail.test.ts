@@ -264,6 +264,43 @@ test("buildHtmlEmailReply: proxies usable photos and avoids duplicate property c
   }
 });
 
+test("buildHtmlEmailReply: showing requests focus on the selected property instead of similar options", () => {
+  const primary = {
+    address: "9605 Corbe Dr",
+    price: "1150000",
+    beds: "5",
+    baths: "5",
+    sqft: "4226",
+    photo_url: "https://photos.zillowstatic.com/fp/primary-p_e.jpg",
+    listing_url: "https://www.zillow.com/homedetails/9605-Corbe-Dr-Austin-TX-78726/29373093_zpid/",
+  } as SheetRow;
+  const similar = {
+    address: "12725 Bloomington Dr #129, Austin, Texas 78748",
+    price: "268000",
+    beds: "4",
+    baths: "3",
+    sqft: "1650",
+    listing_url: "https://www.zillow.com/homedetails/12725-Bloomington-Dr-129-Austin-TX-78748/2053065412_zpid/",
+  } as SheetRow;
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property",
+    body: "Want to take a look at 9605 Corbe Dr",
+  }));
+
+  const reply = buildHtmlEmailReply(
+    "Hi Martin,\n\nGreat, happy to set up a showing at 9605 Corbe Dr for you! What day and time works best for you this week?\n\nBest,\nIris",
+    [primary, similar],
+    classification,
+  );
+
+  assert.doesNotMatch(reply.html || "", /Similar options/i);
+  assert.doesNotMatch(reply.html || "", /12725 Bloomington/i);
+  assert.match(reply.html || "", /What day and time works best/i);
+  assert.equal((reply.text.match(/Property details:/g) || []).length, 1);
+  assert.match(reply.text, /9605 Corbe Dr/);
+  assert.doesNotMatch(reply.text, /12725 Bloomington/i);
+});
+
 test("buildHtmlEmailReply: skips Street View photos instead of rendering broken image blocks", () => {
   const reply = buildHtmlEmailReply("Hello,\n\nBest,\nIris", [{
     address: "100 E 51st St #7",

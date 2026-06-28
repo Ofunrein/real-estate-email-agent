@@ -575,20 +575,29 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
   const cleanProperties = dedupeProperties(properties);
   const featured = cleanProperties[0];
   const rest = cleanProperties.slice(1, 4);
+  const wantsAlternatives = /\b(similar|options?|alternatives?|compare|another|other)\b/i.test(text);
+  const showAlternatives = Boolean(
+    rest.length
+    && classification?.intent !== "showing_request"
+    && (classification?.intent === "property_search" || wantsAlternatives)
+  );
   const subjectLine = classification?.intent === "property_search"
     ? "I found the best matching options from our inventory."
+    : classification?.intent === "showing_request" && featured
+      ? `I can help with ${featured.address || "that property"}.`
     : featured
       ? "Here are the property details from our inventory."
       : "";
+  const plainProperties = showAlternatives ? cleanProperties.slice(0, 4) : cleanProperties.slice(0, featured ? 1 : 0);
   const html = `<div style="font-family:Arial,sans-serif;max-width:620px;color:#111827;line-height:1.45">
 ${subjectLine ? `<p style="margin:0 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
 ${featured ? propertyCardHtml(featured, true) : ""}
-${rest.length ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
+${showAlternatives ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
 ${plainToHtml(text.replace(/\n*Best,\nIris\s*$/i, "").trim())}
 <p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
 </div>`;
-  const propertyText = cleanProperties.length
-    ? `\n\nProperty details:\n${cleanProperties.slice(0, 4).map(propertyPlain).join("\n\n")}`
+  const propertyText = plainProperties.length
+    ? `\n\nProperty details:\n${plainProperties.map(propertyPlain).join("\n\n")}`
     : "";
   return {
     text: `${text}${propertyText}`,
