@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782678411.0289047,
-    "ast_hash": "9264f893fcfdcd1c96778c0ced8403ab",
+    "mtime": 1782680777.1987848,
+    "ast_hash": "29fad9b752e35e73c78d91c19a5d9dae",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1782678480.0032508,
-    "ast_hash": "b5817c41d275db05c163b08b7f881299",
+    "mtime": 1782680552.1546414,
+    "ast_hash": "3af0d0c348c94c153c90cd4cb9b11a76",
     "semantic_hash": ""
   },
   "personalities/__init__.py": {
@@ -3345,13 +3345,28 @@
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailPushReceived.ts": {
-    "mtime": 1782678072.6737094,
-    "ast_hash": "f8efbe848cfa9907372a5b7892cc262e",
+    "mtime": 1782680447.537918,
+    "ast_hash": "5bf602bf86d217a9813e3d6476997aef",
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailWatchRenewal.ts": {
     "mtime": 1782666792.4158387,
     "ast_hash": "10ca990ee78c322808f0f59b954adc0b",
+    "semantic_hash": ""
+  },
+  "scripts/stress-iris-email.mjs": {
+    "mtime": 1782680538.2511444,
+    "ast_hash": "6fbc206c190f0358949331813f976051",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/iris-email-stress-scenarios.json": {
+    "mtime": 1782680709.9040716,
+    "ast_hash": "9df93d691ad7c97ee3ff5a68f255c2cb",
+    "semantic_hash": ""
+  },
+  "docs/iris-email-stress-workflow.md": {
+    "mtime": 1782680574.2992215,
+    "ast_hash": "43d96164a2e2e85c2f67f9697c137b71",
     "semantic_hash": ""
   }
 }
