@@ -240,6 +240,7 @@ Opportunity tags: valuation_interest, mortgage_interest, renter_purchase_potenti
 Compliance flags: fair_housing, mortgage_license, legal, contract_terms, angry_or_complaint, privacy, broker_approval.
 
 Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.
+Use spam for adult-content links, OnlyFans/porn requests, crypto/SEO/casino/loan spam, or other off-topic non-real-estate asks.
 If the latest SMS asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, comparable properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.
 If timeline is 0-3 months, budget is set, and area is set, include hot_lead in opportunityTags.`;
   const user = `Latest lead SMS: ${context.message}
@@ -312,6 +313,9 @@ Rules:
 - Capture hidden opportunities naturally: buyer who may need to sell, renter who may buy, seller valuation, open-house recovery, or mortgage handoff.
 - If the lead says email/call/text is best, acknowledge that preference briefly and continue the conversation in that direction without overexplaining internal routing.
 - If the lead asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, or multiple listings, list up to the requested number from the provided property rows with address, price, beds/baths, and area if available. Do not say an agent has to pull matches unless no property rows are provided.
+- If the lead says they do not like, do not want, or are no longer interested in the current property, do not keep pitching that same property. Acknowledge the pivot and offer different matches from the provided property rows.
+- Do not help with adult-content links, OnlyFans/porn requests, scams, or non-real-estate spam. Redirect briefly back to real estate help.
+- Do not advise on exotic animals, illegal/unusual property use, or unsafe occupancy. Redirect to normal search criteria such as area, budget, beds/baths, yard size, and showing times.
 - If a human should still review pricing, valuation, negotiation, timing, lending, or other judgment work, do both: provide the safe property facts/options you have, then separately mention that a person can handle the judgment-sensitive part.
 - When a reply covers two jobs, such as property options plus human follow-up, use short blocks separated by a blank line. Do not cram it into one paragraph.
 - When listing multiple properties, put a blank line before each numbered listing. Format like:

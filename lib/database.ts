@@ -1515,6 +1515,7 @@ export async function readEventsForThreadOrContactFromDatabase(input: {
   const prefix = `${input.channel}:`;
   const contactRef = input.threadRef.startsWith(prefix) ? input.threadRef.slice(prefix.length) : input.threadRef;
   const prefixedThreadRef = input.threadRef.startsWith(prefix) ? input.threadRef : `${prefix}${input.threadRef}`;
+  const usernameContact = contactRef.trim().replace(/^@+/, "").toLowerCase();
   const result = await getPool().query(
     `select ${columns}
        from conversation_events
@@ -1532,6 +1533,17 @@ export async function readEventsForThreadOrContactFromDatabase(input: {
               or email = $5
             )
           )
+          or (
+            $7 <> ''
+            and channel = $3
+            and $3 in ('instagram', 'messenger')
+            and (
+              lower(trim(leading '@' from coalesce(full_name, ''))) = $7
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'senderUsername', ''))) = $7
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'sender_username', ''))) = $7
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'username', ''))) = $7
+            )
+          )
         )
       order by coalesce(
           nullif(event_at, '')::timestamptz,
@@ -1539,7 +1551,7 @@ export async function readEventsForThreadOrContactFromDatabase(input: {
         ) desc,
         id desc
       limit $4`,
-    [clientId(), input.threadRef, input.channel, input.limit || 12, contactRef, prefixedThreadRef],
+    [clientId(), input.threadRef, input.channel, input.limit || 12, contactRef, prefixedThreadRef, usernameContact],
   );
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }

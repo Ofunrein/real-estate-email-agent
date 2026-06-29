@@ -62,7 +62,7 @@ const SENSITIVE_PATTERNS = [
 ];
 
 const SPAM_PATTERNS = [
-  /\b(crypto|forex|seo services|guest post|casino|loan offer)\b/i,
+  /\b(crypto|forex|seo services|guest post|casino|loan offer|onlyfans|only fans|porn|sex tape|nudes?)\b/i,
 ];
 
 const SERVICE_AREA_CITIES = new Set(CENTRAL_TEXAS_CITIES);
@@ -182,6 +182,26 @@ function asksForAlternativeProperties(message: string): boolean {
   const normalized = normalizeFollowupText(message);
   return /\b(other|another|similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternative|options?|properties|homes?|listings?)\b/i.test(normalized)
     && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(normalized);
+}
+
+function rejectsCurrentProperty(message: string): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(?:no longer|not)\s+interested\b/i.test(normalized)
+    || /\b(?:don't|dont|do not)\s+(?:like|want)\b/i.test(normalized)
+    || /\bnot\s+(?:this|that)\s+(?:one|property|listing)\b/i.test(normalized)
+    || /\b(?:send|show|find|share)\s+(?:me\s+)?another\s+(?:one|option|property|listing)?\b/i.test(normalized)
+    || /\banother\s+(?:one|option|property|listing)\b/i.test(normalized);
+}
+
+function offTopicRedirectReply(message: string): string {
+  const normalized = normalizeFollowupText(message);
+  if (/\b(onlyfans|only fans|porn|sex tape|nudes?|adult link)\b/i.test(normalized)) {
+    return "I can't help with that. I can help with Austin listings, photos, or showings if you want to keep searching.";
+  }
+  if (/\b(monkey|monkeys|exotic animals?|wild animals?)\b/i.test(normalized)) {
+    return "I can't verify or advise on exotic-animal use. I can still help with normal criteria like area, budget, beds, baths, yard size, and showing times.";
+  }
+  return "";
 }
 
 function asksForPropertyOptions(message: string): boolean {
@@ -504,7 +524,7 @@ function formatTheoPropertySafeAnswer(properties: SheetRow[] = [], message: stri
   return formatTheoPropertyDetails(properties);
 }
 
-function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification): string {
+function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification, message = ""): string {
   const usable = properties.filter((property) => cleanText(property.address));
   if (!usable.length) return "";
   const lines = usable.slice(0, 3).flatMap((property, index) => [
@@ -513,7 +533,10 @@ function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: 
   ].filter(Boolean));
   const needsHuman = classification.status === "needs_human" || Boolean(classification.handoffReason);
   const hasSellBeforeBuy = (classification.opportunityTags || []).includes("sell_before_buy") || classification.leadRole === "seller";
-  const intro = needsHuman
+  const rejectedPrior = rejectsCurrentProperty(message);
+  const intro = rejectedPrior
+    ? "No problem — I'll skip that one. Here are better matches from the saved listings:"
+    : needsHuman
     ? "I can do both — here are matches I found, and a person can review the part that needs judgment:"
     : "Got it — here are matches I found:";
   const humanNote = !needsHuman && hasSellBeforeBuy
@@ -602,6 +625,25 @@ export function shouldTheoAutoReply(classification: TheoClassification, lead: Pa
 }
 
 export async function generateTheoReply(context: TheoReplyContext): Promise<TheoReplyResult> {
+  const offTopicReply = offTopicRedirectReply(context.message);
+  if (offTopicReply) {
+    return {
+      classification: {
+        intent: "spam",
+        leadRole: "unknown",
+        handoffReason: "Off-topic or unsafe request",
+        status: "ready_to_reply",
+      },
+      reply: offTopicReply,
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "off_topic_redirect_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics: [],
+    };
+  }
+
   const localSafetyClassification = classifyTheoMessage(context.message);
   if (
     localSafetyClassification.intent === "human_required"
@@ -709,7 +751,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
 
   const optionsReply = asksForPropertyOptions(context.message)
     && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
-    ? formatTheoPropertyOptions(context.properties, classification)
+    ? formatTheoPropertyOptions(context.properties, classification, context.message)
     : "";
   if (optionsReply) {
     const mediaUrls = wantsPropertyImage(context.message)

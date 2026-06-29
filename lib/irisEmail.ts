@@ -25,6 +25,7 @@ import {
 } from "@/lib/gmailConnection";
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
+import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -197,6 +198,26 @@ function cleanBody(text: string): string {
   return current.join("\n").trim() || text.trim();
 }
 
+const THREAD_CONTEXT_MARKER = "Thread context for classification only:";
+
+function latestEmailBody(body: string): string {
+  return body.split(THREAD_CONTEXT_MARKER)[0] || body;
+}
+
+function threadContextBody(body: string): string {
+  const markerIndex = body.indexOf(THREAD_CONTEXT_MARKER);
+  return markerIndex >= 0 ? body.slice(markerIndex + THREAD_CONTEXT_MARKER.length) : "";
+}
+
+function asksForDifferentProperty(text: string): boolean {
+  return /\b(no longer interested|not interested in (?:this|that|the|current) property|what else|else can we do|other options?|different options?|alternatives?|another|better fit|better fits|instead|similar options?|show me options?)\b/i.test(text);
+}
+
+function canResolveFromPriorProperty(latestText: string): boolean {
+  if (asksForDifferentProperty(latestText)) return false;
+  return /\b(this property|that property|the property|that one|this one|it|same one|first one|second one|third one|take a look|tour|showing|schedule|tomorrow|today|noon|morning|afternoon|evening|this friday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?::\d{2})?\s?(?:am|pm))\b/i.test(latestText);
+}
+
 export function parseEmailContact(value = ""): { name: string; email: string } {
   const trimmed = value.trim();
   const bracket = trimmed.match(/^(.*?)<([^>]+)>$/);
@@ -249,8 +270,20 @@ function extractBudget(text: string): string | null {
 }
 
 function extractBeds(text: string): string | null {
-  const match = text.match(/\b([1-9])\s*(?:bed|beds|bedroom|bedrooms|bd)\b/i);
-  return match ? match[1] : null;
+  const match = text.match(/\b([1-9]|one|two|three|four|five|six|seven|eight|nine)\s*(?:bed|beds|bedroom|bedrooms|bd)\b/i);
+  if (!match) return null;
+  const words: Record<string, string> = {
+    one: "1",
+    two: "2",
+    three: "3",
+    four: "4",
+    five: "5",
+    six: "6",
+    seven: "7",
+    eight: "8",
+    nine: "9",
+  };
+  return words[match[1].toLowerCase()] || match[1];
 }
 
 function extractTimeline(text: string): string | null {
@@ -289,67 +322,79 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields): string |
 }
 
 export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" | "body">): IrisEmailClassification {
-  const clean = cleanBody(`${message.subject || ""}\n${message.body || ""}`);
-  const addresses = extractAddresses(clean);
-  const propertyUrls = extractPropertyUrls(clean);
-  const flags = detectIrisComplianceFlags(clean);
-  const noSignal = noOrStopSignal(clean);
+  const latestClean = cleanBody(`${message.subject || ""}\n${latestEmailBody(message.body || "")}`);
+  const contextClean = cleanBody(threadContextBody(message.body || ""));
+  const latestAddresses = extractAddresses(latestClean);
+  const contextAddresses = extractAddresses(contextClean);
+  const addresses = latestAddresses.length
+    ? latestAddresses
+    : canResolveFromPriorProperty(latestClean)
+      ? contextAddresses.slice(0, 1)
+      : [];
+  const propertyUrls = extractPropertyUrls(latestClean);
+  const flags = detectIrisComplianceFlags(latestClean);
+  const noSignal = noOrStopSignal(latestClean);
+  const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
   const fields: IrisLeadFields = {
-    timeline: extractTimeline(clean),
-    budget: extractBudget(clean),
-    area: extractArea(clean),
-    beds: extractBeds(clean),
-    current_property_status: /\b(i own|my house|my home)\b/i.test(clean) ? "owns" : /\b(i rent|renting)\b/i.test(clean) ? "rents" : "unknown",
-    preferred_channel: preferredChannel(clean),
+    timeline: extractTimeline(latestClean),
+    budget: extractBudget(latestClean),
+    area: extractArea(latestClean),
+    beds: extractBeds(latestClean),
+    current_property_status: /\b(i own|my house|my home)\b/i.test(latestClean) ? "owns" : /\b(i rent|renting)\b/i.test(latestClean) ? "rents" : "unknown",
+    preferred_channel: preferredChannel(latestClean),
   };
 
   let intent: IrisEmailIntent = "human_required";
   let role: IrisLeadRole = "unknown";
   const opportunityTags: string[] = [];
 
-  const spamLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution)/i.test(clean);
-  const realEstateLike = /(home|house|condo|property|listing|showing|tour|buy|sell|rent|lease|realtor|real estate|bedroom|mortgage)/i.test(clean) || addresses.length > 0 || propertyUrls.length > 0;
+  const spamLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution)/i.test(latestClean);
+  const realEstateLike = /(home|house|condo|property|listing|showing|tour|buy|sell|rent|lease|realtor|real estate|bedroom|mortgage)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
   if (spamLike && !realEstateLike) {
     intent = "spam";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
-  } else if (/(sell|selling|listing appointment|list my|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(clean)) {
+  } else if (pivotingToOtherOptions && /(options?|alternatives?|another|other|what else|looking for|better fit|three bed|3 bed|bedroom|homes?|houses?|properties|listings?)/i.test(latestClean)) {
+    intent = "property_search";
+    role = "buyer";
+    opportunityTags.push("property_pivot");
+  } else if (/(sell|selling|listing appointment|list my|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(latestClean)) {
     intent = "seller_lead";
     role = "seller";
     opportunityTags.push("valuation_interest");
   } else if (addresses.length || propertyUrls.length) {
-    if (/(show|tour|see|visit|schedule|available today|open house|take a look|look at|check out|walk through|view it|view this|see it)/i.test(clean)) {
+    if (/(show|tour|see|visit|schedule|available today|open house|take a look|look at|check out|walk through|view it|view this|see it)/i.test(latestClean) || (!latestAddresses.length && canResolveFromPriorProperty(latestClean))) {
       intent = "showing_request";
-    } else if (/(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(clean)) {
+    } else if (/(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) {
       intent = "buyer_lead";
       opportunityTags.push("mortgage_interest");
     } else {
       intent = "property_details";
     }
-    role = /(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(clean)
+    role = /(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)
       ? "mortgage_adjacent_lead"
       : "buyer";
-  } else if (/(showing|tour|open house|see it|see that one|view it|schedule|appointment|take a look|look at it|check it out|after work)/i.test(clean)) {
+  } else if (/(showing|tour|open house|see it|see that one|view it|schedule|appointment|take a look|look at it|check it out|after work|tomorrow|today|noon|afternoon|evening|this friday)/i.test(latestClean) && canResolveFromPriorProperty(latestClean)) {
     intent = "showing_request";
     role = "buyer";
-  } else if (/(rent|lease|rental|tenant)/i.test(clean)) {
+  } else if (/(rent|lease|rental|tenant)/i.test(latestClean)) {
     intent = "renter_lead";
     role = "renter";
-  } else if (/(looking for|homes?|houses?|condos?|available|inventory|options|under \$|bedroom|bd)/i.test(clean)) {
+  } else if (/(looking for|homes?|houses?|condos?|available|inventory|options|under \$|bedroom|bd)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
-  } else if (/(buy|purchase|preapproved|pre-approved|mortgage|loan)/i.test(clean)) {
+  } else if (/(buy|purchase|preapproved|pre-approved|mortgage|loan)/i.test(latestClean)) {
     intent = "buyer_lead";
-    role = /(mortgage|loan|preapproved|pre-approved)/i.test(clean) ? "mortgage_adjacent_lead" : "buyer";
+    role = /(mortgage|loan|preapproved|pre-approved)/i.test(latestClean) ? "mortgage_adjacent_lead" : "buyer";
   }
 
-  if (/(asap|today|tomorrow|urgent|this week)/i.test(clean)) opportunityTags.push("high_urgency");
-  if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(clean)) opportunityTags.push("mortgage_interest");
-  if (/(sell before (?:i )?buy|need to sell first|contingent)/i.test(clean)) opportunityTags.push("sell_before_buy");
+  if (/(asap|today|tomorrow|urgent|this week)/i.test(latestClean)) opportunityTags.push("high_urgency");
+  if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) opportunityTags.push("mortgage_interest");
+  if (/(sell before (?:i )?buy|need to sell first|contingent)/i.test(latestClean)) opportunityTags.push("sell_before_buy");
   if (noSignal) opportunityTags.push(noSignal === "stop" ? "opt_out" : "clear_no");
 
   if (role === "mortgage_adjacent_lead" && flags.includes("mortgage_license")) intent = "human_required";
-  if (intent === "human_required" && role === "unknown" && /(complaint|angry|upset|report|legal|attorney|lawyer)/i.test(clean)) {
+  if (intent === "human_required" && role === "unknown" && /(complaint|angry|upset|report|legal|attorney|lawyer)/i.test(latestClean)) {
     role = "unknown";
   }
 
@@ -363,8 +408,8 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     primary_lead_role: role,
     secondary_roles: [],
     opportunity_tags: uniq(opportunityTags),
-    tone_state: flags.includes("angry_or_complaint") ? "annoyed" : /asap|urgent|today|tomorrow/i.test(clean) ? "urgent" : "neutral",
-    urgency: /asap|urgent|today|tomorrow/i.test(clean) ? "high" : "unknown",
+    tone_state: flags.includes("angry_or_complaint") ? "annoyed" : /asap|urgent|today|tomorrow/i.test(latestClean) ? "urgent" : "neutral",
+    urgency: /asap|urgent|today|tomorrow/i.test(latestClean) ? "high" : "unknown",
     compliance_flags: flags,
     confidence,
     address: addresses[0] || null,
@@ -660,6 +705,16 @@ function anthropicApiKey(): string {
   return process.env.ANTHROPIC_API_KEY || "";
 }
 
+const CLAUDE_PRICING_PER_MILLION: Record<string, { input: number; output: number }> = {
+  "claude-haiku-4-5": { input: 0.8, output: 4 },
+  "claude-sonnet-4-6": { input: 3, output: 15 },
+};
+
+function claudeTokenCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = CLAUDE_PRICING_PER_MILLION[model] || { input: 3, output: 15 };
+  return ((inputTokens * pricing.input) + (outputTokens * pricing.output)) / 1_000_000;
+}
+
 async function generateClaudeIrisEmailReplyText(
   message: IrisEmailMessage,
   classification: IrisEmailClassification,
@@ -687,15 +742,21 @@ Rules:
 - The app will render property facts in an HTML property card above your body, so do not repeat the full price/beds/baths/sqft block in prose.
 - Mention the primary address at most once.
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
+- If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.
 - Ask at most one next-step question.
 - End exactly with:
 Best,
 ${IRIS_AGENT_NAME}`;
+  const latestBody = cleanBody(latestEmailBody(message.body));
+  const contextBody = cleanBody(threadContextBody(message.body));
   const user = `Inbound email:
 From: ${message.from}
 Subject: ${message.subject}
 Body:
-${cleanBody(message.body)}
+${latestBody}
+
+Prior thread context for memory only:
+${contextBody || "(none)"}
 
 Classification:
 ${JSON.stringify(classification)}
@@ -703,6 +764,8 @@ ${JSON.stringify(classification)}
 Property facts available to the HTML card:
 ${JSON.stringify(propertyContext)}`;
 
+  const startedAt = Date.now();
+  const model = irisEmailClaudeModel();
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -711,7 +774,7 @@ ${JSON.stringify(propertyContext)}`;
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: irisEmailClaudeModel(),
+      model,
       max_tokens: 360,
       temperature: 0.4,
       system,
@@ -720,6 +783,36 @@ ${JSON.stringify(propertyContext)}`;
   });
   const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) return null;
+  const usage = payload.usage && typeof payload.usage === "object" ? payload.usage as Record<string, unknown> : {};
+  const inputTokens = Number(usage.input_tokens || 0);
+  const outputTokens = Number(usage.output_tokens || 0);
+  const costUsd = claudeTokenCostUsd(model, inputTokens, outputTokens);
+  const contact = parseEmailContact(message.from);
+  await writeRequestAuditEvent({
+    route: "agent:iris-email",
+    method: "LLM",
+    channel: "email",
+    provider: "anthropic",
+    threadRef: message.threadId,
+    contactRef: contact.email || message.from,
+    providerMessageId: message.id,
+    stage: "reply_generate",
+    outcome: "sent",
+    durationMs: Date.now() - startedAt,
+    costUsd,
+    costService: "claude",
+    costUnits: {
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      price_per_million_input: CLAUDE_PRICING_PER_MILLION[model]?.input || 3,
+      price_per_million_output: CLAUDE_PRICING_PER_MILLION[model]?.output || 15,
+    },
+    metadata: {
+      intent: classification.intent,
+      property_count: propertyContext.length,
+    },
+  }).catch(() => null);
   const content = Array.isArray(payload.content) ? payload.content as Array<{ type?: string; text?: string }> : [];
   const text = content.find((block) => block.type === "text")?.text?.trim() || "";
   return text && /Best,\s*\n\s*Iris\s*$/i.test(text) ? text : null;
@@ -735,13 +828,17 @@ async function generateIrisEmailReplyRich(
     const plain = await generateClaudeIrisEmailReplyText(message, classification, []).catch(() => null) || fallbackPlain;
     return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
   }
-  const properties = classification.addresses.length
+  const latestBody = cleanBody(latestEmailBody(message.body));
+  const contextAddresses = extractAddresses(threadContextBody(message.body));
+  const excludeAddresses = classification.opportunity_tags.includes("property_pivot") ? contextAddresses.slice(0, 1) : [];
+  const properties = classification.addresses.length && classification.intent !== "property_search"
     ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
     : await findCandidatePropertiesFromDatabase({
-      query: cleanBody(message.body),
-      area: classification.lead_fields.area || cleanBody(message.body),
+      query: latestBody,
+      area: classification.lead_fields.area || latestBody,
       beds: classification.lead_fields.beds || undefined,
       maxPrice: classification.lead_fields.budget || undefined,
+      excludeAddresses,
       mode: "general",
     }, 4);
   const plain = await generateClaudeIrisEmailReplyText(message, classification, properties).catch(() => null) || fallbackPlain;
@@ -784,7 +881,7 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
   ].filter(Boolean).join("\n");
   return {
     ...message,
-    body: `${message.body}\n\nThread context for classification only:\n${context}`,
+    body: `${message.body}\n\n${THREAD_CONTEXT_MARKER}\n${context}`,
   };
 }
 
