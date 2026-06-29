@@ -2,7 +2,7 @@ import {
   databaseEnabled,
   readDefaultEmailAccountFromDatabase,
   readInboxSettingsFromDatabase,
-  updateEmailAccountGmailWatchInDatabase,
+  updateEmailAccountGmailHistoryCursorInDatabase,
 } from "@/lib/database";
 import {
   createIrisGmailSession,
@@ -48,7 +48,7 @@ async function messageIdsFromGmailHistory(nextHistoryId: string): Promise<GmailH
     return { mode: "fallback", messageIds: [], previousHistoryId: "", nextHistoryId, reason: "database_disabled" };
   }
   const account = await readDefaultEmailAccountFromDatabase();
-  const previousHistoryId = account?.gmail_watch_history_id || "";
+  const previousHistoryId = account?.gmail_history_cursor_id || account?.gmail_watch_history_id || "";
   if (!account || !previousHistoryId) {
     return { mode: "fallback", messageIds: [], previousHistoryId, nextHistoryId, reason: "missing_previous_history_id" };
   }
@@ -97,11 +97,10 @@ async function updateStoredHistoryId(nextHistoryId: string): Promise<void> {
   if (!databaseEnabled() || !nextHistoryId) return;
   const account = await readDefaultEmailAccountFromDatabase();
   if (!account) return;
-  await updateEmailAccountGmailWatchInDatabase({
+  await updateEmailAccountGmailHistoryCursorInDatabase({
     clientId: account.client_id,
     email: account.email,
     historyId: nextHistoryId,
-    expiration: account.gmail_watch_expiration || new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
   });
 }
 

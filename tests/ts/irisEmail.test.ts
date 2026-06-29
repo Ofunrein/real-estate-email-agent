@@ -301,6 +301,36 @@ test("buildHtmlEmailReply: showing requests focus on the selected property inste
   assert.doesNotMatch(reply.text, /12725 Bloomington/i);
 });
 
+test("buildHtmlEmailReply: selected showing reply does not re-ask which property", () => {
+  const primary = {
+    address: "9605 Corbe Dr",
+    price: "1150000",
+    beds: "5",
+    baths: "5",
+    sqft: "4226",
+    photo_url: "https://photos.zillowstatic.com/fp/primary-p_e.jpg",
+    listing_url: "https://www.zillow.com/homedetails/9605-Corbe-Dr-Austin-TX-78726/29373093_zpid/",
+  } as SheetRow;
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property",
+    body: "How about tomorrow afternoon?",
+  }));
+  classification.intent = "showing_request";
+  classification.address = "9605 Corbe Dr";
+  classification.addresses = ["9605 Corbe Dr"];
+
+  const reply = buildHtmlEmailReply(
+    "Hi Martin,\n\nTomorrow afternoon works great! To get it confirmed, could you share what time works best for you - and which of the three properties you'd like to tour first?\n\nBest,\nIris",
+    [primary],
+    classification,
+  );
+
+  assert.doesNotMatch(reply.text, /which of the three properties/i);
+  assert.doesNotMatch(reply.html || "", /which of the three properties/i);
+  assert.match(reply.text, /What time works best for you\?/);
+  assert.match(reply.html || "", /What time works best for you\?/);
+});
+
 test("buildHtmlEmailReply: skips Street View photos instead of rendering broken image blocks", () => {
   const reply = buildHtmlEmailReply("Hello,\n\nBest,\nIris", [{
     address: "100 E 51st St #7",
