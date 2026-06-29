@@ -2019,7 +2019,7 @@ export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): P
   await ensureClientInDatabase();
   const cleaned = cleanRow(LEAD_MEMORY_HEADERS, incoming);
   const existing = await findMatchingLead(cleaned);
-  const next = existing ? mergeNonEmpty(existing, cleaned) : cleaned;
+  const next = existing ? mergeLeadMemory(existing, cleaned) : cleaned;
 
   if (existing) {
     await getPool().query(
@@ -2046,6 +2046,16 @@ export async function upsertLeadMemoryToDatabase(incoming: Partial<SheetRow>): P
     [clientId(), ...LEAD_MEMORY_HEADERS.map((header) => leadMemoryDbValue(header, next[header]))],
   );
   return next;
+}
+
+function mergeLeadMemory(existing: SheetRow, incoming: SheetRow): SheetRow {
+  const merged = mergeNonEmpty(existing, incoming);
+  for (const field of ["handoff_status", "handoff_reason"] as const) {
+    if (incoming[field] === "" && existing[field]) {
+      merged[field] = "";
+    }
+  }
+  return merged;
 }
 
 export async function appendConversationEventToDatabase(event: Partial<SheetRow>): Promise<SheetRow> {

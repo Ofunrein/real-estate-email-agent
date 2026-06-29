@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782714101.809762,
-    "ast_hash": "0e40868f5effb3f01b42854ba4f7deae",
+    "mtime": 1782715983.7156556,
+    "ast_hash": "44621703571b7619fbf40960ca2381de",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782714268.488363,
-    "ast_hash": "933e52da530872c02ed94c504b3daa88",
+    "mtime": 1782716328.3251495,
+    "ast_hash": "86cc5bc052ea5bf6a01eff9958e54998",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -1970,8 +1970,8 @@
     "semantic_hash": ""
   },
   "lib/inboxSettings.ts": {
-    "mtime": 1782652656.210013,
-    "ast_hash": "a0bcfc35753e9fd66f3e21a91c43a433",
+    "mtime": 1782716173.1796987,
+    "ast_hash": "d4627b7f8c2c3ffd4ac63561ebaaaf6e",
     "semantic_hash": ""
   },
   "lib/irisConversationBrain.ts": {
@@ -3150,8 +3150,8 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxReviewResolution.test.ts": {
-    "mtime": 1782629442.647064,
-    "ast_hash": "812efeb8fe90ecd0c3fe37d25594d2fc",
+    "mtime": 1782716341.498893,
+    "ast_hash": "c32102957a868411ffd6cc5fe997de71",
     "semantic_hash": ""
   },
   "tests/ts/requestAudit.test.ts": {
@@ -3345,8 +3345,8 @@
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailPushReceived.ts": {
-    "mtime": 1782714182.7272484,
-    "ast_hash": "3bc70e1ec7d044ca11c1dc9a14269a8f",
+    "mtime": 1782715969.7526586,
+    "ast_hash": "181cdfa9b8dc1cc106f5885268c5face",
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailWatchRenewal.ts": {

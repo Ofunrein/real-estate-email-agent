@@ -149,7 +149,7 @@ export function inferCategorySlug(events: SheetRow[], categories: InboxCategory[
     !latestOutboundAfterInbound &&
     /\b(interested|property|home|house|listing|tour|showing|available|buy|sell|rent|smoking)\b/i.test(latestInboundText)
   ) slug = "needs_human";
-  else if (latest.status === "needs_human" || /\b(needs_human|handoff|fair housing|human review)\b/i.test(text)) slug = "needs_human";
+  else if (!latestOutboundAfterInbound && (latest.status === "needs_human" || /\b(needs_human|handoff|fair housing|human review)\b/i.test(text))) slug = "needs_human";
   else if (/\b(tour|showing|schedule|appointment|book)\b/i.test(text)) slug = "showing";
   else if (/\b(sell|seller|valuation|home value|list my)\b/i.test(text)) slug = "seller_valuation";
   else if (/\b(mortgage|loan|pre.?approved|down payment|credit score)\b/i.test(text)) slug = "financing";

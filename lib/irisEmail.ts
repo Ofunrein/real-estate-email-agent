@@ -7,6 +7,7 @@ import {
   findLeadInDatabase,
   hasOutboundEmailReplyAfterEventInDatabase,
   readConversationEventByGmailMessageId,
+  readEventsForLeadFromDatabase,
   readInboxCategoriesFromDatabase,
   updateInboxCategoryGmailLabelInDatabase,
   upsertAiDraftInDatabase,
@@ -759,18 +760,36 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
   const contact = parseEmailContact(message.from);
   if (!contact.email) return message;
   const lead = await findLeadInDatabase({ email: contact.email });
-  if (!lead?.property_interest && !lead?.budget && !lead?.area && !lead?.bedrooms && !lead?.summary) return message;
+  const events = await readEventsForLeadFromDatabase({ email: contact.email, phone: lead?.phone }, 8);
+  if (
+    !lead?.property_interest
+    && !lead?.budget
+    && !lead?.area
+    && !lead?.bedrooms
+    && !lead?.summary
+    && !events.length
+  ) return message;
+  const recentEvents = events.slice(-6).map((event) => {
+    const when = event.event_at || event.created_at || "";
+    const text = cleanBody(stripHtml(event.message_text || event.summary || "")).slice(0, 220);
+    return `${when} ${event.channel || "unknown"} ${event.direction || "unknown"} ${event.status || ""}: ${text}`;
+  });
   const context = [
-    lead.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
-    lead.budget ? `Known budget: ${lead.budget}` : "",
-    lead.area ? `Known area: ${lead.area}` : "",
-    lead.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
-    lead.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
+    lead?.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
+    lead?.budget ? `Known budget: ${lead.budget}` : "",
+    lead?.area ? `Known area: ${lead.area}` : "",
+    lead?.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
+    lead?.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
+    recentEvents.length ? `Recent omnichannel timeline:\n${recentEvents.join("\n")}` : "",
   ].filter(Boolean).join("\n");
   return {
     ...message,
     body: `${message.body}\n\nThread context for classification only:\n${context}`,
   };
+}
+
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 }
 
 function handoffSummary(message: IrisEmailMessage, classification: IrisEmailClassification, execution: IrisEmailExecution): string {
