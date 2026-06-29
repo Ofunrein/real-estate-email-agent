@@ -109,6 +109,12 @@ async function loadContacts(): Promise<ContactRecord[]> {
   return listFrom(data, ['contacts', 'items', 'results', 'leads']).map(contactFrom);
 }
 
+function contactsConnectHref(provider: 'google' | 'outlook'): string {
+  if (typeof window === 'undefined') return `/api/contacts/connect/${provider}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  return `/api/contacts/connect/${provider}?returnTo=${encodeURIComponent(current)}`;
+}
+
 function initials(name: string): string {
   const parts = name.split(/\s+/).filter(Boolean);
   return (parts[0]?.[0] || 'C') + (parts[1]?.[0] || '');
@@ -268,10 +274,10 @@ export function ContactsOsView() {
             onClick={() => void syncContacts()}>
             Sync contacts
           </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/contacts/connect/google'; }}>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = contactsConnectHref('google'); }}>
             Connect Google
           </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/contacts/connect/outlook'; }}>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = contactsConnectHref('outlook'); }}>
             Connect Outlook
           </Button>
         </Stack>

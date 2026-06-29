@@ -43,6 +43,9 @@ export type RequestAuditInput = {
   durationMs?: number;
   errorCode?: string;
   errorMessage?: string;
+  costUsd?: number;
+  costService?: string;
+  costUnits?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 };
 
@@ -50,6 +53,9 @@ export type RequestAuditRecord = Required<Omit<RequestAuditInput, "metadata" | "
   id: string;
   statusCode: number | null;
   durationMs: number | null;
+  costUsd: number;
+  costService: string;
+  costUnits: Record<string, unknown>;
   metadata: Record<string, unknown>;
   createdAt: string;
 };
@@ -62,6 +68,12 @@ export type RequestAuditQuery = {
   requestId?: string;
   since?: string;
   limit?: number;
+};
+
+export type RequestAuditSummary = {
+  totalCostUsd: number;
+  rowsWithCost: number;
+  byService: Record<string, number>;
 };
 
 function truncate(value: string, max = 300): string {
@@ -109,6 +121,12 @@ function safeMetadata(input?: Record<string, unknown>): Record<string, unknown> 
     : {};
 }
 
+function safeCostUsd(value: unknown): number {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  return Math.round(amount * 100_000_000) / 100_000_000;
+}
+
 export function requestIdFromHeaders(headers?: Headers | null): string {
   return (
     headers?.get("x-vercel-id") ||
@@ -134,6 +152,9 @@ export async function writeRequestAuditEvent(input: RequestAuditInput): Promise<
     durationMs: input.durationMs ?? null,
     errorCode: input.errorCode || "",
     errorMessage: truncate(input.errorMessage || "", 500),
+    costUsd: safeCostUsd(input.costUsd),
+    costService: truncate(input.costService || "", 80),
+    costUnits: safeMetadata(input.costUnits),
     metadata: safeMetadata(input.metadata),
   };
 
@@ -147,11 +168,13 @@ export async function writeRequestAuditEvent(input: RequestAuditInput): Promise<
       `insert into request_audit_events (
           client_id, request_id, route, method, channel, provider, thread_ref,
           contact_ref, provider_message_id, stage, outcome, status_code,
-          duration_ms, error_code, error_message, metadata
+          duration_ms, error_code, error_message, cost_usd, cost_service,
+          cost_units, metadata
         ) values (
           $1, $2, $3, $4, $5, $6, $7,
           $8, $9, $10, $11, $12,
-          $13, $14, $15, $16::jsonb
+          $13, $14, $15, $16,
+          $17, $18::jsonb, $19::jsonb
         )`,
       [
         clientId(),
@@ -169,6 +192,9 @@ export async function writeRequestAuditEvent(input: RequestAuditInput): Promise<
         row.durationMs,
         row.errorCode,
         row.errorMessage,
+        row.costUsd,
+        row.costService,
+        JSON.stringify(row.costUnits),
         JSON.stringify(row.metadata),
       ],
     );
@@ -209,6 +235,9 @@ function auditRecordFromRow(row: Record<string, unknown>): RequestAuditRecord {
   const metadata = row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
     ? row.metadata as Record<string, unknown>
     : {};
+  const costUnits = row.cost_units && typeof row.cost_units === "object" && !Array.isArray(row.cost_units)
+    ? row.cost_units as Record<string, unknown>
+    : {};
   return {
     id: String(row.id || ""),
     requestId: String(row.request_id || ""),
@@ -225,9 +254,30 @@ function auditRecordFromRow(row: Record<string, unknown>): RequestAuditRecord {
     durationMs: row.duration_ms == null ? null : Number(row.duration_ms),
     errorCode: String(row.error_code || ""),
     errorMessage: String(row.error_message || ""),
+    costUsd: safeCostUsd(row.cost_usd),
+    costService: String(row.cost_service || ""),
+    costUnits,
     metadata,
     createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
   };
+}
+
+export function summarizeRequestAuditCosts(events: RequestAuditRecord[]): RequestAuditSummary {
+  const summary: RequestAuditSummary = {
+    totalCostUsd: 0,
+    rowsWithCost: 0,
+    byService: {},
+  };
+  for (const event of events) {
+    const cost = safeCostUsd(event.costUsd);
+    if (!cost) continue;
+    summary.totalCostUsd += cost;
+    summary.rowsWithCost += 1;
+    const service = event.costService || "unknown";
+    summary.byService[service] = safeCostUsd((summary.byService[service] || 0) + cost);
+  }
+  summary.totalCostUsd = safeCostUsd(summary.totalCostUsd);
+  return summary;
 }
 
 export async function readRequestAuditEvents(input: RequestAuditQuery = {}): Promise<RequestAuditRecord[]> {
@@ -249,7 +299,8 @@ export async function readRequestAuditEvents(input: RequestAuditQuery = {}): Pro
     const result = await getPool().query(
       `select id, request_id, route, method, channel, provider, thread_ref,
               contact_ref, provider_message_id, stage, outcome, status_code,
-              duration_ms, error_code, error_message, metadata, created_at
+              duration_ms, error_code, error_message, cost_usd, cost_service,
+              cost_units, metadata, created_at
          from request_audit_events
         where ${where.join(" and ")}
         order by created_at desc

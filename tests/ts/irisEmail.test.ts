@@ -331,6 +331,45 @@ test("buildHtmlEmailReply: selected showing reply does not re-ask which property
   assert.match(reply.html || "", /What time works best for you\?/);
 });
 
+test("classifyIrisEmailText: pivots away from prior selected property when lead asks for other options", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property",
+    body: [
+      "I'm no longer interested in this property, what else can we do? I am looking for a three bed in Austin now. What options are there?",
+      "",
+      "Thread context for classification only:",
+      "Previous property interest: 9605 Corbe Dr, 12725 Bloomington Dr #129, Austin, Texas 78748, 100 E 51st St #7",
+      "Recent omnichannel timeline:",
+      "2026-06-29 email outbound sent: I can help with 9605 Corbe Dr.",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.intent, "property_search");
+  assert.deepEqual(classification.addresses, []);
+  assert.equal(classification.address, null);
+  assert.equal(classification.lead_fields.beds, "3");
+  assert.equal(classification.lead_fields.area, "Austin");
+  assert.ok(classification.opportunity_tags.includes("property_pivot"));
+});
+
+test("classifyIrisEmailText: uses prior selected property for scheduling follow-up only", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property",
+    body: [
+      "How about tomorrow afternoon?",
+      "",
+      "Thread context for classification only:",
+      "Previous property interest: 9605 Corbe Dr",
+      "Recent omnichannel timeline:",
+      "2026-06-29 email outbound sent: I can help with 9605 Corbe Dr.",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.intent, "showing_request");
+  assert.equal(classification.address, "9605 Corbe Dr");
+  assert.deepEqual(classification.addresses, ["9605 Corbe Dr"]);
+});
+
 test("buildHtmlEmailReply: skips Street View photos instead of rendering broken image blocks", () => {
   const reply = buildHtmlEmailReply("Hello,\n\nBest,\nIris", [{
     address: "100 E 51st St #7",

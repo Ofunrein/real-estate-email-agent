@@ -60,6 +60,36 @@ function automatedOutboundEvent(event: Awaited<ReturnType<typeof readEventsForTh
   return event.direction !== "inbound";
 }
 
+function normalizeFollowupText(message = ""): string {
+  return message
+    .replace(/\boptiosn\b/gi, "options")
+    .replace(/\boptoins\b/gi, "options")
+    .replace(/\boptons\b/gi, "options")
+    .replace(/\bsimiliar\b/gi, "similar")
+    .replace(/\bsimliar\b/gi, "similar")
+    .replace(/\bmroe\b/gi, "more")
+    .replace(/\bdetials\b/gi, "details");
+}
+
+function referencesPriorProperties(message = ""): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(those|that|these|them|it|links?|urls?|photos?|pictures?|similar|same spec|same specs|neighboring|neighbor|nearby|next to|close by|comparable|alternatives?|other options?|amenit(?:y|ies)|features?|details?|property you just sent|listing you just sent|one you just sent|for the property|for that property|for this property)\b/i.test(normalized);
+}
+
+function wantsRelatedProperties(message = ""): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?|cheaper|lower price|less expensive|more affordable|more expensive|higher price|bigger|larger|smaller|more bedrooms?|more baths?)\b/i.test(normalized);
+}
+
+function rejectsPriorProperty(message = ""): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(?:no longer|not)\s+interested\b/i.test(normalized)
+    || /\b(?:don't|dont|do not)\s+(?:like|want)\b/i.test(normalized)
+    || /\bnot\s+(?:this|that)\s+(?:one|property|listing)\b/i.test(normalized)
+    || /\b(?:send|show|find|share)\s+(?:me\s+)?another\s+(?:one|option|property|listing)?\b/i.test(normalized)
+    || /\banother\s+(?:one|option|property|listing)\b/i.test(normalized);
+}
+
 function webhookEventSummaries(payload: Record<string, unknown>) {
   const summaries: Array<Record<string, unknown>> = [];
   for (const entry of Array.isArray(payload.entry) ? payload.entry : []) {
@@ -207,11 +237,17 @@ async function findSocialProperties(message: string, recentEvents: Awaited<Retur
     .filter((event) => event.direction !== "inbound")
     .map((event) => event.message_text || event.summary || "")
     .filter(Boolean);
-  const requestedAddresses = extractTheoListedPropertyAddresses(message, ...previousOutbound);
-  const addressMatches = await findPropertiesByAddressesFromDatabase(requestedAddresses, 5);
+  const rejectedPriorProperty = rejectsPriorProperty(message);
+  const priorAddresses = referencesPriorProperties(message) || wantsRelatedProperties(message) || rejectedPriorProperty
+    ? extractTheoListedPropertyAddresses(...previousOutbound)
+    : [];
+  const requestedAddresses = extractTheoListedPropertyAddresses(message);
+  const exactAddresses = [...requestedAddresses, ...priorAddresses];
+  const addressMatches = rejectedPriorProperty ? [] : await findPropertiesByAddressesFromDatabase(exactAddresses, 5);
   const propertySearch = extractTheoPropertySearchIntent(message);
   const propertyQuery = extractTheoPropertySearchQuery(message);
   const shouldSearch = Boolean(
+    rejectedPriorProperty ||
     propertyQuery ||
     propertySearch.area ||
     propertySearch.beds ||
@@ -229,8 +265,12 @@ async function findSocialProperties(message: string, recentEvents: Awaited<Retur
         baths: propertySearch.baths,
         minPrice: propertySearch.minPrice,
         maxPrice: propertySearch.maxPrice,
-        mode: propertySearch.mode,
-        excludeAddresses: addressMatches.map((property) => property.address).filter(Boolean),
+        mode: rejectedPriorProperty && propertySearch.mode === "general" ? "similar" : propertySearch.mode,
+        reference: priorAddresses[0] ? { address: priorAddresses[0] } : undefined,
+        excludeAddresses: [
+          ...addressMatches.map((property) => property.address).filter(Boolean),
+          ...exactAddresses,
+        ].filter(Boolean),
       },
       5,
     )

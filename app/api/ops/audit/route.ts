@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
-import { readRequestAuditEvents } from "@/lib/requestAudit";
+import { readRequestAuditEvents, summarizeRequestAuditCosts } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +23,5 @@ export async function GET(request: NextRequest) {
     since: params.get("since") || undefined,
     limit: Number(params.get("limit") || "100"),
   });
-  return NextResponse.json({ ok: true, events });
+  return NextResponse.json({ ok: true, events, summary: summarizeRequestAuditCosts(events) });
 }

@@ -7,9 +7,26 @@ import { createProviderConnectLink, type ExternalProvider } from "@/lib/provider
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ provider: string }> };
 
-function callbackUrl(request: Request, provider: string): string {
+function sanitizedReturnTo(request: Request): string {
+  const current = new URL(request.url);
   const base = process.env.PUBLIC_BASE_URL || process.env.AUTH_URL || new URL(request.url).origin;
-  return `${base.replace(/\/$/, "")}/?tab=calendar&calendarConnected=${encodeURIComponent(provider)}`;
+  const fallback = new URL("/?tab=calendar", base);
+  const raw = current.searchParams.get("returnTo") || "";
+  if (!raw) return fallback.toString();
+  try {
+    const target = new URL(raw, base);
+    if (target.origin !== new URL(base).origin) return fallback.toString();
+    return target.toString();
+  } catch {
+    return fallback.toString();
+  }
+}
+
+function callbackUrl(request: Request, provider: string): string {
+  const url = new URL(sanitizedReturnTo(request));
+  url.searchParams.set("tab", "calendar");
+  url.searchParams.set("calendarConnected", provider);
+  return url.toString();
 }
 
 async function connect(request: Request, context: RouteContext, redirect: boolean) {

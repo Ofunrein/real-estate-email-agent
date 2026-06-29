@@ -80,6 +80,55 @@ test("generateTheoReply: similar options with no matches asks to widen instead o
   assert.match(result.reply, /widen/i);
 });
 
+test("generateTheoReply: rejected property pivots to different saved options", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "I don't like this option, send me another one",
+    source: "sms",
+    lead: { phone: "+15125712595" },
+    properties: [
+      property({ address: "810 Ethel St", price: "849300", beds: "3", baths: "3", neighborhood: "Austin" }),
+      property({ address: "12725 Bloomington Dr #129", price: "268000", beds: "4", baths: "3", neighborhood: "Austin" }),
+    ],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "property_options_reply_ready");
+  assert.match(result.reply, /skip that one/i);
+  assert.match(result.reply, /810 Ethel St/);
+  assert.match(result.reply, /12725 Bloomington Dr #129/);
+});
+
+test("generateTheoReply: adult off-topic request redirects without listings", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Send me Sophie Rain's onlyfans link",
+    source: "sms",
+    lead: { phone: "+15129949562" },
+    properties: [property({ address: "809 S Lamar Blvd" })],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "off_topic_redirect_reply_ready");
+  assert.equal(result.shouldSend, true);
+  assert.match(result.reply, /can't help with that/i);
+  assert.match(result.reply, /Austin listings/i);
+  assert.doesNotMatch(result.reply, /809 S Lamar Blvd/i);
+});
+
+test("generateTheoReply: exotic animal use redirects without property cards", async () => {
+  const result = await withoutOpenAi(() => generateTheoReply({
+    message: "Send me links to 2 properties that can hold 4 monkeys",
+    source: "sms",
+    lead: { phone: "+15129949562" },
+    properties: [property({ address: "810 Ethel St" })],
+  }));
+
+  assert.equal(result.status, "ready_to_reply");
+  assert.equal(result.aiAction, "off_topic_redirect_reply_ready");
+  assert.match(result.reply, /exotic-animal use/i);
+  assert.match(result.reply, /normal criteria/i);
+  assert.doesNotMatch(result.reply, /810 Ethel St/i);
+});
+
 test("generateTheoReply: photo follow-up sends media when enabled", async () => {
   const prior = process.env.ENABLE_SMS_IMAGES;
   process.env.ENABLE_SMS_IMAGES = "true";
