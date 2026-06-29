@@ -149,6 +149,9 @@ export const gmailPushReceived = inngest.createFunction(
     });
 
     await step.run("advance Gmail history marker", async () => {
+      if (pollOptions.dryRun) {
+        return { skipped: "dry_run_does_not_advance_gmail_cursor", historyId: input.historyId };
+      }
       await updateStoredHistoryId(input.historyId);
       return { historyId: input.historyId };
     });
