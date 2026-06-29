@@ -10,10 +10,12 @@ import {
 import {
   processIrisEmailMessageIds,
   processIrisEmailPoll,
+  type IrisEmailPollResult,
   type IrisEmailPollOptions,
 } from "@/lib/irisEmail";
 import { inngest } from "@/lib/inngest/client";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
+import { writeRequestAuditEvent } from "@/lib/requestAudit";
 
 export type GmailPushReceivedEvent = {
   historyId: string;
@@ -29,6 +31,27 @@ type GmailHistoryTargetResult = {
   nextHistoryId: string;
   reason?: string;
 };
+
+function mergePollResults(primary: IrisEmailPollResult, backlog?: IrisEmailPollResult): IrisEmailPollResult {
+  if (!backlog) return primary;
+  return {
+    ok: true,
+    dryRun: primary.dryRun || backlog.dryRun,
+    processed: primary.processed + backlog.processed,
+    recorded: primary.recorded + backlog.recorded,
+    labeled: primary.labeled + backlog.labeled,
+    sent: primary.sent + backlog.sent,
+    results: [...primary.results, ...backlog.results],
+  };
+}
+
+function workerOutcome(result: IrisEmailPollResult, dryRun: boolean): string {
+  if (dryRun) return "skipped";
+  if (result.sent > 0) return "sent";
+  if (result.recorded > 0 || result.labeled > 0) return "received";
+  if (result.processed > 0) return "skipped";
+  return "skipped";
+}
 
 function gmailHistoryErrorCode(error: unknown): number {
   const candidate = error as { code?: unknown; status?: unknown; response?: { status?: unknown } };
@@ -114,12 +137,30 @@ export const gmailPushReceived = inngest.createFunction(
   async ({ event, step }) => {
     const input = event.data as GmailPushReceivedEvent;
     if (!input.historyId) return { ok: false, error: "missing_history_id" };
+    const auditBase = {
+      requestId: input.pubSubMessageId || `gmail-history:${input.historyId}`,
+      route: "inngest:gmail-push-received",
+      method: "EVENT",
+      channel: "email",
+      provider: "inngest",
+      contactRef: input.emailAddress || "",
+      providerMessageId: input.pubSubMessageId || input.historyId,
+    };
 
     const settings = await step.run("load inbox settings", async () => {
       return databaseEnabled() ? await readInboxSettingsFromDatabase() : undefined;
     });
 
     if (settings && !channelEnabled(settings, "email")) {
+      await step.run("audit email channel disabled", async () => {
+        await writeRequestAuditEvent({
+          ...auditBase,
+          stage: "settings",
+          outcome: "blocked",
+          errorCode: "email_channel_disabled",
+          metadata: { historyId: input.historyId },
+        });
+      });
       return { ok: true, skipped: "email_channel_disabled", historyId: input.historyId };
     }
 
@@ -143,17 +184,70 @@ export const gmailPushReceived = inngest.createFunction(
           // unread inbox before advancing the cursor.
           return processIrisEmailPoll(pollOptions);
         }
-        return processIrisEmailMessageIds(historyTarget.messageIds, pollOptions);
+        const targeted = await processIrisEmailMessageIds(historyTarget.messageIds, pollOptions);
+        const unreadBacklog = await processIrisEmailPoll({ ...pollOptions, limit: 10 });
+        return mergePollResults(targeted, unreadBacklog);
       }
       return processIrisEmailPoll(pollOptions);
+    }).catch(async (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      await step.run("audit Gmail push failed", async () => {
+        await writeRequestAuditEvent({
+          ...auditBase,
+          stage: "process",
+          outcome: "failed",
+          errorCode: "gmail_push_process_failed",
+          errorMessage: message,
+          metadata: {
+            historyId: input.historyId,
+            mode: historyTarget.mode,
+            previousHistoryId: historyTarget.previousHistoryId,
+            messageIds: historyTarget.messageIds,
+            fallbackReason: historyTarget.reason || "",
+            dryRun: pollOptions.dryRun,
+            sendReplies: pollOptions.sendReplies,
+          },
+        });
+      });
+      throw error;
     });
 
     await step.run("advance Gmail history marker", async () => {
       if (pollOptions.dryRun) {
+        await writeRequestAuditEvent({
+          ...auditBase,
+          stage: "cursor",
+          outcome: "skipped",
+          errorCode: "dry_run_cursor_not_advanced",
+          metadata: { historyId: input.historyId },
+        });
         return { skipped: "dry_run_does_not_advance_gmail_cursor", historyId: input.historyId };
       }
       await updateStoredHistoryId(input.historyId);
       return { historyId: input.historyId };
+    });
+
+    await step.run("audit Gmail push processed", async () => {
+      await writeRequestAuditEvent({
+        ...auditBase,
+        stage: "process",
+        outcome: workerOutcome(result, Boolean(pollOptions.dryRun)),
+        metadata: {
+          historyId: input.historyId,
+          mode: historyTarget.mode,
+          previousHistoryId: historyTarget.previousHistoryId,
+          messageIds: historyTarget.messageIds,
+          fallbackReason: historyTarget.reason || "",
+          dryRun: pollOptions.dryRun,
+          sendReplies: pollOptions.sendReplies,
+          processed: result.processed,
+          recorded: result.recorded,
+          labeled: result.labeled,
+          sent: result.sent,
+          resultMessageIds: result.results.map((item) => item.messageId).slice(0, 25),
+          skippedDuplicates: result.results.filter((item) => item.skippedDuplicate).length,
+        },
+      });
     });
 
     return {
