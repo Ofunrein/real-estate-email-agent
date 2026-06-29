@@ -138,7 +138,10 @@ export const gmailPushReceived = inngest.createFunction(
     const result = await step.run("process Gmail messages", async () => {
       if (historyTarget.mode === "history") {
         if (!historyTarget.messageIds.length) {
-          return { ok: true, dryRun: pollOptions.dryRun, processed: 0, recorded: 0, labeled: 0, sent: 0, results: [] };
+          // Gmail History can occasionally advance without returning messageAdded
+          // rows for the filtered history window. Do not silently skip; scan the
+          // unread inbox before advancing the cursor.
+          return processIrisEmailPoll(pollOptions);
         }
         return processIrisEmailMessageIds(historyTarget.messageIds, pollOptions);
       }
