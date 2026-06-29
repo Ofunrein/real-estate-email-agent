@@ -596,6 +596,7 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
   const cleanProperties = dedupeProperties(properties);
   const featured = cleanProperties[0];
   const rest = cleanProperties.slice(1, 4);
+  const bodyText = refineShowingReplyForSelectedProperty(text, featured, classification);
   const wantsAlternatives = /\b(similar|options?|alternatives?|compare|another|other)\b/i.test(text);
   const showAlternatives = Boolean(
     rest.length
@@ -614,16 +615,40 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
 ${subjectLine ? `<p style="margin:0 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
 ${featured ? propertyCardHtml(featured, true) : ""}
 ${showAlternatives ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
-${plainToHtml(text.replace(/\n*Best,\nIris\s*$/i, "").trim())}
+${plainToHtml(bodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
 <p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
 </div>`;
   const propertyText = plainProperties.length
     ? `\n\nProperty details:\n${plainProperties.map(propertyPlain).join("\n\n")}`
     : "";
   return {
-    text: `${text}${propertyText}`,
+    text: `${bodyText}${propertyText}`,
     html,
   };
+}
+
+function refineShowingReplyForSelectedProperty(
+  text: string,
+  featured: SheetRow | undefined,
+  classification?: IrisEmailClassification,
+): string {
+  if (classification?.intent !== "showing_request" || !featured?.address) return text;
+  const signature = /\n*Best,\nIris\s*$/i;
+  const hasSignature = signature.test(text);
+  const core = text.replace(signature, "").trim();
+  const cleaned = core
+    .replace(
+      /(?:To get it confirmed,\s*)?(?:could you|can you|please)\s+(?:share|confirm|let me know)\s+what time works best for you\s*(?:[-–—]|,|and)?\s*and\s+which\s+of\s+the\s+(?:\w+\s+)?properties\s+you(?:'|’)d\s+like\s+to\s+tour\s+first\?/gi,
+      "What time works best for you?",
+    )
+    .replace(
+      /(?:To get it confirmed,\s*)?[^.!?\n]*(?:which\s+(?:of\s+the\s+)?(?:one|property|properties)|which\s+of\s+the\s+(?:one|two|three|four|\d+)\s+properties|tour\s+first)[^.!?\n]*\?/gi,
+      "What time works best for you?",
+    )
+    .replace(/\s{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return `${cleaned}${hasSignature ? `\n\nBest,\n${IRIS_AGENT_NAME}` : ""}`;
 }
 
 function irisEmailClaudeModel(): string {
@@ -660,6 +685,7 @@ Rules:
 - Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
 - The app will render property facts in an HTML property card above your body, so do not repeat the full price/beds/baths/sqft block in prose.
 - Mention the primary address at most once.
+- If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
 - Ask at most one next-step question.
 - End exactly with:
 Best,
