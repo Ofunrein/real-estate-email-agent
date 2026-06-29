@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782666846.77312,
-    "ast_hash": "26697ec659de7d4b3e2d40329160c120",
+    "mtime": 1782714101.809762,
+    "ast_hash": "0e40868f5effb3f01b42854ba4f7deae",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782680777.1987848,
-    "ast_hash": "29fad9b752e35e73c78d91c19a5d9dae",
+    "mtime": 1782714268.488363,
+    "ast_hash": "933e52da530872c02ed94c504b3daa88",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "tests/ts/irisEmail.test.ts": {
-    "mtime": 1782678453.0101569,
-    "ast_hash": "f5f5a4f3b7202a6657f02cd568c308b6",
+    "mtime": 1782714286.5534952,
+    "ast_hash": "5b094e87c31b886e0ade644adf6c601d",
     "semantic_hash": ""
   },
   "tests/ts/irisRyseTranscript.test.ts": {
@@ -3345,8 +3345,8 @@
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailPushReceived.ts": {
-    "mtime": 1782680447.537918,
-    "ast_hash": "5bf602bf86d217a9813e3d6476997aef",
+    "mtime": 1782714182.7272484,
+    "ast_hash": "3bc70e1ec7d044ca11c1dc9a14269a8f",
     "semantic_hash": ""
   },
   "lib/inngest/functions/gmailWatchRenewal.ts": {
@@ -3367,6 +3367,11 @@
   "docs/iris-email-stress-workflow.md": {
     "mtime": 1782680574.2992215,
     "ast_hash": "43d96164a2e2e85c2f67f9697c137b71",
+    "semantic_hash": ""
+  },
+  "db/migrations/021_email_account_gmail_history_cursor.sql": {
+    "mtime": 1782713953.1195252,
+    "ast_hash": "739f660c65a67ae857fb0277bca46b68",
     "semantic_hash": ""
   }
 }
