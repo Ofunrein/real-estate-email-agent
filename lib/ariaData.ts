@@ -1,11 +1,6 @@
-// Voice data layer for Aria. A live caller cannot tolerate the ~10s a cold
-// Zillow scrape can take, so lookups are cache-first with a tight budget:
-//   1. read the property cache (instant)
-//   2. start full enrichment, race it against ARIA_ENRICHMENT_TIMEOUT_MS
-//   3. if enrichment wins, speak the fresh facts
-//   4. if the budget expires, speak what we have (or "pulling it up") AND let
-//      the enrichment finish in the background, then text the caller the full
-//      details via Theo's SMS sender — the data still reaches them.
+// Voice data layer for Aria. A live caller cannot tolerate cold external
+// enrichment, so the production default is DB/cache-only. Tests can inject an
+// enrich dependency, but voice must not trigger Apify-style lookups by default.
 //
 // All IO is injected (AriaDataDeps) so this is unit-testable with no DB,
 // network, or real timers.
@@ -16,7 +11,6 @@ import {
   upsertPropertyToDatabase,
   type PropertySearchCriteria,
 } from "@/lib/database";
-import { enrichTheoData } from "@/lib/theoData";
 import { sendTheoSms } from "@/lib/twilioSms";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { aiSearchPropertyUrl } from "@/lib/aiSearchLinks";
@@ -50,9 +44,15 @@ function defaultBudgetMs(): number {
   return Math.max(500, Number(process.env.ARIA_ENRICHMENT_TIMEOUT_MS || "3500"));
 }
 
+async function noVoiceExternalEnrichment(input: {
+  properties?: SheetRow[];
+}): Promise<{ properties: SheetRow[]; context: string }> {
+  return { properties: input.properties || [], context: "" };
+}
+
 const defaultDeps: AriaDataDeps = {
   findByAddresses: findPropertiesByAddressesFromDatabase,
-  enrich: enrichTheoData,
+  enrich: noVoiceExternalEnrichment,
   cacheProperty: upsertPropertyToDatabase,
   sendSms: sendTheoSms,
   budgetMs: defaultBudgetMs(),
@@ -309,7 +309,7 @@ export type AriaSearchDeps = {
 
 const defaultSearchDeps: AriaSearchDeps = {
   findCandidates: findCandidatePropertiesFromDatabase,
-  enrich: enrichTheoData,
+  enrich: noVoiceExternalEnrichment,
   cacheProperty: upsertPropertyToDatabase,
   sendSms: sendTheoSms,
   budgetMs: defaultBudgetMs(),
@@ -339,9 +339,10 @@ function searchSmsBody(properties: SheetRow[], criteria: string): string {
   return [`Fresh options for ${criteria || "your search"}:`, ...lines].filter(Boolean).join("\n\n");
 }
 
-// Property search tuned for voice: return cached matches quickly, but start a
-// fresh enrichment search too. If enrichment wins the short budget, speak it.
-// If not, speak cache and text fresh options after the call when available.
+// Property search tuned for voice: production returns cached DB matches quickly.
+// Tests may inject enrichment, but the default voice path avoids external
+// Apify-style enrichment and only texts richer results when an injected enrich
+// dependency supplies them.
 export async function searchPropertiesForVoice(
   input: { query?: string; area?: string; beds?: number; baths?: number; minPrice?: number; maxPrice?: number; phone?: string; lead?: Partial<SheetRow> },
   deps: AriaSearchDeps = defaultSearchDeps,
