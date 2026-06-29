@@ -11,6 +11,7 @@ import { isUnsafeSmsRecipient, sendTheoHandoffAlert, sendTheoSms, smsMessageWith
 import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 import { createRequestAudit, type RequestAuditInput } from "@/lib/requestAudit";
@@ -130,6 +131,15 @@ function referencesPriorProperties(message = ""): boolean {
 function wantsRelatedProperties(message = ""): boolean {
   const normalized = normalizeFollowupText(message);
   return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?|cheaper|lower price|less expensive|more affordable|more expensive|higher price|bigger|larger|smaller|more bedrooms?|more baths?)\b/i.test(normalized);
+}
+
+function rejectsPriorProperty(message = ""): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(?:no longer|not)\s+interested\b/i.test(normalized)
+    || /\b(?:don't|dont|do not)\s+(?:like|want)\b/i.test(normalized)
+    || /\bnot\s+(?:this|that)\s+(?:one|property|listing)\b/i.test(normalized)
+    || /\b(?:send|show|find|share)\s+(?:me\s+)?another\s+(?:one|option|property|listing)?\b/i.test(normalized)
+    || /\banother\s+(?:one|option|property|listing)\b/i.test(normalized);
 }
 
 function hasFreshPropertySearchCriteria(search: ReturnType<typeof extractTheoPropertySearchIntent>): boolean {
@@ -546,27 +556,31 @@ export async function POST(request: NextRequest) {
     const ordinalIndex = ordinalReferenceIndex(messageForReply);
     const normalizedReply = normalizeFollowupText(messageForReply);
     const preferDetailPrompt = /\bsimilar|same spec|same specs|other|another|alternative|options?\b/i.test(normalizedReply);
+    const rejectedPriorProperty = rejectsPriorProperty(messageForReply);
     const ordinalAddresses = ordinalIndex == null ? [] : recentOutboundAddresses(recentEvents).slice(ordinalIndex, ordinalIndex + 1);
-    const referencedInboundAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && referencesPriorProperties(messageForReply)
+    const referencedInboundAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && (referencesPriorProperties(messageForReply) || rejectedPriorProperty)
       ? recentInboundAddresses(recentEvents)
       : [];
-    const priorAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
+    const priorAddresses = !ordinalAddresses.length && !freshPropertySearch && !requestedAddresses.length && !referencedInboundAddresses.length && (referencesPriorProperties(messageForReply) || rejectedPriorProperty)
       ? recentOutboundAddresses(recentEvents, { preferDetailPrompt })
       : [];
     const exactAddresses = requestedAddresses.length ? requestedAddresses : ordinalAddresses.length ? ordinalAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
-    const relatedRequest = wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
+    const relatedRequest = rejectedPriorProperty || wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
     const candidateSearchMode = relatedRequest && propertySearch.mode === "general" ? "similar" : propertySearch.mode;
-    const referenceProperties = relatedRequest && !requestedAddresses.length && exactAddresses.length
+    const referenceProperties = relatedRequest && exactAddresses.length
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : [];
-    const properties = requestedAddresses.length || (!relatedRequest && exactAddresses.length)
+    const properties = !rejectedPriorProperty && (requestedAddresses.length || (!relatedRequest && exactAddresses.length))
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
       : await findCandidatePropertiesFromDatabase({
         ...propertySearch,
         mode: candidateSearchMode,
         query: propertyQuery,
         reference: referenceProperties[0],
-        excludeAddresses: referenceProperties.map((property) => property.address).filter(Boolean),
+        excludeAddresses: [
+          ...referenceProperties.map((property) => property.address).filter(Boolean),
+          ...exactAddresses,
+        ].filter(Boolean),
       }, 5);
     logTheo("context read complete", {
       leadPhone: payload.From,
@@ -577,6 +591,7 @@ export async function POST(request: NextRequest) {
       propertySearchMode: candidateSearchMode,
       propertySearchArea: propertySearch.area || "",
       freshPropertySearch,
+      rejectedPriorProperty,
       ordinalIndex,
       ordinalAddressRows: ordinalAddresses.length,
       combinedMessages: messageForReply.split("\n").filter(Boolean).length,
@@ -596,6 +611,15 @@ export async function POST(request: NextRequest) {
       propertyInterest,
     });
     logTheoMetrics(enriched.metrics);
+    await writeTheoMetricAuditEvents(enriched.metrics, {
+      requestId: audit.requestId,
+      route: "agent:theo-sms",
+      channel: "sms",
+      provider: "anthropic",
+      threadRef: result.event.thread_ref,
+      contactRef: payload.From,
+      providerMessageId: payload.MessageSid || "",
+    });
     logTheo("data enrichment complete", {
       leadPhone: payload.From,
       propertyRows: enriched.properties.length,
@@ -628,6 +652,15 @@ export async function POST(request: NextRequest) {
       styleContext: await fetchStyleContext(),
     });
     logTheoMetrics(reply.metrics);
+    await writeTheoMetricAuditEvents(reply.metrics, {
+      requestId: audit.requestId,
+      route: "agent:theo-sms",
+      channel: "sms",
+      provider: "anthropic",
+      threadRef: result.event.thread_ref,
+      contactRef: payload.From,
+      providerMessageId: payload.MessageSid || "",
+    });
     const aiCost = reply.metrics.reduce((total, metric) => total + (metric.costUsd || 0), 0);
     logTheo("reply generated", {
       leadPhone: payload.From,

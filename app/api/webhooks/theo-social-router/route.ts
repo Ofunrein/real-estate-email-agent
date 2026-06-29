@@ -25,6 +25,7 @@ import { sendTheoHandoffAlert } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,14 @@ function referencesPriorProperties(message = ""): boolean {
 
 function wantsRelatedProperties(message = ""): boolean {
   return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(message);
+}
+
+function rejectsPriorProperty(message = ""): boolean {
+  return /\b(?:no longer|not)\s+interested\b/i.test(message)
+    || /\b(?:don't|dont|do not)\s+(?:like|want)\b/i.test(message)
+    || /\bnot\s+(?:this|that)\s+(?:one|property|listing)\b/i.test(message)
+    || /\b(?:send|show|find|share)\s+(?:me\s+)?another\s+(?:one|option|property|listing)?\b/i.test(message)
+    || /\banother\s+(?:one|option|property|listing)\b/i.test(message);
 }
 
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
@@ -138,18 +147,21 @@ async function findSocialProperties(input: SocialDmPayload, messageForReply: str
     messageForReply,
   );
   const requestedAddresses = extractTheoListedPropertyAddresses(input.listingAddress, messageForReply);
-  const priorAddresses = referencesPriorProperties(messageForReply) || wantsRelatedProperties(messageForReply)
+  const rejectedPriorProperty = rejectsPriorProperty(messageForReply);
+  const priorAddresses = referencesPriorProperties(messageForReply) || wantsRelatedProperties(messageForReply) || rejectedPriorProperty
     ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
     : [];
-  const recentAddresses = !requestedAddresses.length && referencesPriorProperties(messageForReply)
+  const recentAddresses = !requestedAddresses.length && (referencesPriorProperties(messageForReply) || rejectedPriorProperty)
     ? recentInboundAddresses(recentEvents)
     : [];
-  const addressMatches = await findPropertiesByAddressesFromDatabase(
-    [...requestedAddresses, ...priorAddresses, ...recentAddresses],
+  const exactAddresses = [...requestedAddresses, ...priorAddresses, ...recentAddresses];
+  const addressMatches = rejectedPriorProperty ? [] : await findPropertiesByAddressesFromDatabase(
+    exactAddresses,
     5,
   );
   const referenceAddress = propertySearch.query || requestedAddresses[0] || priorAddresses[0] || recentAddresses[0] || input.listingAddress;
-  const candidateMatches = propertySearch.mode !== "general" || propertyQuery || propertySearch.area
+  const shouldSearchCandidates = rejectedPriorProperty || propertySearch.mode !== "general" || propertyQuery || propertySearch.area;
+  const candidateMatches = shouldSearchCandidates
     ? await findCandidatePropertiesFromDatabase(
       {
         query: propertyQuery,
@@ -158,9 +170,12 @@ async function findSocialProperties(input: SocialDmPayload, messageForReply: str
         baths: propertySearch.baths,
         minPrice: propertySearch.minPrice,
         maxPrice: propertySearch.maxPrice,
-        mode: propertySearch.mode,
+        mode: rejectedPriorProperty && propertySearch.mode === "general" ? "similar" : propertySearch.mode,
         reference: referenceAddress ? { address: referenceAddress } : undefined,
-        excludeAddresses: addressMatches.map((property) => property.address).filter(Boolean),
+        excludeAddresses: [
+          ...addressMatches.map((property) => property.address).filter(Boolean),
+          ...exactAddresses,
+        ].filter(Boolean),
       },
       5,
     )
@@ -295,6 +310,15 @@ export async function POST(request: NextRequest) {
       propertyInterest: input.listingAddress,
     });
     logTheoMetrics(enriched.metrics);
+    await writeTheoMetricAuditEvents(enriched.metrics, {
+      requestId: audit.requestId,
+      route: "agent:theo-social-router",
+      channel: socialChannel,
+      provider: "anthropic",
+      threadRef: result.event.thread_ref,
+      contactRef: input.senderName || input.senderUsername || input.contactId,
+      providerMessageId: input.contactId,
+    });
     const cacheResult = await cacheTheoProperties(enriched.properties);
     logTheoSocial("property cache processed", cacheResult);
 
@@ -309,6 +333,15 @@ export async function POST(request: NextRequest) {
       styleContext: await fetchStyleContext(),
     });
     logTheoMetrics(reply.metrics);
+    await writeTheoMetricAuditEvents(reply.metrics, {
+      requestId: audit.requestId,
+      route: "agent:theo-social-router",
+      channel: socialChannel,
+      provider: "anthropic",
+      threadRef: result.event.thread_ref,
+      contactRef: input.senderName || input.senderUsername || input.contactId,
+      providerMessageId: input.contactId,
+    });
 
     const routeResult = buildSocialRouterResult({
       channel: socialChannel,

@@ -11,6 +11,7 @@ import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoProperty
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { createRequestAudit } from "@/lib/requestAudit";
 
@@ -69,6 +70,14 @@ function referencesPriorProperties(message = ""): boolean {
 
 function wantsRelatedProperties(message = ""): boolean {
   return /\b(similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|close to (?:the )?(?:\d+\s*)?(?:bed|bd|bedroom|layout)|\d+\s*(?:bed|bd|bedroom).{0,40}layout|something close|comparable|alternatives?|other options?)\b/i.test(message);
+}
+
+function rejectsPriorProperty(message = ""): boolean {
+  return /\b(?:no longer|not)\s+interested\b/i.test(message)
+    || /\b(?:don't|dont|do not)\s+(?:like|want)\b/i.test(message)
+    || /\bnot\s+(?:this|that)\s+(?:one|property|listing)\b/i.test(message)
+    || /\b(?:send|show|find|share)\s+(?:me\s+)?another\s+(?:one|option|property|listing)?\b/i.test(message)
+    || /\banother\s+(?:one|option|property|listing)\b/i.test(message);
 }
 
 function recentInboundAddresses(events: Record<string, string>[] = []): string[] {
@@ -286,24 +295,30 @@ export async function POST(request: NextRequest) {
         recentSearchContext,
       );
       const requestedAddresses = extractTheoListedPropertyAddresses(messageForReply);
-      const referencedInboundAddresses = !requestedAddresses.length && referencesPriorProperties(messageForReply)
+      const rejectedPriorProperty = rejectsPriorProperty(messageForReply);
+      const referencedInboundAddresses = !requestedAddresses.length && (referencesPriorProperties(messageForReply) || rejectedPriorProperty)
         ? recentInboundAddresses(recentEvents)
         : [];
-      const priorAddresses = !requestedAddresses.length && !referencedInboundAddresses.length && referencesPriorProperties(messageForReply)
+      const priorAddresses = !requestedAddresses.length && !referencedInboundAddresses.length && (referencesPriorProperties(messageForReply) || rejectedPriorProperty)
         ? extractTheoListedPropertyAddresses(...recentEvents.filter((event) => event.direction === "outbound").map((event) => event.message_text || ""))
         : [];
       const exactAddresses = requestedAddresses.length ? requestedAddresses : referencedInboundAddresses.length ? referencedInboundAddresses : priorAddresses;
-      const relatedRequest = wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
-      const referenceProperties = relatedRequest && !requestedAddresses.length && exactAddresses.length
+      const relatedRequest = rejectedPriorProperty || wantsRelatedProperties(messageForReply) || propertySearch.mode !== "general";
+      const candidateSearchMode = relatedRequest && propertySearch.mode === "general" ? "similar" : propertySearch.mode;
+      const referenceProperties = relatedRequest && exactAddresses.length
         ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
         : [];
-      const properties = requestedAddresses.length || (!relatedRequest && exactAddresses.length)
+      const properties = !rejectedPriorProperty && (requestedAddresses.length || (!relatedRequest && exactAddresses.length))
         ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
         : await findCandidatePropertiesFromDatabase({
           ...propertySearch,
+          mode: candidateSearchMode,
           query: propertyQuery,
           reference: referenceProperties[0],
-          excludeAddresses: referenceProperties.map((property) => property.address).filter(Boolean),
+          excludeAddresses: [
+            ...referenceProperties.map((property) => property.address).filter(Boolean),
+            ...exactAddresses,
+          ].filter(Boolean),
         }, 5);
       logTheoWhatsApp("context read complete", {
         leadPhone: inbound.from,
@@ -321,6 +336,15 @@ export async function POST(request: NextRequest) {
         propertyInterest,
       });
       logTheoMetrics(enriched.metrics);
+      await writeTheoMetricAuditEvents(enriched.metrics, {
+        requestId: audit.requestId,
+        route: "agent:theo-whatsapp",
+        channel: "whatsapp",
+        provider: "anthropic",
+        threadRef: result.event.thread_ref,
+        contactRef: inbound.from,
+        providerMessageId: inbound.messageId,
+      });
       const cacheResult = await cacheTheoProperties(enriched.properties);
       logTheoWhatsApp("property cache processed", {
         leadPhone: inbound.from,
@@ -341,6 +365,15 @@ export async function POST(request: NextRequest) {
         styleContext: await fetchStyleContext(),
       });
       logTheoMetrics(reply.metrics);
+      await writeTheoMetricAuditEvents(reply.metrics, {
+        requestId: audit.requestId,
+        route: "agent:theo-whatsapp",
+        channel: "whatsapp",
+        provider: "anthropic",
+        threadRef: result.event.thread_ref,
+        contactRef: inbound.from,
+        providerMessageId: inbound.messageId,
+      });
       logTheoWhatsApp("reply generated", {
         leadPhone: inbound.from,
         intent: reply.classification.intent,

@@ -137,6 +137,12 @@ async function readJson(url: string): Promise<unknown> {
   return data;
 }
 
+function calendarConnectHref(provider: 'google' | 'outlook'): string {
+  if (typeof window === 'undefined') return `/api/calendar/connect/${provider}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  return `/api/calendar/connect/${provider}?returnTo=${encodeURIComponent(current)}`;
+}
+
 function timeLabel(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Time pending';
@@ -575,10 +581,10 @@ export function CalendarOsView() {
             onClick={() => void syncCalendar()}>
             Sync calendar
           </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/calendar/connect/google'; }}>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('google'); }}>
             Connect Google
           </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = '/api/calendar/connect/outlook'; }}>
+          <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('outlook'); }}>
             Connect Outlook
           </Button>
         </Stack>
