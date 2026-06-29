@@ -235,6 +235,7 @@ export type EmailAccountRecord = {
   last_error: string;
   last_used_at: string;
   gmail_watch_history_id: string;
+  gmail_history_cursor_id: string;
   gmail_watch_expiration: string;
   gmail_watch_renewed_at: string;
   created_at: string;
@@ -266,6 +267,7 @@ function emailAccountFromRow(row: Record<string, unknown>): EmailAccountRecord {
     last_error: String(row.last_error || ""),
     last_used_at: row.last_used_at ? new Date(String(row.last_used_at)).toISOString() : "",
     gmail_watch_history_id: String(row.gmail_watch_history_id || ""),
+    gmail_history_cursor_id: String(row.gmail_history_cursor_id || ""),
     gmail_watch_expiration: row.gmail_watch_expiration ? new Date(String(row.gmail_watch_expiration)).toISOString() : "",
     gmail_watch_renewed_at: row.gmail_watch_renewed_at ? new Date(String(row.gmail_watch_renewed_at)).toISOString() : "",
     created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
@@ -838,13 +840,16 @@ export async function readLeadImportItemsFromDatabase(batchId: string, limit = 5
 export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecord[]> {
   if (!await emailAccountsTableReady()) return [];
   const columns = await tableColumns("email_accounts");
-  const watchColumns = columns.has("gmail_watch_history_id")
-    ? `, gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
-    : `, '' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
+  const watchColumns = [
+    columns.has("gmail_watch_history_id") ? "gmail_watch_history_id" : "'' as gmail_watch_history_id",
+    columns.has("gmail_history_cursor_id") ? "gmail_history_cursor_id" : "'' as gmail_history_cursor_id",
+    columns.has("gmail_watch_expiration") ? "gmail_watch_expiration" : "null::timestamptz as gmail_watch_expiration",
+    columns.has("gmail_watch_renewed_at") ? "gmail_watch_renewed_at" : "null::timestamptz as gmail_watch_renewed_at",
+  ].join(", ");
   const result = await getPool().query(
     `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
             is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
-            ${watchColumns}
+            , ${watchColumns}
        from email_accounts
       where client_id = $1
       order by is_default desc, updated_at desc`,
@@ -856,13 +861,16 @@ export async function readEmailAccountsFromDatabase(): Promise<EmailAccountRecor
 export async function readDefaultEmailAccountFromDatabase(): Promise<EmailAccountRecord | null> {
   if (!await emailAccountsTableReady()) return null;
   const columns = await tableColumns("email_accounts");
-  const watchColumns = columns.has("gmail_watch_history_id")
-    ? `, gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
-    : `, '' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
+  const watchColumns = [
+    columns.has("gmail_watch_history_id") ? "gmail_watch_history_id" : "'' as gmail_watch_history_id",
+    columns.has("gmail_history_cursor_id") ? "gmail_history_cursor_id" : "'' as gmail_history_cursor_id",
+    columns.has("gmail_watch_expiration") ? "gmail_watch_expiration" : "null::timestamptz as gmail_watch_expiration",
+    columns.has("gmail_watch_renewed_at") ? "gmail_watch_renewed_at" : "null::timestamptz as gmail_watch_renewed_at",
+  ].join(", ");
   const result = await getPool().query(
     `select id, client_id, provider, email, display_name, token_json_encrypted, scopes,
             is_default, status, connected_by, last_error, last_used_at, created_at, updated_at
-            ${watchColumns}
+            , ${watchColumns}
        from email_accounts
       where client_id = $1
         and provider = 'gmail'
@@ -885,9 +893,12 @@ export async function readConnectedGmailAccountsForWatchRenewal(options: {
   const hasWatchColumns = columns.has("gmail_watch_history_id");
   const renewWithinHours = Math.max(1, Math.min(options.renewWithinHours || 48, 24 * 6));
   const limit = Math.max(1, Math.min(options.limit || 100, 500));
-  const watchColumns = hasWatchColumns
-    ? `gmail_watch_history_id, gmail_watch_expiration, gmail_watch_renewed_at`
-    : `'' as gmail_watch_history_id, null::timestamptz as gmail_watch_expiration, null::timestamptz as gmail_watch_renewed_at`;
+  const watchColumns = [
+    columns.has("gmail_watch_history_id") ? "gmail_watch_history_id" : "'' as gmail_watch_history_id",
+    columns.has("gmail_history_cursor_id") ? "gmail_history_cursor_id" : "'' as gmail_history_cursor_id",
+    columns.has("gmail_watch_expiration") ? "gmail_watch_expiration" : "null::timestamptz as gmail_watch_expiration",
+    columns.has("gmail_watch_renewed_at") ? "gmail_watch_renewed_at" : "null::timestamptz as gmail_watch_renewed_at",
+  ].join(", ");
   const dueClause = !hasWatchColumns || options.force
     ? ""
     : `and (
@@ -1002,6 +1013,13 @@ export async function updateEmailAccountGmailWatchInDatabase(input: {
   if (!input.clientId.trim() || !input.email.trim() || !await emailAccountsTableReady()) return;
   const columns = await tableColumns("email_accounts");
   if (!columns.has("gmail_watch_history_id")) return;
+  const cursorAssignment = columns.has("gmail_history_cursor_id")
+    ? `,
+            gmail_history_cursor_id = case
+              when gmail_history_cursor_id = '' then $3
+              else gmail_history_cursor_id
+            end`
+    : "";
   await getPool().query(
     `update email_accounts
         set gmail_watch_history_id = $3,
@@ -1010,10 +1028,31 @@ export async function updateEmailAccountGmailWatchInDatabase(input: {
             status = 'connected',
             last_error = '',
             updated_at = now()
+            ${cursorAssignment}
       where client_id = $1
         and provider = 'gmail'
         and email = $2`,
     [input.clientId, input.email.trim().toLowerCase(), input.historyId, input.expiration],
+  );
+}
+
+export async function updateEmailAccountGmailHistoryCursorInDatabase(input: {
+  clientId: string;
+  email: string;
+  historyId: string;
+}): Promise<void> {
+  if (!input.clientId.trim() || !input.email.trim() || !input.historyId || !await emailAccountsTableReady()) return;
+  const columns = await tableColumns("email_accounts");
+  if (!columns.has("gmail_history_cursor_id")) return;
+  await getPool().query(
+    `update email_accounts
+        set gmail_history_cursor_id = $3,
+            last_used_at = now(),
+            updated_at = now()
+      where client_id = $1
+        and provider = 'gmail'
+        and email = $2`,
+    [input.clientId, input.email.trim().toLowerCase(), input.historyId],
   );
 }
 
