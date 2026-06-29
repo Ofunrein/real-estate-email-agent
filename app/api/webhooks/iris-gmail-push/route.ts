@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
+import { createRequestAudit } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -51,10 +52,18 @@ export async function POST(request: NextRequest) {
   // ACK unauthorized/bad payloads to avoid retry storms. For valid Gmail events,
   // return non-200 if durable queueing fails so Pub/Sub retries.
   const ack = () => NextResponse.json({ ok: true });
+  const audit = createRequestAudit({
+    headers: request.headers,
+    route: "/api/webhooks/iris-gmail-push",
+    method: "POST",
+    channel: "email",
+    provider: "gmail_pubsub",
+  });
 
   if (!authorized(request)) {
     // Log but ACK — returning 4xx causes Pub/Sub to retry indefinitely
     console.warn("iris_gmail_push: unauthorized request, acking to suppress retries");
+    await audit.write("auth", "blocked", { statusCode: 200, errorCode: "unauthorized_pubsub_push" });
     return ack();
   }
 
@@ -62,22 +71,45 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json() as PubSubPayload;
   } catch {
+    await audit.write("parse", "skipped", { statusCode: 200, errorCode: "invalid_pubsub_json" });
     return ack();
   }
 
   const messageData = payload.message?.data;
-  if (!messageData) return ack();
+  if (!messageData) {
+    await audit.write("parse", "skipped", { statusCode: 200, errorCode: "missing_pubsub_data" });
+    return ack();
+  }
 
   const historyData = decodePubSubData(messageData);
   const historyId = String(historyData.historyId || "").trim();
+  const pubSubMessageId = payload.message?.messageId || "";
 
   console.info("iris_gmail_push_received", JSON.stringify({
     historyId,
     emailAddress: historyData.emailAddress,
-    pubSubMessageId: payload.message?.messageId,
+    pubSubMessageId,
   }));
+  await audit.write("received", "received", {
+    contactRef: historyData.emailAddress || "",
+    providerMessageId: pubSubMessageId || historyId,
+    metadata: {
+      historyId,
+      emailAddress: historyData.emailAddress || "",
+      pubSubMessageId,
+      subscription: payload.subscription || "",
+    },
+  });
 
-  if (!historyId) return ack();
+  if (!historyId) {
+    await audit.write("validate", "skipped", {
+      contactRef: historyData.emailAddress || "",
+      providerMessageId: pubSubMessageId,
+      statusCode: 200,
+      errorCode: "missing_history_id",
+    });
+    return ack();
+  }
 
   try {
     await inngest.send({
@@ -85,19 +117,33 @@ export async function POST(request: NextRequest) {
       data: {
         historyId,
         emailAddress: historyData.emailAddress || "",
-        pubSubMessageId: payload.message?.messageId || "",
+        pubSubMessageId,
         receivedAt: new Date().toISOString(),
       },
     });
     console.info("iris_gmail_push_queued", JSON.stringify({
       historyId,
       emailAddress: historyData.emailAddress,
-      pubSubMessageId: payload.message?.messageId,
+      pubSubMessageId,
     }));
+    await audit.write("queued", "sent", {
+      contactRef: historyData.emailAddress || "",
+      providerMessageId: pubSubMessageId || historyId,
+      statusCode: 200,
+      metadata: { historyId },
+    });
     return ack();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("iris_gmail_push_queue_error", message);
+    await audit.write("queued", "failed", {
+      contactRef: historyData.emailAddress || "",
+      providerMessageId: pubSubMessageId || historyId,
+      statusCode: 503,
+      errorCode: "inngest_queue_failed",
+      errorMessage: message,
+      metadata: { historyId },
+    });
     return NextResponse.json({ ok: false, error: "Unable to queue Gmail push" }, { status: 503 });
   }
 }
