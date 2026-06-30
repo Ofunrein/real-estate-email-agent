@@ -164,7 +164,7 @@ test("Meta connect only includes client id in state when explicitly requested", 
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
-    CLIENT_ID: "ryse-realty",
+    CLIENT_ID: "austin-realty",
   }, async () => {
     const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram&client_id=lumenosis"));
     const location = response.headers.get("location");

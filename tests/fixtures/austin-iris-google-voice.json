@@ -1,0 +1,326 @@
+{
+  "fixtureId": "austin-iris-google-voice-2026-06-19",
+  "source": {
+    "kind": "google_voice_html_export",
+    "path": "docs/Voice - (29) Messages (6_19_2026 5：16：43 PM).html",
+    "exportedAt": "2026-06-19T17:16:43-05:00",
+    "client": "Austin Realty",
+    "assistantName": "Remi",
+    "targetAgentName": "Iris"
+  },
+  "listingSearch": {
+    "baseUrl": "https://search.austinrealty.example",
+    "tenantId": "YQxX9erMaCPdeBOYthLK",
+    "mlsOsn": "Austin"
+  },
+  "messages": [
+    {
+      "id": "m01",
+      "timestamp": "2026-06-17T17:55:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "Chad! This is Remi with Austin Realty. We wanted to check in about buying or selling a home in the Austin area. Still thinking of doing anything or did plans shift?"
+    },
+    {
+      "id": "m02",
+      "timestamp": "2026-06-18T03:59:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Hi"
+    },
+    {
+      "id": "m03",
+      "timestamp": "2026-06-18T04:00:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Still interested in buying in Austin"
+    },
+    {
+      "id": "m04",
+      "timestamp": "2026-06-18T04:00:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Any 2bds 2 baths available in downtown Austin under 1m?"
+    },
+    {
+      "id": "m05",
+      "timestamp": "2026-06-19T11:51:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "Hey Chad! Thanks for the reply. Just checking in on your plans for buying or selling in Austin-are you still looking to move forward?"
+    },
+    {
+      "id": "m06",
+      "timestamp": "2026-06-19T11:52:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "That's great, Chad! To help me narrow down some options, are you focused on a specific neighborhood in Austin, or should we start with a price range?"
+    },
+    {
+      "id": "m07",
+      "timestamp": "2026-06-19T11:52:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "Found 3 homes in Austin, TX: 1. 3401 Neal ST B, Austin, TX: $599,900, 2bd/2ba, 1,066 sqft, Active https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 2. 1189 Oakgrove Ave, Austin, TX: $599,000, 3bd/1ba, 1,530 sqft, Active https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 3. 1707 Spyglass DR 123, Austin, TX: $540,000, 2bd/2ba, 1,335 sqft, Active https://search.austinrealty.example/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+      "links": [
+        "https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+        "https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+        "https://search.austinrealty.example/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+      ]
+    },
+    {
+      "id": "m08",
+      "timestamp": "2026-06-19T16:52:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Tell me more about the first and I would like photos of the property"
+    },
+    {
+      "id": "m09",
+      "timestamp": "2026-06-19T16:53:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "3401 Neal ST B, Austin, TX $599,900, 2bd/2ba, 1,066 sqft, Active Notes: **This home qualifies under the Community Reinvestment program, allowing buyers to lock in interest rates typically 1% lower than market rates with NO INCOME RESTRICTIONS. Inquire for more information.** Live the Austin Dream in This Ado... Link: https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
+      "links": [
+        "https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+      ],
+      "attachments": [
+        {
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "m10",
+      "timestamp": "2026-06-19T16:55:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Nice any more photos? And can you send the details to my email?"
+    },
+    {
+      "id": "m11",
+      "timestamp": "2026-06-19T16:56:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "1189 Oakgrove Ave, Austin, TX $599,000, 3bd/1ba, 1,530 sqft, Active Notes: Incredible home in the Heart of East Austin. Contact today!! Link: https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
+      "links": [
+        "https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+      ],
+      "attachments": [
+        {
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "m12",
+      "timestamp": "2026-06-19T16:58:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Call me"
+    },
+    {
+      "id": "m13",
+      "timestamp": "2026-06-19T16:58:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "I understand you need a call to discuss 1189 Oakgrove Ave."
+    },
+    {
+      "id": "m14",
+      "timestamp": "2026-06-19T17:00:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Speculo ai?"
+    },
+    {
+      "id": "m15",
+      "timestamp": "2026-06-19T17:01:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "I searched Speculo ai? (TX), but I didn't find active matches. Want me to loosen the price, beds, yard, or city?"
+    },
+    {
+      "id": "m16",
+      "timestamp": "2026-06-19T17:01:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Any available properties in Columbus Ohio?"
+    },
+    {
+      "id": "m17",
+      "timestamp": "2026-06-19T17:01:00-05:00",
+      "speaker": "remi",
+      "direction": "assistant_to_lead",
+      "text": "I didn't find any active listings in Columbus, OH. Should I expand the search to nearby areas?"
+    },
+    {
+      "id": "m18",
+      "timestamp": "2026-06-19T17:06:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "",
+      "attachments": [
+        {
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "m19",
+      "timestamp": "2026-06-19T17:06:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "",
+      "attachments": [
+        {
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "m20",
+      "timestamp": "2026-06-19T17:06:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "",
+      "attachments": [
+        {
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "m21",
+      "timestamp": "2026-06-19T17:06:00-05:00",
+      "speaker": "lead",
+      "direction": "lead_to_assistant",
+      "text": "Can you see these?"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "database_revival_opener",
+      "name": "database revival opener",
+      "messageIds": [
+        "m01"
+      ],
+      "expected": {
+        "intent": "database_revival",
+        "leadRole": "unknown",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "wait_for_reply",
+        "opportunityTags": [
+          "stale_lead"
+        ]
+      }
+    },
+    {
+      "id": "downtown_two_bed_search",
+      "name": "2 bed / 2 bath / downtown / under $1M search",
+      "messageIds": [
+        "m03",
+        "m04"
+      ],
+      "expected": {
+        "intent": "property_search",
+        "leadRole": "buyer",
+        "shouldSearchListings": true,
+        "recommendedNextAction": "search_properties",
+        "leadFields": {
+          "area": "downtown Austin",
+          "budgetMax": 1000000,
+          "beds": 2,
+          "baths": 2
+        }
+      }
+    },
+    {
+      "id": "details_and_photos_request",
+      "name": "details + photos request",
+      "messageIds": [
+        "m08"
+      ],
+      "expected": {
+        "intent": "property_details",
+        "leadRole": "buyer",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "send_property_details_with_photos",
+        "mediaRequested": true,
+        "referencedResultOrdinal": 1
+      }
+    },
+    {
+      "id": "email_preference_request",
+      "name": "email preference request",
+      "messageIds": [
+        "m10"
+      ],
+      "expected": {
+        "intent": "property_details",
+        "leadRole": "buyer",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "send_details_by_email",
+        "preferredChannel": "email",
+        "mediaRequested": true
+      },
+      "observedFailure": {
+        "messageIds": [
+          "m11"
+        ],
+        "reason": "Remi sent another SMS listing instead of honoring the email handoff request."
+      }
+    },
+    {
+      "id": "call_request",
+      "name": "call request",
+      "messageIds": [
+        "m12"
+      ],
+      "expected": {
+        "intent": "call_request",
+        "leadRole": "buyer",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "create_call_task",
+        "preferredChannel": "phone",
+        "handoffRequired": true
+      }
+    },
+    {
+      "id": "product_business_question",
+      "name": "product/business question misclassified as property search",
+      "messageIds": [
+        "m14"
+      ],
+      "expected": {
+        "intent": "business_question",
+        "leadRole": "unknown",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "route_human_or_answer_product_question"
+      },
+      "observedFailure": {
+        "messageIds": [
+          "m15"
+        ],
+        "reason": "Remi treated the product/business question as a Texas property search."
+      }
+    },
+    {
+      "id": "out_of_market_request",
+      "name": "out-of-market request",
+      "messageIds": [
+        "m16"
+      ],
+      "expected": {
+        "intent": "out_of_market_property_search",
+        "leadRole": "buyer",
+        "shouldSearchListings": false,
+        "recommendedNextAction": "route_referral_or_human",
+        "leadFields": {
+          "area": "Columbus, OH"
+        },
+        "marketStatus": "out_of_market"
+      }
+    }
+  ]
+}

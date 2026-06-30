@@ -19,9 +19,9 @@ test("normalizeChannelConnectionInput matches registry defaults", () => {
     selected_asset_name: "Austin Homes",
     selected_asset_type: "instagram_business_account",
     metadata: { toolkit: "instagram", scopes: ["messages"] },
-  }, "ryse");
+  }, "austin");
 
-  assert.equal(normalized.client_id, "ryse");
+  assert.equal(normalized.client_id, "austin");
   assert.equal(normalized.channel, "instagram_dms");
   assert.equal(normalized.provider, "composio");
   assert.equal(normalized.status, "connected");

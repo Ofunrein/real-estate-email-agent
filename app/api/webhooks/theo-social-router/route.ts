@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
@@ -26,6 +26,7 @@ import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { createRequestAudit } from "@/lib/requestAudit";
 import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 
 export const dynamic = "force-dynamic";
 
@@ -162,7 +163,7 @@ async function findSocialProperties(input: SocialDmPayload, messageForReply: str
   const referenceAddress = propertySearch.query || requestedAddresses[0] || priorAddresses[0] || recentAddresses[0] || input.listingAddress;
   const shouldSearchCandidates = rejectedPriorProperty || propertySearch.mode !== "general" || propertyQuery || propertySearch.area;
   const candidateMatches = shouldSearchCandidates
-    ? await findCandidatePropertiesFromDatabase(
+    ? await retrievePropertiesForAgent(
       {
         query: propertyQuery,
         area: propertySearch.area,
@@ -178,6 +179,7 @@ async function findSocialProperties(input: SocialDmPayload, messageForReply: str
         ].filter(Boolean),
       },
       5,
+      { channel: input.channel },
     )
     : [];
   return [...addressMatches, ...candidateMatches].filter((property, index, list) =>

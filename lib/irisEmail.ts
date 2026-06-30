@@ -26,6 +26,7 @@ import {
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -833,14 +834,14 @@ async function generateIrisEmailReplyRich(
   const excludeAddresses = classification.opportunity_tags.includes("property_pivot") ? contextAddresses.slice(0, 1) : [];
   const properties = classification.addresses.length && classification.intent !== "property_search"
     ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
-    : await findCandidatePropertiesFromDatabase({
+    : await retrievePropertiesForAgent({
       query: latestBody,
       area: classification.lead_fields.area || latestBody,
       beds: classification.lead_fields.beds || undefined,
       maxPrice: classification.lead_fields.budget || undefined,
       excludeAddresses,
       mode: "general",
-    }, 4);
+    }, 4, { channel: "email" });
   const plain = await generateClaudeIrisEmailReplyText(message, classification, properties).catch(() => null) || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
