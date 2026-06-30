@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertLeadMemoryToDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { isTakeoverActive } from "@/lib/humanTakeover";
@@ -16,6 +16,7 @@ import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 import { createRequestAudit, type RequestAuditInput } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { appendLeadProfileCaptureAsk, decideLeadProfileCapture, leadProfileMemoryPatch } from "@/lib/leadProfileCapture";
 
 export const dynamic = "force-dynamic";
 
@@ -530,6 +531,26 @@ export async function POST(request: NextRequest) {
     const contextReadStarted = nowMs();
     const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
     const messageForReply = combinedInboundMessage(recentEvents, payload.Body || "");
+    const initialProfileDecision = decideLeadProfileCapture({
+      channel: "sms",
+      message: messageForReply,
+      lead: lead || result.lead,
+    });
+    const profilePatch = leadProfileMemoryPatch({
+      extracted: initialProfileDecision.extracted,
+      existing: lead || result.lead,
+      channel: "sms",
+      source: "twilio",
+      message: messageForReply,
+    });
+    const profileLead = Object.keys(profilePatch).length
+      ? await upsertLeadMemoryToDatabase({
+        ...profilePatch,
+        phone: profilePatch.phone || leadPhone,
+        full_name: profilePatch.full_name || payload.ProfileName || lead?.full_name || result.lead.full_name || "",
+      })
+      : null;
+    const leadForReply = profileLead || lead || result.lead;
     const recentSearchContext = recentEvents
       .slice(-6)
       .filter((event) => event.direction === "inbound")
@@ -537,17 +558,17 @@ export async function POST(request: NextRequest) {
       .join(" ");
     const propertySearch = extractTheoPropertySearchIntent(
       messageForReply,
-      lead?.area || "",
+      leadForReply?.area || "",
       result.lead.area || "",
-      lead?.property_interest || "",
+      leadForReply?.property_interest || "",
       result.lead.property_interest || "",
       recentSearchContext,
     );
     const propertyQuery = extractTheoPropertySearchQuery(
       messageForReply,
-      lead?.area || "",
+      leadForReply?.area || "",
       result.lead.area || "",
-      lead?.property_interest || "",
+      leadForReply?.property_interest || "",
       result.lead.property_interest || "",
       recentSearchContext,
     );
@@ -603,11 +624,11 @@ export async function POST(request: NextRequest) {
       elapsedMs: elapsedMs(contextReadStarted),
       totalMs: elapsedMs(requestStarted),
     });
-    const propertyInterest = exactAddresses[0] || propertyQuery || lead?.property_interest || result.lead.property_interest || "";
+    const propertyInterest = exactAddresses[0] || propertyQuery || leadForReply?.property_interest || result.lead.property_interest || "";
     const enrichmentStarted = nowMs();
     const enriched = await enrichTheoData({
       message: messageForReply,
-      lead: lead || result.lead,
+      lead: leadForReply,
       properties,
       propertyInterest,
     });
@@ -644,7 +665,7 @@ export async function POST(request: NextRequest) {
     const aiStarted = nowMs();
     const reply = await generateTheoReply({
       message: messageForReply,
-      lead: lead || result.lead,
+      lead: leadForReply,
       properties: enriched.properties,
       recentEvents,
       propertyInterest,
@@ -679,6 +700,13 @@ export async function POST(request: NextRequest) {
       mediaCount: reply.mediaUrls.length,
       replyPreview: reply.reply.slice(0, 160),
     });
+    const profileDecision = decideLeadProfileCapture({
+      channel: "sms",
+      message: messageForReply,
+      lead: leadForReply,
+      classification: reply.classification,
+    });
+    reply.reply = appendLeadProfileCaptureAsk(reply.reply, profileDecision, reply.mediaUrls.length ? 1200 : 520);
 
     if (!reply.shouldSend) {
       logTheo("reply blocked", {
