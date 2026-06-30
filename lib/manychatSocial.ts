@@ -139,15 +139,26 @@ export function shouldTheoHandleSocialDm(input: SocialDmPayload): SocialDmGuard 
     return { allowed: false, needsHuman: true, reason: "Missing social DM text", intent };
   }
   if (HANDOFF_INTENT.test(input.messageText)) {
-    return { allowed: false, needsHuman: true, reason: "Sensitive or human-required social DM", intent: intent || "human_required" };
+    return { allowed: true, needsHuman: true, reason: "Sensitive or human-required social DM", intent: intent || "human_required" };
   }
   if (PERSONAL_SOCIAL.test(input.messageText) && !input.routeReason) {
-    return { allowed: false, needsHuman: true, reason: "Personal or general social DM", intent: "personal_social" };
+    return { allowed: true, needsHuman: true, reason: "Personal or general social DM", intent: "personal_social" };
   }
   if (input.routeReason || REAL_ESTATE_INTENT.test(text)) {
     return { allowed: true, needsHuman: false, reason: "", intent: intent || "real_estate_intent" };
   }
-  return { allowed: false, needsHuman: true, reason: "Low-confidence social DM route", intent: "low_confidence" };
+  return { allowed: true, needsHuman: true, reason: "Low-confidence social DM route", intent: "low_confidence" };
+}
+
+export function shouldTheoHandleDirectMetaDm(input: SocialDmPayload): SocialDmGuard {
+  const guard = shouldTheoHandleSocialDm(input);
+  if (guard.reason !== "Low-confidence social DM route") return guard;
+  return {
+    allowed: true,
+    needsHuman: false,
+    reason: "",
+    intent: "direct_meta_dm",
+  };
 }
 
 export function socialDmIngestInput(input: SocialDmPayload, guard: SocialDmGuard): ChannelIngestInput {

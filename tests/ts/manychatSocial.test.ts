@@ -6,6 +6,7 @@ import {
   formatManyChatDynamicBlock,
   normalizeManyChatPayload,
   shouldTheoHandleSocialDm,
+  shouldTheoHandleDirectMetaDm,
   socialDmIngestInput,
   socialMediaUrls,
 } from "@/lib/manychatSocial";
@@ -38,16 +39,75 @@ test("shouldTheoHandleSocialDm: allows routed real estate messages", () => {
   assert.equal(guard.needsHuman, false);
 });
 
-test("shouldTheoHandleSocialDm: blocks personal social messages", () => {
+test("shouldTheoHandleSocialDm: flags personal social messages but still lets the agent reply", () => {
   const input = normalizeManyChatPayload({
     channel: "instagram",
     message_text: "Happy birthday lol how are you?",
     contact_id: "contact_3",
   });
   const guard = shouldTheoHandleSocialDm(input);
-  assert.equal(guard.allowed, false);
+  assert.equal(guard.allowed, true);
   assert.equal(guard.needsHuman, true);
   assert.equal(guard.intent, "personal_social");
+});
+
+test("shouldTheoHandleSocialDm: defaults low-confidence social DMs to reply plus human flag", () => {
+  const guard = shouldTheoHandleSocialDm({
+    channel: "instagram",
+    messageText: "Hmm what else do you have in inventory",
+    contactId: "contact_5",
+    threadId: "contact_5",
+    senderName: "Lead Five",
+    senderUsername: "lead.five",
+    accountLabel: "Instagram",
+    routeReason: "",
+    campaign: "",
+    listingAddress: "",
+    sourceUrl: "",
+  });
+
+  assert.equal(guard.allowed, true);
+  assert.equal(guard.needsHuman, true);
+  assert.equal(guard.intent, "low_confidence");
+});
+
+test("shouldTheoHandleDirectMetaDm: defaults direct channel DMs to the agent without human flag", () => {
+  const guard = shouldTheoHandleDirectMetaDm({
+    channel: "instagram",
+    messageText: "Hmm what else do you have in inventory",
+    contactId: "contact_5",
+    threadId: "contact_5",
+    senderName: "Lead Five",
+    senderUsername: "lead.five",
+    accountLabel: "Instagram",
+    routeReason: "",
+    campaign: "",
+    listingAddress: "",
+    sourceUrl: "",
+  });
+
+  assert.equal(guard.allowed, true);
+  assert.equal(guard.needsHuman, false);
+  assert.equal(guard.intent, "direct_meta_dm");
+});
+
+test("shouldTheoHandleDirectMetaDm: still blocks clearly human-required messages", () => {
+  const guard = shouldTheoHandleDirectMetaDm({
+    channel: "instagram",
+    messageText: "I need a lawyer for contract terms",
+    contactId: "contact_6",
+    threadId: "contact_6",
+    senderName: "Lead Six",
+    senderUsername: "lead.six",
+    accountLabel: "Instagram",
+    routeReason: "",
+    campaign: "",
+    listingAddress: "",
+    sourceUrl: "",
+  });
+
+  assert.equal(guard.allowed, true);
+  assert.equal(guard.needsHuman, true);
 });
 
 test("socialDmIngestInput: stores separate social channel thread refs", () => {
