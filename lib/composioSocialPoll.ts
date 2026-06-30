@@ -30,6 +30,7 @@ import { generateTheoReply } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
+import { understandMediaItems } from "@/lib/mediaUnderstanding";
 
 type PollChannel = Extract<SocialDmChannel, "instagram" | "messenger">;
 
@@ -427,7 +428,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
   if (!message.id || !message.senderId) return "skipped";
   if (isSelfMessage(message, connection)) return "skipped";
   const messageKey = `${message.channel}:${message.id}`;
-  const media = await transcribeSocialMediaItems(message.media || []);
+  const media = await understandMediaItems(await transcribeSocialMediaItems(message.media || []));
   const messageText = normalizedMessageText({ text: message.text, media });
   if (!messageText) return "skipped";
   const payload = socialPayloadFromMessage(message);
