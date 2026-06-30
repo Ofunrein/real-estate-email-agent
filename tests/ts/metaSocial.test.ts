@@ -99,6 +99,45 @@ test("extractMetaSocialMessages preserves Instagram shared post attachments", ()
   assert.equal(messages[0].media[0]?.providerMetadata?.title, "Shared Instagram post");
 });
 
+test("extractMetaSocialMessages uses shared reel thumbnails as preview cards when Meta provides them", () => {
+  const messages = extractMetaSocialMessages({
+    entry: [
+      {
+        id: "ig-business-1",
+        messaging: [
+          {
+            sender: { id: "igsid-1", username: "buyer.austin" },
+            recipient: { id: "ig-business-1" },
+            timestamp: 1782511020000,
+            message: {
+              mid: "mid.ig.share.thumb.1",
+              attachments: [
+                {
+                  type: "share",
+                  payload: {
+                    url: "https://www.instagram.com/reel/austin-listing-tour/",
+                    image_data: {
+                      url: "https://cdn.example.com/reel-thumb.jpg",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }, {
+    instagramIds: ["ig-business-1"],
+  });
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0].media.length, 1);
+  assert.equal(messages[0].media[0]?.type, "image");
+  assert.equal(messages[0].media[0]?.url, "https://cdn.example.com/reel-thumb.jpg");
+  assert.equal(messages[0].media[0]?.providerMetadata?.linkUrl, "https://www.instagram.com/reel/austin-listing-tour/");
+});
+
 test("extractMetaSocialMessages preserves platform-sent echo messages", () => {
   const messages = extractMetaSocialMessages({
     entry: [

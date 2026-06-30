@@ -344,6 +344,7 @@ export function SmsBubble({
   const isOwner = message.direction === 'owner';
   const isOutbound = message.direction !== 'inbound';
   const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
+  const videoMedia = message.media?.filter((item) => item.kind === 'video') || [];
   const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
   const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
   const voiceTranscripts = (message.body || "")
@@ -442,10 +443,66 @@ export function SmsBubble({
         <SmsMediaGallery
           media={imageMedia}
           isIris={isOutbound}
-          hasText={Boolean(displayBody || cleanHtml || voiceTranscripts.length)} />
+          hasText={Boolean(displayBody || cleanHtml || voiceTranscripts.length || videoMedia.length || audioMedia.length)} />
+        }
+        {!!videoMedia.length &&
+        <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml || audioMedia.length) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+          {videoMedia.map((item, index) => (
+            <Box
+              key={`${item.url}-${index}`}
+              sx={{
+                width: { xs: 246, sm: 286 },
+                maxWidth: '100%',
+                overflow: 'hidden',
+                borderRadius: 3,
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(15,23,42,0.82)' : theme.palette.background.paper,
+                border: '1px solid',
+                borderColor: isOutbound ? 'rgba(99,102,241,0.35)' : 'divider',
+                boxShadow: '0 12px 28px rgba(15,23,42,0.18)',
+                '& video': {
+                  display: 'block',
+                  width: '100%',
+                  maxHeight: 340,
+                  bgcolor: '#000'
+                }
+              }}>
+              <video controls preload="metadata" src={item.url} poster={item.thumbnailUrl} />
+              {(item.label || item.alt || item.transcript) &&
+              <Box sx={{ px: 1.1, py: 0.8, borderTop: '1px solid', borderColor: 'divider' }}>
+                {(item.label || item.alt) &&
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    lineHeight: 1.25,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                  {item.label || item.alt}
+                </Typography>
+                }
+                {item.transcript &&
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: item.label || item.alt ? 0.45 : 0,
+                    color: 'text.secondary',
+                    lineHeight: 1.35,
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                  {item.transcript}
+                </Typography>
+                }
+              </Box>
+              }
+            </Box>
+          ))}
+        </Stack>
         }
         {!!audioMedia.length &&
-        <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+        <Stack spacing={0.75} sx={{ mt: imageMedia.length || videoMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
           {audioMedia.map((item, index) => {
             const transcript = item.transcript || voiceTranscripts[index];
             return (
@@ -487,7 +544,7 @@ export function SmsBubble({
         </Stack>
         }
         {!!fileMedia.length &&
-        <Stack spacing={0.5} sx={{ mt: imageMedia.length || audioMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
+        <Stack spacing={0.5} sx={{ mt: imageMedia.length || videoMedia.length || audioMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
           {fileMedia.map((item, index) => (
             <Chip
               key={`${item.url}-${index}`}

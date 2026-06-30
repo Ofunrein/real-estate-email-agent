@@ -718,6 +718,89 @@ test("adaptInboxData labels Instagram shared posts from media metadata", () => {
   assert.equal(message.media?.[0].alt, "Shared Instagram post");
 });
 
+test("adaptInboxData renders Instagram shared reel thumbnails as preview cards", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "buyer.austin",
+        phone: "igsid-buyer",
+        thread_ref: "instagram:igsid-buyer",
+        gmail_message_id: "instagram:shared-reel-thumb-1",
+        message_text: "I want something similar to this North Austin listing video",
+        media_json: JSON.stringify([
+          {
+            type: "image",
+            url: "https://cdn.example.com/reel-thumb.jpg",
+            filename: "Shared Instagram post",
+            providerMetadata: {
+              title: "Shared Instagram post",
+              linkUrl: "https://www.instagram.com/reel/north-austin-listing/",
+              mediaContext: {
+                summary: "Lead shared a listing video and wants similar homes.",
+                confidence: 0.72,
+              },
+            },
+          },
+        ]),
+        event_at: "2026-06-26T21:53:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const message = model.textThreads.instagram[0].messages[0];
+
+  assert.equal(message.media?.length, 1);
+  assert.equal(message.media?.[0].kind, "image");
+  assert.equal(message.media?.[0].url, "https://cdn.example.com/reel-thumb.jpg");
+  assert.equal(message.media?.[0].linkUrl, "https://www.instagram.com/reel/north-austin-listing/");
+  assert.match(message.media?.[0].label || "", /similar homes/i);
+});
+
+test("adaptInboxData renders native social videos as videos instead of audio bubbles", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "inbound",
+        full_name: "buyer.austin",
+        phone: "igsid-buyer",
+        thread_ref: "instagram:igsid-buyer",
+        gmail_message_id: "instagram:video-1",
+        message_text: "Can you find homes like this?",
+        media_json: JSON.stringify([
+          {
+            type: "video",
+            url: "https://cdn.example.com/listing-tour.mp4",
+            filename: "Listing tour video",
+            providerMetadata: {
+              thumbnailUrl: "https://cdn.example.com/listing-tour-thumb.jpg",
+              mediaContext: {
+                summary: "Lead shared a property walkthrough video and wants similar options.",
+                confidence: 0.75,
+              },
+            },
+          },
+        ]),
+        event_at: "2026-06-26T21:54:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  const message = model.textThreads.instagram[0].messages[0];
+
+  assert.equal(message.media?.[0].kind, "video");
+  assert.equal(message.media?.[0].thumbnailUrl, "https://cdn.example.com/listing-tour-thumb.jpg");
+  assert.match(message.media?.[0].transcript || "", /property walkthrough/i);
+});
+
 test("adaptInboxData preserves email voice note attachments and transcript previews from media_json", () => {
   const data = composeInboxData(
     [],

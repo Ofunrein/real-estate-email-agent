@@ -213,7 +213,7 @@ function stableEventHash(value: string): string {
   return hash.toString(36);
 }
 
-type ThreadMedia = { url: string; alt: string; kind?: "image" | "audio" | "file"; transcript?: string; label?: string; linkUrl?: string };
+type ThreadMedia = { url: string; alt: string; kind?: "image" | "audio" | "video" | "file"; transcript?: string; label?: string; linkUrl?: string; thumbnailUrl?: string };
 
 function messageEventId(event: SheetRow, fallback: string): string {
   const direct = event.gmail_message_id || event.appointment_id || event.call_id;
@@ -352,33 +352,46 @@ function eventMedia(event: SheetRow): ThreadMedia[] {
   for (const item of jsonMediaArray((event as SheetRow & { media_json?: unknown }).media_json)) {
     const rawUrl = String(item.url || "").trim();
     if (!rawUrl) continue;
-    const url = isDisplayableImageUrl(rawUrl)
-      ? inboxImagePreviewUrl(rawUrl)
-      : isDisplayableAudioUrl(rawUrl)
-        ? inboxAudioPreviewUrl(rawUrl)
-        : rawUrl;
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    const declaredType = String(item.type || item.contentType || item.content_type || "").toLowerCase();
-    const kind: ThreadMedia["kind"] = isDisplayableImageUrl(url) || declaredType.includes("image")
-      ? "image"
-      : isDisplayableAudioUrl(url) || declaredType.includes("audio") || declaredType.includes("video")
-        ? "audio"
-        : "file";
-    const transcript = String(item.transcript || "").trim() || undefined;
     const providerMetadata = item.providerMetadata && typeof item.providerMetadata === "object" && !Array.isArray(item.providerMetadata)
       ? item.providerMetadata as Record<string, unknown>
       : {};
-    const label = String(item.alt || item.filename || providerMetadata.title || "").trim();
-    const mediaLabel = String(item.label || providerMetadata.label || "").trim();
+    const thumbnailCandidate = String(item.thumbnailUrl || item.thumbnail_url || providerMetadata.thumbnailUrl || providerMetadata.thumbnail_url || "").trim();
     const linkUrl = String(item.linkUrl || item.link_url || providerMetadata.linkUrl || providerMetadata.targetUrl || "").trim();
+    const displayRawUrl = !isDisplayableImageUrl(rawUrl) && !isDisplayableVideoUrl(rawUrl) && !isDisplayableAudioUrl(rawUrl) && thumbnailCandidate
+      ? thumbnailCandidate
+      : rawUrl;
+    const url = isDisplayableImageUrl(displayRawUrl)
+      ? inboxImagePreviewUrl(displayRawUrl)
+      : isDisplayableVideoUrl(displayRawUrl)
+        ? inboxVideoPreviewUrl(displayRawUrl)
+        : isDisplayableAudioUrl(displayRawUrl)
+        ? inboxAudioPreviewUrl(displayRawUrl)
+        : displayRawUrl;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    const declaredType = String(item.type || item.contentType || item.content_type || "").toLowerCase();
+    const mediaContext = providerMetadata.mediaContext && typeof providerMetadata.mediaContext === "object" && !Array.isArray(providerMetadata.mediaContext)
+      ? providerMetadata.mediaContext as Record<string, unknown>
+      : {};
+    const kind: ThreadMedia["kind"] = isDisplayableImageUrl(url) || declaredType.includes("image")
+      ? "image"
+      : isDisplayableVideoUrl(url) || declaredType.includes("video")
+        ? "video"
+        : isDisplayableAudioUrl(url) || declaredType.includes("audio")
+        ? "audio"
+        : "file";
+    const transcript = String(item.transcript || mediaContext.extractedText || mediaContext.extracted_text || (kind === "video" ? mediaContext.summary : "") || "").trim() || undefined;
+    const label = String(item.alt || item.filename || providerMetadata.title || mediaContext.summary || "").trim();
+    const mediaLabel = String(item.label || providerMetadata.label || (kind === "image" ? mediaContext.summary : "") || "").trim();
+    const thumbnailUrl = thumbnailCandidate;
     media.push({
       url,
-      alt: label || (kind === "audio" ? "Voice note" : kind === "image" ? "MMS image" : "Attachment"),
+      alt: label || (kind === "audio" ? "Voice note" : kind === "video" ? "Video" : kind === "image" ? "MMS image" : "Attachment"),
       kind,
       transcript,
       label: mediaLabel || undefined,
       linkUrl: linkUrl || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
     });
   }
   return media;
@@ -402,14 +415,25 @@ function mediaPreviewText(media: ThreadMedia[]): string {
   if (media.length === 1) {
     if (media[0].label) return media[0].label;
     if (media[0].kind === "audio") return "1 voice note";
+    if (media[0].kind === "video") return "1 video";
     if (media[0].kind === "image") return "1 MMS image";
     return "1 attachment";
   }
   const allImages = media.every((item) => item.kind === "image");
   const allAudio = media.every((item) => item.kind === "audio");
+  const allVideo = media.every((item) => item.kind === "video");
   if (allImages) return `${media.length} MMS images`;
   if (allAudio) return `${media.length} voice notes`;
+  if (allVideo) return `${media.length} videos`;
   return `${media.length} attachments`;
+}
+
+function isDisplayableVideoUrl(value: string): boolean {
+  return /\.(?:mp4|mov|webm)(?:$|[?#])/i.test(value);
+}
+
+function inboxVideoPreviewUrl(value: string): string {
+  return value.trim();
 }
 
 function isDisplayableAudioUrl(value: string): boolean {
