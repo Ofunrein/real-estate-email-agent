@@ -8,7 +8,7 @@ import { ColorModeProvider } from "./theme/ColorModeContext";
 import { CategoryColorProvider } from "./theme/CategoryColorContext";
 import { InboxDataProvider } from "./InboxDataContext";
 
-const DASHBOARD_REFRESH_MS = 30_000;
+const DASHBOARD_REFRESH_MS = 5000;
 
 interface InboxAppProps {
   data: AgentInboxData;
