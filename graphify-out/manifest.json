@@ -120,23 +120,23 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/olivia-website/route.ts": {
-    "mtime": 1781914504.9638896,
-    "ast_hash": "f1c688dd13df7efafcf5bf9010ee42ad",
+    "mtime": 1782777348.3060935,
+    "ast_hash": "5a641542be7e115347790754277a4f2a",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-sms/route.ts": {
-    "mtime": 1782772676.1262164,
-    "ast_hash": "a2a9da7a84cd933b8d78c05ec8869fdb",
+    "mtime": 1782777348.3015225,
+    "ast_hash": "cc8a0cc1bed1815a2427b88165a34098",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-social-router/route.ts": {
-    "mtime": 1782772954.7598462,
-    "ast_hash": "eaca80fa68416520bba3c555c8c31b47",
+    "mtime": 1782777348.3035662,
+    "ast_hash": "e8f5231b77176379b8ebd383efe0e775",
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-whatsapp/route.ts": {
-    "mtime": 1782772713.5716252,
-    "ast_hash": "d3b2c0316a45bde1917c2ed01c24106e",
+    "mtime": 1782777348.3025866,
+    "ast_hash": "65dc2136ee0808c476479d5bb124dd52",
     "semantic_hash": ""
   },
   "app/layout.tsx": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "lib/irisEmail.ts": {
-    "mtime": 1782769855.071679,
-    "ast_hash": "85667a302c75731051f6a7463e04d626",
+    "mtime": 1782777348.307222,
+    "ast_hash": "ce9aa62a97eeafdd41b2a22208b76e68",
     "semantic_hash": ""
   },
   "lib/leadIdentity.ts": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1782680552.1546414,
-    "ast_hash": "3af0d0c348c94c153c90cd4cb9b11a76",
+    "mtime": 1782777348.2963512,
+    "ast_hash": "cc249457a86094a5003ade01c59cbe5b",
     "semantic_hash": ""
   },
   "personalities/__init__.py": {
@@ -834,11 +834,6 @@
     "ast_hash": "e6461653d375d3a95a0dfec6f6f4e0e6",
     "semantic_hash": ""
   },
-  "tests/fixtures/ryse-remi-google-voice.json": {
-    "mtime": 1781914506.0780957,
-    "ast_hash": "c8b514d26e1ff3a412a663c3406f6cd2",
-    "semantic_hash": ""
-  },
   "tests/test_agent_inbox.py": {
     "mtime": 1779898593.0853572,
     "ast_hash": "598c2122c9c0463dc94b1cc85dd877e1",
@@ -925,137 +920,132 @@
     "semantic_hash": ""
   },
   "tests/ts/aiSearchLinks.test.ts": {
-    "mtime": 1781914506.166954,
-    "ast_hash": "5b9c6795d17ce0ace61935226f540dda",
+    "mtime": 1782779518.1994913,
+    "ast_hash": "7f9a812da7acd14a1ce519d2c0eedf5a",
     "semantic_hash": ""
   },
   "tests/ts/ariaAssistant.test.ts": {
-    "mtime": 1782651515.3265955,
-    "ast_hash": "ccc1233853993f4b91962e1612ad6a19",
+    "mtime": 1782779816.5917985,
+    "ast_hash": "4705ace434353059fc8ed9ff3150f616",
     "semantic_hash": ""
   },
   "tests/ts/ariaData.test.ts": {
-    "mtime": 1781914506.1986196,
-    "ast_hash": "9128f1d5f9f7d8a4be121c092a6bca40",
+    "mtime": 1782779561.0257177,
+    "ast_hash": "4bb31f271f311b622c57bc104413b43b",
     "semantic_hash": ""
   },
   "tests/ts/ariaTools.test.ts": {
-    "mtime": 1782379470.8208418,
+    "mtime": 1782779518.2061982,
     "ast_hash": "9bdfba5e7b051d23acfb88688ba0f427",
     "semantic_hash": ""
   },
   "tests/ts/ariaWebhook.test.ts": {
-    "mtime": 1781943350.0735638,
+    "mtime": 1782779518.2074955,
     "ast_hash": "8fe29eb618472735d89c1f8cfebfa780",
     "semantic_hash": ""
   },
   "tests/ts/cadence.test.ts": {
-    "mtime": 1781218676.6646223,
+    "mtime": 1782779518.2098956,
     "ast_hash": "0f6acb6125650721ef769a1b29c8dcdc",
     "semantic_hash": ""
   },
   "tests/ts/cadenceQueue.test.ts": {
-    "mtime": 1781914506.2324746,
+    "mtime": 1782779518.211273,
     "ast_hash": "1a5070a0dd4f2e0aa218701d484f7290",
     "semantic_hash": ""
   },
   "tests/ts/calendar.test.ts": {
-    "mtime": 1781218676.2008824,
+    "mtime": 1782779518.2145479,
     "ast_hash": "612d063391520f5acc267f57cde8cbdd",
     "semantic_hash": ""
   },
   "tests/ts/channelIngest.test.ts": {
-    "mtime": 1782085003.352958,
+    "mtime": 1782779518.2254372,
     "ast_hash": "589837832c3a729aa42f69e79d234430",
     "semantic_hash": ""
   },
   "tests/ts/clientConfig.test.ts": {
-    "mtime": 1781914506.2504725,
+    "mtime": 1782779518.2286775,
     "ast_hash": "41903dbf9d17177c4c67d226da70d734",
     "semantic_hash": ""
   },
   "tests/ts/ghlAdapter.test.ts": {
-    "mtime": 1782072762.7883637,
+    "mtime": 1782779518.2319396,
     "ast_hash": "4ba88f9d852ade86ec07728865622894",
     "semantic_hash": ""
   },
   "tests/ts/identity.test.ts": {
-    "mtime": 1781218676.2044976,
+    "mtime": 1782779518.2346797,
     "ast_hash": "d4f83402153a4111f0fe618fe0583ea8",
     "semantic_hash": ""
   },
   "tests/ts/importZillowApifyProperties.test.ts": {
-    "mtime": 1781218676.6687853,
+    "mtime": 1782779518.2356496,
     "ast_hash": "766a4ba5edd63abfdd030c883e2f0ed7",
     "semantic_hash": ""
   },
   "tests/ts/inboxData.test.ts": {
-    "mtime": 1781914506.2552183,
+    "mtime": 1782779518.2366357,
     "ast_hash": "930dc592cda806c29409023459f83998",
     "semantic_hash": ""
   },
   "tests/ts/irisEmail.test.ts": {
-    "mtime": 1782769365.838958,
+    "mtime": 1782779518.2449436,
     "ast_hash": "6106419046395e2a1131c269220bfa62",
     "semantic_hash": ""
   },
-  "tests/ts/irisRyseTranscript.test.ts": {
-    "mtime": 1781914506.25884,
-    "ast_hash": "88cfbf45a80fe0d8597f2c7ac793321b",
-    "semantic_hash": ""
-  },
   "tests/ts/manychatApi.test.ts": {
-    "mtime": 1781914506.2618663,
+    "mtime": 1782779518.2483308,
     "ast_hash": "002ab1c921a4da5db1016303bcf6062b",
     "semantic_hash": ""
   },
   "tests/ts/manychatSocial.test.ts": {
-    "mtime": 1782651515.3270357,
+    "mtime": 1782779518.24936,
     "ast_hash": "aa898f158ff1e39e8324e4263a4cc6f9",
     "semantic_hash": ""
   },
   "tests/ts/mediaProxy.test.ts": {
-    "mtime": 1782359888.9579895,
+    "mtime": 1782779518.2505128,
     "ast_hash": "8824d2dbcfb2bc8732c9d849358cdced",
     "semantic_hash": ""
   },
   "tests/ts/metaWhatsapp.test.ts": {
-    "mtime": 1781816913.9780107,
+    "mtime": 1782779518.2566063,
     "ast_hash": "6daaa62b066e57339961fea332889885",
     "semantic_hash": ""
   },
   "tests/ts/notify.test.ts": {
-    "mtime": 1781218676.205071,
+    "mtime": 1782779518.2582865,
     "ast_hash": "a9698956807a32a80dca1c99a846c8e4",
     "semantic_hash": ""
   },
   "tests/ts/outbound.test.ts": {
-    "mtime": 1782035137.6655777,
-    "ast_hash": "789cbb08d0da1f4404595bdeac8bccb6",
+    "mtime": 1782779518.2613144,
+    "ast_hash": "fc755a3d5d69af57a0d7ddee74705a06",
     "semantic_hash": ""
   },
   "tests/ts/styleTraining.test.ts": {
-    "mtime": 1781218676.2128854,
+    "mtime": 1782779518.2667193,
     "ast_hash": "d3e71ebed24925e2501d3ec81e100f06",
     "semantic_hash": ""
   },
   "tests/ts/theoAgent.test.ts": {
-    "mtime": 1782773168.7956598,
+    "mtime": 1782779518.268619,
     "ast_hash": "1e4fe9f5bd83eb2c76914013ae88d02e",
     "semantic_hash": ""
   },
   "tests/ts/theoSocialRouter.test.ts": {
-    "mtime": 1781914506.269765,
+    "mtime": 1782779518.2717187,
     "ast_hash": "14ebbc7f70bd6286e161cf3b5f3c2460",
     "semantic_hash": ""
   },
   "tests/ts/twilioSms.test.ts": {
-    "mtime": 1781221223.5746703,
+    "mtime": 1782779518.2731647,
     "ast_hash": "d6e0124cd19063eac7478898ea00488b",
     "semantic_hash": ""
   },
   "tests/ts/vapi.test.ts": {
-    "mtime": 1782035131.3388393,
+    "mtime": 1782779518.274535,
     "ast_hash": "3673ef95d38e74b5f6dadcee7909aa00",
     "semantic_hash": ""
   },
@@ -1115,8 +1105,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782208868.9781137,
-    "ast_hash": "e4b27e0d6dd03fde2380a85826d1c3ec",
+    "mtime": 1782779668.5984664,
+    "ast_hash": "5ca1cfb1514b1a0cb1e3e71152c1809b",
     "semantic_hash": ""
   },
   "docs/CODEBASE_ONBOARDING.md": {
@@ -1195,8 +1185,8 @@
     "semantic_hash": ""
   },
   "docs/iris-omnichannel-competitive-research.md": {
-    "mtime": 1781914505.190187,
-    "ast_hash": "30d49f0ed0d60da724447ea63573ddc8",
+    "mtime": 1782779518.2783546,
+    "ast_hash": "66e52763cb7fa7b71d0add517230dd4d",
     "semantic_hash": ""
   },
   "docs/lumenosis-real-estate-agent-improvement-plan.md": {
@@ -1935,8 +1925,8 @@
     "semantic_hash": ""
   },
   "tests/ts/gmailConnection.test.ts": {
-    "mtime": 1782379542.2000422,
-    "ast_hash": "1fd4e6b910163c72ca20ba491cfebe3d",
+    "mtime": 1782779518.233439,
+    "ast_hash": "4a4fcc85215a6e89c38f43f9386723fa",
     "semantic_hash": ""
   },
   "COPY_PLAN.md": {
@@ -2355,7 +2345,7 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782654580.2238588,
+    "mtime": 1782779518.239436,
     "ast_hash": "6e0be8555c7b8bd7e93939ebd764cee3",
     "semantic_hash": ""
   },
@@ -2505,7 +2495,7 @@
     "semantic_hash": ""
   },
   "tests/ts/publicPropertyData.test.ts": {
-    "mtime": 1782050849.6506984,
+    "mtime": 1782779518.2642224,
     "ast_hash": "419ff89032b5d63e88c85b2755aa3ffb",
     "semantic_hash": ""
   },
@@ -2535,7 +2525,7 @@
     "semantic_hash": ""
   },
   "tests/ts/leadImport.test.ts": {
-    "mtime": 1782082890.4853811,
+    "mtime": 1782779518.246031,
     "ast_hash": "a19d79269cf7bd95e1c7af0e0252311d",
     "semantic_hash": ""
   },
@@ -2585,12 +2575,12 @@
     "semantic_hash": ""
   },
   "tests/ts/theoAppointments.test.ts": {
-    "mtime": 1782090247.7119923,
+    "mtime": 1782779518.2696624,
     "ast_hash": "d8e8ca7cc2760aee280d6678d9f7c47f",
     "semantic_hash": ""
   },
   "tests/ts/theoLlm.test.ts": {
-    "mtime": 1782090233.4847884,
+    "mtime": 1782779518.2706015,
     "ast_hash": "2487f6972568963247f55912451e7a60",
     "semantic_hash": ""
   },
@@ -2610,8 +2600,8 @@
     "semantic_hash": ""
   },
   "tests/ts/channelConnections.test.ts": {
-    "mtime": 1782654770.7852147,
-    "ast_hash": "e6c0001c7107caa5d488211cd48fd297",
+    "mtime": 1782779549.881223,
+    "ast_hash": "86277942c3aa8be121a98f1980fc2b12",
     "semantic_hash": ""
   },
   "app/api/calendar/appointments/route.ts": {
@@ -2900,27 +2890,27 @@
     "semantic_hash": ""
   },
   "tests/ts/calendarContactsOs.test.ts": {
-    "mtime": 1782135494.5098293,
+    "mtime": 1782779518.215909,
     "ast_hash": "b885ede6415989dcf32d39169f15e53f",
     "semantic_hash": ""
   },
   "tests/ts/channelConnectionDisplay.test.ts": {
-    "mtime": 1782409119.5246167,
+    "mtime": 1782779518.2226386,
     "ast_hash": "a05ee524b650fd7e3148aa741599b1fa",
     "semantic_hash": ""
   },
   "tests/ts/composioSocial.test.ts": {
-    "mtime": 1782204688.937898,
+    "mtime": 1782779518.230334,
     "ast_hash": "b48b313f196143dcdffef7293236d95d",
     "semantic_hash": ""
   },
   "tests/ts/omnichannelEvents.test.ts": {
-    "mtime": 1782179766.5237272,
+    "mtime": 1782779518.25971,
     "ast_hash": "5056a56c26647a544616ac672a635210",
     "semantic_hash": ""
   },
   "tests/ts/providerNormalizers.test.ts": {
-    "mtime": 1782133455.8802397,
+    "mtime": 1782779518.2633133,
     "ast_hash": "53d3fa73eae55b0bc81db384a1b10405",
     "semantic_hash": ""
   },
@@ -2930,8 +2920,8 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-meta-social/route.ts": {
-    "mtime": 1782773133.8184721,
-    "ast_hash": "09a7205fb24873c3f1e1cc9ea10fabca",
+    "mtime": 1782777348.3045502,
+    "ast_hash": "70cfc99b9693ec0b3bc1e67fa68aced6",
     "semantic_hash": ""
   },
   "lib/metaSocial.ts": {
@@ -2940,7 +2930,7 @@
     "semantic_hash": ""
   },
   "tests/ts/metaSocial.test.ts": {
-    "mtime": 1782651515.3276784,
+    "mtime": 1782779518.2542746,
     "ast_hash": "d40aec416f53395ac6dd3a8a0878d932",
     "semantic_hash": ""
   },
@@ -2960,8 +2950,8 @@
     "semantic_hash": ""
   },
   "tests/ts/metaConnect.test.ts": {
-    "mtime": 1782651515.3274722,
-    "ast_hash": "33aed5449530c643aa5d74558909503f",
+    "mtime": 1782779518.252255,
+    "ast_hash": "548bc016e2264c244037672603d138f1",
     "semantic_hash": ""
   },
   "app/api/webhooks/google-drive-sheets/route.ts": {
@@ -2995,7 +2985,7 @@
     "semantic_hash": ""
   },
   "tests/ts/manualReply.test.ts": {
-    "mtime": 1782388908.9907963,
+    "mtime": 1782779518.247512,
     "ast_hash": "002896670f7ae6a421337d4bf75d2f15",
     "semantic_hash": ""
   },
@@ -3040,12 +3030,12 @@
     "semantic_hash": ""
   },
   "tests/ts/audioTranscode.test.ts": {
-    "mtime": 1782600829.2179885,
+    "mtime": 1782779518.2084093,
     "ast_hash": "f0488d3fce18ac97c41eec29a710cf97",
     "semantic_hash": ""
   },
   "tests/ts/cartesiaAudio.test.ts": {
-    "mtime": 1782601718.8660066,
+    "mtime": 1782779518.22126,
     "ast_hash": "d6e94f580591008b0f3d16ec97ad73c0",
     "semantic_hash": ""
   },
@@ -3145,17 +3135,17 @@
     "semantic_hash": ""
   },
   "tests/ts/calendarProvider.test.ts": {
-    "mtime": 1782638815.0066397,
+    "mtime": 1782779518.218124,
     "ast_hash": "55366ba714519e9c5ed4f66162ec826d",
     "semantic_hash": ""
   },
   "tests/ts/inboxReviewResolution.test.ts": {
-    "mtime": 1782716341.498893,
+    "mtime": 1782779518.2417574,
     "ast_hash": "c32102957a868411ffd6cc5fe997de71",
     "semantic_hash": ""
   },
   "tests/ts/requestAudit.test.ts": {
-    "mtime": 1782770968.5298047,
+    "mtime": 1782779518.2652721,
     "ast_hash": "12c611ac4e67bfc180284add14227c65",
     "semantic_hash": ""
   },
@@ -3382,6 +3372,46 @@
   "lib/agentCostAudit.ts": {
     "mtime": 1782770143.2429845,
     "ast_hash": "e89f14e5f849ddc4aaabcd60113b424b",
+    "semantic_hash": ""
+  },
+  "db/migrations/023_property_embeddings.sql": {
+    "mtime": 1782776593.571035,
+    "ast_hash": "f5859d1657fac7b8e1e9aadd41b92bfb",
+    "semantic_hash": ""
+  },
+  "lib/propertyEmbeddings.ts": {
+    "mtime": 1782776593.5715475,
+    "ast_hash": "7bf2ababd1a09a84468be27bf552aedf",
+    "semantic_hash": ""
+  },
+  "lib/propertyRetrieval.ts": {
+    "mtime": 1782776707.8991866,
+    "ast_hash": "b17adce99da74bd4641ca69fa7f9aac8",
+    "semantic_hash": ""
+  },
+  "scripts/backfill-property-embeddings.mjs": {
+    "mtime": 1782776707.9044092,
+    "ast_hash": "e62e7c503f104892e7511e84dee3f0f4",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/austin-iris-google-voice.json": {
+    "mtime": 1782779518.2766542,
+    "ast_hash": "92d2d43219cb3a627c7a6c3761b3ceb1",
+    "semantic_hash": ""
+  },
+  "tests/ts/irisAustinTranscript.test.ts": {
+    "mtime": 1782779570.1544344,
+    "ast_hash": "281c8f79d7ef906b224c9a89d59b16c1",
+    "semantic_hash": ""
+  },
+  "tests/ts/propertyRetrieval.test.ts": {
+    "mtime": 1782779518.2623239,
+    "ast_hash": "23d149928c073a7d0ee08a4a454f3297",
+    "semantic_hash": ""
+  },
+  "docs/property-rag-plan.md": {
+    "mtime": 1782776844.0094266,
+    "ast_hash": "c9727e6329303eab843a47db66657b21",
     "semantic_hash": ""
   }
 }

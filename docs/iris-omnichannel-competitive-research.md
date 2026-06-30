@@ -2,7 +2,7 @@
 
 Date: 2026-06-19
 
-Scope: Speculo AI / Remi public research, the Ryse Realty Google Voice export, and the migration plan for making Iris the single Lumenosis real estate ISA personality across email, SMS, WhatsApp, social DMs, voice, and website chat.
+Scope: Speculo AI / Remi public research, the Austin Realty Google Voice export, and the migration plan for making Iris the single Lumenosis real estate ISA personality across email, SMS, WhatsApp, social DMs, voice, and website chat.
 
 ## Public Speculo / Remi Capability Map
 
@@ -30,13 +30,13 @@ Observed capabilities:
 
 What Speculo appears to be selling is not just an AI caller. It is a lead-reactivation and listing-aware ISA layer that can contact stale database leads, search listings, send property links/media, transfer calls, and keep CRM/calendar state warm.
 
-## Ryse / Remi Conversation Evidence
+## Austin Realty / Iris Conversation Evidence
 
-The Google Voice export shows this Ryse Realty flow:
+The Google Voice export shows this Austin Realty flow:
 
 1. Remi reactivated the lead with a low-friction opener: checking whether the lead was still thinking about buying or selling in Austin or whether plans shifted.
 2. The lead replied that they were still interested in buying in Austin and asked for 2 bed / 2 bath options downtown under $1M.
-3. Remi first asked generic qualification follow-ups, then sent three listing matches from `aisearch.rysehomes.com` with price, beds/baths, square footage, status, and property URLs.
+3. Remi first asked generic qualification follow-ups, then sent three listing matches from `search.austinrealty.example` with price, beds/baths, square footage, status, and property URLs.
 4. When the lead asked for details and photos of the first property, Remi sent a property summary, a listing link, and an image attachment.
 5. When the lead asked for more photos and details by email, Remi sent another SMS listing instead of executing the email handoff.
 6. When the lead asked for a call, Remi acknowledged the call request but the export does not show a completed call transfer or booked appointment.
@@ -44,12 +44,12 @@ The Google Voice export shows this Ryse Realty flow:
 8. When the lead asked for Columbus, Ohio, Remi searched out-of-market and returned no active listings, then asked whether to expand nearby areas.
 9. The export contains stale real estate follow-ups from other teams, financing/lender nudges, spam-like threads, and old "given up?" cadence. Iris needs stronger thread hygiene and source filtering.
 
-The Ryse AI search domain used in the thread:
+The Austin Realty AI search domain used in the thread:
 
 ```text
-https://aisearch.rysehomes.com/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
-https://aisearch.rysehomes.com/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
-https://aisearch.rysehomes.com/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
+https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
+https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
+https://search.austinrealty.example/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true
 ```
 
 ## Iris Should Beat Remi Here
@@ -107,14 +107,14 @@ Phase 3: Cadence queue
 - Enforce one channel per day, quiet hours, stop-on-reply, max touches, consent, and reserved/test number blocking before spend or sends.
 - Queue tasks for SMS, email, voice, WhatsApp, Messenger, Instagram, and manual human follow-up.
 
-Phase 4: AI search / Ryse client config
+Phase 4: AI search / Austin client config
 
 - Add client-level search URL config, for example:
 
 ```bash
-CLIENT_ID=ryse-realty
-CLIENT_NAME=Ryse Realty
-NEXT_PUBLIC_AI_SEARCH_BASE_URL=https://aisearch.rysehomes.com
+CLIENT_ID=austin-realty
+CLIENT_NAME=Austin Realty
+NEXT_PUBLIC_AI_SEARCH_BASE_URL=https://search.austinrealty.example
 AI_SEARCH_TENANT_ID=YQxX9erMaCPdeBOYthLK
 AI_SEARCH_MLS_OSN=Austin
 ```
@@ -123,7 +123,7 @@ AI_SEARCH_MLS_OSN=Austin
 
 Phase 5: Quality gates
 
-- Add fixture tests from the Ryse transcript:
+- Add fixture tests from the Austin transcript:
   - database revival opener
   - 2 bed / 2 bath / downtown / under $1M search
   - details + photos request
