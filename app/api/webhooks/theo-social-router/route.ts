@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertLeadMemoryToDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
@@ -27,6 +27,7 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { createRequestAudit } from "@/lib/requestAudit";
 import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { appendLeadProfileCaptureAsk, decideLeadProfileCapture, leadProfileMemoryPatch } from "@/lib/leadProfileCapture";
 
 export const dynamic = "force-dynamic";
 
@@ -304,10 +305,29 @@ export async function POST(request: NextRequest) {
     const recentEvents = await readEventsForThreadFromDatabase(result.event.thread_ref, 12);
     const messageForReply = combinedInboundMessage(recentEvents, input.messageText);
     const lead = await findLeadInDatabase({ full_name: input.senderName });
+    const initialProfileDecision = decideLeadProfileCapture({
+      channel: socialChannel,
+      message: messageForReply,
+      lead: lead || result.lead,
+    });
+    const profilePatch = leadProfileMemoryPatch({
+      extracted: initialProfileDecision.extracted,
+      existing: lead || result.lead,
+      channel: socialChannel,
+      source: "manychat",
+      message: messageForReply,
+    });
+    const profileLead = Object.keys(profilePatch).length
+      ? await upsertLeadMemoryToDatabase({
+        ...profilePatch,
+        full_name: profilePatch.full_name || input.senderName || lead?.full_name || result.lead.full_name || "",
+      })
+      : null;
+    const leadForReply = profileLead || lead || result.lead;
     const properties = await findSocialProperties(input, messageForReply, recentEvents);
     const enriched = await enrichTheoData({
       message: messageForReply,
-      lead: lead || result.lead,
+      lead: leadForReply,
       properties,
       propertyInterest: input.listingAddress,
     });
@@ -326,7 +346,7 @@ export async function POST(request: NextRequest) {
 
     const reply = await generateTheoReply({
       message: messageForReply,
-      lead: lead || result.lead,
+      lead: leadForReply,
       properties: enriched.properties,
       recentEvents,
       propertyInterest: input.listingAddress,
@@ -344,6 +364,13 @@ export async function POST(request: NextRequest) {
       contactRef: input.senderName || input.senderUsername || input.contactId,
       providerMessageId: input.contactId,
     });
+    const profileDecision = decideLeadProfileCapture({
+      channel: socialChannel,
+      message: messageForReply,
+      lead: leadForReply,
+      classification: reply.classification,
+    });
+    reply.reply = appendLeadProfileCaptureAsk(reply.reply, profileDecision, reply.mediaUrls.length ? 1200 : 520);
 
     const routeResult = buildSocialRouterResult({
       channel: socialChannel,
