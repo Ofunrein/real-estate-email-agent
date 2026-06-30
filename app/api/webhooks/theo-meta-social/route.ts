@@ -24,7 +24,7 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { createRequestAudit } from "@/lib/requestAudit";
 import {
   buildSocialRouterResult,
-  shouldTheoHandleSocialDm,
+  shouldTheoHandleDirectMetaDm,
   socialDmAgentEnabled,
   type SocialDmPayload,
 } from "@/lib/manychatSocial";
@@ -349,7 +349,7 @@ async function processInbound(input: {
     senderUsername: identity.senderUsername,
     messageText,
   });
-  const guard = shouldTheoHandleSocialDm(payload);
+  const guard = shouldTheoHandleDirectMetaDm(payload);
   const existingJob = await readReplyJobByDedupeKeyFromDatabase(messageKey);
   if (existingJob?.status === "sent") return "skipped" as const;
 
