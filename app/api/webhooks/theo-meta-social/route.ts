@@ -22,6 +22,7 @@ import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { understandMediaItems } from "@/lib/mediaUnderstanding";
 import {
   buildSocialRouterResult,
   shouldTheoHandleDirectMetaDm,
@@ -774,7 +775,7 @@ export async function POST(request: NextRequest) {
       results.push({ message_id: inbound.messageId, channel: inbound.channel, action, type: msgType });
       continue;
     }
-    const media = await transcribeMediaItems(inbound.media || []);
+    const media = await understandMediaItems(await transcribeMediaItems(inbound.media || []));
     const action = inbound.isEcho || normalized?.isEcho
       ? await processOutboundEcho({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) })
       : await processInbound({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) });

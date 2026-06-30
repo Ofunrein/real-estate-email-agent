@@ -205,6 +205,38 @@ function attachmentUrl(value: Record<string, unknown>): string {
   ].map((item) => cleanText(item)).find(Boolean) || "";
 }
 
+function attachmentThumbnailUrl(value: Record<string, unknown>): string {
+  const payload = jsonRecord(value.payload);
+  const imageData = jsonRecord(value.image_data || payload.image_data);
+  const videoData = jsonRecord(value.video_data || payload.video_data);
+  return [
+    value.thumbnail_url,
+    value.thumbnail,
+    payload.thumbnail_url,
+    payload.thumbnail,
+    imageData.url,
+    imageData.src,
+    videoData.thumbnail_url,
+    videoData.thumbnail,
+  ].map((item) => cleanText(item)).find(Boolean) || "";
+}
+
+function attachmentLinkUrl(value: Record<string, unknown>): string {
+  const payload = jsonRecord(value.payload);
+  return [
+    value.link_url,
+    value.target_url,
+    value.permalink,
+    value.share_url,
+    payload.link_url,
+    payload.target_url,
+    payload.permalink,
+    payload.share_url,
+    payload.url,
+    payload.link,
+  ].map((item) => cleanText(item)).find((item) => /^https?:\/\//i.test(item)) || "";
+}
+
 function attachmentLabel(value: Record<string, unknown>, url: string): string {
   const payload = jsonRecord(value.payload);
   const direct = cleanText(value.title || value.name || value.filename || payload.title || payload.name);
@@ -228,18 +260,34 @@ function extractAttachments(value: unknown): OmnichannelMedia[] {
     if (typeof input !== "object") return;
     const record = input as Record<string, unknown>;
     const url = attachmentUrl(record);
-    if (url && !seen.has(url)) {
-      seen.add(url);
+    if (url) {
+      const linkUrl = attachmentLinkUrl(record);
+      const thumbnailUrl = attachmentThumbnailUrl(record);
+      const displayUrl = linkUrl && thumbnailUrl && /(?:instagram\.com|facebook\.com|fb\.watch|threads\.net|tiktok\.com|youtube\.com|youtu\.be)\//i.test(linkUrl)
+        ? thumbnailUrl
+        : url;
+      const seenKey = linkUrl || displayUrl;
+      if (seen.has(seenKey)) {
+        for (const [key, child] of Object.entries(record)) {
+          if (["sender", "recipient", "from", "to"].includes(key)) continue;
+          if (child && typeof child === "object") visit(child, depth + 1);
+        }
+        return;
+      }
+      seen.add(seenKey);
+      seen.add(displayUrl);
       const label = attachmentLabel(record, url);
       media.push({
         id: cleanText(record.id || record.attachment_id),
-        url,
-        type: attachmentTypeFrom(record, url),
+        url: displayUrl,
+        type: attachmentTypeFrom(record, displayUrl),
         contentType: cleanText(record.mime_type || record.content_type || record.contentType) || undefined,
         filename: label || cleanText(record.name || record.filename) || undefined,
         providerMetadata: {
           attachment_type: cleanText(record.type),
           title: label,
+          linkUrl: linkUrl && linkUrl !== displayUrl ? linkUrl : "",
+          thumbnailUrl: thumbnailUrl && thumbnailUrl !== displayUrl ? thumbnailUrl : "",
         },
       });
     }

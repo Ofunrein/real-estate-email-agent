@@ -53,11 +53,47 @@ export function mediaTranscriptLines(media: OmnichannelMedia[] = []): string[] {
     .filter(Boolean);
 }
 
+function providerMetadataRecord(item: OmnichannelMedia): Record<string, unknown> {
+  return item.providerMetadata && typeof item.providerMetadata === "object" && !Array.isArray(item.providerMetadata)
+    ? item.providerMetadata
+    : {};
+}
+
+function mediaContextRecord(item: OmnichannelMedia): Record<string, unknown> {
+  const metadata = providerMetadataRecord(item);
+  const context = metadata.mediaContext || metadata.media_context;
+  return context && typeof context === "object" && !Array.isArray(context)
+    ? context as Record<string, unknown>
+    : {};
+}
+
+export function mediaContextLines(media: OmnichannelMedia[] = []): string[] {
+  return media
+    .flatMap((item) => {
+      const context = mediaContextRecord(item);
+      const summary = String(context.summary || "").trim();
+      const extractedText = String(context.extractedText || context.extracted_text || "").trim();
+      const label = item.type === "image"
+        ? "Image context"
+        : item.type === "video"
+          ? "Video context"
+          : item.type === "audio"
+            ? "Audio context"
+            : "Attachment context";
+      return [
+        summary ? `${label}: ${summary}` : "",
+        extractedText ? `Visible/extracted text: ${extractedText}` : "",
+      ];
+    })
+    .filter(Boolean);
+}
+
 export function normalizedMessageText(input: Pick<OmnichannelMessageReceived, "text" | "media">): string {
   const text = String(input.text || "").trim();
   const mediaLines = mediaTranscriptLines(input.media);
+  const contextLines = mediaContextLines(input.media);
   const attachmentLine = !text && !mediaLines.length && input.media?.length ? "Attachment" : "";
-  return [text, ...mediaLines, attachmentLine].filter(Boolean).join("\n\n");
+  return [text, ...mediaLines, ...contextLines, attachmentLine].filter(Boolean).join("\n\n");
 }
 
 export function isMediaTranscribable(media: Pick<OmnichannelMedia, "type" | "contentType" | "url" | "filename">): boolean {
@@ -81,6 +117,7 @@ export function mediaLogLines(media: OmnichannelMedia[] = []): string[] {
     return [
       url ? `${label}: ${url}` : "",
       ...mediaTranscriptLines([item]),
+      ...mediaContextLines([item]),
     ].filter(Boolean);
   });
 }

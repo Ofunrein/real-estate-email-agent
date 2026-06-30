@@ -132,7 +132,7 @@ export interface EmailMessage {
   subject?: string;
   body?: string;
   html?: string;
-  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string }>;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'video' | 'file'; transcript?: string; label?: string; linkUrl?: string; thumbnailUrl?: string }>;
   cards?: PropertyCard[];
   showSchedule?: boolean;
   flag?: string;
@@ -159,7 +159,7 @@ export interface SmsMessage {
   time: string;
   body: string;
   html?: string;
-  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'file'; transcript?: string; label?: string; linkUrl?: string }>;
+  media?: Array<{ url: string; alt: string; kind?: 'image' | 'audio' | 'video' | 'file'; transcript?: string; label?: string; linkUrl?: string; thumbnailUrl?: string }>;
   reactions?: Array<{ emoji: string; by: 'contact' | 'owner'; action?: 'react' | 'unreact' }>;
 }
 
