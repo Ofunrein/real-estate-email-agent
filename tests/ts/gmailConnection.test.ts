@@ -19,12 +19,12 @@ test("gmail oauth state is signed and carries client/operator", () => {
   process.env.AUTH_SECRET = "test-secret";
   try {
     const state = signedGmailOAuthState({
-      clientId: "ryse-realty",
+      clientId: "austin-realty",
       operatorEmail: "operator@example.com",
       next: "/",
     });
     assert.deepEqual(verifyGmailOAuthState(state), {
-      clientId: "ryse-realty",
+      clientId: "austin-realty",
       operatorEmail: "operator@example.com",
       next: "/",
     });

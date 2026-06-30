@@ -54,7 +54,7 @@ test("propertySmsBody: uses configured AI search link when property id is availa
   const originalBase = process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL;
   const originalTenant = process.env.AI_SEARCH_TENANT_ID;
   const originalMls = process.env.AI_SEARCH_MLS_OSN;
-  process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL = "https://aisearch.rysehomes.com";
+  process.env.NEXT_PUBLIC_AI_SEARCH_BASE_URL = "https://search.austinrealty.example";
   process.env.AI_SEARCH_TENANT_ID = "YQxX9erMaCPdeBOYthLK";
   process.env.AI_SEARCH_MLS_OSN = "Austin";
   try {
@@ -67,7 +67,7 @@ test("propertySmsBody: uses configured AI search link when property id is availa
       listing_url: "https://www.zillow.com/homedetails/old",
     }));
 
-    assert.match(body, /https:\/\/aisearch\.rysehomes\.com\/property\/5013978221052957045/);
+    assert.match(body, /https:\/\/search\.austinrealty\.example\/property\/5013978221052957045/);
     assert.match(body, /tenant_id=YQxX9erMaCPdeBOYthLK/);
     assert.match(body, /mls_osn=Austin/);
     assert.doesNotMatch(body, /zillow\.com/);

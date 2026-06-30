@@ -5,7 +5,6 @@ import { listChannelConnections } from "@/lib/channelConnections";
 import {
   claimEventDedupeInDatabase,
   conversationEventMessageIdExists,
-  findCandidatePropertiesFromDatabase,
   findLeadInDatabase,
   findPropertiesByAddressesFromDatabase,
   findSocialBrowserThreadByUsernameFromDatabase,
@@ -41,6 +40,7 @@ import {
   type MetaSocialChannel,
 } from "@/lib/metaSocial";
 import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 
 export const dynamic = "force-dynamic";
 
@@ -257,7 +257,7 @@ async function findSocialProperties(message: string, recentEvents: Awaited<Retur
     propertySearch.mode !== "general",
   );
   const candidateMatches = shouldSearch
-    ? await findCandidatePropertiesFromDatabase(
+    ? await retrievePropertiesForAgent(
       {
         query: propertyQuery,
         area: propertySearch.area,
@@ -273,6 +273,7 @@ async function findSocialProperties(message: string, recentEvents: Awaited<Retur
         ].filter(Boolean),
       },
       5,
+      { channel: "social" },
     )
     : [];
   return [...addressMatches, ...candidateMatches]

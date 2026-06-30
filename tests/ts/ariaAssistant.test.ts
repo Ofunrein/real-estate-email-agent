@@ -78,7 +78,7 @@ test("buildAriaAssistant: keeps saved first message inbound-safe", () => {
 
 test("buildAriaAssistant: voice brand can differ from inbox client name", () => {
   const voiceConfig = resolveClientConfig({
-    CLIENT_NAME: "Ryse Realty",
+    CLIENT_NAME: "Legacy Realty",
     TEAM_NAME: "Austin Realty",
     HUMAN_TRANSFER_NUMBER: "+15128152032",
   });
@@ -87,7 +87,7 @@ test("buildAriaAssistant: voice brand can differ from inbox client name", () => 
   assert.equal(assistant.firstMessage, "Thanks for calling Austin Realty, this is Iris. How can I help?");
   const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
   assert.match(messages[0].content, /voice assistant for Austin Realty/);
-  assert.doesNotMatch(messages[0].content, /voice assistant for Ryse Realty/);
+  assert.doesNotMatch(messages[0].content, /voice assistant for Legacy Realty/);
 });
 
 test("buildAriaAssistant: custom voice id wired, system prompt branded", () => {

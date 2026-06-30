@@ -1,15 +1,15 @@
 {
-  "fixtureId": "ryse-remi-google-voice-2026-06-19",
+  "fixtureId": "austin-iris-google-voice-2026-06-19",
   "source": {
     "kind": "google_voice_html_export",
     "path": "docs/Voice - (29) Messages (6_19_2026 5：16：43 PM).html",
     "exportedAt": "2026-06-19T17:16:43-05:00",
-    "client": "Ryse Realty",
+    "client": "Austin Realty",
     "assistantName": "Remi",
     "targetAgentName": "Iris"
   },
   "listingSearch": {
-    "baseUrl": "https://aisearch.rysehomes.com",
+    "baseUrl": "https://search.austinrealty.example",
     "tenantId": "YQxX9erMaCPdeBOYthLK",
     "mlsOsn": "Austin"
   },
@@ -19,7 +19,7 @@
       "timestamp": "2026-06-17T17:55:00-05:00",
       "speaker": "remi",
       "direction": "assistant_to_lead",
-      "text": "Chad! This is Remi with Ryse Realty Group. We wanted to check in about buying or selling a home in the Austin area. Still thinking of doing anything or did plans shift?"
+      "text": "Chad! This is Remi with Austin Realty. We wanted to check in about buying or selling a home in the Austin area. Still thinking of doing anything or did plans shift?"
     },
     {
       "id": "m02",
@@ -61,11 +61,11 @@
       "timestamp": "2026-06-19T11:52:00-05:00",
       "speaker": "remi",
       "direction": "assistant_to_lead",
-      "text": "Found 3 homes in Austin, TX: 1. 3401 Neal ST B, Austin, TX: $599,900, 2bd/2ba, 1,066 sqft, Active https://aisearch.rysehomes.com/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 2. 1189 Oakgrove Ave, Austin, TX: $599,000, 3bd/1ba, 1,530 sqft, Active https://aisearch.rysehomes.com/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 3. 1707 Spyglass DR 123, Austin, TX: $540,000, 2bd/2ba, 1,335 sqft, Active https://aisearch.rysehomes.com/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+      "text": "Found 3 homes in Austin, TX: 1. 3401 Neal ST B, Austin, TX: $599,900, 2bd/2ba, 1,066 sqft, Active https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 2. 1189 Oakgrove Ave, Austin, TX: $599,000, 3bd/1ba, 1,530 sqft, Active https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true 3. 1707 Spyglass DR 123, Austin, TX: $540,000, 2bd/2ba, 1,335 sqft, Active https://search.austinrealty.example/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
       "links": [
-        "https://aisearch.rysehomes.com/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
-        "https://aisearch.rysehomes.com/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
-        "https://aisearch.rysehomes.com/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+        "https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+        "https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true",
+        "https://search.austinrealty.example/property/5018084977197200761?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
       ]
     },
     {
@@ -80,9 +80,9 @@
       "timestamp": "2026-06-19T16:53:00-05:00",
       "speaker": "remi",
       "direction": "assistant_to_lead",
-      "text": "3401 Neal ST B, Austin, TX $599,900, 2bd/2ba, 1,066 sqft, Active Notes: **This home qualifies under the Community Reinvestment program, allowing buyers to lock in interest rates typically 1% lower than market rates with NO INCOME RESTRICTIONS. Inquire for more information.** Live the Austin Dream in This Ado... Link: https://aisearch.rysehomes.com/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
+      "text": "3401 Neal ST B, Austin, TX $599,900, 2bd/2ba, 1,066 sqft, Active Notes: **This home qualifies under the Community Reinvestment program, allowing buyers to lock in interest rates typically 1% lower than market rates with NO INCOME RESTRICTIONS. Inquire for more information.** Live the Austin Dream in This Ado... Link: https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
       "links": [
-        "https://aisearch.rysehomes.com/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+        "https://search.austinrealty.example/property/5013978221052957045?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
       ],
       "attachments": [
         {
@@ -102,9 +102,9 @@
       "timestamp": "2026-06-19T16:56:00-05:00",
       "speaker": "remi",
       "direction": "assistant_to_lead",
-      "text": "1189 Oakgrove Ave, Austin, TX $599,000, 3bd/1ba, 1,530 sqft, Active Notes: Incredible home in the Heart of East Austin. Contact today!! Link: https://aisearch.rysehomes.com/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
+      "text": "1189 Oakgrove Ave, Austin, TX $599,000, 3bd/1ba, 1,530 sqft, Active Notes: Incredible home in the Heart of East Austin. Contact today!! Link: https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true, Attachment: Image",
       "links": [
-        "https://aisearch.rysehomes.com/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
+        "https://search.austinrealty.example/property/5010086478384677653?tenant_id=YQxX9erMaCPdeBOYthLK&mls_osn=Austin&no_squeeze=true"
       ],
       "attachments": [
         {

@@ -1,397 +1,532 @@
 # Real Estate Email Agent
 
-An AI-powered Gmail agent for real estate teams. Monitors your inbox, understands what each email is asking for, and sends a personalized reply within seconds — property details with photos, live Zillow search results, lead qualification, showing scheduling, and more.
+Real Estate Email Agent is the Lumenosis real estate automation app. It started as **Iris**, a Gmail agent for real estate teams, and grew into an omnichannel lead-handling system around that same email-first brain.
 
-Built for solo agents and small teams (1-20 agents). Each client gets their own deployed instance.
+The main product is still the Gmail/Agent Inbox workflow: Iris reads real estate emails, understands the lead, searches property context, drafts or sends a useful reply, and keeps the team in control. The newer SMS, Instagram, Messenger, WhatsApp, voice, and website-chat paths are channel adapters around that same core memory, property search, and handoff system.
+
+The current demo client is **Austin Realty**. Runtime config, seeded database rows, channel connections, and RAG embeddings should use `CLIENT_ID=austin-realty`.
+
+Customer replies use Claude. Property RAG uses OpenAI only for embeddings, stored in Neon Postgres with `pgvector`.
+
+---
+
+## What this project became
+
+This repo is no longer just a local Gmail script. It is now a hosted omnichannel real estate agent platform.
+
+The easiest way to understand it:
+
+| Part | What it means |
+|---|---|
+| Main product | Iris Gmail agent plus Agent Inbox for reviewing leads, replies, memory, and handoffs |
+| Core job | Respond fast to real estate leads with accurate property context and safe escalation |
+| Omnichannel layer | Lets the same lead brain handle SMS, Instagram, Messenger, WhatsApp, voice, and website chat |
+| Memory layer | Stores every lead, message, summary, and handoff in Neon so channels do not operate in isolation |
+| Property layer | Combines structured SQL filters, live/imported listings, and vector search for natural property requests |
+| Human-control layer | Draft-first email, needs-human categories, thread takeover, audit logs, and dashboard visibility |
+
+The product direction is: **Gmail inbox agent first, omnichannel real estate front desk second**. Email is the anchor because real estate teams already work out of their inbox. The extra channels exist so the same conversation can continue wherever the lead replies.
 
 ---
 
 ## Screenshots
 
-**Live Zillow search results** — "show me 3-bed homes under $500k in Round Rock":
+**Live Zillow search results** - "show me 3-bed homes under $500k in Round Rock":
 
 ![Search results with Zillow photos](docs/screenshot-search-results.png)
 
-**Property detail reply** — photo, price, beds/baths/sqft, mortgage rates, Calendly button:
+**Property detail reply** - photo, price, beds/baths/sqft, mortgage rates, Calendly button:
 
 ![Property detail reply](docs/screenshot-property-detail.png)
 
-**Seller lead qualification** — asks one question + free home valuation CTA:
+**Seller lead qualification** - asks one question + free home valuation CTA:
 
 ![Seller lead reply](docs/screenshot-seller-lead.png)
 
 ---
 
-## What it does
+## What the app does
 
-| Email type | What happens |
+The app receives messages from real estate leads, decides what the lead wants, looks up the right context, and responds through the same channel.
+
+| Lead asks for | What happens |
 |---|---|
-| Single property inquiry | HTML reply with hero photo, price, beds/baths/sqft, mortgage rates, neighborhood stats, Calendly button, and optional similar homes block |
-| Multi-property inquiry | Card-per-property reply with photos and details for all addresses |
-| Property search (e.g. "3-bed under $500k in Round Rock") | Searches your sheet first, hits live Zillow if sheet has fewer than 3 matches, appends new results to sheet |
-| Showing request | Reply with Calendly booking link |
-| Buyer lead | Qualifies over up to 3 emails (budget, area, timeline) → HubSpot contact |
-| Seller lead | Qualifies + sends free home valuation form link |
-| Renter lead | Qualifies → routes to property manager if configured |
-| Hot lead detected | Instant SMS to agent via Twilio |
-| No reply in 3 days | Automatic day-3 follow-up email |
-| No reply in 7 days | Final follow-up, then marked cold |
-| Spam / complex | Labeled `NEEDS_HUMAN`, no reply sent |
+| A specific property | Finds the matching property, adds useful facts, and replies with details and links |
+| A broad search | Uses SQL filters for hard facts like price, beds, baths, city, and ZIP, then RAG/vector search for softer wording like "modern kitchen" or "good natural light" |
+| Photos | Sends safe public image links or falls back to a listing/gallery URL |
+| A showing | Routes to booking flow, calendar tools, or human handoff depending on channel state |
+| A call | Flags handoff or voice follow-up |
+| Seller valuation | Qualifies the seller and routes to valuation CTA or human follow-up |
+| Confusing, risky, or high-intent message | Marks the thread for human review instead of forcing an unsafe auto-reply |
 
-All replies include a consistent signature and are sent as threaded replies to the original email.
+All channels write to the same Neon tables, so email, SMS, Instagram, Messenger, WhatsApp, voice, and website chat can share memory.
 
 ---
 
-## Data sources
+## Product evolution
 
-| Source | Used for | Cost |
+The project has three generations in one repo:
+
+| Generation | What existed | Status now |
 |---|---|---|
-| Google Sheet | Your own active listings (primary cache) | Free |
-| Zillow via Apify | Live property details + photos for any address | ~$0.002/lookup |
-| Zillow search via Apify | Live inventory search by area/beds/price | ~$0.002/result |
-| Zillow sold comps via Apify | Max 2 comps, only on explicit price/value questions | ~$0.006/trigger |
-| RentCast | Rental value estimates | Free (50 req/month) |
-| FRED API | Current 30yr/15yr mortgage rates | Free |
-| Census ACS | Neighborhood median income by ZIP | Free |
+| 1. Local Gmail agent | `agent.py` polled Gmail, classified emails, searched property data, and replied | Still present as legacy compatibility |
+| 2. Hosted Iris inbox | Next.js/Vercel app, Gmail OAuth, Gmail push webhooks, Inngest background processing, Agent Inbox UI | Main production path |
+| 3. Omnichannel handling | SMS, WhatsApp, Instagram/Messenger, website chat, and voice routes that share Iris memory and property logic | Active channel layer around the email-first product |
 
-New properties fetched from Zillow/RentCast are automatically appended to your Google Sheet so future inquiries hit the sheet cache at zero cost.
+This matters when reading the code:
 
----
-
-## Setup
-
-### 1. Google Cloud — Gmail + Sheets OAuth
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create a project
-2. Enable **Gmail API** and **Google Sheets API**
-3. Configure OAuth consent screen → External → add your Gmail as a test user
-4. Create **OAuth 2.0 Client ID** → **Desktop app** → Download JSON → save as `credentials.json`
-5. Add `http://localhost:8080/` to Authorized redirect URIs
-
-### 2. Google Sheet
-
-Create a sheet with a tab named **`properties`**. Row 1 headers (exact order):
-
-```
-address | price | beds | baths | city | state | zip | description | neighborhood | property_type | features | days_on_market | photo_url | sqft | year_built | status | listing_url | agent_name | agent_email
-```
-
-Copy the Sheet ID from the URL: `https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
-
-### 3. API keys
-
-| Service | Where to get it | Cost |
-|---|---|---|
-| Anthropic | [console.anthropic.com](https://console.anthropic.com) | Pay-per-use (~$0.01–0.05/email) |
-| Apify | [console.apify.com](https://console.apify.com) → Settings → Integrations | Pay-per-use |
-| HubSpot | App → Settings → Integrations → Private Apps | Free tier |
-| Twilio | [console.twilio.com](https://console.twilio.com) | ~$0.008/SMS |
-| RentCast | [app.rentcast.io](https://app.rentcast.io) | Free (50 req/month) |
-| FRED | [fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html) | Free |
-| Census | [api.census.gov/data/key_signup.html](https://api.census.gov/data/key_signup.html) | Free |
-| Calendly | [calendly.com](https://calendly.com) | Free tier |
-
-### 4. Install
-
-```bash
-git clone https://github.com/Ofunrein/real-estate-email-agent
-cd real-estate-email-agent
-pip install -r requirements.txt
-cp .env.example .env
-# Fill in .env with your keys
-```
-
-### 5. First run
-
-```bash
-python agent.py
-```
-
-A browser window opens for Gmail OAuth. Approve access — `token.json` is saved and re-auth is not needed again unless scopes change.
-
-The agent only processes emails that arrive **after** first start. The startup timestamp is saved to `state.json`.
+- Older files may say `Theo`, `Aria`, or `Olivia` because those were channel-specific names while the product was expanding.
+- Iris is the real product identity and shared assistant personality.
+- Route names are kept stable because Twilio, Meta, Vapi, Gmail, and other external systems already point to those URLs.
+- The business logic should keep moving into shared modules so each channel is just a transport, not a separate agent.
 
 ---
 
-## Configuration
+## Architecture
 
-All config lives in `.env`. See [`.env.example`](.env.example) for the full reference.
-
-Key variables:
-
-```bash
-TEAM_NAME=Austin Realty          # Used in replies and notifications
-TEAM_LEAD_EMAIL=                 # Receives lead notifications + fallback routing
-AGENT_PHONE=+1xxxxxxxxxx         # SMS destination for hot leads and Theo handoff alerts
-POLL_INTERVAL_SECONDS=60         # How often to check for new emails
-ENABLE_SIMILAR_HOMES=false       # Optional similar-home cards on single-property inquiry emails
-ENABLE_SMS_AGENT=false           # Set true only after Twilio dry-run checks pass
-TWILIO_ACCOUNT_SID=              # Required for Theo outbound SMS
-TWILIO_AUTH_TOKEN=               # Required for Theo outbound SMS
-TWILIO_FROM=+1xxxxxxxxxx         # Twilio sender number
-TWILIO_MESSAGING_SERVICE_SID=    # Prefer for RCS-capable Messaging Service send/fallback
-ENABLE_SMS_IMAGES=false          # Optional MMS property photos
-SMS_IMAGE_MODE=on_request        # off | on_request | property_reply
-SMS_MAX_IMAGES=3                 # Max one photo per requested property, capped at 3
-THEO_ENRICHMENT_TIMEOUT_MS=14000 # Live data budget so SMS photo/detail lookups can return before reply
-THEO_APIFY_TIMEOUT_SECONDS=12    # Keeps live SMS enrichment inside Twilio's webhook window
-THEO_REPLY_DEBOUNCE_MS=2500      # Wait briefly to combine rapid-fire texts into one reply
-GOOGLE_MAPS_API_KEY=             # Optional Street View fallback when Zillow photos are unavailable
-```
-
-**Agent routing:** Add `Agent Name` and `Agent Email` columns to your sheet. Inquiries about a specific listing are CC'd to that agent automatically.
-
----
-
-## Agent Inbox V1
-
-Agent Inbox is a read-only monitor for the shared Google Sheet workbook. It shows lead memory, conversation events, email threads, and basic metrics.
-
-Prepare the workbook:
-
-```bash
-python3 scripts/setup_agent_inbox_sheets.py
-```
-
-Run the email agent:
-
-```bash
-python3 -m channels.iris_email
-```
-
-## Lead Import Pipeline
-
-The managed implementation layer can import old and active leads without triggering outreach automatically.
-
-`POST /api/leads/import` accepts:
-
-- `multipart/form-data` with a CSV `file`
-- JSON `{ "csvText": "..." }`
-- JSON `{ "rows": [...] }` from Google Sheets exports, Composio connector actions, or manual import tools
-- JSON `{ "pullCrm": true, "sourceType": "crm" }` for the configured CRM adapter when it supports import, currently GHL first
-
-Every source is normalized into the same `lead_memory` shape, deduped by email, phone, CRM source id, or normalized name, then segmented for review. Default segments include hot buyer, seller/valuation, showing-ready, nurture, financing, renter, needs human, missing contact info, do not contact, duplicate/merged, and closed/no reply.
-
-Fresh imports only produce batch summaries and campaign candidates. Reactivation sending must be enabled from a separate reviewed campaign step.
-
-The legacy `python3 agent.py` entry point still works. Disable Iris with `ENABLE_EMAIL_AGENT=false`.
-
-Run the local Python Agent Inbox debug viewer:
-
-```bash
-python3 -m agent_inbox.app
-```
-
-Open `http://127.0.0.1:8787`.
-
-Run the Next.js Agent Inbox:
-
-```bash
-npm install
-npm run dev
-```
-
-Open `http://127.0.0.1:3000`.
-
-The dashboard polls `/api/data` every 5 seconds. Theo/Olivia webhook events usually appear on the next poll because they write to Neon during the inbound request. Iris email events appear after the Gmail poller records them; by default that means up to `POLL_INTERVAL_SECONDS` plus the next 5-second dashboard refresh. In Google Sheets-only mode, the dashboard cache is also 5 seconds.
-
-Hosted Iris email uses a separate Gmail mailbox connection from dashboard login. Operators still sign in to `app.lumenosis.com` with an allowlisted Google account, then click **Connect** in the inbox top bar to choose the Gmail account Iris should read and reply from. That mailbox can be a different Google account than the operator login.
-
-For hosted Gmail OAuth, add this redirect URI to the Google OAuth client:
+The simplest mental model:
 
 ```text
-https://app.lumenosis.com/api/settings/email-account/callback
+Lead message
+  -> channel adapter
+  -> shared Iris brain
+  -> Neon memory + property context + RAG
+  -> Claude reply
+  -> channel sender
+  -> Agent Inbox visibility
 ```
 
-Set `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` for a separate Gmail OAuth app, or let it fall back to `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`. Connected Gmail refresh tokens are encrypted before storage with `EMAIL_ACCOUNT_ENCRYPTION_KEY` or `AUTH_SECRET`.
+For Gmail, the flow is:
 
-For hosted/multi-client deployment, run the Postgres schema and sync Sheets into the database:
+```text
+Gmail push notification
+  -> /api/webhooks/iris-gmail-push
+  -> Inngest durable job
+  -> load Gmail thread + lead memory + property context
+  -> Iris classifies the message
+  -> draft, auto-send, label, or human-review decision
+  -> write conversation_events + lead_memory + ai_drafts
+  -> show the result in Agent Inbox
+```
+
+For non-email channels, the flow is:
+
+```text
+Twilio / Meta / Vapi / website payload
+  -> channel webhook
+  -> normalize sender, thread, message, media, and consent
+  -> load shared lead memory and recent cross-channel history
+  -> search properties when needed
+  -> generate a channel-sized Claude reply
+  -> send through the provider when enabled
+  -> write the same Neon event timeline used by email
+```
+
+Important pieces:
+
+| Layer | Main files | Purpose |
+|---|---|---|
+| Gmail product core | `lib/irisEmail.ts`, `lib/inngest/functions/gmailPushReceived.ts` | Iris email classification, draft/send behavior, labels, thread state, durable hosted Gmail processing |
+| Agent Inbox | `app/page.tsx`, `app/api/data/route.ts`, inbox APIs under `app/api/threads/*` | Operator view for leads, channels, drafts, categories, takeovers, and message history |
+| Channel adapters | `app/api/webhooks/*/route.ts` | Receives SMS, WhatsApp, Meta social, voice, website, and Gmail push events |
+| Shared memory | `lib/database.ts` | Reads/writes clients, properties, lead memory, events, settings, channels, drafts, and audit rows |
+| Property retrieval | `lib/propertyRetrieval.ts` | Shared SQL plus optional vector retrieval for property candidates |
+| Embeddings | `lib/propertyEmbeddings.ts` | Builds property text and calls OpenAI embeddings |
+| Inngest jobs | `lib/inngest/functions/*` | Durable background processing for hosted Gmail |
+| Backfill scripts | `scripts/*` | Imports, syncs, migrations, RAG backfill, channel tests |
+| Tests | `tests/ts/*` | TypeScript unit and integration-style checks |
+
+Some route names still say Theo, Aria, or Olivia because vendors already point to those URLs. The runtime personality should be Iris/Austin Realty unless a specific compatibility path says otherwise.
+
+---
+
+## Channels
+
+The channel layer is deliberately thin. Its job is to translate each provider into the same internal shape: who sent it, which thread it belongs to, what the message says, what media came with it, and whether the app is allowed to respond.
+
+| Channel | Current route | Notes |
+|---|---|---|
+| Gmail / email | `/api/webhooks/iris-gmail-push` | Hosted Gmail push enters a durable Inngest flow |
+| SMS | `/api/webhooks/theo-sms` | Twilio inbound SMS/RCS route |
+| WhatsApp | `/api/webhooks/theo-whatsapp` | Meta WhatsApp Cloud API route |
+| Instagram / Messenger | `/api/webhooks/theo-meta-social` | Direct Meta social webhook route |
+| Website chat | `/api/webhooks/olivia-website` | Logs website/chat intake and can trigger SMS when consent is present |
+| Voice | `/api/webhooks/aria-voice` | Vapi/voice events and call summaries |
+
+Every successful inbound/outbound turn should create rows in `conversation_events` and update `lead_memory` when the contact identity is known.
+
+The intended behavior is not "six separate bots." It is one Iris system with multiple doors:
+
+- Gmail is the primary workflow for business-critical replies and human review.
+- SMS is for fast lead response, showing coordination, and short follow-ups.
+- Instagram and Messenger catch social DMs and route them into the same memory.
+- WhatsApp mirrors the same Theo/Iris SMS-style logic through Meta Cloud API.
+- Voice handles phone calls and call summaries while reading the same lead context.
+- Website chat captures web leads and can start SMS follow-up when consent exists.
+
+---
+
+## Database
+
+Neon Postgres is the system of record.
+
+Core tables:
+
+| Table | Purpose |
+|---|---|
+| `clients` | One row per client tenant. Demo client: `austin-realty` |
+| `properties` | Structured property catalog |
+| `property_embeddings` | Vector embeddings for RAG property matching |
+| `lead_memory` | Contact-level memory and qualification state |
+| `conversation_events` | Timeline of inbound/outbound messages across channels |
+| `channel_connections` | Connected Instagram, Messenger, Gmail, and other channel accounts |
+| `email_accounts` | Hosted Gmail mailbox tokens |
+| `inbox_settings` / `inbox_categories` | Agent Inbox behavior and review categories |
+| `request_audit_events` | Webhook/audit trail for debugging live traffic |
+
+Run migrations with your loaded `DATABASE_URL`:
 
 ```bash
 for migration in db/migrations/*.sql; do
   psql "$DATABASE_URL" -f "$migration"
 done
-npm run sync:sheets
 ```
 
-Current sync contract: Google Sheets remains the editable source for manual property/config edits and `npm run sync:sheets` upserts those rows into Neon. Live Theo property lookups write to Neon and append missing properties back to the Sheet when possible. General Neon-to-Sheets editing is not automatic yet because the Sheet has no per-row `updated_at` or conflict marker; add that before enabling broad two-way overwrites.
+The RAG migration is:
 
-See [docs/hosted-client-onboarding.md](/Users/martinofunrein/Downloads/real-estate-email-agent/docs/hosted-client-onboarding.md).
+```text
+db/migrations/023_property_embeddings.sql
+```
 
-Neon bootstrap and GoHighLevel mirror:
+---
+
+## Property RAG
+
+RAG is implemented directly in Neon, not LangChain and not a separate vector database.
+
+Why:
+
+- Property data already lives in Postgres.
+- SQL is better for exact filters like price, beds, baths, city, ZIP, and status.
+- Vector search is useful for fuzzy language like "cozy", "open concept", "lots of natural light", or "good for entertaining".
+- Keeping both in Neon avoids syncing live property data to a second database.
+
+Activation checklist:
 
 ```bash
-npm run setup:neon
-npm run sync:ghl
+# 1. Apply db/migrations/023_property_embeddings.sql
+
+# 2. Backfill embeddings for the active client
+CLIENT_ID=austin-realty npm run rag:backfill -- --limit=5000 --batch=96
+
+# 3. Enable runtime retrieval
+PROPERTY_RAG_ENABLED=true
 ```
 
-Hosted channel webhooks write to Neon and then appear in the dashboard:
+Backfill uses `OPENAI_API_KEY` or `PROPERTY_EMBEDDING_OPENAI_API_KEY` for `text-embedding-3-small`. Customer-facing replies still use Claude.
 
-| Channel | Agent | Webhook |
-|---|---|---|
-| SMS | Theo | `/api/webhooks/theo-sms` |
-| WhatsApp | Theo | `/api/webhooks/theo-whatsapp` |
-| Instagram / Messenger direct | Theo | `/api/webhooks/theo-meta-social` |
-| Voice | Aria | `/api/webhooks/aria-voice` |
-| Website chat | Olivia | `/api/webhooks/olivia-website` |
+At runtime:
 
-Set `CHANNEL_WEBHOOK_SECRET` to require `x-lumenosis-webhook-secret` or `?secret=` on inbound webhook calls. V1 behavior:
+- Exact address lookup stays deterministic.
+- Candidate property searches call `retrievePropertiesForAgent(...)`.
+- Voice skips RAG by default for latency unless explicitly enabled later.
+- If `PROPERTY_RAG_ENABLED` is not `true`, the app falls back to normal SQL/property rows.
 
-- Theo SMS logs inbound messages, updates shared memory, generates one safe reply, sends through Twilio only when `ENABLE_SMS_AGENT=true`, then logs the outbound reply.
-- Theo preserves the inbound thread type. If Twilio posts `From=rcs:+...`, Theo replies through `TWILIO_MESSAGING_SERVICE_SID`; if Twilio posts `From=+...`, Theo replies from `TWILIO_FROM` so normal SMS stays in the phone-number thread.
-- Theo SMS sends internal handoff alerts to `AGENT_PHONE` when a lead asks for help or a message is marked `needs_human`.
-- Theo SMS uses the same context categories as Iris email: lead memory, prior thread history, property sheet rows, Austin Realty knowledge, and live enrichment when keys are available. It passes rich property facts like description, neighborhood, type, features, DOM, photo availability, listing URL, listing agent fields, RentCast/Apify fills, FRED rates, Census ZIP stats, and gated sold comps into the SMS reply model. Replies are explicitly no-emoji.
-- Theo can send MMS/RCS property photos when `ENABLE_SMS_IMAGES=true`. Default mode is `SMS_IMAGE_MODE=on_request`, so photos attach only when the lead asks for photos/pictures/images and Theo has a real public HTTPS image URL. For explicit property requests, Theo sends one matching photo per requested property, capped by `SMS_MAX_IMAGES` and never above 3. Sendable media is proxied through `/api/media/proxy` so Twilio can fetch it reliably. Google Street View fallback URLs are not treated as sendable photos because they can return Google error images; when no real photo is available, Theo sends the listing/photo-gallery link instead. Sensitive/handoff replies never attach images.
-- Olivia website logs form/chat intake. If the payload includes `phone` plus explicit `sms_consent`, it triggers Theo's first SMS reply.
-- Theo WhatsApp uses Meta Cloud API when `ENABLE_WHATSAPP_AGENT=true`. Meta webhook verification is handled by `GET /api/webhooks/theo-whatsapp` with `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; inbound text/image/button messages are logged, passed through the same Claude/property/booking logic as SMS, sent with `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_ACCESS_TOKEN`, and outbound replies are logged to the WhatsApp thread. If `META_APP_SECRET` is set, POST requests must pass Meta's `x-hub-signature-256` check.
-- Theo WhatsApp can send property images as native Meta image messages when `ENABLE_WHATSAPP_IMAGES=true`. It uses the same safe-photo selection as SMS, caps sends with `WHATSAPP_MAX_IMAGES`, and uses `/api/media/proxy` as an absolute URL when `PUBLIC_BASE_URL` is set.
-- Direct Instagram/Messenger webhook mode uses `ENABLE_META_SOCIAL_WEBHOOKS=true` or per-channel flags plus `META_SOCIAL_PAGE_ACCESS_TOKEN` and `META_SOCIAL_WEBHOOK_VERIFY_TOKEN`. When direct mode is enabled for a channel, the Composio social poller skips that channel and dashboard/manual sends prefer Meta direct send.
-- Voice and website chat remain logging/monitoring routes until those channel agents are enabled.
+---
 
-Meta WhatsApp setup:
+## Local setup
 
-1. Set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN`, `ENABLE_WHATSAPP_AGENT=true`, and optionally `ENABLE_WHATSAPP_IMAGES=true`.
-2. In Meta Developers → App → WhatsApp → Configuration, set callback URL to `${PUBLIC_BASE_URL}/api/webhooks/theo-whatsapp` and verify token to `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
-3. Subscribe the app to WhatsApp `messages`.
-4. Send a WhatsApp test message from an allowed number and confirm the inbound and outbound events appear under the dashboard's WhatsApp channel.
+Install dependencies:
 
-Local Theo SMS test without a public Twilio webhook:
+```bash
+npm install
+```
+
+Copy and fill environment variables:
+
+```bash
+cp .env.example .env
+```
+
+Minimum local variables for the hosted TypeScript app:
+
+```bash
+DATABASE_URL=
+CLIENT_ID=austin-realty
+CLIENT_NAME="Austin Realty"
+TEAM_NAME="Austin Realty"
+EMAIL_ACCOUNT_CLIENT_ID=austin-realty
+PUBLIC_BASE_URL=http://127.0.0.1:3000
+AUTH_URL=http://127.0.0.1:3000
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+PROPERTY_RAG_ENABLED=true
+```
+
+Start the Next.js app:
 
 ```bash
 npm run dev
 ```
 
-In a second terminal:
+Open:
+
+```text
+http://127.0.0.1:3000
+```
+
+---
+
+## Environment groups
+
+Most configuration lives in `.env` locally and Vercel project env vars in production.
+
+| Group | Key examples | Used for |
+|---|---|---|
+| Client | `CLIENT_ID`, `CLIENT_NAME`, `TEAM_NAME` | Branding and tenant routing |
+| Database | `DATABASE_URL`, `DATABASE_SSL` | Neon reads/writes |
+| Claude | `ANTHROPIC_API_KEY`, Claude model vars | Customer-facing classification and replies |
+| Embeddings | `OPENAI_API_KEY`, `PROPERTY_EMBEDDING_OPENAI_API_KEY`, `PROPERTY_RAG_ENABLED` | Property vector search |
+| Gmail | `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `EMAIL_ACCOUNT_ENCRYPTION_KEY` | Hosted mailbox connection |
+| Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, `TWILIO_MESSAGING_SERVICE_SID` | SMS/RCS send and receive |
+| Meta | `META_SOCIAL_WEBHOOK_VERIFY_TOKEN`, `META_SOCIAL_APP_SECRET`, `META_SOCIAL_PAGE_ACCESS_TOKEN` | Instagram and Messenger direct webhooks |
+| WhatsApp | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | WhatsApp Cloud API |
+| Voice | `VAPI_API_KEY`, `VAPI_*`, `ARIA_*` | Voice assistant provisioning and callbacks |
+
+Do not commit real secrets. Plain client flags like `CLIENT_ID=austin-realty` are safe, but API keys and tokens are not.
+
+---
+
+## Instagram and Messenger
+
+Direct Meta social mode is controlled by:
+
+```bash
+ENABLE_META_SOCIAL_WEBHOOKS=true
+ENABLE_INSTAGRAM_DIRECT_WEBHOOK=true
+ENABLE_MESSENGER_DIRECT_WEBHOOK=true
+META_SOCIAL_WEBHOOK_VERIFY_TOKEN=
+META_SOCIAL_APP_SECRET=
+META_SOCIAL_PAGE_ACCESS_TOKEN=
+ENABLE_SOCIAL_DM_AGENT=true
+```
+
+Meta webhook URL:
+
+```text
+https://app.lumenosis.com/api/webhooks/theo-meta-social
+```
+
+Expected checks:
+
+- `GET` verification returns the Meta challenge when the verify token matches.
+- `POST` requests pass `x-hub-signature-256` when the app secret is set.
+- Inbound messages write `conversation_events` under `client_id='austin-realty'`.
+- The channel connection is present in `channel_connections`.
+
+---
+
+## SMS testing
+
+Local Theo SMS test:
 
 ```bash
 npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
 ```
 
-Watch the `npm run dev` terminal for `[Theo SMS]` lines. This simulates an inbound Twilio SMS locally, can send a real reply when `ENABLE_SMS_AGENT=true`, and records the same Neon conversation events the dashboard reads.
-
-Do not use reserved `+1555...` numbers for live Twilio smoke tests. Theo blocks reserved/test-like NANP recipients before sending and skips reserved inbound payloads before writing to Neon, so bad local tests cannot create invalid-number sends or dashboard noise. Use `ENABLE_SMS_AGENT=false` for dry runs, or test against a real opted-in device.
-
-For live SMS/RCS testing, expose the Next.js app with a public URL, set `PUBLIC_BASE_URL`, then point the Twilio Messaging Service inbound webhook at Theo:
+Live Twilio setup helper:
 
 ```bash
 npm run theo:twilio:configure
 ```
 
-That command sets the Messaging Service inbound URL to `${PUBLIC_BASE_URL}/api/webhooks/theo-sms`, disables deferring RCS inbound messages to individual number webhooks, and also points the direct `TWILIO_FROM` SMS webhook at Theo. It preserves the phone number's voice webhook, so Vapi calls can keep working while SMS/RCS land in the same Theo route. Quick tunnel URLs are only for local testing; production needs a stable deployed URL.
+Important flags:
 
-Theo logs inbound SMS as soon as Twilio posts to `/api/webhooks/theo-sms`, then waits `THEO_REPLY_DEBOUNCE_MS` before replying so rapid-fire texts can collapse into one response. If a newer inbound message arrives in the same thread during that window, the older webhook exits without sending and the newest webhook replies with the combined pending messages. Response time is the sum of debounce delay, database writes, context reads, live enrichment, Claude classification/reply, Twilio send, and outbound logging. The terminal logs show each phase:
+```bash
+ENABLE_SMS_AGENT=false          # keep false for dry runs
+ENABLE_SMS_IMAGES=false         # optional MMS/RCS property photos
+SMS_IMAGE_MODE=on_request       # off | on_request | property_reply
+SMS_MAX_IMAGES=3
+THEO_REPLY_DEBOUNCE_MS=2500
+THEO_ENRICHMENT_TIMEOUT_MS=14000
+THEO_APIFY_TIMEOUT_SECONDS=12
+```
+
+Do not use reserved `+1555...` numbers for live Twilio smoke tests. The app blocks test-like NANP numbers to avoid bad sends and noisy dashboard rows.
+
+---
+
+## Gmail setup
+
+Hosted Gmail uses an OAuth mailbox connection that can be different from the dashboard login account.
+
+Google OAuth redirect URI:
 
 ```text
-[Theo SMS] inbound received { parseMs: 4, ... }
-[Theo SMS] inbound logged { elapsedMs: 42, totalMs: 71, ... }
-[Theo SMS] debounce checked { debounceMs: 2500, hasNewerInbound: false, ... }
-[Theo SMS] context read complete { propertyRows: 5, threadEvents: 8, elapsedMs: 54, ... }
-[Theo SMS] metric { service: 'claude', label: 'theo_reply', elapsedMs: 1420, cost: '$0.00411', sessionCost: '$0.00495' }
-[Theo SMS] reply send processed { replyStatus: 'sent', elapsedMs: 311, ... }
-[Theo SMS] webhook complete { totalMs: 3840, sessionCost: '$0.00495' }
+https://app.lumenosis.com/api/settings/email-account/callback
 ```
 
-For live SMS, keep enrichment fast enough for Twilio but long enough for property media. `THEO_ENRICHMENT_TIMEOUT_MS` defaults to 14000ms for the whole live enrichment step, and `THEO_APIFY_TIMEOUT_SECONDS` defaults to 12 seconds per Apify actor call. Longer data repair should run through sheet/property hygiene jobs, not the live SMS response path.
-
-Property hygiene checks:
+Set:
 
 ```bash
-python3 scripts/property_hygiene.py
-python3 scripts/property_hygiene.py --repair
-python3 scripts/property_hygiene.py --enrich --limit 25
+GMAIL_OAUTH_CLIENT_ID=
+GMAIL_OAUTH_CLIENT_SECRET=
+EMAIL_ACCOUNT_ENCRYPTION_KEY=
+EMAIL_ACCOUNT_CLIENT_ID=austin-realty
 ```
 
-V1 uses three required tabs in the same Google Sheet workbook:
+Hosted Gmail push enters:
 
-- `properties`
-- `lead_memory`
-- `conversation_events`
-
----
-
-## Gmail labels
-
-| Label | Meaning |
-|---|---|
-| `AUTO_REPLIED` | Agent replied automatically |
-| `NEEDS_HUMAN` | Flagged for manual follow-up (spam, complaints, complex) |
-
----
-
-## Follow-up sequences
-
-For buyer, seller, and renter leads:
-
-- **Day 3** — Soft check-in referencing their budget/area/timeline
-- **Day 7** — Final touch, keeps door open, then marked cold
-
-Tracked per thread in `state.json`. No external scheduler needed.
-
----
-
-## Logging
-
-Every external API call, Claude invocation, Gmail send, label, and HubSpot action is logged to `agent.log` with timestamps, HTTP status, and elapsed time. Cost is tracked per call and as a running session total.
-
+```text
+/api/webhooks/iris-gmail-push
 ```
-2026-05-18 14:32:01 [INFO] --- Processing message id=... from=buyer@example.com
-2026-05-18 14:32:01 [INFO] Intent: property_details | Addresses: ['5005 Buchanan Draw Rd, Austin TX']
-2026-05-18 14:32:02 [INFO] Apify maxcopell/zillow-detail-scraper — returned 1 item(s)
-2026-05-18 14:32:02 [INFO] COST $0.00200 — apify (maxcopell/zillow-detail-scraper x1) | session total $0.0020
-2026-05-18 14:32:03 [INFO] Claude claude-sonnet-4-6 — 890 in / 198 out tokens (1243ms)
-2026-05-18 14:32:03 [INFO] COST $0.00564 — claude | session total $0.0076
-2026-05-18 14:32:04 [INFO] Gmail send — delivered
-2026-05-18 14:32:04 [INFO] Reply sent — to=buyer@example.com intent=property_details
+
+The durable processor is the Inngest function:
+
+```text
+gmail.push.received
 ```
 
 ---
 
-## Deploy 24/7
+## Sync and imports
 
-**Railway / Render (recommended):**
-```
-Start command: python agent.py
-```
+Google Sheets can still be used as an editable property source.
 
-**VPS:**
 ```bash
-nohup python agent.py >> agent.log 2>&1 &
+npm run sync:sheets
 ```
 
-**Per-client deployment:** Each client gets their own folder with their own `.env`, `credentials.json`, and `token.json`. One process per client. ~$5/month per instance on Railway.
+Other useful jobs:
 
+```bash
+npm run setup:neon
+npm run sync:ghl
+npm run import:zillow
+npm run normalize:rental-prices
+npm run rag:backfill -- --limit=5000 --batch=96
 ```
-client_folder/
-├── agent.py
-├── credentials.json
-├── token.json        ← generated once locally, then uploaded
-├── .env              ← client-specific config
-└── state.json        ← auto-generated at runtime
+
+Current sync contract:
+
+- Google Sheets can seed/update Neon property rows.
+- Live property lookups can write to Neon and append missing rows back to Sheets when configured.
+- Broad Neon-to-Sheets overwrite is not automatic yet because the sheet needs row-level conflict markers first.
+
+---
+
+## Tests and checks
+
+Run TypeScript tests:
+
+```bash
+npm test
+```
+
+Run lint/type check:
+
+```bash
+npm run lint
+```
+
+Run production build:
+
+```bash
+npm run build
+```
+
+Run Python tests if you are touching legacy Python code:
+
+```bash
+npm run test:py
 ```
 
 ---
 
-## Cost estimate
+## Deployment
 
-Typical per-email cost for a property inquiry (Apify + Claude):
+Production app:
 
-| Item | Cost |
-|---|---|
-| Haiku classification | ~$0.0002 |
-| Zillow detail lookup | $0.002 |
-| Sonnet reply generation | ~$0.005 |
-| **Total per email** | **~$0.007** |
+```text
+https://app.lumenosis.com
+```
 
-A team handling 200 inbound emails/month: ~$1.40/month in AI/scraping costs.
+Vercel project env must include:
+
+```bash
+CLIENT_ID=austin-realty
+CLIENT_NAME=Austin Realty
+TEAM_NAME=Austin Realty
+EMAIL_ACCOUNT_CLIENT_ID=austin-realty
+PROPERTY_RAG_ENABLED=true
+```
+
+After changing Vercel env vars, deploy again so serverless functions receive the new values:
+
+```bash
+vercel deploy --prod
+```
 
 ---
 
-## Requirements
+## Legacy Python agent
 
-- Python 3.10+
-- Gmail account with API access
-- Google Sheet (read/write)
-- Anthropic API key
-- Apify token
+The older Python email poller still exists for compatibility:
 
-All other integrations (HubSpot, Twilio, FRED, Census, RentCast) are optional but recommended.
+```bash
+python agent.py
+```
+
+Modern hosted work should prefer the TypeScript/Vercel path. Keep Python changes scoped unless you are explicitly working on the legacy poller.
+
+---
+
+## Common debugging queries
+
+Check recent channel activity:
+
+```sql
+select channel, count(*) as events, max(created_at) as latest
+from conversation_events
+where client_id = 'austin-realty'
+group by channel
+order by latest desc;
+```
+
+Check connected channels:
+
+```sql
+select channel, provider, status, selected_asset_name, updated_at
+from channel_connections
+where client_id = 'austin-realty'
+order by updated_at desc;
+```
+
+Check RAG coverage:
+
+```sql
+select client_id, count(*) as vectors
+from property_embeddings
+group by client_id;
+```
+
+Check latest webhook audit events:
+
+```sql
+select route, channel, provider, outcome, status_code, created_at
+from request_audit_events
+where client_id = 'austin-realty'
+order by created_at desc
+limit 25;
+```
+
+---
+
+## Project rules
+
+- Austin Realty is the active demo client.
+- Keep channel logic centralized in shared agent modules instead of duplicating business logic inside Twilio, Meta, or Vapi builders.
+- Use SQL for exact constraints and RAG for semantic property matching.
+- Keep image/media links real and public before sending them through SMS, WhatsApp, or social DMs.
+- Prefer durable processing for hosted Gmail and other work that must survive a serverless response ending.
+- Do not add LangChain unless there is a concrete provider orchestration problem that the direct adapters cannot handle.

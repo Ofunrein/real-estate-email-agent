@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { metaWhatsAppIngestInput, normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { extractMetaWhatsAppMessages, sendMetaWhatsApp, verifyMetaSignature, whatsAppMessageWithMediaLog } from "@/lib/metaWhatsapp";
@@ -14,6 +14,7 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 
 export const dynamic = "force-dynamic";
 
@@ -310,7 +311,7 @@ export async function POST(request: NextRequest) {
         : [];
       const properties = !rejectedPriorProperty && (requestedAddresses.length || (!relatedRequest && exactAddresses.length))
         ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
-        : await findCandidatePropertiesFromDatabase({
+        : await retrievePropertiesForAgent({
           ...propertySearch,
           mode: candidateSearchMode,
           query: propertyQuery,
@@ -319,7 +320,7 @@ export async function POST(request: NextRequest) {
             ...referenceProperties.map((property) => property.address).filter(Boolean),
             ...exactAddresses,
           ].filter(Boolean),
-        }, 5);
+        }, 5, { channel: "whatsapp" });
       logTheoWhatsApp("context read complete", {
         leadPhone: inbound.from,
         propertyRows: properties.length,

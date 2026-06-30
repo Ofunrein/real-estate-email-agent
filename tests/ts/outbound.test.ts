@@ -140,7 +140,7 @@ test("outboundFirstMessage: defaults voice company to team name before client na
   try {
     delete process.env.ARIA_CLIENT_NAME;
     process.env.TEAM_NAME = "Austin Realty";
-    process.env.CLIENT_NAME = "Ryse Realty";
+    process.env.CLIENT_NAME = "Austin Realty";
     assert.equal(
       outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
       "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
@@ -160,7 +160,7 @@ test("outboundFirstMessage: ARIA_CLIENT_NAME overrides team name", () => {
   const priorAria = process.env.ARIA_CLIENT_NAME;
   try {
     process.env.ARIA_CLIENT_NAME = "Austin Realty";
-    process.env.TEAM_NAME = "Ryse Realty";
+    process.env.TEAM_NAME = "Austin Realty";
     assert.equal(
       outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
       "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",

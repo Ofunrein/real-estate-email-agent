@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { bookAppointment } from "@/lib/ariaCalendar";
 import { notifySlackOnHotLead } from "@/lib/ariaSlack";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
+import { findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
 import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
 import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       const lead = await findLeadInDatabase({ phone, email, full_name: fullName });
       const propertyQuery = extractTheoPropertySearchQuery(propertyInterest, message, lead?.property_interest || "");
       const [properties, recentEvents] = await Promise.all([
-        findCandidatePropertiesFromDatabase(propertyQuery, 5),
+        retrievePropertiesForAgent(propertyQuery, 5, { channel: "website_chat" }),
         readEventsForThreadFromDatabase(`sms:${phone}`, 12),
       ]);
       const enriched = await enrichTheoData({

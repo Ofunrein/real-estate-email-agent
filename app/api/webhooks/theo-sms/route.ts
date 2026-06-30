@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
-import { findCandidatePropertiesFromDatabase, findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
+import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { generateTheoReply } from "@/lib/theoAgent";
 import { isTakeoverActive } from "@/lib/humanTakeover";
@@ -15,6 +15,7 @@ import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 import { createRequestAudit, type RequestAuditInput } from "@/lib/requestAudit";
+import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 
 export const dynamic = "force-dynamic";
 
@@ -572,7 +573,7 @@ export async function POST(request: NextRequest) {
       : [];
     const properties = !rejectedPriorProperty && (requestedAddresses.length || (!relatedRequest && exactAddresses.length))
       ? await findPropertiesByAddressesFromDatabase(exactAddresses, 5)
-      : await findCandidatePropertiesFromDatabase({
+      : await retrievePropertiesForAgent({
         ...propertySearch,
         mode: candidateSearchMode,
         query: propertyQuery,
@@ -581,7 +582,7 @@ export async function POST(request: NextRequest) {
           ...referenceProperties.map((property) => property.address).filter(Boolean),
           ...exactAddresses,
         ].filter(Boolean),
-      }, 5);
+      }, 5, { channel: "sms" });
     logTheo("context read complete", {
       leadPhone: payload.From,
       propertyRows: properties.length,

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import fixture from "@/tests/fixtures/ryse-remi-google-voice.json";
+import fixture from "@/tests/fixtures/austin-iris-google-voice.json";
 
 type FixtureMessage = {
   id: string;
@@ -53,7 +53,7 @@ function textForScenario(scenario: TranscriptScenario): string {
   return scenario.messageIds.map((id) => messageById(id).text).join(" ").trim();
 }
 
-function classifyRyseFixtureTurn(scenario: TranscriptScenario): ClassifiedTurn {
+function classifyAustinFixtureTurn(scenario: TranscriptScenario): ClassifiedTurn {
   const text = textForScenario(scenario);
   const normalized = text.toLowerCase();
   const firstMessage = messageById(scenario.messageIds[0]);
@@ -159,12 +159,12 @@ function assertClassificationIncludes(actual: ClassifiedTurn, expected: Expected
   }
 }
 
-test("ryse Google Voice fixture: transcript extraction is stable", () => {
-  assert.equal(fixture.fixtureId, "ryse-remi-google-voice-2026-06-19");
+test("austin Google Voice fixture: transcript extraction is stable", () => {
+  assert.equal(fixture.fixtureId, "austin-iris-google-voice-2026-06-19");
   assert.equal(fixture.source.kind, "google_voice_html_export");
   assert.match(fixture.source.path, /Voice - \(29\) Messages/);
   assert.equal(messages.length, 21);
-  assert.equal(messages[0].text, "Chad! This is Remi with Ryse Realty Group. We wanted to check in about buying or selling a home in the Austin area. Still thinking of doing anything or did plans shift?");
+  assert.equal(messages[0].text, "Chad! This is Remi with Austin Realty. We wanted to check in about buying or selling a home in the Austin area. Still thinking of doing anything or did plans shift?");
   assert.equal(messages.at(-1)?.text, "Can you see these?");
 
   for (const message of messages) {
@@ -174,22 +174,22 @@ test("ryse Google Voice fixture: transcript extraction is stable", () => {
   }
 });
 
-test("ryse Google Voice fixture: listing links preserve Ryse search config", () => {
+test("austin Google Voice fixture: listing links preserve Austin search config", () => {
   const linkMessages = messages.filter((message) => message.links?.length);
   const links = linkMessages.flatMap((message) => message.links || []);
 
-  assert.equal(fixture.listingSearch.baseUrl, "https://aisearch.rysehomes.com");
+  assert.equal(fixture.listingSearch.baseUrl, "https://search.austinrealty.example");
   assert.equal(fixture.listingSearch.tenantId, "YQxX9erMaCPdeBOYthLK");
   assert.equal(fixture.listingSearch.mlsOsn, "Austin");
   assert.equal(new Set(links).size, 3);
   for (const link of links) {
-    assert.match(link, /^https:\/\/aisearch\.rysehomes\.com\/property\/\d+\?/);
+    assert.match(link, /^https:\/\/search\.austinrealty\.example\/property\/\d+\?/);
     assert.match(link, /tenant_id=YQxX9erMaCPdeBOYthLK/);
     assert.match(link, /mls_osn=Austin/);
   }
 });
 
-test("ryse Google Voice fixture: Phase 5 classification expectations are covered", () => {
+test("austin Google Voice fixture: Phase 5 classification expectations are covered", () => {
   const requiredScenarioIds = [
     "database_revival_opener",
     "downtown_two_bed_search",
@@ -203,12 +203,12 @@ test("ryse Google Voice fixture: Phase 5 classification expectations are covered
   assert.deepEqual(scenarios.map((scenario) => scenario.id), requiredScenarioIds);
 
   for (const scenario of scenarios) {
-    const actual = classifyRyseFixtureTurn(scenario);
+    const actual = classifyAustinFixtureTurn(scenario);
     assertClassificationIncludes(actual, scenario.expected);
   }
 });
 
-test("ryse Google Voice fixture: observed Remi misses stay visible", () => {
+test("austin Google Voice fixture: observed Remi misses stay visible", () => {
   const emailPreference = scenarios.find((scenario) => scenario.id === "email_preference_request");
   assert.ok(emailPreference?.observedFailure);
   assert.match(messageById(emailPreference.observedFailure.messageIds[0]).text, /1189 Oakgrove Ave/);
