@@ -76,6 +76,15 @@ export type RequestAuditSummary = {
   byService: Record<string, number>;
 };
 
+export type SocialFallbackHealth = {
+  fallbackEvents24h: number;
+  lastFallbackAt: string;
+  lastFallbackChannel: string;
+  lastFallbackThreadRef: string;
+  directMetaLastAt: string;
+  stuckJobs: number;
+};
+
 function truncate(value: string, max = 300): string {
   return value.length > max ? `${value.slice(0, max)}...` : value;
 }
@@ -311,5 +320,61 @@ export async function readRequestAuditEvents(input: RequestAuditQuery = {}): Pro
   } catch (error) {
     console.warn("[request-audit] read failed", error instanceof Error ? error.message : error);
     return [];
+  }
+}
+
+export async function readSocialFallbackHealth(): Promise<SocialFallbackHealth> {
+  const empty: SocialFallbackHealth = {
+    fallbackEvents24h: 0,
+    lastFallbackAt: "",
+    lastFallbackChannel: "",
+    lastFallbackThreadRef: "",
+    directMetaLastAt: "",
+    stuckJobs: 0,
+  };
+  if (!databaseEnabled()) return empty;
+  try {
+    const [fallback, direct, stuck] = await Promise.all([
+      getPool().query(
+        `select count(*) filter (where created_at >= now() - interval '24 hours') as count_24h,
+                max(created_at) as last_at,
+                (array_agg(channel order by created_at desc))[1] as last_channel,
+                (array_agg(thread_ref order by created_at desc))[1] as last_thread_ref
+           from request_audit_events
+          where client_id = $1
+            and (provider = 'composio_fallback' or stage like 'fallback_%' or outcome = 'fallback_active')`,
+        [clientId()],
+      ),
+      getPool().query(
+        `select max(created_at) as last_at
+           from request_audit_events
+          where client_id = $1
+            and channel in ('instagram','messenger')
+            and provider <> 'composio_fallback'
+            and route like '%meta%'`,
+        [clientId()],
+      ),
+      getPool().query(
+        `select count(*) as count
+           from reply_jobs
+          where client_id = $1
+            and channel in ('instagram','messenger')
+            and status in ('fallback_active','received','send_failed','blocked','needs_human','review_ready')
+            and updated_at < now() - interval '10 minutes'`,
+        [clientId()],
+      ),
+    ]);
+    const row = fallback.rows[0] || {};
+    return {
+      fallbackEvents24h: Number(row.count_24h || 0),
+      lastFallbackAt: row.last_at ? new Date(String(row.last_at)).toISOString() : "",
+      lastFallbackChannel: String(row.last_channel || ""),
+      lastFallbackThreadRef: String(row.last_thread_ref || ""),
+      directMetaLastAt: direct.rows[0]?.last_at ? new Date(String(direct.rows[0].last_at)).toISOString() : "",
+      stuckJobs: Number(stuck.rows[0]?.count || 0),
+    };
+  } catch (error) {
+    console.warn("[request-audit] fallback health read failed", error instanceof Error ? error.message : error);
+    return empty;
   }
 }

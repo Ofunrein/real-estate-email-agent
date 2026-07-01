@@ -57,9 +57,20 @@ export type CalendarListPage = {
   nextSyncToken?: string;
 };
 
+export type CalendarSource = {
+  id: string;
+  name: string;
+  description?: string;
+  timezone?: string;
+  color?: string;
+  primary?: boolean;
+  raw?: Record<string, unknown>;
+};
+
 export interface CalendarProvider {
   readonly provider: CalendarProviderName | string;
 
+  listCalendars?(): Promise<CalendarSource[]>;
   listEvents(input?: CalendarListInput): Promise<CalendarListPage>;
   createEvent(input: CalendarEventInput): Promise<CalendarEvent>;
   updateEvent(eventId: string, update: CalendarEventUpdate): Promise<CalendarEvent>;

@@ -287,6 +287,7 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
             meta: `${t.messageCount} messages`,
             categoryLabel: categoryMeta[t.category]?.label,
             categoryColor: colors[t.category],
+            fallbackUsed: t.fallbackUsed,
             unreadCount: seenOverrides[t.id] ? 0 : t.unreadCount,
             seen: seenOverrides[t.id] ? true : t.seen
           }))}

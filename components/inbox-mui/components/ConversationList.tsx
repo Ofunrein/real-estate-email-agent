@@ -20,6 +20,7 @@ export interface ConversationListItem {
   unreadCount?: number;
   seen?: boolean;
   needsReview?: boolean;
+  fallbackUsed?: boolean;
   categoryLabel?: string;
   categoryColor?: string;
 }
@@ -207,6 +208,17 @@ export function ConversationList({
                     border: '1px solid',
                     borderColor: it.categoryColor || 'divider',
                     '& .MuiChip-label': { px: 0.6 }
+                  }} />
+                }
+                {it.fallbackUsed &&
+                <Chip
+                  size="small"
+                  label="Fallback"
+                  color="info"
+                  variant="outlined"
+                  sx={{
+                    height: 17,
+                    fontSize: 10
                   }} />
                 }
                 {it.needsReview &&

@@ -1,4 +1,4 @@
-import type { CalendarAttendee, CalendarEvent } from "./calendar-provider.interface";
+import type { CalendarAttendee, CalendarEvent, CalendarSource } from "./calendar-provider.interface";
 import type { ContactEmail, ContactPhone, ContactRecord } from "./contacts-provider.interface";
 
 type JsonRecord = Record<string, unknown>;
@@ -136,6 +136,21 @@ export function normalizeCalendarEvent(provider: string, rawValue: unknown): Cal
     htmlLink: firstString(raw.htmlLink, raw.webLink) || undefined,
     updatedAt: firstString(raw.updated, raw.lastModifiedDateTime, raw.updatedAt) || undefined,
     etag: firstString(raw.etag, raw["@odata.etag"]) || undefined,
+    raw,
+  };
+}
+
+export function normalizeCalendarSource(rawValue: unknown): CalendarSource {
+  const raw = record(rawValue);
+  const sourceId = firstString(raw.id, raw.calendarId, raw.calendar_id, raw.externalId, raw.external_id);
+  const name = firstString(raw.summary, raw.name, raw.title, raw.displayName, raw.ownerEmail, "Calendar");
+  return {
+    id: sourceId || normalizeIdPart(name) || "primary",
+    name,
+    description: firstString(raw.description) || undefined,
+    timezone: firstString(raw.timeZone, raw.timezone, raw.time_zone) || undefined,
+    color: firstString(raw.backgroundColor, raw.color, raw.hexColor) || undefined,
+    primary: Boolean(raw.primary || raw.isPrimary || raw.default),
     raw,
   };
 }
