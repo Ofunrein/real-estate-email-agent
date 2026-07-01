@@ -715,8 +715,47 @@ test("adaptInboxData labels Instagram shared posts from media metadata", () => {
   const message = model.textThreads.instagram[0].messages[0];
 
   assert.equal(message.media?.length, 1);
-  assert.equal(message.media?.[0].kind, "file");
+ assert.equal(message.media?.[0].kind, "image");
+ assert.equal(message.media?.[0].linkUrl, "https://www.instagram.com/reel/example/");
   assert.equal(message.media?.[0].alt, "Shared Instagram post");
+});
+
+
+
+test("adaptInboxData turns Meta URL-only Instagram shares into preview cards", () => {
+  const data = composeInboxData(
+    [],
+    [
+      {
+        channel: "instagram",
+        direction: "outbound",
+        source: "meta_social_echo",
+        full_name: "@martn.o",
+        phone: "1526516032549624",
+        thread_ref: "instagram:116105473108942",
+        gmail_message_id: "instagram:url-only-share",
+        message_text: "Attachment context: design skills",
+        media_json: JSON.stringify([
+          {
+            type: "unknown",
+            url: "https://www.instagram.com/reel/DaPc06fSOA7/",
+            filename: "Comment DESIGN and I’ll send you all 42 skills",
+            providerMetadata: {
+              title: "Comment DESIGN and I’ll send you all 42 skills",
+              attachment_type: "ig_reel",
+              mediaContext: { summary: "Claude design skills reel" },
+            },
+          },
+        ]),
+        event_at: "2026-07-01T08:17:25.902Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+  const message = adaptInboxData(data).textThreads.instagram[0].messages[0];
+  assert.equal(message.media?.[0].kind, "image");
+  assert.equal(message.media?.[0].linkUrl, "https://www.instagram.com/reel/DaPc06fSOA7/");
+  assert.match(message.media?.[0].label || "", /Claude design skills|Comment DESIGN/i);
 });
 
 test("adaptInboxData renders Instagram shared reel thumbnails as preview cards", () => {

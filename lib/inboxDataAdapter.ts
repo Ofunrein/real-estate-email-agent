@@ -346,6 +346,10 @@ function reactionsByTarget(events: SheetRow[]) {
   return map;
 }
 
+function isInstagramShareUrl(value: string): boolean {
+  return /^https?:\/\/(?:www\.)?instagram\.com\/(?:reel|p|tv|stories)\//i.test(value.trim());
+}
+
 function eventMedia(event: SheetRow): ThreadMedia[] {
   const media: ThreadMedia[] = [];
   const seen = new Set<string>();
@@ -355,35 +359,38 @@ function eventMedia(event: SheetRow): ThreadMedia[] {
     const providerMetadata = item.providerMetadata && typeof item.providerMetadata === "object" && !Array.isArray(item.providerMetadata)
       ? item.providerMetadata as Record<string, unknown>
       : {};
+    const mediaContext = providerMetadata.mediaContext && typeof providerMetadata.mediaContext === "object" && !Array.isArray(providerMetadata.mediaContext)
+      ? providerMetadata.mediaContext as Record<string, unknown>
+      : {};
     const thumbnailCandidate = String(item.thumbnailUrl || item.thumbnail_url || providerMetadata.thumbnailUrl || providerMetadata.thumbnail_url || "").trim();
-    const linkUrl = String(item.linkUrl || item.link_url || providerMetadata.linkUrl || providerMetadata.targetUrl || "").trim();
+    const providerLink = String(item.linkUrl || item.link_url || providerMetadata.linkUrl || providerMetadata.targetUrl || "").trim();
+    const instagramShare = isInstagramShareUrl(rawUrl) || isInstagramShareUrl(providerLink);
+    const linkUrl = providerLink || (instagramShare ? rawUrl : "");
     const displayRawUrl = !isDisplayableImageUrl(rawUrl) && !isDisplayableVideoUrl(rawUrl) && !isDisplayableAudioUrl(rawUrl) && thumbnailCandidate
       ? thumbnailCandidate
       : rawUrl;
     const url = isDisplayableImageUrl(displayRawUrl)
       ? inboxImagePreviewUrl(displayRawUrl)
       : isDisplayableVideoUrl(displayRawUrl)
-        ? inboxVideoPreviewUrl(displayRawUrl)
-        : isDisplayableAudioUrl(displayRawUrl)
-        ? inboxAudioPreviewUrl(displayRawUrl)
-        : displayRawUrl;
+      ? inboxVideoPreviewUrl(displayRawUrl)
+      : isDisplayableAudioUrl(displayRawUrl)
+      ? inboxAudioPreviewUrl(displayRawUrl)
+      : displayRawUrl;
     if (!url || seen.has(url)) continue;
     seen.add(url);
-    const declaredType = String(item.type || item.contentType || item.content_type || "").toLowerCase();
-    const mediaContext = providerMetadata.mediaContext && typeof providerMetadata.mediaContext === "object" && !Array.isArray(providerMetadata.mediaContext)
-      ? providerMetadata.mediaContext as Record<string, unknown>
-      : {};
+    const declaredType = String(item.type || item.contentType || item.content_type || providerMetadata.attachment_type || "").toLowerCase();
     const kind: ThreadMedia["kind"] = isDisplayableImageUrl(url) || declaredType.includes("image")
       ? "image"
       : isDisplayableVideoUrl(url) || declaredType.includes("video")
-        ? "video"
-        : isDisplayableAudioUrl(url) || declaredType.includes("audio")
-        ? "audio"
-        : "file";
+      ? "video"
+      : isDisplayableAudioUrl(url) || declaredType.includes("audio")
+      ? "audio"
+      : instagramShare
+      ? "image"
+      : "file";
     const transcript = String(item.transcript || mediaContext.extractedText || mediaContext.extracted_text || (kind === "video" ? mediaContext.summary : "") || "").trim() || undefined;
-    const label = String(item.alt || item.filename || providerMetadata.title || mediaContext.summary || "").trim();
-    const mediaLabel = String(item.label || providerMetadata.label || (kind === "image" ? mediaContext.summary : "") || "").trim();
-    const thumbnailUrl = thumbnailCandidate;
+    const label = String(item.alt || item.filename || providerMetadata.title || mediaContext.summary || (instagramShare ? "Instagram shared post" : "")).trim();
+    const mediaLabel = String(item.label || providerMetadata.label || mediaContext.summary || (instagramShare ? label : "") || "").trim();
     media.push({
       url,
       alt: label || (kind === "audio" ? "Voice note" : kind === "video" ? "Video" : kind === "image" ? "MMS image" : "Attachment"),
@@ -391,7 +398,7 @@ function eventMedia(event: SheetRow): ThreadMedia[] {
       transcript,
       label: mediaLabel || undefined,
       linkUrl: linkUrl || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
+      thumbnailUrl: thumbnailCandidate || undefined,
     });
   }
   return media;

@@ -829,6 +829,10 @@ export function SmsMediaGallery({
     </Box>);
 }
 
+function canRenderPreviewImage(value = "") {
+  return /\.(?:avif|gif|jpe?g|png|webp)(?:$|[?#])/i.test(value) || /lookaside\.fbsbx\.com|fbcdn\.net|cdninstagram\.com/i.test(value);
+}
+
 function SocialLinkPreview({
   item,
   isIris,
@@ -839,6 +843,8 @@ function SocialLinkPreview({
   hasText: boolean;
 }) {
   const host = linkHost(item.linkUrl || "");
+  const previewImage = item.thumbnailUrl || (canRenderPreviewImage(item.url) ? item.url : "");
+  const isInstagram = /(?:^|\.)instagram\.com$/i.test(host);
   return (
     <Box
       component="a"
@@ -867,19 +873,31 @@ function SocialLinkPreview({
           width: '100%',
           aspectRatio: '4 / 5',
           bgcolor: 'background.default',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-        <Box
-          component="img"
-          src={item.url}
-          alt={item.alt}
-          loading="lazy"
-          sx={{
-            display: 'block',
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover'
-          }} />
+        {previewImage ? (
+          <Box
+            component="img"
+            src={previewImage}
+            alt={item.alt}
+            loading="lazy"
+            sx={{
+              display: 'block',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }} />
+        ) : (
+          <Stack spacing={1} alignItems="center" sx={{ px: 2, textAlign: 'center' }}>
+            <PlayArrowIcon sx={{ fontSize: 38, color: 'primary.main' }} />
+            <Typography sx={{ fontSize: 12, fontWeight: 900, color: 'text.secondary' }}>
+              {isInstagram ? 'Instagram shared post' : 'Shared media'}
+            </Typography>
+          </Stack>
+        )}
         <Box
           sx={{
             position: 'absolute',
@@ -907,13 +925,7 @@ function SocialLinkPreview({
           <PlayArrowIcon sx={{ fontSize: 18 }} />
         </Box>
       </Box>
-      <Box
-        sx={{
-          px: 1.25,
-          py: 1,
-          borderTop: '1px solid',
-          borderColor: 'divider'
-        }}>
+      <Box sx={{ px: 1.25, py: 1, borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography
           sx={{
             fontSize: 12,
@@ -925,19 +937,7 @@ function SocialLinkPreview({
           }}>
           {item.label || item.alt || 'Instagram media'}
         </Typography>
-        {host &&
-        <Typography
-          sx={{
-            mt: 0.25,
-            fontSize: 11,
-            color: 'text.secondary',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-          {host}
-        </Typography>
-        }
+        {host && <Typography sx={{ mt: 0.35, fontSize: 11, color: 'text.secondary', fontWeight: 700 }}>{host}</Typography>}
       </Box>
     </Box>
   );
