@@ -181,14 +181,8 @@ const BROWSER_IMPORT_SEND_TARGET_KEYS = [
   "ig_scoped_user_id",
   "scopedUserId",
   "scoped_user_id",
-  "contactId",
-  "contact_id",
-  "instagramUserId",
-  "instagram_user_id",
-  "senderId",
-  "sender_id",
 ];
-const BROWSER_IMPORT_USERNAME_KEYS = ["senderUsername", "sender_username", "username"];
+const BROWSER_IMPORT_THREAD_KEYS = ["threadId", "thread_id", "directThreadId", "direct_thread_id", "threadFbid", "thread_fbid"];
 
 function socialSendTargetKeys(channel: ReplyBody["channel"]): string[] {
   return channel === "instagram" ? INSTAGRAM_SEND_TARGET_KEYS : MESSENGER_SEND_TARGET_KEYS;
@@ -214,18 +208,18 @@ function addCandidate(candidates: Set<string>, value: unknown) {
 
 function socialReplyTarget(threadRef: string, channel: ReplyBody["channel"], events: SheetRow[]): string {
   let verifiedBrowserTarget = "";
-  let browserUsernameTarget = "";
+  let browserThreadTarget = "";
   let sawBrowserImport = false;
   let sawNonBrowserImport = false;
   for (const event of [...events].reverse()) {
     if (isBrowserImportedSocialEvent(event)) {
       sawBrowserImport = true;
       if (!verifiedBrowserTarget && isBrowserVerifiedSocialEvent(event)) {
-        verifiedBrowserTarget = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS);
+          verifiedBrowserTarget = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS);
       }
-      if (channel === "instagram" && !browserUsernameTarget) {
-        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
-        if (username) browserUsernameTarget = `@${username}`;
+      if (channel === "instagram" && !browserThreadTarget && isBrowserVerifiedSocialEvent(event)) {
+        const browserThreadId = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_THREAD_KEYS) || String(event.provider_thread_id || "").trim();
+        if (browserThreadId) browserThreadTarget = `browser_thread:${browserThreadId}`;
       }
       continue;
     }
@@ -242,7 +236,7 @@ function socialReplyTarget(threadRef: string, channel: ReplyBody["channel"], eve
     }
   }
   if (verifiedBrowserTarget) return verifiedBrowserTarget;
-  if (browserUsernameTarget) return browserUsernameTarget;
+  if (browserThreadTarget) return browserThreadTarget;
   if (sawBrowserImport && !sawNonBrowserImport) return "";
   if (threadRef.startsWith(`${channel}:`)) return threadRef.slice(channel.length + 1).trim();
   return "";
@@ -260,10 +254,8 @@ function socialReplyTargetCandidates(
     if (isBrowserImportedSocialEvent(event)) {
       if (isBrowserVerifiedSocialEvent(event)) {
         addCandidate(candidates, metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS));
-      }
-      if (channel === "instagram") {
-        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
-        if (username) addCandidate(candidates, `@${username}`);
+        const browserThreadId = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_THREAD_KEYS) || String(event.provider_thread_id || "").trim();
+        if (channel === "instagram" && browserThreadId) addCandidate(candidates, `browser_thread:${browserThreadId}`);
       }
       continue;
     }

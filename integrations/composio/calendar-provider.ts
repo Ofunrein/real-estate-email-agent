@@ -6,8 +6,9 @@ import type {
   CalendarListPage,
   CalendarProvider,
   CalendarProviderName,
+  CalendarSource,
 } from "../calendar-provider.interface";
-import { normalizeCalendarEvent } from "../provider-normalizers";
+import { normalizeCalendarEvent, normalizeCalendarSource } from "../provider-normalizers";
 import { executeComposioTool, resultItems, resultString, type ComposioProviderContext } from "./client";
 
 type ComposioCalendarKind = "google" | "outlook";
@@ -19,12 +20,14 @@ const PROVIDERS: Record<ComposioCalendarKind, CalendarProviderName> = {
 
 const TOOL_SLUGS: Record<ComposioCalendarKind, Record<string, string[]>> = {
   google: {
+    calendars: ["GOOGLECALENDAR_LIST_CALENDARS", "GOOGLE_CALENDAR_LIST_CALENDARS", "GOOGLECALENDAR_CALENDARS_LIST"],
     list: ["GOOGLECALENDAR_LIST_EVENTS", "GOOGLE_CALENDAR_LIST_EVENTS", "GOOGLECALENDAR_EVENTS_LIST"],
     create: ["GOOGLECALENDAR_CREATE_EVENT", "GOOGLE_CALENDAR_CREATE_EVENT"],
     update: ["GOOGLECALENDAR_UPDATE_EVENT", "GOOGLE_CALENDAR_UPDATE_EVENT"],
     cancel: ["GOOGLECALENDAR_DELETE_EVENT", "GOOGLE_CALENDAR_DELETE_EVENT", "GOOGLECALENDAR_PATCH_EVENT"],
   },
   outlook: {
+    calendars: ["OUTLOOK_CALENDAR_LIST_CALENDARS", "MICROSOFT_OUTLOOK_CALENDAR_LIST_CALENDARS", "OUTLOOK_LIST_CALENDARS"],
     list: ["OUTLOOK_CALENDAR_LIST_EVENTS", "MICROSOFT_OUTLOOK_CALENDAR_LIST_EVENTS", "OUTLOOK_LIST_EVENTS"],
     create: ["OUTLOOK_CALENDAR_CREATE_EVENT", "MICROSOFT_OUTLOOK_CALENDAR_CREATE_EVENT", "OUTLOOK_CREATE_EVENT"],
     update: ["OUTLOOK_CALENDAR_UPDATE_EVENT", "MICROSOFT_OUTLOOK_CALENDAR_UPDATE_EVENT", "OUTLOOK_UPDATE_EVENT"],
@@ -75,6 +78,17 @@ export class ComposioCalendarProvider implements CalendarProvider {
     this.kind = kind;
     this.provider = PROVIDERS[kind];
     this.context = { ...input, provider: this.provider };
+  }
+
+  async listCalendars(): Promise<CalendarSource[]> {
+    const result = await executeComposioTool({
+      context: this.context,
+      envSlug: process.env[envName(this.kind, "calendars")],
+      fallbackSlugs: TOOL_SLUGS[this.kind].calendars,
+      args: {},
+    });
+    const calendars = resultItems(result).map(normalizeCalendarSource).filter((calendar) => calendar.id);
+    return calendars.length ? calendars : [{ id: "primary", name: "Primary calendar", primary: true }];
   }
 
   async listEvents(input: CalendarListInput = {}): Promise<CalendarListPage> {

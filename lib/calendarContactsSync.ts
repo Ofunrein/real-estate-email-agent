@@ -2,10 +2,9 @@ import { Pool } from "pg";
 
 import { createComposioGoogleCalendarProvider, createComposioOutlookCalendarProvider } from "@/integrations/composio/calendar-provider";
 import { createComposioGoogleContactsProvider, createComposioOutlookContactsProvider } from "@/integrations/composio/contacts-provider";
-import type { CalendarEvent, CalendarProvider } from "@/integrations/calendar-provider.interface";
+import type { CalendarEvent, CalendarProvider, CalendarSource } from "@/integrations/calendar-provider.interface";
 import type { ContactRecord as ExternalContact, ContactsProvider } from "@/integrations/contacts-provider.interface";
 import { clientId } from "@/lib/database";
-import { ensureDefaultCalendar } from "@/lib/calendarOs";
 import { upsertContact } from "@/lib/contactOs";
 import {
   listProviderConnections,
@@ -70,6 +69,127 @@ function contactsProvider(connection: ProviderConnectionRecord): ContactsProvide
   if (connection.provider === "composio_google_contacts") return createComposioGoogleContactsProvider(input);
   if (connection.provider === "composio_outlook_contacts") return createComposioOutlookContactsProvider(input);
   return null;
+}
+
+function defaultCalendarSource(connection: ProviderConnectionRecord): CalendarSource {
+  return {
+    id: "primary",
+    name: connection.display_name || connection.email || `${connection.provider} primary`,
+    primary: true,
+  };
+}
+
+async function ensureCalendarAccount(connection: ProviderConnectionRecord) {
+  const existing = await pool().query(
+    `select *
+       from calendar_accounts
+      where client_id = $1
+        and connection_id = $2
+        and provider = $3
+        and provider_account_id = $4
+      limit 1`,
+    [clientId(), connection.id, connection.provider, connection.composio_connected_account_id],
+  );
+  if (existing.rows[0]) {
+    const updated = await pool().query(
+      `update calendar_accounts
+          set display_name = $3,
+              email = $4,
+              status = 'active',
+              metadata = metadata || $5::jsonb,
+              updated_at = now()
+        where client_id = $1 and id = $2
+        returning *`,
+      [
+        clientId(),
+        existing.rows[0].id,
+        connection.display_name || connection.email || connection.provider,
+        connection.email || "",
+        JSON.stringify({ connection_id: connection.id, connected_account_id: connection.composio_connected_account_id }),
+      ],
+    );
+    return updated.rows[0];
+  }
+  const inserted = await pool().query(
+    `insert into calendar_accounts (
+       client_id, connection_id, provider, provider_account_id, display_name, email, status, metadata
+     ) values ($1,$2,$3,$4,$5,$6,'active',$7::jsonb)
+     returning *`,
+    [
+      clientId(),
+      connection.id,
+      connection.provider,
+      connection.composio_connected_account_id,
+      connection.display_name || connection.email || connection.provider,
+      connection.email || "",
+      JSON.stringify({ connection_id: connection.id, connected_account_id: connection.composio_connected_account_id }),
+    ],
+  );
+  return inserted.rows[0];
+}
+
+async function ensureExternalCalendar(connection: ProviderConnectionRecord, source: CalendarSource) {
+  const account = await ensureCalendarAccount(connection);
+  const externalCalendarId = source.id || "primary";
+  const existing = await pool().query(
+    `select *
+       from calendars
+      where client_id = $1
+        and account_id = $2
+        and metadata->>'external_calendar_id' = $3
+        and archived_at is null
+      limit 1`,
+    [clientId(), account.id, externalCalendarId],
+  );
+  const metadata = {
+    external_calendar_id: externalCalendarId,
+    provider: connection.provider,
+    provider_account_id: connection.composio_connected_account_id,
+    primary: Boolean(source.primary),
+    raw: source.raw || {},
+  };
+  if (existing.rows[0]) {
+    const updated = await pool().query(
+      `update calendars
+          set name = $3,
+              description = $4,
+              color = $5,
+              timezone = $6,
+              metadata = metadata || $7::jsonb,
+              updated_at = now()
+        where client_id = $1 and id = $2
+        returning *`,
+      [
+        clientId(),
+        existing.rows[0].id,
+        source.name || "Calendar",
+        source.description || existing.rows[0].description || "",
+        source.color || existing.rows[0].color || "#6366f1",
+        source.timezone || existing.rows[0].timezone || "America/Chicago",
+        JSON.stringify(metadata),
+      ],
+    );
+    return updated.rows[0];
+  }
+  const inserted = await pool().query(
+    `insert into calendars (
+       client_id, account_id, owner_user_id, name, description, color, timezone,
+       booking_link_slug, metadata
+     ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
+     returning *`,
+    [
+      clientId(),
+      account.id,
+      connection.user_id || "",
+      source.name || "Calendar",
+      source.description || "",
+      source.color || "#6366f1",
+      source.timezone || "America/Chicago",
+      "",
+      JSON.stringify(metadata),
+    ],
+  );
+  return inserted.rows[0];
 }
 
 async function connectedRows(domain: ProviderDomain, userEmail: string): Promise<ProviderConnectionRecord[]> {
@@ -205,11 +325,12 @@ async function writeSyncLog(input: {
   );
 }
 
-async function upsertExternalCalendarEvent(connection: ProviderConnectionRecord, event: CalendarEvent): Promise<boolean> {
+async function upsertExternalCalendarEvent(connection: ProviderConnectionRecord, event: CalendarEvent, source: CalendarSource): Promise<boolean> {
   if (!event.startTime) return false;
   const externalEventId = text(event.sourceId || event.id);
   if (!externalEventId) return false;
-  const calendar = await ensureDefaultCalendar();
+  const calendar = await ensureExternalCalendar(connection, source);
+  const externalCalendarId = event.calendarId || source.id || "primary";
   const existing = await pool().query(
     `select appointment_id
        from appointment_external_refs
@@ -219,7 +340,7 @@ async function upsertExternalCalendarEvent(connection: ProviderConnectionRecord,
         and external_calendar_id = $4
         and external_event_id = $5
       limit 1`,
-    [clientId(), connection.provider, connection.composio_connected_account_id, event.calendarId || "", externalEventId],
+    [clientId(), connection.provider, connection.composio_connected_account_id, externalCalendarId, externalEventId],
   );
   const attendee = event.attendees[0];
   const contact = attendee?.email
@@ -305,7 +426,7 @@ async function upsertExternalCalendarEvent(connection: ProviderConnectionRecord,
         created.rows[0].id,
         connection.provider,
         connection.composio_connected_account_id,
-        event.calendarId || "",
+        externalCalendarId,
         externalEventId,
         JSON.stringify(event.raw || {}),
       ],
@@ -363,21 +484,63 @@ export async function syncCalendars(input: { userEmail: string; syncType: SyncKi
     if (!provider) continue;
     summary.providers.push(connection.provider);
     try {
-      const state = input.syncType === "incremental" ? await syncCursor("calendar", connection) : undefined;
-      const page = await provider.listEvents({
-        timeMin,
-        timeMax,
-        syncToken: input.syncType === "incremental" ? state?.sync_cursor : undefined,
-        limit: 100,
-      });
-      let written = 0;
-      for (const event of page.events) {
-        if (await upsertExternalCalendarEvent(connection, event)) written += 1;
+      let calendars = [defaultCalendarSource(connection)];
+      if (provider.listCalendars) {
+        try {
+          const listed = await provider.listCalendars();
+          if (listed.length) calendars = listed;
+        } catch (error) {
+          await writeSyncLog({
+            domain: "calendar",
+            connection,
+            syncType: input.syncType,
+            status: "calendar_list_fallback",
+            itemsRead: 0,
+            itemsWritten: 0,
+            error: error instanceof Error ? error.message : String(error),
+            externalCalendarId: "primary",
+          });
+        }
       }
-      summary.itemsRead += page.events.length;
-      summary.itemsWritten += written;
-      await writeSyncState({ domain: "calendar", connection, syncType: input.syncType, cursor: page.nextSyncToken, status: "synced", metadata: { next_page_token: page.nextPageToken || "" } });
-      await writeSyncLog({ domain: "calendar", connection, syncType: input.syncType, status: "synced", itemsRead: page.events.length, itemsWritten: written });
+      for (const calendar of calendars) {
+        const externalCalendarId = calendar.id || "primary";
+        const state = input.syncType === "incremental" ? await syncCursor("calendar", connection, externalCalendarId) : undefined;
+        let pageToken = "";
+        let cursor = "";
+        let read = 0;
+        let written = 0;
+        let pages = 0;
+        do {
+          const page = await provider.listEvents({
+            calendarId: externalCalendarId,
+            timeMin,
+            timeMax,
+            syncToken: input.syncType === "incremental" ? state?.sync_cursor : undefined,
+            pageToken: pageToken || undefined,
+            limit: 100,
+          });
+          pages += 1;
+          read += page.events.length;
+          cursor = page.nextSyncToken || cursor;
+          pageToken = page.nextPageToken || "";
+          for (const event of page.events) {
+            const eventWithCalendar = { ...event, calendarId: event.calendarId || externalCalendarId };
+            if (await upsertExternalCalendarEvent(connection, eventWithCalendar, calendar)) written += 1;
+          }
+        } while (pageToken && pages < 10);
+        summary.itemsRead += read;
+        summary.itemsWritten += written;
+        await writeSyncState({
+          domain: "calendar",
+          connection,
+          externalCalendarId,
+          syncType: input.syncType,
+          cursor,
+          status: "synced",
+          metadata: { calendar_name: calendar.name, pages, truncated: Boolean(pageToken) },
+        });
+        await writeSyncLog({ domain: "calendar", connection, externalCalendarId, syncType: input.syncType, status: "synced", itemsRead: read, itemsWritten: written });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       summary.errors.push(`${connection.provider}: ${message}`);

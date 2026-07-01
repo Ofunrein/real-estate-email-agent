@@ -270,7 +270,7 @@ test("adaptInboxData does not use browser-imported Instagram ids as Meta reply t
 
   assert.equal(thread.id, "oje.o");
   assert.equal(thread.contact, "@oje.o");
-  assert.equal(thread.replyTo, "@oje.o");
+  assert.equal(thread.replyTo, "");
 });
 
 test("adaptInboxData marks browser-synced inbound Instagram leads as needs human", () => {
@@ -301,11 +301,11 @@ test("adaptInboxData marks browser-synced inbound Instagram leads as needs human
   const thread = model.textThreads.instagram[0];
 
   assert.equal(thread.contact, "@oje.o");
-  assert.equal(thread.replyTo, "@oje.o");
+  assert.equal(thread.replyTo, "");
   assert.equal(thread.category, "needs-human");
 });
 
-test("adaptInboxData uses authenticated browser Instagram user ids as Meta reply targets", () => {
+test("adaptInboxData does not use authenticated browser Instagram ids as Meta reply targets", () => {
   const data = composeInboxData(
     [],
     [
@@ -325,6 +325,7 @@ test("adaptInboxData uses authenticated browser Instagram user ids as Meta reply
           senderUsername: "oje.o",
         }),
         gmail_message_id: "instagram:oje-message-verified",
+        provider_thread_id: "340282366841710301244259965533046095313",
         message_text: "I’m interested in a property",
         status: "browser_backfill_verified_recipient",
         event_at: "2026-06-26T21:55:38.014Z",
@@ -337,7 +338,7 @@ test("adaptInboxData uses authenticated browser Instagram user ids as Meta reply
   const thread = model.textThreads.instagram[0];
 
   assert.equal(thread.contact, "@oje.o");
-  assert.equal(thread.replyTo, "2112135625");
+  assert.equal(thread.replyTo, "browser_thread:340282366841710301244259965533046095313");
   assert.equal(thread.category, "needs-human");
 });
 

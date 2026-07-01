@@ -40,7 +40,8 @@
     "sync:ghl": "node scripts/sync-events-to-ghl.mjs",
     "setup:neon": "bash scripts/setup-neon.sh",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
-    "test:py": "pytest tests/"
+    "test:py": "pytest tests/",
+    "sync:instagram-browser-thread": "node scripts/sync-instagram-browser-thread.mjs"
   },
   "dependencies": {
     "@cartesia/cartesia-js": "^3.2.0",
