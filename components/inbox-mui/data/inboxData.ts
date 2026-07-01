@@ -174,6 +174,7 @@ export interface SmsThread {
   seen?: boolean;
   lastSeenAt?: string;
   lastInboundAt?: string;
+  fallbackUsed?: boolean;
   category: LeadCategoryId;
   messages: SmsMessage[];
 }

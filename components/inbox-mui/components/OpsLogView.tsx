@@ -48,8 +48,17 @@ type AuditSummary = {
   byService: Record<string, number>;
 };
 
+type SocialFallbackHealth = {
+  fallbackEvents24h: number;
+  lastFallbackAt: string;
+  lastFallbackChannel: string;
+  lastFallbackThreadRef: string;
+  directMetaLastAt: string;
+  stuckJobs: number;
+};
+
 const CHANNELS = ["", "instagram", "messenger", "sms", "whatsapp", "email", "website_chat"];
-const OUTCOMES = ["", "received", "sent", "drafted", "blocked", "failed", "skipped"];
+const OUTCOMES = ["", "received", "fallback_active", "sent", "drafted", "blocked", "failed", "skipped"];
 
 function formatWhen(value: string) {
   if (!value) return "";
@@ -74,6 +83,7 @@ function shortId(value: string) {
 export function OpsLogView() {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [summary, setSummary] = useState<AuditSummary>({ totalCostUsd: 0, rowsWithCost: 0, byService: {} });
+  const [health, setHealth] = useState<SocialFallbackHealth>({ fallbackEvents24h: 0, lastFallbackAt: "", lastFallbackChannel: "", lastFallbackThreadRef: "", directMetaLastAt: "", stuckJobs: 0 });
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string>("");
   const [channel, setChannel] = useState("");
@@ -100,10 +110,11 @@ export function OpsLogView() {
     setError("");
     try {
       const res = await fetch(`/api/ops/audit?${params.toString()}`, { cache: "no-store" });
-      const payload = await res.json().catch(() => ({})) as { events?: AuditEvent[]; summary?: AuditSummary; error?: string };
+      const payload = await res.json().catch(() => ({})) as { events?: AuditEvent[]; summary?: AuditSummary; health?: SocialFallbackHealth; error?: string };
       if (!res.ok) throw new Error(payload.error || "Could not load audit events.");
       setEvents(payload.events || []);
       setSummary(payload.summary || { totalCostUsd: 0, rowsWithCost: 0, byService: {} });
+      setHealth(payload.health || { fallbackEvents24h: 0, lastFallbackAt: "", lastFallbackChannel: "", lastFallbackThreadRef: "", directMetaLastAt: "", stuckJobs: 0 });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load audit events.");
     } finally {
@@ -129,6 +140,10 @@ export function OpsLogView() {
         <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: "wrap" }}>
           <Chip size="small" label={`Cost ${formatCost(summary.totalCostUsd)}`} color={summary.totalCostUsd ? "warning" : "default"} variant="outlined" />
           <Chip size="small" label={`${summary.rowsWithCost} billed rows`} variant="outlined" />
+          <Chip size="small" label={`Fallback 24h ${health.fallbackEvents24h}`} color={health.fallbackEvents24h ? "info" : "default"} variant="outlined" />
+          <Chip size="small" label={`Stuck social jobs ${health.stuckJobs}`} color={health.stuckJobs ? "warning" : "default"} variant="outlined" />
+          {health.lastFallbackAt && <Chip size="small" label={`Last fallback ${health.lastFallbackChannel || "social"} ${formatWhen(health.lastFallbackAt)}`} color="info" variant="outlined" />}
+          {health.directMetaLastAt && <Chip size="small" label={`Meta direct ${formatWhen(health.directMetaLastAt)}`} variant="outlined" />}
           {Object.entries(summary.byService || {}).map(([service, cost]) => (
             <Chip key={service} size="small" label={`${service} ${formatCost(cost)}`} variant="outlined" />
           ))}
@@ -178,6 +193,7 @@ export function OpsLogView() {
         {events.map((event) => {
           const isExpanded = expanded === event.id;
           const isBad = event.outcome === "failed" || Number(event.statusCode || 0) >= 400 || Boolean(event.errorMessage);
+          const isFallback = event.provider === "composio_fallback" || event.stage.startsWith("fallback_") || event.outcome === "fallback_active";
           return (
             <Box
               key={event.id}
@@ -195,8 +211,9 @@ export function OpsLogView() {
             >
               <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0 }}>
                 <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0, flexWrap: "wrap" }}>
-                  <Chip size="small" label={event.outcome || "event"} color={isBad ? "warning" : event.outcome === "sent" ? "success" : "default"} variant="outlined" />
+                  <Chip size="small" label={event.outcome || "event"} color={isBad ? "warning" : event.outcome === "sent" ? "success" : isFallback ? "info" : "default"} variant="outlined" />
                   {event.channel && <Chip size="small" label={event.channel} variant="outlined" />}
+                  {isFallback && <Chip size="small" label="Composio fallback" color="info" variant="outlined" />}
                   {event.costUsd > 0 && <Chip size="small" label={`${event.costService || "cost"} ${formatCost(event.costUsd)}`} color="warning" variant="outlined" />}
                 </Stack>
                 <Box sx={{ minWidth: 0, flex: 1 }}>

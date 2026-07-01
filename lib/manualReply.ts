@@ -1,6 +1,7 @@
 import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
 import { sendComposioSocialMessage } from "@/lib/composioSocial";
 import { listChannelConnections } from "@/lib/channelConnections";
+import { sendInstagramBrowserThreadMessage } from "@/lib/instagramBrowserBridge";
 import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 
@@ -67,6 +68,22 @@ export async function sendManualReply(input: ManualReplyInput): Promise<ManualRe
         return await sendWhatsApp(input);
       case "instagram":
       case "messenger": {
+        if (input.channel === "instagram" && input.to.startsWith("browser_thread:")) {
+          const r = await sendInstagramBrowserThreadMessage({
+            threadId: input.to,
+            body: input.body,
+            mediaUrls: input.mediaUrls,
+          });
+          return r.ok
+            ? {
+              ok: true,
+              deliveredBody: r.deliveredBody || input.body,
+              deliveredMediaUrls: [],
+              droppedMediaUrls: input.mediaUrls ?? [],
+              messageIds: r.messageId ? [r.messageId] : [],
+            }
+            : { ok: false, error: r.error || "Instagram browser send failed" };
+        }
         const usernameTarget = input.channel === "instagram" ? instagramUsernameTarget(input.to) : "";
         if (usernameTarget) {
           const r = await sendComposioSocialMessage({

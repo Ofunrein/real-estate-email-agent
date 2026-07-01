@@ -31,8 +31,10 @@ import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoProperty
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import { understandMediaItems } from "@/lib/mediaUnderstanding";
+import { writeRequestAuditEvent } from "@/lib/requestAudit";
 
 type PollChannel = Extract<SocialDmChannel, "instagram" | "messenger">;
+const FALLBACK_SOURCE = "composio_fallback";
 
 type ComposioMessage = {
   id: string;
@@ -454,15 +456,35 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
   const replyJob = await upsertReplyJobInDatabase({
     dedupeKey: messageKey,
     channel: message.channel,
-    provider: "composio",
+    provider: FALLBACK_SOURCE,
     threadRef,
     contactRef: message.senderId,
-    status: dedupe.inserted ? "received" : "duplicate_suppressed",
+    status: dedupe.inserted ? "fallback_active" : "duplicate_suppressed",
     mediaJson: media,
-    metadata: { connectionId: connection.id, providerMessageId: message.id },
+    metadata: { connectionId: connection.id, providerMessageId: message.id, fallback: true, primaryProvider: "meta_direct" },
   });
 
   const duplicate = await conversationEventMessageIdExists(messageKey);
+  if (!duplicate) {
+    await writeRequestAuditEvent({
+      route: "/api/social/composio/poll",
+      method: "POST",
+      channel: message.channel,
+      provider: FALLBACK_SOURCE,
+      threadRef,
+      contactRef: message.senderId,
+      providerMessageId: message.id,
+      stage: "fallback_ingest",
+      outcome: "fallback_active",
+      statusCode: 200,
+      metadata: {
+        connectionId: connection.id,
+        accountLabel: message.accountLabel,
+        directMetaMissed: true,
+        mediaCount: media.length,
+      },
+    });
+  }
   const result = duplicate
     ? null
     : await recordChannelInteraction({
@@ -472,7 +494,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       agentName: IRIS_AGENT_NAME,
       phone: message.senderId,
       fullName: message.senderUsername || message.senderName,
-      source: "composio",
+      source: FALLBACK_SOURCE,
       sourceDetail,
       threadRef,
       eventType: `${message.channel}_inbound`,
@@ -480,17 +502,19 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       summary: `Inbound ${message.channel} DM: ${messageText}`,
       preferredChannel: message.channel,
       intent: guard.intent,
-      aiAction: guard.allowed ? "social_dm_routed" : "social_dm_handoff",
+      aiAction: guard.allowed ? "fallback_ingested" : "fallback_handoff",
       handoffStatus: guard.needsHuman ? "needs_human" : "",
       handoffReason: guard.reason,
       nextAction: guard.allowed ? "reply_with_iris" : "human_follow_up",
-      status: guard.allowed ? "received" : "needs_human",
+      status: guard.allowed ? "fallback_active" : "needs_human",
       gmailMessageId: messageKey,
       providerMessageId: message.id,
       providerThreadId: message.conversationId,
       mediaJson: media,
       providerMetadata: {
         connectionId: connection.id,
+        fallback: true,
+        primaryProvider: "meta_direct",
         senderId: message.senderId,
         senderName: message.senderName,
         senderUsername: message.senderUsername,
@@ -504,7 +528,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: message.channel,
-      provider: "composio",
+      provider: FALLBACK_SOURCE,
       threadRef,
       contactRef: message.senderId,
       status: "agent_disabled",
@@ -518,7 +542,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: message.channel,
-      provider: "composio",
+      provider: FALLBACK_SOURCE,
       threadRef,
       contactRef: message.senderId,
       status: guard.allowed ? "blocked" : "needs_human",
@@ -563,7 +587,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: message.channel,
-      provider: "composio",
+      provider: FALLBACK_SOURCE,
       threadRef,
       contactRef: message.senderId,
       status: routeResult.needs_human ? "needs_human" : "review_ready",
@@ -571,7 +595,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       modelReply: "claude-sonnet-4-6",
       replyText: routeResult.reply,
       nextAction: "human_review",
-      metadata: { reason: routeResult.reason || "" },
+      metadata: { reason: routeResult.reason || "", fallback: true, primaryProvider: "meta_direct" },
     });
     await recordChannelInteraction({
       channel: message.channel,
@@ -579,13 +603,13 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
       agentName: IRIS_AGENT_NAME,
       phone: message.senderId,
       fullName: message.senderUsername || message.senderName,
-      source: "composio",
+      source: FALLBACK_SOURCE,
       sourceDetail,
       threadRef,
       eventType: `${message.channel}_reply_ready`,
       messageText: routeResult.reply,
-      summary: routeResult.reason || "Iris prepared a social DM reply.",
-      aiAction: "social_dm_reply_ready",
+      summary: routeResult.reason || "Iris prepared a social DM reply through Composio fallback.",
+      aiAction: "fallback_reply_ready",
       status: routeResult.needs_human ? "needs_human" : "review_ready",
       handoffReason: routeResult.reason,
       nextAction: "human_review",
@@ -603,7 +627,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
   await upsertReplyJobInDatabase({
     dedupeKey: messageKey,
     channel: message.channel,
-    provider: "composio",
+    provider: FALLBACK_SOURCE,
     threadRef,
     contactRef: message.senderId,
     status: sendResult.ok ? "sent" : "send_failed",
@@ -612,6 +636,26 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     replyText: routeResult.reply,
     error: sendResult.ok ? "" : sendResult.error,
     nextAction: sendResult.ok ? "monitor_reply" : "human_review",
+    metadata: { fallback: true, primaryProvider: "meta_direct" },
+  });
+  await writeRequestAuditEvent({
+    route: "/api/social/composio/poll",
+    method: "POST",
+    channel: message.channel,
+    provider: FALLBACK_SOURCE,
+    threadRef,
+    contactRef: message.senderId,
+    providerMessageId: message.id,
+    stage: "fallback_send",
+    outcome: sendResult.ok ? "sent" : "failed",
+    statusCode: sendResult.ok ? 200 : 502,
+    errorCode: sendResult.ok ? "" : "fallback_send_failed",
+    errorMessage: sendResult.ok ? "" : sendResult.error,
+    metadata: {
+      connectionId: connection.id,
+      mediaCount: routeResult.media_urls.length,
+      primaryProvider: "meta_direct",
+    },
   });
   await recordChannelInteraction({
     channel: message.channel,
@@ -619,13 +663,13 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     agentName: IRIS_AGENT_NAME,
     phone: message.senderId,
     fullName: message.senderUsername || message.senderName,
-    source: "composio",
+    source: FALLBACK_SOURCE,
     sourceDetail,
     threadRef,
     eventType: `${message.channel}_ai_reply`,
     messageText: routeResult.reply,
-    summary: sendResult.ok ? "Iris replied to social DM through Composio." : `Composio send failed: ${sendResult.error}`,
-    aiAction: sendResult.ok ? "social_dm_sent" : "social_dm_send_failed",
+    summary: sendResult.ok ? "Iris replied to social DM through Composio fallback." : `Composio fallback send failed: ${sendResult.error}`,
+    aiAction: sendResult.ok ? "fallback_sent" : "fallback_send_failed",
     status: sendResult.ok ? "sent" : "needs_human",
     handoffReason: sendResult.ok ? "" : sendResult.error,
     nextAction: sendResult.ok ? "monitor_reply" : "human_follow_up",

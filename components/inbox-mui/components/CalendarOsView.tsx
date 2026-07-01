@@ -544,6 +544,17 @@ export function CalendarOsView() {
     }
   }
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const provider = url.searchParams.get('calendarConnected');
+    if (!provider) return;
+    setMessage(`Connected ${provider}. Syncing all calendars...`);
+    url.searchParams.delete('calendarConnected');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    void syncCalendar();
+  }, []);
+
   const displayAppointments = appointments;
   const displaySettings = settings.length ? settings : disconnectedSettings;
 

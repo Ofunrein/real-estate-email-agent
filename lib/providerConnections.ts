@@ -147,9 +147,23 @@ export async function createProviderConnectLink(input: {
   const authConfigId = process.env[config.authConfigEnv] || "";
   const toolkit = toolkitFor(config);
   const options = { callbackUrl: input.callbackUrl, allowMultiple: true, alias: `${input.domain}_${input.provider}` };
+  const maybeComposio = composio as unknown as {
+    create?: (userId: string) => Promise<{
+      authorize?: (toolkit: string, options: { callbackUrl: string; alias?: string; authConfigId?: string }) => Promise<unknown>;
+    }>;
+  };
   const request = authConfigId
     ? await composio.connectedAccounts.link(userId, authConfigId, options)
-    : await composio.toolkits.authorize(userId, toolkit, undefined);
+    : typeof maybeComposio.create === "function"
+      ? await (async () => {
+        const session = await maybeComposio.create!(userId);
+        if (!session.authorize) throw new Error("Composio session authorize is unavailable");
+        return session.authorize(toolkit, {
+          callbackUrl: input.callbackUrl,
+          alias: options.alias,
+        });
+      })()
+      : await composio.toolkits.authorize(userId, toolkit, undefined);
   const link = linkResponsePayload(request);
   if (link.id) {
     await upsertProviderConnection({

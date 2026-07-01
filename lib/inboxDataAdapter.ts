@@ -735,6 +735,7 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
       const latestText = smsTextAndMedia(eventText(latest) || latest.summary || "");
       const latestMedia = mergedThreadMedia(latestText.media, eventMedia(latest));
       const unread = unreadStateForEvents(data, view, key, sorted);
+      const fallbackUsed = sorted.some(isComposioFallbackEvent);
       return {
         sortValue: eventTimeValue(latest),
         thread: {
@@ -750,6 +751,7 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
         seen: unread.seen,
         lastSeenAt: unread.lastSeenAt,
         lastInboundAt: unread.lastInboundAt,
+        fallbackUsed,
         category,
         messages,
         },
@@ -757,6 +759,16 @@ function buildTextThreadsForView(data: AgentInboxData, view: "instagram" | "mess
     })
     .sort((a, b) => b.sortValue - a.sortValue)
     .map((entry) => entry.thread);
+}
+
+function isComposioFallbackEvent(event: SheetRow): boolean {
+  const source = String(event.source || "").toLowerCase();
+  const aiAction = String(event.ai_action || "").toLowerCase();
+  const metadata = String((event as SheetRow & { provider_metadata?: unknown }).provider_metadata || "").toLowerCase();
+  return source === "composio_fallback"
+    || source.includes("composio_fallback")
+    || aiAction.startsWith("fallback_")
+    || metadata.includes('"fallback":true');
 }
 
 function socialRawThreadKey(event: SheetRow, channel: string): string {
@@ -819,14 +831,8 @@ const BROWSER_IMPORT_SEND_TARGET_KEYS = [
   "ig_scoped_user_id",
   "scopedUserId",
   "scoped_user_id",
-  "contactId",
-  "contact_id",
-  "instagramUserId",
-  "instagram_user_id",
-  "senderId",
-  "sender_id",
 ];
-const BROWSER_IMPORT_USERNAME_KEYS = ["senderUsername", "sender_username", "username"];
+const BROWSER_IMPORT_THREAD_KEYS = ["threadId", "thread_id", "directThreadId", "direct_thread_id", "threadFbid", "thread_fbid"];
 
 function socialSendTargetKeys(channel: string): string[] {
   return channel === "instagram" ? INSTAGRAM_SEND_TARGET_KEYS : MESSENGER_SEND_TARGET_KEYS;
@@ -848,7 +854,7 @@ function isBrowserVerifiedSocialEvent(event: SheetRow): boolean {
 
 function socialReplyTarget(threadKey: string, events: SheetRow[], channel: string): string {
   let verifiedBrowserTarget = "";
-  let browserUsernameTarget = "";
+  let browserThreadTarget = "";
   let sawBrowserImport = false;
   let sawNonBrowserImport = false;
   for (const event of [...events].reverse()) {
@@ -857,9 +863,9 @@ function socialReplyTarget(threadKey: string, events: SheetRow[], channel: strin
       if (!verifiedBrowserTarget && isBrowserVerifiedSocialEvent(event)) {
         verifiedBrowserTarget = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_SEND_TARGET_KEYS);
       }
-      if (channel === "instagram" && !browserUsernameTarget) {
-        const username = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_USERNAME_KEYS).replace(/^@/, "");
-        if (username) browserUsernameTarget = `@${username}`;
+      if (channel === "instagram" && !browserThreadTarget && isBrowserVerifiedSocialEvent(event)) {
+        const browserThreadId = metadataStringValue(event.provider_metadata, BROWSER_IMPORT_THREAD_KEYS) || String(event.provider_thread_id || "").trim();
+        if (browserThreadId) browserThreadTarget = `browser_thread:${browserThreadId}`;
       }
       continue;
     }
@@ -876,7 +882,7 @@ function socialReplyTarget(threadKey: string, events: SheetRow[], channel: strin
     }
   }
   if (verifiedBrowserTarget) return verifiedBrowserTarget;
-  if (browserUsernameTarget) return browserUsernameTarget;
+  if (browserThreadTarget) return browserThreadTarget;
   if (sawBrowserImport && !sawNonBrowserImport) return "";
   if (threadKey.startsWith(`${channel}:`)) return threadKey.slice(channel.length + 1).trim();
   return "";
