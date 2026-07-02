@@ -388,6 +388,84 @@ gmail.push.received
 ```
 
 
+
+---
+
+## Media and screenshot understanding
+
+All text channels should treat media as conversation context, not noise. Shared screenshots, property photos, reels, videos, and voice notes are normalized into `media_json`, enriched by `lib/mediaUnderstanding.ts`, then folded into the message text sent to the shared agent brain.
+
+Covered inbound paths:
+
+| Channel | What happens |
+|---|---|
+| Email | Gmail non-text attachments become media records. If the file can be downloaded, image bytes can be sent to Claude vision when enabled. Otherwise the agent still gets safe heuristic context. |
+| SMS/MMS | Twilio media URLs and voice-note transcripts are attached to the inbound event before Theo replies. |
+| WhatsApp | Meta media IDs are resolved, proxied, understood, then kept in `conversation_events.media_json`. |
+| Instagram/Messenger | Meta shared attachments, image/video/reel links, and transcribed media route through the same media-understanding path. |
+| Composio/social fallback | Polled social messages use the same media enrichment before dedupe and reply. |
+
+Enable real image analysis:
+
+```bash
+ENABLE_MEDIA_VISION=true
+MEDIA_VISION_MODEL=claude-sonnet-4-6
+ANTHROPIC_API_KEY=
+```
+
+If vision is off or media is inaccessible, the system still gives the agent a safe summary like “lead shared social content” or “lead sent kitchen inspiration photo” and asks one concise clarifying question instead of pretending it saw details. This is deliberate for real estate compliance and reliability.
+
+Scenario handling lives in `lib/conversationPlaybooks.ts`. It recognizes seller valuation, buyer listing details, broad property search, showing scheduling, shared media references, service-area checks, and missing lead-profile details. The playbook is injected into Theo/Iris context so SMS, WhatsApp, Instagram, Messenger, website chat, and email use the same business judgment.
+
+---
+
+## Facebook Lead Ads and speed-to-lead
+
+Facebook Lead Form submissions enter through:
+
+```text
+/api/webhooks/meta-leadgen
+```
+
+Meta sends a `leadgen_id`; the app fetches field data, normalizes it into the shared lead/event model, dedupes it, writes `lead_memory` + `conversation_events`, then optionally sends an instant Austin Realty SMS if phone/consent exists.
+
+Env:
+
+```bash
+META_LEADGEN_VERIFY_TOKEN=
+META_LEADGEN_ACCESS_TOKEN=
+META_LEADGEN_AUTOREPLY=true
+```
+
+Important rule: Facebook Lead Form data is not the same as Messenger/Instagram DM identity. If a lead form only provides phone/email, first reply should be SMS or email. Reply in Messenger/Instagram only when the lead actually came through a click-to-message path with a real thread ID.
+
+---
+
+## Persistent cadence
+
+Cadence is stateful, not prompt-only. The agent records facts. The cadence engine decides when to follow up, pause, stop, or escalate.
+
+Core pieces:
+
+| Piece | File/table | Purpose |
+|---|---|---|
+| Rules | `lib/cadence.ts`, `lib/cadenceQueue.ts` | Max touches, reply stop, quiet hours, one-channel-per-day, consent checks |
+| Scheduler | `lib/cadenceScheduler.ts` | Creates durable follow-up tasks after inbound/outbound events |
+| Storage | `cadence_tasks` table, migration `024_cadence_tasks.sql` | Durable GHL-style follow-up queue |
+| Workers | `cadence-plan`, `cadence-task-run` Inngest functions | Plan and execute due follow-up tasks |
+
+Env:
+
+```bash
+ENABLE_CADENCE_TASKS=true
+CADENCE_MAX_TOUCHES=14
+CADENCE_MIN_GAP_HOURS=48
+CADENCE_STOP_ON_REPLY=true
+CADENCE_ONE_CHANNEL_PER_DAY=true
+CADENCE_TASK_BATCH_SIZE=10
+```
+
+Stop/hold rules: if the lead replies, opts out, books, needs human review, or has a channel disabled, cadence must not blindly continue. Blocked/sent/skipped state is stored so the dashboard and Ops Log can explain what happened.
 ---
 
 ## GoHighLevel / CloseBot-style actions
