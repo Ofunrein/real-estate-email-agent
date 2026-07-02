@@ -2820,7 +2820,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "transcribe_route",
-      "community": 304,
+      "community": 51,
       "norm_label": "route.ts"
     },
     {
@@ -2830,7 +2830,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "transcribe_route_post",
-      "community": 304,
+      "community": 51,
       "norm_label": "post()"
     },
     {
@@ -5010,7 +5010,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "theo_sms_route_inboundvoicemediaindexes",
-      "community": 304,
+      "community": 51,
       "norm_label": "inboundvoicemediaindexes()"
     },
     {
@@ -5060,7 +5060,7 @@
       "source_location": "L315",
       "_origin": "ast",
       "id": "theo_sms_route_payloadwithvoicetranscripts",
-      "community": 304,
+      "community": 51,
       "norm_label": "payloadwithvoicetranscripts()"
     },
     {
@@ -7317,7 +7317,7 @@
       "label": "reactionOptions",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L689",
+      "source_location": "L691",
       "_origin": "ast",
       "id": "components_smsview_reactionoptions",
       "community": 70,
@@ -7327,7 +7327,7 @@
       "label": "reactionGlyph()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L698",
+      "source_location": "L700",
       "_origin": "ast",
       "id": "components_smsview_reactionglyph",
       "community": 70,
@@ -7337,7 +7337,7 @@
       "label": "SmsMediaGallery()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L702",
+      "source_location": "L704",
       "_origin": "ast",
       "id": "components_smsview_smsmediagallery",
       "community": 70,
@@ -7347,7 +7347,7 @@
       "label": "canRenderPreviewImage()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L832",
+      "source_location": "L837",
       "_origin": "ast",
       "id": "components_smsview_canrenderpreviewimage",
       "community": 70,
@@ -7357,7 +7357,7 @@
       "label": "SocialLinkPreview()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L836",
+      "source_location": "L841",
       "_origin": "ast",
       "id": "components_smsview_sociallinkpreview",
       "community": 70,
@@ -7367,7 +7367,7 @@
       "label": "linkHost()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L946",
+      "source_location": "L958",
       "_origin": "ast",
       "id": "components_smsview_linkhost",
       "community": 70,
@@ -7377,7 +7377,7 @@
       "label": "isRedundantMediaPreviewBody()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L954",
+      "source_location": "L966",
       "_origin": "ast",
       "id": "components_smsview_isredundantmediapreviewbody",
       "community": 70,
@@ -7387,7 +7387,7 @@
       "label": "normalizePreviewText()",
       "file_type": "code",
       "source_file": "components/inbox-mui/components/SmsView.tsx",
-      "source_location": "L974",
+      "source_location": "L986",
       "_origin": "ast",
       "id": "components_smsview_normalizepreviewtext",
       "community": 70,
@@ -18960,7 +18960,7 @@
       "source_location": "L342",
       "_origin": "ast",
       "id": "lib_composiosocialpoll_socialpayloadfrommessage",
-      "community": 304,
+      "community": 27,
       "norm_label": "socialpayloadfrommessage()"
     },
     {
@@ -21290,7 +21290,7 @@
       "source_location": "L2607",
       "_origin": "ast",
       "id": "lib_database_styleexample",
-      "community": 27,
+      "community": 85,
       "norm_label": "styleexample"
     },
     {
@@ -21320,7 +21320,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_deepgramaudio",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramaudio.ts"
     },
     {
@@ -21330,7 +21330,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgramalternative",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramalternative"
     },
     {
@@ -21340,7 +21340,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgramresponse",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramresponse"
     },
     {
@@ -21350,7 +21350,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgramapikey",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramapikey()"
     },
     {
@@ -21360,7 +21360,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgramaudioenabled",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramaudioenabled()"
     },
     {
@@ -21370,7 +21370,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgrammodel",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgrammodel()"
     },
     {
@@ -21380,7 +21380,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "lib_deepgramaudio_deepgramlistenurl",
-      "community": 304,
+      "community": 51,
       "norm_label": "deepgramlistenurl()"
     },
     {
@@ -21390,7 +21390,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_deepgramaudio_transcribedeepgramaudio",
-      "community": 304,
+      "community": 51,
       "norm_label": "transcribedeepgramaudio()"
     },
     {
@@ -21740,7 +21740,7 @@
       "source_location": "L260",
       "_origin": "ast",
       "id": "lib_gmailconnection_validgmailthreadid",
-      "community": 336,
+      "community": 48,
       "norm_label": "validgmailthreadid()"
     },
     {
@@ -21750,7 +21750,7 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailerrorcode",
-      "community": 336,
+      "community": 266,
       "norm_label": "gmailerrorcode()"
     },
     {
@@ -21760,7 +21760,7 @@
       "source_location": "L271",
       "_origin": "ast",
       "id": "lib_gmailconnection_gmailerrormessage",
-      "community": 336,
+      "community": 266,
       "norm_label": "gmailerrormessage()"
     },
     {
@@ -21770,7 +21770,7 @@
       "source_location": "L277",
       "_origin": "ast",
       "id": "lib_gmailconnection_isgmailnotfounderror",
-      "community": 336,
+      "community": 266,
       "norm_label": "isgmailnotfounderror()"
     },
     {
@@ -21780,7 +21780,7 @@
       "source_location": "L282",
       "_origin": "ast",
       "id": "lib_gmailconnection_isgmailauthorscopeerror",
-      "community": 336,
+      "community": 266,
       "norm_label": "isgmailauthorscopeerror()"
     },
     {
@@ -21790,7 +21790,7 @@
       "source_location": "L287",
       "_origin": "ast",
       "id": "lib_gmailconnection_verifygmailthread",
-      "community": 336,
+      "community": 266,
       "norm_label": "verifygmailthread()"
     },
     {
@@ -21800,7 +21800,7 @@
       "source_location": "L295",
       "_origin": "ast",
       "id": "lib_gmailconnection_sendgmailreply",
-      "community": 336,
+      "community": 48,
       "norm_label": "sendgmailreply()"
     },
     {
@@ -21810,7 +21810,7 @@
       "source_location": "L299",
       "_origin": "ast",
       "id": "lib_gmailconnection_buildgmailreplymessage",
-      "community": 336,
+      "community": 48,
       "norm_label": "buildgmailreplymessage()"
     },
     {
@@ -21820,7 +21820,7 @@
       "source_location": "L368",
       "_origin": "ast",
       "id": "lib_gmailconnection_sendgmailreplywithoptions",
-      "community": 336,
+      "community": 48,
       "norm_label": "sendgmailreplywithoptions()"
     },
     {
@@ -21830,7 +21830,7 @@
       "source_location": "L409",
       "_origin": "ast",
       "id": "lib_gmailconnection_creategmailreplydraftwithoptions",
-      "community": 336,
+      "community": 266,
       "norm_label": "creategmailreplydraftwithoptions()"
     },
     {
@@ -21840,7 +21840,7 @@
       "source_location": "L449",
       "_origin": "ast",
       "id": "lib_gmailconnection_updategmailreplydraftwithoptions",
-      "community": 336,
+      "community": 266,
       "norm_label": "updategmailreplydraftwithoptions()"
     },
     {
@@ -22570,7 +22570,7 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_lookslikehtml",
-      "community": 345,
+      "community": 199,
       "norm_label": "lookslikehtml()"
     },
     {
@@ -22580,7 +22580,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_striphtml",
-      "community": 345,
+      "community": 199,
       "norm_label": "striphtml()"
     },
     {
@@ -22600,7 +22600,7 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_emailbodypreview",
-      "community": 345,
+      "community": 199,
       "norm_label": "emailbodypreview()"
     },
     {
@@ -22620,7 +22620,7 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_compactactivitytext",
-      "community": 345,
+      "community": 199,
       "norm_label": "compactactivitytext()"
     },
     {
@@ -22630,7 +22630,7 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_usableactivitytext",
-      "community": 345,
+      "community": 199,
       "norm_label": "usableactivitytext()"
     },
     {
@@ -22690,7 +22690,7 @@
       "source_location": "L301",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_jsonobject",
-      "community": 199,
+      "community": 336,
       "norm_label": "jsonobject()"
     },
     {
@@ -22710,7 +22710,7 @@
       "source_location": "L322",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_reactiontargetmessageid",
-      "community": 199,
+      "community": 336,
       "norm_label": "reactiontargetmessageid()"
     },
     {
@@ -22720,7 +22720,7 @@
       "source_location": "L327",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_isreactionevent",
-      "community": 199,
+      "community": 336,
       "norm_label": "isreactionevent()"
     },
     {
@@ -22730,7 +22730,7 @@
       "source_location": "L331",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_reactionsbytarget",
-      "community": 199,
+      "community": 336,
       "norm_label": "reactionsbytarget()"
     },
     {
@@ -22840,7 +22840,7 @@
       "source_location": "L498",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_realchanneltoview",
-      "community": 346,
+      "community": 199,
       "norm_label": "realchanneltoview()"
     },
     {
@@ -23150,7 +23150,7 @@
       "source_location": "L935",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_metadatastringvalue",
-      "community": 199,
+      "community": 336,
       "norm_label": "metadatastringvalue()"
     },
     {
@@ -23200,7 +23200,7 @@
       "source_location": "L978",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_socialsendtargetkeys",
-      "community": 199,
+      "community": 336,
       "norm_label": "socialsendtargetkeys()"
     },
     {
@@ -23210,7 +23210,7 @@
       "source_location": "L982",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_isbrowserimportedsocialevent",
-      "community": 199,
+      "community": 336,
       "norm_label": "isbrowserimportedsocialevent()"
     },
     {
@@ -23220,7 +23220,7 @@
       "source_location": "L988",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_isbrowserverifiedsocialevent",
-      "community": 199,
+      "community": 336,
       "norm_label": "isbrowserverifiedsocialevent()"
     },
     {
@@ -23230,7 +23230,7 @@
       "source_location": "L996",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_socialreplytarget",
-      "community": 199,
+      "community": 336,
       "norm_label": "socialreplytarget()"
     },
     {
@@ -23270,7 +23270,7 @@
       "source_location": "L1098",
       "_origin": "ast",
       "id": "lib_inboxdataadapter_buildchannels",
-      "community": 346,
+      "community": 199,
       "norm_label": "buildchannels()"
     },
     {
@@ -23750,7 +23750,7 @@
       "source_location": "L234",
       "_origin": "ast",
       "id": "lib_inboxthreadutils_adaptchannelid",
-      "community": 346,
+      "community": 199,
       "norm_label": "adaptchannelid()"
     },
     {
@@ -24000,7 +24000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "functions_messagereceived",
-      "community": 85,
+      "community": 27,
       "norm_label": "messagereceived.ts"
     },
     {
@@ -24010,7 +24010,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "functions_messagereceived_messagereceivedresult",
-      "community": 85,
+      "community": 27,
       "norm_label": "messagereceivedresult"
     },
     {
@@ -24657,7 +24657,7 @@
       "label": "humanHandoffReason()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L429",
+      "source_location": "L431",
       "_origin": "ast",
       "id": "lib_irisemail_humanhandoffreason",
       "community": 220,
@@ -24667,7 +24667,7 @@
       "label": "decideIrisEmailExecution()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L436",
+      "source_location": "L438",
       "_origin": "ast",
       "id": "lib_irisemail_decideirisemailexecution",
       "community": 338,
@@ -24677,7 +24677,7 @@
       "label": "generateIrisEmailReply()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L472",
+      "source_location": "L474",
       "_origin": "ast",
       "id": "lib_irisemail_generateirisemailreply",
       "community": 338,
@@ -24687,7 +24687,7 @@
       "label": "htmlEscape()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L535",
+      "source_location": "L537",
       "_origin": "ast",
       "id": "lib_irisemail_htmlescape",
       "community": 220,
@@ -24697,7 +24697,7 @@
       "label": "plainToHtml()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L543",
+      "source_location": "L545",
       "_origin": "ast",
       "id": "lib_irisemail_plaintohtml",
       "community": 220,
@@ -24707,7 +24707,7 @@
       "label": "formatCurrency()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L550",
+      "source_location": "L552",
       "_origin": "ast",
       "id": "lib_irisemail_formatcurrency",
       "community": 220,
@@ -24717,7 +24717,7 @@
       "label": "propertyFacts()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L557",
+      "source_location": "L559",
       "_origin": "ast",
       "id": "lib_irisemail_propertyfacts",
       "community": 220,
@@ -24727,7 +24727,7 @@
       "label": "propertyHighlights()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L567",
+      "source_location": "L569",
       "_origin": "ast",
       "id": "lib_irisemail_propertyhighlights",
       "community": 220,
@@ -24737,7 +24737,7 @@
       "label": "propertyPhotoSrc()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L590",
+      "source_location": "L592",
       "_origin": "ast",
       "id": "lib_irisemail_propertyphotosrc",
       "community": 241,
@@ -24747,7 +24747,7 @@
       "label": "propertyCardHtml()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L596",
+      "source_location": "L598",
       "_origin": "ast",
       "id": "lib_irisemail_propertycardhtml",
       "community": 220,
@@ -24757,7 +24757,7 @@
       "label": "propertyPlain()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L619",
+      "source_location": "L621",
       "_origin": "ast",
       "id": "lib_irisemail_propertyplain",
       "community": 220,
@@ -24767,7 +24767,7 @@
       "label": "dedupeProperties()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L630",
+      "source_location": "L632",
       "_origin": "ast",
       "id": "lib_irisemail_dedupeproperties",
       "community": 220,
@@ -24777,7 +24777,7 @@
       "label": "buildHtmlEmailReply()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L646",
+      "source_location": "L648",
       "_origin": "ast",
       "id": "lib_irisemail_buildhtmlemailreply",
       "community": 220,
@@ -24787,7 +24787,7 @@
       "label": "refineShowingReplyForSelectedProperty()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L681",
+      "source_location": "L683",
       "_origin": "ast",
       "id": "lib_irisemail_refineshowingreplyforselectedproperty",
       "community": 220,
@@ -24797,7 +24797,7 @@
       "label": "irisEmailClaudeModel()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L705",
+      "source_location": "L707",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailclaudemodel",
       "community": 220,
@@ -24807,7 +24807,7 @@
       "label": "anthropicApiKey()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L709",
+      "source_location": "L711",
       "_origin": "ast",
       "id": "lib_irisemail_anthropicapikey",
       "community": 220,
@@ -24817,7 +24817,7 @@
       "label": "CLAUDE_PRICING_PER_MILLION",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L713",
+      "source_location": "L715",
       "_origin": "ast",
       "id": "lib_irisemail_claude_pricing_per_million",
       "community": 220,
@@ -24827,7 +24827,7 @@
       "label": "claudeTokenCostUsd()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L718",
+      "source_location": "L720",
       "_origin": "ast",
       "id": "lib_irisemail_claudetokencostusd",
       "community": 220,
@@ -24837,7 +24837,7 @@
       "label": "generateClaudeIrisEmailReplyText()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L723",
+      "source_location": "L725",
       "_origin": "ast",
       "id": "lib_irisemail_generateclaudeirisemailreplytext",
       "community": 220,
@@ -24847,7 +24847,7 @@
       "label": "generateIrisEmailReplyRich()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L827",
+      "source_location": "L829",
       "_origin": "ast",
       "id": "lib_irisemail_generateirisemailreplyrich",
       "community": 220,
@@ -24857,7 +24857,7 @@
       "label": "normalizeReplyDraft()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L854",
+      "source_location": "L859",
       "_origin": "ast",
       "id": "lib_irisemail_normalizereplydraft",
       "community": 220,
@@ -24867,7 +24867,7 @@
       "label": "messageWithLeadContext()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L861",
+      "source_location": "L866",
       "_origin": "ast",
       "id": "lib_irisemail_messagewithleadcontext",
       "community": 285,
@@ -24877,7 +24877,7 @@
       "label": "stripHtml()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L894",
+      "source_location": "L899",
       "_origin": "ast",
       "id": "lib_irisemail_striphtml",
       "community": 220,
@@ -24887,7 +24887,7 @@
       "label": "handoffSummary()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L898",
+      "source_location": "L903",
       "_origin": "ast",
       "id": "lib_irisemail_handoffsummary",
       "community": 220,
@@ -24897,7 +24897,7 @@
       "label": "buildIrisEmailLeadMemoryRow()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L916",
+      "source_location": "L921",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailleadmemoryrow",
       "community": 220,
@@ -24907,7 +24907,7 @@
       "label": "buildIrisEmailConversationEventRow()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L946",
+      "source_location": "L951",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailconversationeventrow",
       "community": 220,
@@ -24917,7 +24917,7 @@
       "label": "buildIrisEmailOutboundEventRow()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L975",
+      "source_location": "L980",
       "_origin": "ast",
       "id": "lib_irisemail_buildirisemailoutboundeventrow",
       "community": 220,
@@ -24927,7 +24927,7 @@
       "label": "recordIrisEmailInteraction()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1004",
+      "source_location": "L1009",
       "_origin": "ast",
       "id": "lib_irisemail_recordirisemailinteraction",
       "community": 220,
@@ -24937,7 +24937,7 @@
       "label": "processIrisEmailPoll()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1024",
+      "source_location": "L1029",
       "_origin": "ast",
       "id": "lib_irisemail_processirisemailpoll",
       "community": 285,
@@ -24947,7 +24947,7 @@
       "label": "header()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1139",
+      "source_location": "L1144",
       "_origin": "ast",
       "id": "lib_irisemail_header",
       "community": 175,
@@ -24957,7 +24957,7 @@
       "label": "decodeBase64Url()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1143",
+      "source_location": "L1148",
       "_origin": "ast",
       "id": "lib_irisemail_decodebase64url",
       "community": 175,
@@ -24967,7 +24967,7 @@
       "label": "decodeHtmlEntities()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1147",
+      "source_location": "L1152",
       "_origin": "ast",
       "id": "lib_irisemail_decodehtmlentities",
       "community": 175,
@@ -24977,7 +24977,7 @@
       "label": "htmlToText()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1159",
+      "source_location": "L1164",
       "_origin": "ast",
       "id": "lib_irisemail_htmltotext",
       "community": 175,
@@ -24987,7 +24987,7 @@
       "label": "bodyFromPayload()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1172",
+      "source_location": "L1177",
       "_origin": "ast",
       "id": "lib_irisemail_bodyfrompayload",
       "community": 175,
@@ -24997,7 +24997,7 @@
       "label": "gmailPartFilename()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1189",
+      "source_location": "L1194",
       "_origin": "ast",
       "id": "lib_irisemail_gmailpartfilename",
       "community": 175,
@@ -25007,7 +25007,7 @@
       "label": "gmailPartBody()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1193",
+      "source_location": "L1198",
       "_origin": "ast",
       "id": "lib_irisemail_gmailpartbody",
       "community": 175,
@@ -25017,7 +25017,7 @@
       "label": "gmailMediaType()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1197",
+      "source_location": "L1202",
       "_origin": "ast",
       "id": "lib_irisemail_gmailmediatype",
       "community": 175,
@@ -25027,7 +25027,7 @@
       "label": "collectGmailAttachmentParts()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1205",
+      "source_location": "L1210",
       "_origin": "ast",
       "id": "lib_irisemail_collectgmailattachmentparts",
       "community": 175,
@@ -25037,7 +25037,7 @@
       "label": "gmailAttachmentBytes()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1216",
+      "source_location": "L1221",
       "_origin": "ast",
       "id": "lib_irisemail_gmailattachmentbytes",
       "community": 175,
@@ -25047,7 +25047,7 @@
       "label": "mediaFromGmailPayload()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1228",
+      "source_location": "L1233",
       "_origin": "ast",
       "id": "lib_irisemail_mediafromgmailpayload",
       "community": 175,
@@ -25057,7 +25057,7 @@
       "label": "gmailSearchToken()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1268",
+      "source_location": "L1273",
       "_origin": "ast",
       "id": "lib_irisemail_gmailsearchtoken",
       "community": 175,
@@ -25067,7 +25067,7 @@
       "label": "irisEmailPollQuery()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1272",
+      "source_location": "L1277",
       "_origin": "ast",
       "id": "lib_irisemail_irisemailpollquery",
       "community": 175,
@@ -25077,7 +25077,7 @@
       "label": "isIrisEligibleEmail()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1290",
+      "source_location": "L1295",
       "_origin": "ast",
       "id": "lib_irisemail_isiriseligibleemail",
       "community": 175,
@@ -25087,7 +25087,7 @@
       "label": "listUnreadMessages()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1308",
+      "source_location": "L1313",
       "_origin": "ast",
       "id": "lib_irisemail_listunreadmessages",
       "community": 175,
@@ -25097,7 +25097,7 @@
       "label": "listMessagesByIds()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1344",
+      "source_location": "L1349",
       "_origin": "ast",
       "id": "lib_irisemail_listmessagesbyids",
       "community": 175,
@@ -25107,7 +25107,7 @@
       "label": "applyGmailLabels()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1376",
+      "source_location": "L1381",
       "_origin": "ast",
       "id": "lib_irisemail_applygmaillabels",
       "community": 39,
@@ -25117,7 +25117,7 @@
       "label": "syncGmailCategoryLabels()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1385",
+      "source_location": "L1390",
       "_origin": "ast",
       "id": "lib_irisemail_syncgmailcategorylabels",
       "community": 163,
@@ -25127,7 +25127,7 @@
       "label": "syncInboxCategoriesWithGmail()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1405",
+      "source_location": "L1410",
       "_origin": "ast",
       "id": "lib_irisemail_syncinboxcategorieswithgmail",
       "community": 163,
@@ -25137,7 +25137,7 @@
       "label": "createGmailIrisEmailClient()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1410",
+      "source_location": "L1415",
       "_origin": "ast",
       "id": "lib_irisemail_creategmailirisemailclient",
       "community": 39,
@@ -25147,7 +25147,7 @@
       "label": "processIrisEmailMessageIds()",
       "file_type": "code",
       "source_file": "lib/irisEmail.ts",
-      "source_location": "L1442",
+      "source_location": "L1447",
       "_origin": "ast",
       "id": "lib_irisemail_processirisemailmessageids",
       "community": 285,
@@ -25800,7 +25800,7 @@
       "source_location": "L197",
       "_origin": "ast",
       "id": "lib_manualreply_sendemail",
-      "community": 336,
+      "community": 48,
       "norm_label": "sendemail()"
     },
     {
@@ -26207,7 +26207,7 @@
       "label": "formatManyChatDynamicBlock()",
       "file_type": "code",
       "source_file": "lib/manychatSocial.ts",
-      "source_location": "L233",
+      "source_location": "L234",
       "_origin": "ast",
       "id": "lib_manychatsocial_formatmanychatdynamicblock",
       "community": 75,
@@ -26600,7 +26600,7 @@
       "source_location": "L238",
       "_origin": "ast",
       "id": "lib_mediaunderstanding_understandmediaitems",
-      "community": 157,
+      "community": 27,
       "norm_label": "understandmediaitems()"
     },
     {
@@ -27760,7 +27760,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_omnichannelevents",
-      "community": 85,
+      "community": 27,
       "norm_label": "omnichannelevents.ts"
     },
     {
@@ -27780,7 +27780,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_omnichannelevents_omnichannelmessagereceived",
-      "community": 85,
+      "community": 27,
       "norm_label": "omnichannelmessagereceived"
     },
     {
@@ -27790,7 +27790,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "lib_omnichannelevents_channel_prefix",
-      "community": 85,
+      "community": 27,
       "norm_label": "channel_prefix"
     },
     {
@@ -27800,7 +27800,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "lib_omnichannelevents_normalizeddedupekey",
-      "community": 85,
+      "community": 27,
       "norm_label": "normalizeddedupekey()"
     },
     {
@@ -27810,7 +27810,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "lib_omnichannelevents_mediatranscriptlines",
-      "community": 85,
+      "community": 27,
       "norm_label": "mediatranscriptlines()"
     },
     {
@@ -27820,7 +27820,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "lib_omnichannelevents_providermetadatarecord",
-      "community": 85,
+      "community": 27,
       "norm_label": "providermetadatarecord()"
     },
     {
@@ -27830,7 +27830,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "lib_omnichannelevents_mediacontextrecord",
-      "community": 85,
+      "community": 27,
       "norm_label": "mediacontextrecord()"
     },
     {
@@ -27840,7 +27840,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "lib_omnichannelevents_mediacontextlines",
-      "community": 85,
+      "community": 27,
       "norm_label": "mediacontextlines()"
     },
     {
@@ -27850,7 +27850,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "lib_omnichannelevents_normalizedmessagetext",
-      "community": 85,
+      "community": 27,
       "norm_label": "normalizedmessagetext()"
     },
     {
@@ -27860,7 +27860,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "lib_omnichannelevents_ismediatranscribable",
-      "community": 85,
+      "community": 27,
       "norm_label": "ismediatranscribable()"
     },
     {
@@ -27870,7 +27870,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "lib_omnichannelevents_medialoglines",
-      "community": 85,
+      "community": 27,
       "norm_label": "medialoglines()"
     },
     {
@@ -29490,7 +29490,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_styletraining",
-      "community": 27,
+      "community": 85,
       "norm_label": "styletraining.ts"
     },
     {
@@ -29500,7 +29500,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "lib_styletraining_styletrainingenabled",
-      "community": 27,
+      "community": 85,
       "norm_label": "styletrainingenabled()"
     },
     {
@@ -29510,7 +29510,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "lib_styletraining_buildstylefewshot",
-      "community": 27,
+      "community": 85,
       "norm_label": "buildstylefewshot()"
     },
     {
@@ -29520,7 +29520,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "lib_styletraining_styletrainingdeps",
-      "community": 27,
+      "community": 85,
       "norm_label": "styletrainingdeps"
     },
     {
@@ -29530,7 +29530,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "lib_styletraining_defaultdeps",
-      "community": 27,
+      "community": 85,
       "norm_label": "defaultdeps"
     },
     {
@@ -29540,7 +29540,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "lib_styletraining_fetchstylecontext",
-      "community": 27,
+      "community": 85,
       "norm_label": "fetchstylecontext()"
     },
     {
@@ -29630,7 +29630,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "lib_theoagent_cleantext",
-      "community": 339,
+      "community": 0,
       "norm_label": "cleantext()"
     },
     {
@@ -29680,7 +29680,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "lib_theoagent_envflag",
-      "community": 0,
+      "community": 339,
       "norm_label": "envflag()"
     },
     {
@@ -29690,7 +29690,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "lib_theoagent_smsimagesenabled",
-      "community": 0,
+      "community": 339,
       "norm_label": "smsimagesenabled()"
     },
     {
@@ -29700,7 +29700,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "lib_theoagent_whatsappimagesenabled",
-      "community": 0,
+      "community": 339,
       "norm_label": "whatsappimagesenabled()"
     },
     {
@@ -29710,7 +29710,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "lib_theoagent_socialdmimagesenabled",
-      "community": 0,
+      "community": 339,
       "norm_label": "socialdmimagesenabled()"
     },
     {
@@ -29720,7 +29720,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "lib_theoagent_mediaimagesenabled",
-      "community": 0,
+      "community": 339,
       "norm_label": "mediaimagesenabled()"
     },
     {
@@ -29770,7 +29770,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "lib_theoagent_valuationurl",
-      "community": 339,
+      "community": 0,
       "norm_label": "valuationurl()"
     },
     {
@@ -29970,7 +29970,7 @@
       "source_location": "L286",
       "_origin": "ast",
       "id": "lib_theoagent_usablephotourl",
-      "community": 339,
+      "community": 0,
       "norm_label": "usablephotourl()"
     },
     {
@@ -29980,7 +29980,7 @@
       "source_location": "L295",
       "_origin": "ast",
       "id": "lib_theoagent_formatprice",
-      "community": 339,
+      "community": 0,
       "norm_label": "formatprice()"
     },
     {
@@ -29990,7 +29990,7 @@
       "source_location": "L305",
       "_origin": "ast",
       "id": "lib_theoagent_numericvalue",
-      "community": 339,
+      "community": 0,
       "norm_label": "numericvalue()"
     },
     {
@@ -30000,7 +30000,7 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "lib_theoagent_formatfacts",
-      "community": 339,
+      "community": 0,
       "norm_label": "formatfacts()"
     },
     {
@@ -30010,7 +30010,7 @@
       "source_location": "L322",
       "_origin": "ast",
       "id": "lib_theoagent_formatoptionfacts",
-      "community": 339,
+      "community": 0,
       "norm_label": "formatoptionfacts()"
     },
     {
@@ -30020,7 +30020,7 @@
       "source_location": "L332",
       "_origin": "ast",
       "id": "lib_theoagent_formatsqft",
-      "community": 339,
+      "community": 0,
       "norm_label": "formatsqft()"
     },
     {
@@ -30030,7 +30030,7 @@
       "source_location": "L337",
       "_origin": "ast",
       "id": "lib_theoagent_formattheosellervaluationreply",
-      "community": 339,
+      "community": 0,
       "norm_label": "formattheosellervaluationreply()"
     },
     {
@@ -30080,7 +30080,7 @@
       "source_location": "L395",
       "_origin": "ast",
       "id": "lib_theoagent_formattheopropertydetails",
-      "community": 339,
+      "community": 0,
       "norm_label": "formattheopropertydetails()"
     },
     {
@@ -30090,7 +30090,7 @@
       "source_location": "L413",
       "_origin": "ast",
       "id": "lib_theoagent_requestedamenitylabels",
-      "community": 339,
+      "community": 0,
       "norm_label": "requestedamenitylabels()"
     },
     {
@@ -30100,7 +30100,7 @@
       "source_location": "L436",
       "_origin": "ast",
       "id": "lib_theoagent_formattheoavailabilityanswer",
-      "community": 339,
+      "community": 0,
       "norm_label": "formattheoavailabilityanswer()"
     },
     {
@@ -30110,7 +30110,7 @@
       "source_location": "L442",
       "_origin": "ast",
       "id": "lib_theoagent_formattheoamenityanswer",
-      "community": 339,
+      "community": 0,
       "norm_label": "formattheoamenityanswer()"
     },
     {
@@ -30120,7 +30120,7 @@
       "source_location": "L468",
       "_origin": "ast",
       "id": "lib_theoagent_formattheoshowingrequest",
-      "community": 339,
+      "community": 0,
       "norm_label": "formattheoshowingrequest()"
     },
     {
@@ -42860,7 +42860,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_mediaunderstanding_test",
-      "community": 85,
+      "community": 27,
       "norm_label": "mediaunderstanding.test.ts"
     },
     {
@@ -42940,7 +42940,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_omnichannelevents_test",
-      "community": 85,
+      "community": 27,
       "norm_label": "omnichannelevents.test.ts"
     },
     {
@@ -43070,7 +43070,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_styletraining_test",
-      "community": 27,
+      "community": 85,
       "norm_label": "styletraining.test.ts"
     },
     {
@@ -43080,7 +43080,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "ts_styletraining_test_example",
-      "community": 27,
+      "community": 85,
       "norm_label": "example()"
     },
     {
@@ -43090,7 +43090,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "ts_theoagent_test",
-      "community": 0,
+      "community": 345,
       "norm_label": "theoagent.test.ts"
     },
     {
@@ -43100,7 +43100,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "ts_theoagent_test_property",
-      "community": 0,
+      "community": 345,
       "norm_label": "property()"
     },
     {
@@ -43110,7 +43110,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "ts_theoagent_test_withoutopenai",
-      "community": 0,
+      "community": 345,
       "norm_label": "withoutopenai()"
     },
     {
@@ -129262,9 +129262,9 @@
       "source_file": "lib/irisEmail.ts",
       "source_location": "L746",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_irisemail_generateclaudeirisemailreplytext",
-      "target": "lib_qualificationplaybooks_advancedqualificationplaybook",
-      "confidence_score": 1.0
+      "target": "lib_qualificationplaybooks_advancedqualificationplaybook"
     },
     {
       "relation": "calls",
@@ -170835,5 +170835,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2f114cd60d7b946f6a9b9a20a954852c30f1c499"
+  "built_at_commit": "71068fd22dc417d8296bd4ec83d8f4271f0f35bf"
 }

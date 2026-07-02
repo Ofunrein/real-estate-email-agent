@@ -381,3 +381,37 @@ test("buildHtmlEmailReply: skips Street View photos instead of rendering broken 
   assert.doesNotMatch(reply.html || "", /maps\.googleapis\.com/);
   assert.match(reply.html || "", /View listing/);
 });
+
+test("classifyIrisEmailText: blocks account activation emails from auto-reply", () => {
+  const classification = classifyIrisEmailText(email({
+    from: "Bulk Email Checker <support@bulkemailchecker.com>",
+    subject: "Welcome to Bulk Email Checker!",
+    body: "Welcome to Bulk Email Checker! Your account has been created. Confirm Email Address https://panel.bulkemailchecker.com/activate/320767197/",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(isIrisEligibleEmail(email({
+    from: "Bulk Email Checker <support@bulkemailchecker.com>",
+    subject: "Welcome to Bulk Email Checker!",
+    body: "Confirm Email Address https://panel.bulkemailchecker.com/activate/320767197/",
+  })), false);
+  assert.equal(classification.intent, "spam");
+  assert.equal(execution.canReply, false);
+});
+
+test("classifyIrisEmailText: blocks non-real-estate founder outreach from auto-reply", () => {
+  const classification = classifyIrisEmailText(email({
+    from: "Amy Green <amy@example.com>",
+    subject: "Martin - partners at Lumenosis AI?",
+    body: "Martin, selling all day, no deals moving? We partner with technical founders on their actual deals. Want the method?",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(isIrisEligibleEmail(email({
+    from: "Amy Green <amy@example.com>",
+    subject: "Martin - partners at Lumenosis AI?",
+    body: "We partner with technical founders on their actual deals. Want the method?",
+  })), false);
+  assert.equal(classification.intent, "spam");
+  assert.equal(execution.canReply, false);
+});

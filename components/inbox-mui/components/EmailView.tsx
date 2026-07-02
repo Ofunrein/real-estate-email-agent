@@ -274,7 +274,7 @@ function EmailBubble({
   'Iris sent' :
   isOwner ?
   'Owner sent' :
-  `${senderName} received`;
+  `Inbound from ${senderName}`;
   const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
   const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
   const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
