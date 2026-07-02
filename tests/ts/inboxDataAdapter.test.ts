@@ -1024,3 +1024,32 @@ test("adaptInboxData exposes pipeline, channel quality, and media-understanding 
   assert.equal(model.metrics.mediaTranscripts, 1);
   assert.ok(model.channelQuality.some((row) => row.channel === "sms" && row.quality >= 90));
 });
+
+
+test("adaptInboxData counts only actual qualified appointments and transfers", () => {
+  const data = composeInboxData(
+    [
+      { full_name: "Prospect Only", summary: "Wants 3 bed under 500k" } as SheetRow,
+      { full_name: "Qualified Score", phone: "+15125550111", lead_score: "80", last_ai_touch_at: new Date().toISOString() } as SheetRow,
+      { full_name: "Structured Buyer", phone: "+15125550112", intent: "buyer", budget: "500000", bedrooms: "3", area: "Austin", timeline: "30 days", last_ai_touch_at: new Date().toISOString() } as SheetRow,
+    ],
+    [
+      { channel: "sms", direction: "inbound", phone: "+15125550001", thread_ref: "sms:+15125550001", message_text: "Can we schedule a showing and talk to an agent?", event_at: new Date().toISOString() } as SheetRow,
+      { channel: "sms", direction: "outbound", phone: "+15125550001", thread_ref: "sms:+15125550001", message_text: "I can help with scheduling.", event_at: new Date().toISOString() } as SheetRow,
+      { channel: "sms", direction: "outbound", phone: "+15125550002", thread_ref: "sms:+15125550002", ai_action: "appointment_scheduled", appointment_id: "appt_123", message_text: "Confirmed for 2pm.", event_at: new Date().toISOString() } as SheetRow,
+      { channel: "sms", direction: "outbound", phone: "+15125550003", thread_ref: "sms:+15125550003", ai_action: "live_transfer", event_type: "human_handoff", message_text: "Forwarded to Austin Realty.", event_at: new Date().toISOString() } as SheetRow,
+    ],
+    [],
+    [
+      { call_id: "call_transfer_1", phone: "+15125550004", direction: "inbound", ended_reason: "assistant-forwarded-call", started_at: new Date().toISOString(), ended_at: new Date().toISOString() } as SheetRow,
+    ],
+  );
+
+  const model = adaptInboxData(data);
+  assert.equal(model.metrics.appointments, 1);
+  assert.equal(model.metrics.liveTransfers, 2);
+  assert.equal(model.metrics.qualifiedLeads, 3);
+  assert.equal(model.statTrends.appointments.reduce((sum, point) => sum + point.value, 0), 1);
+  assert.equal(model.statTrends.transfers.reduce((sum, point) => sum + point.value, 0), 2);
+  assert.ok(model.statTrends.qualified.some((point) => point.value >= 2));
+});

@@ -2010,8 +2010,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxDataContext.tsx": {
-    "mtime": 1782980439.8069692,
-    "ast_hash": "fefd02232cd09eea3f8a2e9d221a8b6c",
+    "mtime": 1782984657.267299,
+    "ast_hash": "dcd7f29cb780a124d81d7a43a6c50ff9",
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxPage.tsx": {
@@ -2070,8 +2070,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OverviewView.tsx": {
-    "mtime": 1782980677.022516,
-    "ast_hash": "4ada347abf77469e78d0bdad4469752a",
+    "mtime": 1782984603.0507646,
+    "ast_hash": "50e7f48fc82a2146b4ccec1b97da13f1",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/PropertiesView.tsx": {
@@ -2130,8 +2130,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/data/inboxData.ts": {
-    "mtime": 1782980280.3207881,
-    "ast_hash": "bd2446f2441b5878a3fe8271649e3ba6",
+    "mtime": 1782984603.0326788,
+    "ast_hash": "8d280064a369ab2528bf242c37698fd7",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/CategoryColorContext.tsx": {
@@ -2325,8 +2325,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782980752.875618,
-    "ast_hash": "6c2ce8fdaed85bce394018ce4d623389",
+    "mtime": 1782984786.7644336,
+    "ast_hash": "edb72c6543e47d019ed89cde0b13eaf9",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
@@ -2345,8 +2345,8 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782980845.983041,
-    "ast_hash": "8dd8be6d207545a1c7c9df9540ad64e7",
+    "mtime": 1782984786.7669144,
+    "ast_hash": "de32c8e95b54020e7da9551c94821d15",
     "semantic_hash": ""
   },
   ".github/workflows/build-check.yml": {
