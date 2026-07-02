@@ -15,6 +15,8 @@ import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { createRequestAudit } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { understandMediaItems, mediaVisionEnabled } from "@/lib/mediaUnderstanding";
+import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,59 @@ function logTheoWhatsApp(message: string, details: Record<string, unknown> = {})
     }),
   );
   console.info(`[Theo WhatsApp] ${message}`, safeDetails);
+}
+
+function graphVersion(): string {
+  return (process.env.META_GRAPH_VERSION || "v20.0").trim().replace(/^\/+/, "");
+}
+
+async function resolveWhatsAppMediaItem(item: OmnichannelMedia): Promise<OmnichannelMedia> {
+  const mediaId = String(item.providerMetadata?.mediaId || item.id || "").trim();
+  const token = process.env.WHATSAPP_ACCESS_TOKEN || "";
+  if (!mediaId || !token) return item;
+  try {
+    const metaResponse = await fetch(`https://graph.facebook.com/${graphVersion()}/${encodeURIComponent(mediaId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!metaResponse.ok) return item;
+    const meta = await metaResponse.json() as Record<string, unknown>;
+    const url = String(meta.url || "").trim();
+    const mimeType = String(meta.mime_type || item.contentType || "").trim();
+    const next: OmnichannelMedia = {
+      ...item,
+      url: url || item.url,
+      contentType: mimeType || item.contentType,
+      providerMetadata: {
+        ...(item.providerMetadata || {}),
+        mediaUrlResolved: Boolean(url),
+        fileSize: meta.file_size,
+      },
+    };
+    if (mediaVisionEnabled() && next.type === "image" && url) {
+      const bytesResponse = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (bytesResponse.ok) {
+        const contentType = bytesResponse.headers.get("content-type") || mimeType || "image/jpeg";
+        next.providerMetadata = {
+          ...next.providerMetadata,
+          visionContentType: contentType,
+          visionBytesBase64: Buffer.from(await bytesResponse.arrayBuffer()).toString("base64"),
+        };
+      }
+    }
+    return next;
+  } catch (error) {
+    logTheoWhatsApp("media resolution skipped", {
+      mediaId,
+      error: error instanceof Error ? error.message : "media_resolution_failed",
+    });
+    return item;
+  }
+}
+
+async function resolveWhatsAppMediaItems(media: OmnichannelMedia[] = []): Promise<OmnichannelMedia[]> {
+  const resolved: OmnichannelMedia[] = [];
+  for (const item of media) resolved.push(await resolveWhatsAppMediaItem(item));
+  return resolved;
 }
 
 function logTheoMetrics(metrics: TheoMetric[]) {
@@ -181,7 +236,13 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const inboundMedia = await understandMediaItems(await resolveWhatsAppMediaItems(inbound.media || []));
       const inboundInput = metaWhatsAppIngestInput(inbound);
+      if (inboundMedia.length) {
+        inboundInput.mediaJson = inboundMedia;
+        inboundInput.messageText = normalizedMessageText({ text: inbound.body || "", media: inboundMedia });
+        inboundInput.summary = `Inbound WhatsApp with ${inboundMedia.length} media item${inboundMedia.length === 1 ? "" : "s"}.`;
+      }
       const result = await recordChannelInteraction(inboundInput);
       const controlAction = smsControlAction(inbound.body || "");
       logTheoWhatsApp("inbound logged", {
