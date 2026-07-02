@@ -506,6 +506,10 @@ function realChannelToView(rawChannel: string): MessageChannelId {
   return "website";
 }
 
+function realChannelToViewRaw(view: string): string {
+  return view === "website" ? "website_chat" : view;
+}
+
 // Build 14-day day bins from events, returning per-day aggregates.
 function buildDayBins(events: SheetRow[]) {
   const now = new Date();
@@ -1050,55 +1054,122 @@ function buildActivityEvents(data: AgentInboxData): ActivityEvent[] {
     .map((entry) => entry.event);
 }
 
+function eventMediaItems(event: SheetRow): Array<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(event.media_json || "[]") as unknown;
+    return Array.isArray(parsed) ? parsed.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object") : [];
+  } catch {
+    return [];
+  }
+}
+
+function eventHasMedia(event: SheetRow): boolean {
+  return eventMediaItems(event).length > 0 || /(?:MMS|SMS|WhatsApp|Social DM)?\s*(?:image|photo|media|attachment|audio|voice note|video):/i.test(event.message_text || "");
+}
+
+function eventHasTranscript(event: SheetRow): boolean {
+  if (/voice note transcript:/i.test(event.message_text || "")) return true;
+  return eventMediaItems(event).some((item) => {
+    const meta = item.providerMetadata && typeof item.providerMetadata === "object" ? item.providerMetadata as Record<string, unknown> : {};
+    const mediaContext = meta.mediaContext && typeof meta.mediaContext === "object" ? meta.mediaContext as Record<string, unknown> : {};
+    return Boolean(item.transcript || mediaContext.extractedText || mediaContext.extracted_text || mediaContext.summary);
+  });
+}
+
+function leadText(lead: SheetRow): string {
+  return [lead.intent, lead.summary, lead.next_action, lead.property_interest, lead.timeline, lead.budget, lead.lead_role]
+    .join(" ")
+    .toLowerCase();
+}
+
+function eventSearchText(event: SheetRow): string {
+  return [event.event_type, event.ai_action, event.summary, event.message_text, event.handoff_reason]
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildPipelineStages(data: AgentInboxData) {
+  const events = data.events;
+  const activeThreads = Object.keys(data.threads).length;
+  const qualified = Math.max(
+    data.leads.filter((lead) => /qualified|hot|showing|valuation|seller|buyer|appointment|book/i.test(leadText(lead))).length,
+    Object.values(data.threads).filter((threadEvents) => threadEvents.some((event) => /qualified|budget|bed|bath|timeline|showing|valuation|appointment/i.test(eventSearchText(event)))).length,
+  );
+  const appointments = events.filter((event) => /appointment|book|scheduled|showing/i.test(eventSearchText(event))).length;
+  const transfers = events.filter((event) => /transfer|handoff|human|owner|agent/i.test(eventSearchText(event))).length;
+  const media = events.filter(eventHasMedia).length;
+  return [
+    { key: "new", label: "New lead", value: data.leads.length, color: "#c4b5fd" },
+    { key: "contacted", label: "Contacted", value: Math.max(activeThreads, events.filter((event) => event.direction === "inbound").length), color: "#a78bfa" },
+    { key: "qualified", label: "Qualified", value: qualified, color: "#8b5cf6" },
+    { key: "appointment", label: "Appointment", value: appointments, color: "#7c3aed" },
+    { key: "transfer", label: "Transfer", value: transfers, color: "#6d28d9" },
+    { key: "media", label: "Media handled", value: media, color: "#5b21b6" },
+  ];
+}
+
 function buildChannelStats(data: AgentInboxData): Record<"all" | MessageChannelId, ChannelStats> {
   const views: Array<"all" | MessageChannelId> = ["all", "email", "sms", "voice", "instagram", "messenger", "whatsapp", "website"];
   const result = {} as Record<"all" | MessageChannelId, ChannelStats>;
   for (const view of views) {
-    const events = view === "all" ? data.events : data.events.filter((e) => realChannelToView(e.channel || "") === view);
-    const threadKeys = new Set(events.map((e) => conversationKey(e, view === "all" ? "" : realChannelToViewRaw(view))));
-    const inbound = events.filter((e) => e.direction === "inbound").length;
-    const aiReplies = events.filter((e) => e.direction !== "inbound").length;
+    const events = view === "all" ? data.events : data.events.filter((event) => realChannelToView(event.channel || "") === view);
+    const threadKeys = new Set(events.map((event) => conversationKey(event, view === "all" ? eventChannel(event) : realChannelToViewRaw(view))));
+    const inbound = events.filter((event) => event.direction === "inbound").length;
+    const aiReplies = events.filter((event) => event.direction !== "inbound").length;
     const latest = events[events.length - 1];
-    const flagged = Object.values(
-      events.reduce<Record<string, SheetRow[]>>((acc, event) => {
-        const channel = eventChannel(event);
-        const key = conversationKey(event, channel);
-        acc[key] ||= [];
-        acc[key].push(event);
-        return acc;
-      }, {}),
-    ).some(threadNeedsHuman);
+    const grouped = events.reduce<Record<string, SheetRow[]>>((acc, event) => {
+      const channel = eventChannel(event);
+      const key = conversationKey(event, channel);
+      acc[key] ||= [];
+      acc[key].push(event);
+      return acc;
+    }, {});
+    const reviewCount = Object.values(grouped).filter(threadNeedsHuman).length;
+    const mediaCount = events.filter(eventHasMedia).length;
+    const replyCoverage = inbound ? Math.min(100, Math.round((aiReplies / inbound) * 100)) : 100;
+    const qualityScore = Math.max(0, Math.min(100, Math.round(replyCoverage - reviewCount * 8 + (mediaCount ? 4 : 0))));
     const latestChannel = latest ? eventChannel(latest) : "";
     const latestThreadId = latest ? conversationKey(latest, latestChannel) : "";
     const latestThreadEvents = latest
       ? events.filter((event) => {
-          const channel = eventChannel(event);
-          return conversationKey(event, channel) === latestThreadId || (latest.thread_ref && event.thread_ref === latest.thread_ref);
-        })
+        const channel = eventChannel(event);
+        return conversationKey(event, channel) === latestThreadId || (latest.thread_ref && event.thread_ref === latest.thread_ref);
+      })
       : [];
     result[view] = {
       events: events.length,
       threads: threadKeys.size,
       inbound,
       aiReplies,
+      reviewCount,
+      mediaCount,
+      replyCoverage,
+      qualityScore,
       lastActivity: latest
         ? {
-            contact: threadIdentity(latest.thread_ref || latestThreadId, latestThreadEvents, latestChannel),
-            message: usableActivityText(eventText(latest) || latest.summary || "", latest.summary || ""),
-            status: latest.direction === "inbound" ? "received" : "sent",
-            when: formatEventTimeShort(latest.event_at),
-          }
+          contact: threadIdentity(latest.thread_ref || latestThreadId, latestThreadEvents, latestChannel),
+          message: usableActivityText(eventText(latest) || latest.summary || "", latest.summary || ""),
+          status: eventNeedsHuman(latest) ? "Review" : latest.direction === "inbound" ? "New" : "Sent",
+          when: formatEventTimeShort(latest.event_at),
+        }
         : null,
-      humanReview: flagged ? "flagged" : "clear",
+      humanReview: reviewCount ? "flagged" : "clear",
     };
   }
   return result;
 }
 
-function realChannelToViewRaw(view: string): string {
-  // inverse for conversationKey channel arg
-  if (view === "website") return "website_chat";
-  return view;
+function buildChannelQuality(stats: Record<"all" | MessageChannelId, ChannelStats>) {
+  const views: MessageChannelId[] = ["email", "sms", "voice", "instagram", "messenger", "whatsapp", "website"];
+  return views.map((channel) => ({
+    channel,
+    label: channelMeta[channel].label,
+    inbound: stats[channel].inbound,
+    replies: stats[channel].aiReplies,
+    media: stats[channel].mediaCount,
+    review: stats[channel].reviewCount,
+    quality: stats[channel].qualityScore,
+  }));
 }
 
 function buildReviewQueue(data: AgentInboxData): ReviewItem[] {
@@ -1138,10 +1209,13 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
   const responsesByDay = responseSamplesByDay(data.events);
   const todayResponses = responsesByDay.get(dayKey(new Date())) || [];
   const avgResponseSeconds = average(todayResponses);
-
   const needReview = data.metrics.needs_human;
   const handled = data.metrics.inbound_messages + data.metrics.outbound_replies;
   const aiRate = handled ? Math.round((data.metrics.outbound_replies / handled) * 100) : 0;
+  const channelStats = buildChannelStats(data);
+  const pipelineStages = buildPipelineStages(data);
+  const mediaItems = data.events.filter(eventHasMedia).length;
+  const mediaTranscripts = data.events.filter(eventHasTranscript).length;
 
   return {
     channels: buildChannels(data),
@@ -1149,17 +1223,17 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
     channelAccounts: { ...channelAccounts, ...data.channelAccounts },
     leadCategories: data.inboxCategories.length
       ? data.inboxCategories.map((c) => ({
-          id: categorySlugToId(c.slug),
-          label: c.name,
-          color: c.color || "#8b5cf6",
-          slug: c.slug,
-          enabled: c.enabled,
-          gmailLabelName: c.gmail_label_name,
-        }))
+        id: categorySlugToId(c.slug),
+        label: c.name,
+        color: c.color || "#8b5cf6",
+        slug: c.slug,
+        enabled: c.enabled,
+        gmailLabelName: c.gmail_label_name,
+      }))
       : leadCategories,
     activityEvents: buildActivityEvents(data),
     reviewQueue: buildReviewQueue(data),
-    channelStats: buildChannelStats(data),
+    channelStats,
     emailThreads: buildEmailThreads(data),
     smsThreads: buildSmsThreads(data),
     textThreads: {
@@ -1199,7 +1273,14 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
       avgResponseSeconds,
       avgResponseLabel: formatResponseDuration(avgResponseSeconds),
       avgResponseSamples: todayResponses.length,
+      qualifiedLeads: pipelineStages.find((stage) => stage.key === "qualified")?.value || 0,
+      appointments: pipelineStages.find((stage) => stage.key === "appointment")?.value || 0,
+      liveTransfers: pipelineStages.find((stage) => stage.key === "transfer")?.value || 0,
+      mediaItems,
+      mediaTranscripts,
     },
+    pipelineStages,
+    channelQuality: buildChannelQuality(channelStats),
     sparkline,
     statTrends: {
       needReview: bins.map((b) => ({ value: b.needReview })),

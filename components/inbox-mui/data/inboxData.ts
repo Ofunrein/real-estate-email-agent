@@ -103,6 +103,10 @@ export interface ChannelStats {
   threads: number;
   inbound: number;
   aiReplies: number;
+  reviewCount: number;
+  mediaCount: number;
+  replyCoverage: number;
+  qualityScore: number;
   lastActivity: {
     contact: string;
     message: string;
@@ -110,6 +114,23 @@ export interface ChannelStats {
     when: string;
   } | null;
   humanReview: 'flagged' | 'clear';
+}
+
+export interface PipelineStage {
+  key: string;
+  label: string;
+  value: number;
+  color: string;
+}
+
+export interface ChannelQualityMetric {
+  channel: MessageChannelId;
+  label: string;
+  inbound: number;
+  replies: number;
+  media: number;
+  review: number;
+  quality: number;
 }
 
 export interface PropertyCard {
@@ -257,6 +278,11 @@ export interface Metrics {
   avgResponseSeconds: number;
   avgResponseLabel: string;
   avgResponseSamples: number;
+  qualifiedLeads: number;
+  appointments: number;
+  liveTransfers: number;
+  mediaItems: number;
+  mediaTranscripts: number;
 }
 
 export interface InboxModel {
@@ -274,6 +300,8 @@ export interface InboxModel {
   properties: Property[];
   propertyHealth: PropertyHealth;
   metrics: Metrics;
+  pipelineStages: PipelineStage[];
+  channelQuality: ChannelQualityMetric[];
   sparkline: number[];
   statTrends: {
     needReview: TrendPoint[];

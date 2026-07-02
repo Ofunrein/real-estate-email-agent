@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, error: "No audio file uploaded" }, { status: 400 });
   }
-  if (!file.type.startsWith("audio/") && file.type !== "video/webm") {
+  if (!file.type.startsWith("audio/") && !file.type.startsWith("video/")) {
     return NextResponse.json({ ok: false, error: `Unsupported transcription file type: ${file.type}` }, { status: 415 });
   }
 
