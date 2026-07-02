@@ -9,6 +9,7 @@ import {
   PROPERTY_EMBEDDING_MODEL,
   vectorLiteral,
 } from "@/lib/propertyEmbeddings";
+import { searchAndImportMissingProperties } from "@/lib/propertyImportFallback";
 import { PROPERTIES_HEADERS, type SheetRow } from "@/lib/sheetSchema";
 
 export type SemanticPropertyMatch = {
@@ -19,18 +20,26 @@ export type SemanticPropertyMatch = {
 type RetrieveOptions = {
   channel?: string;
   enableRag?: boolean;
+  enableMissingPropertyImport?: boolean;
 };
 
 type RetrieveDeps = {
   structured: (query: string | PropertySearchCriteria, limit?: number) => Promise<SheetRow[]>;
   embed: (text: string) => Promise<number[] | null>;
   semantic: (addresses: string[], embedding: number[], limit?: number) => Promise<SemanticPropertyMatch[]>;
+  fallback?: (query: string | PropertySearchCriteria, limit: number, options: RetrieveOptions) => Promise<SheetRow[]>;
 };
 
 const defaultDeps: RetrieveDeps = {
   structured: findCandidatePropertiesFromDatabase,
   embed: embedText,
   semantic: findSemanticPropertyMatchesByAddress,
+  fallback: (query, limit, options) => searchAndImportMissingProperties({
+    query,
+    limit,
+    channel: options.channel,
+    source: `apify_fallback_${options.channel || "agent"}`,
+  }),
 };
 
 let pool: Pool | null = null;
@@ -113,6 +122,24 @@ function shouldUseRag(query: string | PropertySearchCriteria, options: RetrieveO
   return Boolean(semanticQueryText(query));
 }
 
+function shouldUseMissingPropertyFallback(options: RetrieveOptions): boolean {
+  if (options.enableMissingPropertyImport === false) return false;
+  if (options.channel === "voice" && process.env.PROPERTY_APIFY_FALLBACK_VOICE_ENABLED !== "true") return false;
+  return true;
+}
+
+async function fallbackWhenEmpty(
+  rows: SheetRow[],
+  query: string | PropertySearchCriteria,
+  requested: number,
+  options: RetrieveOptions,
+  deps: RetrieveDeps,
+): Promise<SheetRow[]> {
+  if (rows.length || !deps.fallback || !shouldUseMissingPropertyFallback(options)) return rows.slice(0, requested);
+  const imported = await deps.fallback(query, requested, options).catch(() => []);
+  return imported.slice(0, requested);
+}
+
 export async function retrievePropertiesForAgent(
   query: string | PropertySearchCriteria = "",
   limit = 5,
@@ -122,7 +149,9 @@ export async function retrievePropertiesForAgent(
   const requested = Math.max(1, Math.min(limit, 25));
   const poolSize = Math.max(25, Math.min(requested * 12, 100));
   const structured = await deps.structured(query, shouldUseRag(query, options) ? poolSize : requested);
-  if (!structured.length || !shouldUseRag(query, options)) return structured.slice(0, requested);
+  if (!structured.length || !shouldUseRag(query, options)) {
+    return fallbackWhenEmpty(structured, query, requested, options, deps);
+  }
 
   const embedding = await deps.embed(semanticQueryText(query)).catch(() => null);
   if (!embedding?.length) return structured.slice(0, requested);
