@@ -2188,6 +2188,156 @@ function jsonRecordFromDb(value: unknown): Record<string, unknown> {
   return {};
 }
 
+
+export type CadenceTaskRecord = {
+  id: string;
+  leadIdentity: string;
+  channel: string;
+  reason: string;
+  status: string;
+  dueAt: string;
+  touchCount: number;
+  lead: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  lastError: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapCadenceTask(row: Record<string, unknown>): CadenceTaskRecord {
+  return {
+    id: String(row.id || ""),
+    leadIdentity: String(row.lead_identity || ""),
+    channel: String(row.channel || ""),
+    reason: String(row.reason || ""),
+    status: String(row.status || ""),
+    dueAt: row.due_at ? new Date(String(row.due_at)).toISOString() : "",
+    touchCount: intDbValue(row.touch_count),
+    lead: jsonRecordFromDb(row.lead_snapshot),
+    metadata: jsonRecordFromDb(row.metadata),
+    lastError: String(row.last_error || ""),
+    createdAt: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
+    updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : "",
+  };
+}
+
+export async function persistCadenceQueuePlanInDatabase(input: {
+  tasks: Array<{ id: string; leadIdentity: string; channel: string; reason: string; dueAt: string; touchCount: number; lead: Record<string, unknown> }>;
+  skipped?: Array<Record<string, unknown>>;
+  generatedAt: string;
+}, metadata: Record<string, unknown> = {}): Promise<CadenceTaskRecord[]> {
+  if (!await tableReady("cadence_tasks")) return [];
+  await ensureClientInDatabase();
+  const saved: CadenceTaskRecord[] = [];
+  for (const task of input.tasks) {
+    const result = await getPool().query(
+      `insert into cadence_tasks (
+         client_id, id, lead_identity, channel, reason, status, due_at, touch_count, lead_snapshot, metadata
+       ) values (
+         $1, $2, $3, $4, $5, 'queued', $6::timestamptz, $7, $8::jsonb, $9::jsonb
+       )
+       on conflict (client_id, id) do update set
+         lead_identity = excluded.lead_identity,
+         channel = excluded.channel,
+         reason = excluded.reason,
+         due_at = excluded.due_at,
+         touch_count = excluded.touch_count,
+         lead_snapshot = cadence_tasks.lead_snapshot || excluded.lead_snapshot,
+         metadata = cadence_tasks.metadata || excluded.metadata,
+         status = case when cadence_tasks.status in ('completed', 'cancelled') then cadence_tasks.status else excluded.status end,
+         updated_at = now()
+       returning *`,
+      [
+        clientId(),
+        task.id,
+        task.leadIdentity,
+        task.channel,
+        task.reason,
+        task.dueAt,
+        task.touchCount,
+        JSON.stringify(task.lead || {}),
+        JSON.stringify({ ...metadata, generatedAt: input.generatedAt, skipped: input.skipped || [] }),
+      ],
+    );
+    if (result.rows[0]) saved.push(mapCadenceTask(result.rows[0]));
+  }
+  return saved;
+}
+
+
+export async function claimDueCadenceTasksInDatabase(limit = 10): Promise<CadenceTaskRecord[]> {
+  if (!await tableReady("cadence_tasks")) return [];
+  await ensureClientInDatabase();
+  const result = await getPool().query(
+    `with due as (
+       select id
+         from cadence_tasks
+        where client_id = $1
+          and status = 'queued'
+          and due_at <= now()
+        order by due_at asc, updated_at asc
+        limit $2
+        for update skip locked
+     )
+     update cadence_tasks task
+        set status = 'running',
+            locked_at = now(),
+            updated_at = now()
+       from due
+      where task.client_id = $1
+        and task.id = due.id
+      returning task.*`,
+    [clientId(), limit],
+  );
+  return result.rows.map(mapCadenceTask);
+}
+
+export async function completeCadenceTaskInDatabase(id: string, metadata: Record<string, unknown> = {}): Promise<CadenceTaskRecord | null> {
+  if (!id || !await tableReady("cadence_tasks")) return null;
+  const result = await getPool().query(
+    `update cadence_tasks
+        set status = 'completed',
+            completed_at = now(),
+            metadata = metadata || $3::jsonb,
+            updated_at = now()
+      where client_id = $1
+        and id = $2
+      returning *`,
+    [clientId(), id, JSON.stringify(metadata)],
+  );
+  return result.rows[0] ? mapCadenceTask(result.rows[0]) : null;
+}
+
+export async function failCadenceTaskInDatabase(id: string, error: string, retry = false): Promise<CadenceTaskRecord | null> {
+  if (!id || !await tableReady("cadence_tasks")) return null;
+  const result = await getPool().query(
+    `update cadence_tasks
+        set status = $3,
+            last_error = $4,
+            locked_at = null,
+            updated_at = now()
+      where client_id = $1
+        and id = $2
+      returning *`,
+    [clientId(), id, retry ? "queued" : "failed", error],
+  );
+  return result.rows[0] ? mapCadenceTask(result.rows[0]) : null;
+}
+
+export async function readCadenceTasksFromDatabase(status = "queued", limit = 50): Promise<CadenceTaskRecord[]> {
+  if (!await tableReady("cadence_tasks")) return [];
+  const result = await getPool().query(
+    `select *
+       from cadence_tasks
+      where client_id = $1
+        and ($2 = '' or status = $2)
+      order by due_at asc, updated_at desc
+      limit $3`,
+    [clientId(), status, limit],
+  );
+  return result.rows.map(mapCadenceTask);
+}
+
 export async function upsertReplyJobInDatabase(input: ReplyJobInput): Promise<ReplyJobRecord | null> {
   const dedupeKey = input.dedupeKey.trim();
   if (!dedupeKey || !await tableReady("reply_jobs")) return null;

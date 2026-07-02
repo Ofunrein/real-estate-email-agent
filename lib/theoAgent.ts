@@ -3,6 +3,7 @@ import { CENTRAL_TEXAS_CITIES } from "@/lib/serviceAreas";
 import { handleTheoAppointmentMessage } from "@/lib/theoAppointments";
 import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
 import type { TheoMetric } from "@/lib/theoTelemetry";
+import { detectConversationScenario, sharedBrainInstruction } from "@/lib/conversationPlaybooks";
 
 export type TheoIntent =
   | "property_details"
@@ -686,10 +687,16 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     }
   }
 
+  const scenario = detectConversationScenario({ message: context.message, lead: context.lead, event: context.recentEvents?.[context.recentEvents.length - 1] });
+  const playbookContext: TheoReplyContext = {
+    ...context,
+    dataContext: [context.dataContext, sharedBrainInstruction({ channel: context.source || "sms", scenario })].filter(Boolean).join("\n\n"),
+  };
+
   let classification: TheoClassification;
   const metrics: TheoMetric[] = [];
   try {
-    classification = await classifyTheoWithLlm(context);
+    classification = await classifyTheoWithLlm(playbookContext);
     metrics.push(...(classification.metrics || []));
   } catch {
     classification = classifyTheoMessage(context.message);
@@ -898,7 +905,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   if (classification.intent === "human_required") {
     let handoffReply = "I'm going to have a real person follow up on that so we handle it correctly.";
     try {
-      const generated = await generateTheoSmsWithLlm(context, classification);
+      const generated = await generateTheoSmsWithLlm(playbookContext, classification);
       handoffReply = generated.reply;
       metrics.push(...generated.metrics);
     } catch {
@@ -963,7 +970,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
 
   let reply: string;
   try {
-    const generated = await generateTheoSmsWithLlm(context, classification);
+    const generated = await generateTheoSmsWithLlm(playbookContext, classification);
     reply = generated.reply;
     metrics.push(...generated.metrics);
   } catch {
