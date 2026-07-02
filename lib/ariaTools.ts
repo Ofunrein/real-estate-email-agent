@@ -808,7 +808,8 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
   const bedrooms = str(args.bedrooms || args.beds);
   const bathrooms = str(args.bathrooms || args.baths);
   const preferredChannel = str(args.preferred_channel || args.preferredChannel);
-  const interest = str(args.property || args.property_interest || args.propertyInterest || args.address);
+  const sellBeforeBuy = str(args.sell_before_buy || args.sellBeforeBuy || args.needs_to_sell || args.needsToSell);
+  const interest = str(args.property || args.property_interest || args.propertyInterest || args.address || args.current_address || args.currentAddress);
   const callConsent = consent(args.call_consent ?? args.callConsent);
   const smsConsent = consent(args.sms_consent ?? args.smsConsent);
 
@@ -822,7 +823,7 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
   ].filter(Boolean).join(", ");
 
   return {
-    result: `Got it — I've noted ${confirmBits}. A team member will follow up.`,
+    result: `Got it — I've noted ${confirmBits}.`,
     ingest: {
       ...baseIngest(ctx),
       fullName,
@@ -831,6 +832,12 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
       leadRole: role,
       intent: role ? `${role}_lead` : "",
       propertyInterest: interest,
+      budget,
+      area,
+      timeline,
+      bedrooms,
+      bathrooms,
+      sellBeforeBuy,
       preferredChannel,
       callConsent,
       smsConsent,
@@ -844,6 +851,7 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
         bedrooms ? `beds=${bedrooms}` : "",
         bathrooms ? `baths=${bathrooms}` : "",
         timeline ? `timeline=${timeline}` : "",
+        sellBeforeBuy ? `sell_before_buy=${sellBeforeBuy}` : "",
         preferredChannel ? `preferred_channel=${preferredChannel}` : "",
         interest ? `interest=${interest}` : "",
       ].filter(Boolean).join(" "),

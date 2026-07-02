@@ -1,5 +1,6 @@
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { advancedQualificationPlaybook, qualificationScenarioHint } from "@/lib/qualificationPlaybooks";
 
 export type ConversationScenarioId =
   | "seller_valuation"
@@ -8,7 +9,9 @@ export type ConversationScenarioId =
   | "schedule_showing"
   | "shared_media_reference"
   | "service_area_check"
-  | "lead_profile_capture";
+  | "lead_profile_capture"
+  | "move_sell_buy"
+  | "seller_realtor_guard";
 
 export type ConversationScenario = {
   id: ConversationScenarioId;
@@ -26,8 +29,8 @@ export type ChannelTone = {
 };
 
 const CHANNEL_TONE: Record<string, ChannelTone> = {
-  sms: { maxChars: 480, allowBullets: false, allowMedia: true, cta: "Ask one simple next question or offer a showing/valuation slot." },
-  whatsapp: { maxChars: 700, allowBullets: false, allowMedia: true, cta: "Keep it warm, direct, and confirm preferred next step." },
+  sms: { maxChars: 480, allowBullets: false, allowMedia: true, cta: "Ask one simple next question or offer showing/valuation slot." },
+  whatsapp: { maxChars: 700, allowBullets: false, allowMedia: true, cta: "Keep it warm, direct, confirm preferred next step." },
   instagram: { maxChars: 420, allowBullets: false, allowMedia: true, cta: "Short DM. Offer details/photos or ask one qualifier." },
   messenger: { maxChars: 500, allowBullets: false, allowMedia: true, cta: "Short DM. Offer details/photos or showing times." },
   website_chat: { maxChars: 700, allowBullets: true, allowMedia: true, cta: "Answer directly, then offer tour/valuation." },
@@ -49,17 +52,45 @@ export function detectConversationScenario(input: {
   lead?: Partial<SheetRow>;
 }): ConversationScenario {
   const message = clean(input.message || input.event?.message_text || input.event?.summary || input.lead?.summary);
-  const leadText = [input.lead?.intent, input.lead?.lead_role, input.lead?.property_interest, input.lead?.summary, input.lead?.next_action].map(clean).join(" ");
+  const leadText = [
+    input.lead?.intent,
+    input.lead?.lead_role,
+    input.lead?.property_interest,
+    input.lead?.summary,
+    input.lead?.next_action,
+  ].map(clean).join(" ");
   const text = `${message} ${leadText}`.toLowerCase();
   const media = hasMedia(input.event || {});
+  const selling = /\b(sell|selling|seller|list|listing|home value|valuation|what'?s it worth|worth|estimate|current home|our place|my house|our house)\b/i.test(text);
+  const buying = /\b(buy|buying|move|moving|relocat|new area|home search|looking for|area|neighborhood|under|budget|bed|bath)\b/i.test(text);
 
-  if (/\b(sell|seller|home value|valuation|what'?s it worth|worth|list my|estimate)\b/i.test(text)) {
+  if (selling && buying) {
+    return {
+      id: "move_sell_buy",
+      confidence: 0.9,
+      reason: "Lead is selling one home and buying or moving to another area",
+      requiredContext: ["current_property_address", "realtor_status", "seller_timeline", "target_buy_area", "buyer_budget_or_preferences", "calendar_availability"],
+      nextBestAction: "Keep both tracks active: value/list current home and help destination search. Ask one missing question, then offer concrete consultation slot.",
+    };
+  }
+
+  if (selling && /\b(already have|have a|we have|i have|our)\s+(?:realtor|agent|broker)|listing agreement|represented\b/i.test(text)) {
+    return {
+      id: "seller_realtor_guard",
+      confidence: 0.88,
+      reason: "Seller appears already represented",
+      requiredContext: ["representation_status", "permitted_help_scope", "human_review"],
+      nextBestAction: "Do not solicit represented seller. Give safe general info only, mark for human review, and avoid valuation/listing pitch unless unrepresented.",
+    };
+  }
+
+  if (selling) {
     return {
       id: "seller_valuation",
       confidence: media ? 0.92 : 0.86,
       reason: media ? "Seller/valuation language with media context" : "Seller/valuation language",
-      requiredContext: ["address_or_property_interest", "avm_or_comp_lookup", "service_area", "calendar_availability"],
-      nextBestAction: "Give cautious value range context, mention visible/media condition if known, then offer valuation appointment.",
+      requiredContext: ["address_or_property_interest", "realtor_status", "condition_updates", "avm_or_comp_lookup", "service_area", "calendar_availability"],
+      nextBestAction: "Give cautious value range context only with data, ask about updates/condition, then offer valuation appointment.",
     };
   }
 
@@ -124,6 +155,8 @@ export function sharedBrainInstruction(input: { channel: Channel | string; scena
     `Next best action: ${input.scenario.nextBestAction}`,
     `Channel style: max ${tone.maxChars} chars, ${tone.allowBullets ? "bullets allowed" : "no bullets"}, ${tone.allowMedia ? "media/cards allowed" : "text only"}.`,
     tone.cta,
-    "Never invent price, availability, owner, valuation, or booked appointment. If context is missing, ask one concise question or run the matching tool path first.",
+    `Qualification hint: ${qualificationScenarioHint(`${input.scenario.reason} ${input.scenario.nextBestAction}`)}.`,
+    advancedQualificationPlaybook(),
+    "Never invent price, availability, owner, valuation, or booked appointment. If context is missing, ask one concise question or run matching tool path first.",
   ].join("\n");
 }

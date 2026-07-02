@@ -248,6 +248,8 @@ test("qualifyLead: captures fields, normalizes consent + intent", async () => {
       bedrooms: "3 bed",
       bathrooms: "2.5 bath",
       preferred_channel: "email",
+      sell_before_buy: "yes",
+      current_address: "120 Savo Ave",
       call_consent: "sure",
       sms_consent: "no",
     },
@@ -260,10 +262,19 @@ test("qualifyLead: captures fields, normalizes consent + intent", async () => {
   assert.equal(out.ingest.callConsent, "yes");
   assert.equal(out.ingest.smsConsent, "no");
   assert.equal(out.ingest.preferredChannel, "email");
+  assert.equal(out.ingest.budget, "$600k");
+  assert.equal(out.ingest.area, "Mueller");
+  assert.equal(out.ingest.timeline, "60 days");
+  assert.equal(out.ingest.bedrooms, "3 bed");
+  assert.equal(out.ingest.bathrooms, "2.5 bath");
+  assert.equal(out.ingest.sellBeforeBuy, "yes");
+  assert.equal(out.ingest.propertyInterest, "120 Savo Ave");
   assert.equal(out.ingest.aiAction, "lead_qualified");
   assert.match(out.ingest.summary || "", /beds=3 bed/);
   assert.match(out.ingest.summary || "", /baths=2.5 bath/);
+  assert.match(out.ingest.summary || "", /sell_before_buy=yes/);
   assert.match(out.result, /seller/);
+  assert.doesNotMatch(out.result, /team member will follow up/i);
 });
 
 test("unknown tool: safe error outcome", async () => {

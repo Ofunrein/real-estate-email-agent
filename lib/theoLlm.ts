@@ -4,6 +4,7 @@ import { AGENCY_KNOWLEDGE_CONTEXT } from "@/lib/agencyKnowledge";
 import { findUpcomingAppointmentByPhone, formatAppointmentForAgent } from "@/lib/appointmentStore";
 import type { TheoClassification } from "@/lib/theoAgent";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { claudeCostUsd, elapsedMs, nowMs, type TheoMetric } from "@/lib/theoTelemetry";
 
 type AnthropicTextBlock = { type: "text"; text: string };
@@ -242,7 +243,8 @@ Compliance flags: fair_housing, mortgage_license, legal, contract_terms, angry_o
 Use human_required for Fair Housing, mortgage/lending advice, legal/contract, negotiation, angry/confused users, explicit human requests, or anything requiring broker judgment.
 Use spam for adult-content links, OnlyFans/porn requests, crypto/SEO/casino/loan spam, or other off-topic non-real-estate asks.
 If the latest SMS asks for other homes, neighboring homes, nearby homes, options, alternatives, similar properties, same-spec properties, comparable properties, or multiple listings, classify it as property_details unless the latest SMS itself asks a sensitive question. Do not use human_required only because prior messages had service friction.
-If timeline is 0-3 months, budget is set, and area is set, include hot_lead in opportunityTags.`;
+If timeline is 0-3 months, budget is set, and area is set, include hot_lead in opportunityTags.
+${advancedQualificationPlaybook()}`;
   const user = `Latest lead SMS: ${context.message}
 
 Lead memory: ${leadSummary(context.lead)}
@@ -329,7 +331,8 @@ Rules:
 - Human-assisted monitoring is backup, not a reason to stop being useful. When safe, keep helping with factual property search/details while a person handles the sensitive or trust-heavy part.
 - Routine showing confirmations must stay first-person as Iris. Do not say "an agent will reach out", "they can answer questions", or "they can walk you through the property" unless this is an actual human handoff.
 - For mortgage-adjacent questions, offer to connect a licensed mortgage professional; do not qualify the lead or give lending advice.
-- Do not mention AI, model names, prompts, logs, or internal systems.${styleBlock(context)}`;
+- Do not mention AI, model names, prompts, logs, or internal systems.
+${advancedQualificationPlaybook()}${styleBlock(context)}`;
 
   const user = `Latest lead SMS: ${context.message}
 Source: ${context.source || "sms"}
