@@ -387,6 +387,56 @@ The durable processor is the Inngest function:
 gmail.push.received
 ```
 
+
+---
+
+## GoHighLevel / CloseBot-style actions
+
+The app can sit beside GoHighLevel the same way a CloseBot-style agent does: GHL can trigger Lumenosis, Lumenosis reads the real omnichannel timeline, then writes useful state back to the contact.
+
+Implemented custom action:
+
+| Action | Endpoint | What it does |
+|---|---|---|
+| Summarize Conversation | `POST /api/actions/summarize-conversation` | Reads `conversation_events` across email, SMS, WhatsApp, Instagram, Messenger, website chat, and voice, builds one Austin Realty summary, and can save it into a GHL contact custom field |
+
+GHL workflow/custom-action example:
+
+```json
+{
+  "contactId": "{{contact.id}}",
+  "phone": "{{contact.phone}}",
+  "email": "{{contact.email}}",
+  "fullName": "{{contact.name}}",
+  "writeToCrm": true
+}
+```
+
+Headers:
+
+```text
+Authorization: Bearer <CHANNEL_WEBHOOK_SECRET>
+```
+
+Optional env vars:
+
+```bash
+GHL_CONVERSATION_SUMMARY_FIELD_ID=
+GHL_CONVERSATION_SUMMARY_FIELD_KEY=conversation_summary
+CLOSEBOT_PARITY_CUSTOM_ACTION_SECRET=
+```
+
+Use `GHL_CONVERSATION_SUMMARY_FIELD_ID` when the exact GHL custom field ID is known. Otherwise the adapter sends the configured key. If `writeToCrm` is false, the endpoint only returns the summary JSON and does not write to GHL.
+
+This is the first CloseBot-parity action. The broader model is:
+
+```text
+GHL trigger or lead form
+  -> Lumenosis action/webhook
+  -> shared lead memory + conversation_events
+  -> AI summary / reply / booking / handoff
+  -> optional GHL contact, custom field, calendar, conversation, tag, or workflow update
+```
 ---
 
 ## Sync and imports

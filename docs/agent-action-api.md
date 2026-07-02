@@ -69,3 +69,37 @@ This lets new clients onboard by changing client settings and provider connectio
 ```
 
 Blocked actions still write an audit/interaction event, so failures show up in Ops instead of silently disappearing.
+
+## GHL / CloseBot-style custom action
+
+`POST /api/actions/summarize-conversation`
+
+Purpose: GHL workflow calls Lumenosis, Lumenosis summarizes the real cross-channel thread, then optionally writes the result to the GHL contact custom field used as `conversation_summary`.
+
+Auth:
+
+```text
+Authorization: Bearer <CHANNEL_WEBHOOK_SECRET>
+```
+
+Body:
+
+```json
+{
+  "contactId": "{{contact.id}}",
+  "phone": "{{contact.phone}}",
+  "email": "{{contact.email}}",
+  "fullName": "{{contact.name}}",
+  "writeToCrm": true
+}
+```
+
+Env:
+
+```bash
+GHL_CONVERSATION_SUMMARY_FIELD_ID=
+GHL_CONVERSATION_SUMMARY_FIELD_KEY=conversation_summary
+CLOSEBOT_PARITY_CUSTOM_ACTION_SECRET=
+```
+
+Result includes `summary`, structured `details`, reviewed `eventCount`, and `savedToCrm`.

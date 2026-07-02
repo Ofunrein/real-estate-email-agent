@@ -1506,6 +1506,54 @@ export async function readEventsForThreadFromDatabase(threadRef: string, limit =
   return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
 }
 
+export async function readEventsForContactIdentityFromDatabase(input: {
+  threadRef?: string;
+  channel?: string;
+  email?: string;
+  phone?: string;
+  fullName?: string;
+  limit?: number;
+}): Promise<SheetRow[]> {
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
+  const threadRef = (input.threadRef || "").trim();
+  const email = normalizeEmail(input.email || "");
+  const phone = normalizePhone(input.phone || "");
+  const channel = (input.channel || "").trim().toLowerCase();
+  const name = normalizeName(input.fullName || "");
+  const username = name.replace(/^@+/, "").toLowerCase();
+  const prefixedThreadRef = threadRef && channel && !threadRef.startsWith(`${channel}:`) ? `${channel}:${threadRef}` : "";
+  if (!threadRef && !email && !phone && !name) return [];
+
+  const result = await getPool().query(
+    `select ${columns}
+       from conversation_events
+      where client_id = $1
+        and (
+          ($2 <> '' and (thread_ref = $2 or provider_thread_id = $2))
+          or ($3 <> '' and thread_ref = $3)
+          or ($4 <> '' and lower(email) = $4)
+          or ($5 <> '' and phone = $5)
+          or (
+            $6 <> ''
+            and (
+              lower(full_name) = $6
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'senderUsername', ''))) = $7
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'sender_username', ''))) = $7
+              or lower(trim(leading '@' from coalesce(provider_metadata->>'username', ''))) = $7
+            )
+          )
+        )
+      order by coalesce(
+          nullif(event_at, '')::timestamptz,
+          created_at
+        ) desc,
+        id desc
+      limit $8`,
+    [clientId(), threadRef, prefixedThreadRef, email, phone, name.toLowerCase(), username, input.limit || 80],
+  );
+  return result.rows.reverse().map((row) => rowToStrings(CONVERSATION_EVENTS_HEADERS, row));
+}
+
 export async function readEventsForThreadOrContactFromDatabase(input: {
   threadRef: string;
   channel: string;

@@ -320,18 +320,18 @@
     "semantic_hash": ""
   },
   "lib/crm/ghl.ts": {
-    "mtime": 1782072754.0072212,
-    "ast_hash": "5228defa24291efde7867ca39074c902",
+    "mtime": 1783026202.1123128,
+    "ast_hash": "5d938a33e560800f35846befdfe03be2",
     "semantic_hash": ""
   },
   "lib/crm/index.ts": {
-    "mtime": 1782638435.941688,
+    "mtime": 1783026202.1137145,
     "ast_hash": "11cfa17671d926ec8d74e11f6137e787",
     "semantic_hash": ""
   },
   "lib/crm/types.ts": {
-    "mtime": 1782072489.0067697,
-    "ast_hash": "e1127e3f18eb70516a9e571bf6e21463",
+    "mtime": 1783025188.575001,
+    "ast_hash": "437aace427a49510bb68751c52e16e22",
     "semantic_hash": ""
   },
   "lib/dataSource.ts": {
@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1783022888.8398006,
-    "ast_hash": "33c4dc305cc8ecc25bed2ca24b640f6e",
+    "mtime": 1783025243.6597695,
+    "ast_hash": "03781ee581775fb60c0aa10dff205245",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -970,8 +970,8 @@
     "semantic_hash": ""
   },
   "tests/ts/ghlAdapter.test.ts": {
-    "mtime": 1782779518.2319396,
-    "ast_hash": "4ba88f9d852ade86ec07728865622894",
+    "mtime": 1783025541.0941498,
+    "ast_hash": "f4ffe697b81e807f3bcbbed34b4b2b78",
     "semantic_hash": ""
   },
   "tests/ts/identity.test.ts": {
@@ -1105,8 +1105,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782780707.6407454,
-    "ast_hash": "cfc4b715c0827a49d55e700366f6e9c5",
+    "mtime": 1783025624.5937936,
+    "ast_hash": "42ae59e4efe1588f89e1d97392abbb97",
     "semantic_hash": ""
   },
   "docs/CODEBASE_ONBOARDING.md": {
@@ -3470,8 +3470,8 @@
     "semantic_hash": ""
   },
   "docs/agent-action-api.md": {
-    "mtime": 1782947543.832796,
-    "ast_hash": "cee84d205ffd76019dc2c1ce7d744096",
+    "mtime": 1783025668.9768693,
+    "ast_hash": "139e0d8cc2c1df4469374e6d94b4eaca",
     "semantic_hash": ""
   },
   "app/api/webhooks/meta-leadgen/route.ts": {
@@ -3522,6 +3522,21 @@
   "tests/ts/metaLeadgen.test.ts": {
     "mtime": 1783021612.674475,
     "ast_hash": "d9acaeeef9b747c179729385a2b67d52",
+    "semantic_hash": ""
+  },
+  "app/api/actions/summarize-conversation/route.ts": {
+    "mtime": 1783025379.2582483,
+    "ast_hash": "b4f71a1b352bea303c921d7e51f6193e",
+    "semantic_hash": ""
+  },
+  "lib/conversationSummary.ts": {
+    "mtime": 1783026278.367341,
+    "ast_hash": "6c7699a235c1859a9b822a6f1afe7d34",
+    "semantic_hash": ""
+  },
+  "tests/ts/conversationSummary.test.ts": {
+    "mtime": 1783025540.9860256,
+    "ast_hash": "80ebe5075bcf7cf48c4eb40d1575d101",
     "semantic_hash": ""
   }
 }

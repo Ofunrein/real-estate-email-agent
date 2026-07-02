@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { createGhlAdapter, type GhlRequest } from "@/lib/crm/ghl";
+import { buildGhlCustomFieldsPayload, createGhlAdapter, type GhlRequest } from "@/lib/crm/ghl";
 
 type Call = { path: string; method: string; body?: unknown; query?: Record<string, string | undefined> };
 
@@ -123,4 +123,21 @@ test("listImportableLeads: maps GHL contacts into import leads", async () => {
   assert.equal(page.leads[0].fullName, "Nia Patel");
   assert.equal(page.leads[0].stage, "Showing");
   assert.equal(page.leads[0].owner, "agent_1");
+});
+
+
+test("updateContactCustomFields: PUTs GHL customFields payload", async () => {
+  const { calls, request } = recorder();
+  const adapter = createGhlAdapter(config, request);
+  await adapter.updateContactCustomFields?.("c1", [{ key: "conversation_summary", fieldValue: "Lead wants South Austin." }]);
+  assert.equal(calls[0].method, "PUT");
+  assert.equal(calls[0].path, "/contacts/c1");
+  assert.deepEqual(calls[0].body, { customFields: [{ key: "conversation_summary", fieldValue: "Lead wants South Austin." }] });
+});
+
+test("buildGhlCustomFieldsPayload: supports ids and drops empty values", () => {
+  assert.deepEqual(buildGhlCustomFieldsPayload([
+    { id: "cf_1", fieldValue: "summary" },
+    { key: "empty", fieldValue: "" },
+  ]), { customFields: [{ id: "cf_1", fieldValue: "summary" }] });
 });
