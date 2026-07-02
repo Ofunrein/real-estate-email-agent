@@ -1713,7 +1713,7 @@ function numericValue(value?: string | number): number | null {
   return amount;
 }
 
-function criteriaFromQuery(query: string | PropertySearchCriteria = ""): PropertySearchCriteria {
+export function criteriaFromQuery(query: string | PropertySearchCriteria = ""): PropertySearchCriteria {
   if (typeof query !== "string") return query;
   return { query, area: query, mode: "general" };
 }
@@ -1800,7 +1800,7 @@ function referenceRange(criteria: PropertySearchCriteria, key: "price" | "beds" 
   return [Math.max(0, referenceValue - 1), referenceValue + 1];
 }
 
-function propertyMatchesCriteria(property: SheetRow, criteria: PropertySearchCriteria): boolean {
+export function propertyMatchesCriteria(property: SheetRow, criteria: PropertySearchCriteria): boolean {
   const excluded = new Set((criteria.excludeAddresses || []).map((address) => normalizeSearchText(address)));
   if (excluded.has(normalizeSearchText(property.address))) return false;
   if (wantsRental(criteria) && !propertyLooksRental(property)) return false;

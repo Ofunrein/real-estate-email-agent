@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/reply/route.ts": {
-    "mtime": 1782651515.3015804,
-    "ast_hash": "19bb6022778fab92569a0eaa1ddf19ac",
+    "mtime": 1782890069.2580583,
+    "ast_hash": "5c9d8948c552b26b8d52a821f4d20f2e",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/takeover/route.ts": {
@@ -340,8 +340,8 @@
     "semantic_hash": ""
   },
   "lib/database.ts": {
-    "mtime": 1782772419.7083957,
-    "ast_hash": "ecfdf8ee3b59bf3582a9919b7f456c70",
+    "mtime": 1782977558.8271284,
+    "ast_hash": "a9cb3c49856cba238dd51404d2c8c1ef",
     "semantic_hash": ""
   },
   "lib/format.ts": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "lib/manualReply.ts": {
-    "mtime": 1782651515.3241246,
-    "ast_hash": "41f90e35741ec92d286274103cbe8005",
+    "mtime": 1782890002.326737,
+    "ast_hash": "177672ca7175928e075ec56f6a297cc2",
     "semantic_hash": ""
   },
   "lib/manychatApi.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "lib/manychatSocial.ts": {
-    "mtime": 1782651515.3243778,
-    "ast_hash": "ebf5047401f51716e03888720dca7cf1",
+    "mtime": 1782807892.5475698,
+    "ast_hash": "97a935b0560f862955dd69505ae76fae",
     "semantic_hash": ""
   },
   "lib/mediaProxy.ts": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1782777348.2963512,
-    "ast_hash": "cc249457a86094a5003ade01c59cbe5b",
+    "mtime": 1782890292.038966,
+    "ast_hash": "744654a229edd29ca756e416944d010a",
     "semantic_hash": ""
   },
   "personalities/__init__.py": {
@@ -1000,8 +1000,8 @@
     "semantic_hash": ""
   },
   "tests/ts/manychatSocial.test.ts": {
-    "mtime": 1782779518.24936,
-    "ast_hash": "aa898f158ff1e39e8324e4263a4cc6f9",
+    "mtime": 1782807909.3217623,
+    "ast_hash": "14f4be4f8a5702de5212042fe2ec4dde",
     "semantic_hash": ""
   },
   "tests/ts/mediaProxy.test.ts": {
@@ -2005,8 +2005,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxApp.tsx": {
-    "mtime": 1782651515.3032825,
-    "ast_hash": "57e097b08f1db257b775de60286ab3d5",
+    "mtime": 1782809178.7758505,
+    "ast_hash": "133120a3f98f953b092a7e9cb78466c0",
     "semantic_hash": ""
   },
   "components/inbox-mui/InboxDataContext.tsx": {
@@ -2045,8 +2045,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ConversationList.tsx": {
-    "mtime": 1782651515.3056247,
-    "ast_hash": "d317b6429d5a026be6a795913b237f08",
+    "mtime": 1782887595.3122134,
+    "ast_hash": "072e3beba86de732c3403b3dba818535",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/EmailView.tsx": {
@@ -2105,8 +2105,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/SmsView.tsx": {
-    "mtime": 1782651515.306526,
-    "ast_hash": "7c2506ee262b2c12a10c5027b78c8295",
+    "mtime": 1782930988.9453132,
+    "ast_hash": "c8feec3e4185efce5a2d1b0d6aec1d61",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/StatCards.tsx": {
@@ -2130,8 +2130,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/data/inboxData.ts": {
-    "mtime": 1782651515.3073366,
-    "ast_hash": "c6a5906b86b0a96ac92ac4f68e16dbce",
+    "mtime": 1782887461.39545,
+    "ast_hash": "5905f9df73c0d47d7f123dc7a97e6ee0",
     "semantic_hash": ""
   },
   "components/inbox-mui/theme/CategoryColorContext.tsx": {
@@ -2325,8 +2325,8 @@
     "semantic_hash": ""
   },
   "lib/inboxDataAdapter.ts": {
-    "mtime": 1782667348.1206102,
-    "ast_hash": "b18958cadf2a1841fd6c45c4f16a1cd0",
+    "mtime": 1782931162.7693236,
+    "ast_hash": "23e21c3a3b6b3f8b24451170be7618e9",
     "semantic_hash": ""
   },
   "lib/inboxThreadUtils.ts": {
@@ -2345,8 +2345,8 @@
     "semantic_hash": ""
   },
   "tests/ts/inboxDataAdapter.test.ts": {
-    "mtime": 1782779518.239436,
-    "ast_hash": "6e0be8555c7b8bd7e93939ebd764cee3",
+    "mtime": 1782931209.738844,
+    "ast_hash": "b43eeb4ca32637896cb03834c4143a82",
     "semantic_hash": ""
   },
   ".github/workflows/build-check.yml": {
@@ -2565,8 +2565,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/TextChannelView.tsx": {
-    "mtime": 1782651515.3070645,
-    "ast_hash": "32ca0a5a57f4efda58ad6924ec84bb7e",
+    "mtime": 1782887547.6435401,
+    "ast_hash": "c99b5eedd1c382cbe7aae18f9856f4c3",
     "semantic_hash": ""
   },
   "lib/composioSocial.ts": {
@@ -2720,8 +2720,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/CalendarOsView.tsx": {
-    "mtime": 1782770887.5281932,
-    "ast_hash": "a26d9afdc6b511f7c338b00759fef37b",
+    "mtime": 1782887852.5220635,
+    "ast_hash": "67e3ee13b6ff5ff1208a2d887b9cd28c",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ContactsOsView.tsx": {
@@ -2745,13 +2745,13 @@
     "semantic_hash": ""
   },
   "integrations/calendar-provider.interface.ts": {
-    "mtime": 1782133321.2209063,
-    "ast_hash": "de42d63ffdc0cd40aed63ad5b5e778b8",
+    "mtime": 1782887046.1084626,
+    "ast_hash": "9807108f1a4f6ae45889ee7777e6c642",
     "semantic_hash": ""
   },
   "integrations/composio/calendar-provider.ts": {
-    "mtime": 1782133401.1910186,
-    "ast_hash": "dd291a1c27beae2c75a45ba0925a1d78",
+    "mtime": 1782887144.5527208,
+    "ast_hash": "f65950e561037211649c4d3eabdc083c",
     "semantic_hash": ""
   },
   "integrations/composio/client.ts": {
@@ -2805,8 +2805,8 @@
     "semantic_hash": ""
   },
   "integrations/provider-normalizers.ts": {
-    "mtime": 1782133321.2212205,
-    "ast_hash": "2fc447c7fc2363f745f94f9f6c399246",
+    "mtime": 1782887089.9925275,
+    "ast_hash": "dce68f66e836b41f0db2d3292f8cf883",
     "semantic_hash": ""
   },
   "integrations/sync-engine.ts": {
@@ -2820,8 +2820,8 @@
     "semantic_hash": ""
   },
   "lib/calendarContactsSync.ts": {
-    "mtime": 1782163638.6768095,
-    "ast_hash": "526605874270dc5993a6af874c59380e",
+    "mtime": 1782887422.8231761,
+    "ast_hash": "d2a87233ec2e439a49d0b71ff9a0c1d5",
     "semantic_hash": ""
   },
   "lib/calendarOs.ts": {
@@ -2840,8 +2840,8 @@
     "semantic_hash": ""
   },
   "lib/composioSocialPoll.ts": {
-    "mtime": 1782208964.6367514,
-    "ast_hash": "fbe4a46f2cf0f58db9eb1b00ab4fcedb",
+    "mtime": 1782885614.0737815,
+    "ast_hash": "61fbbde8b07a896c3859b908dd88c750",
     "semantic_hash": ""
   },
   "lib/contactOs.ts": {
@@ -2880,13 +2880,13 @@
     "semantic_hash": ""
   },
   "lib/omnichannelEvents.ts": {
-    "mtime": 1782651515.3248286,
-    "ast_hash": "a61cd797a2c9ce0a29cd498e682026de",
+    "mtime": 1782814569.7504904,
+    "ast_hash": "1110513d7bcb1849b1dddfb8b6ef7364",
     "semantic_hash": ""
   },
   "lib/providerConnections.ts": {
-    "mtime": 1782163495.6023622,
-    "ast_hash": "f39d1e9e95bcf3c391145aa8b1e61a34",
+    "mtime": 1782887228.1080225,
+    "ast_hash": "fc1f1f20b3a411b3d73cab2ddaf97e09",
     "semantic_hash": ""
   },
   "tests/ts/calendarContactsOs.test.ts": {
@@ -2920,18 +2920,18 @@
     "semantic_hash": ""
   },
   "app/api/webhooks/theo-meta-social/route.ts": {
-    "mtime": 1782777348.3045502,
-    "ast_hash": "70cfc99b9693ec0b3bc1e67fa68aced6",
+    "mtime": 1782814631.465549,
+    "ast_hash": "173277d79ffd402a23b8f52c74889e72",
     "semantic_hash": ""
   },
   "lib/metaSocial.ts": {
-    "mtime": 1782651515.3245914,
-    "ast_hash": "da48bc2aefbf433368b2b22197ac7a66",
+    "mtime": 1782814797.8487632,
+    "ast_hash": "6404f309647e0332429494bbad69eeb4",
     "semantic_hash": ""
   },
   "tests/ts/metaSocial.test.ts": {
-    "mtime": 1782779518.2542746,
-    "ast_hash": "d40aec416f53395ac6dd3a8a0878d932",
+    "mtime": 1782814818.4689395,
+    "ast_hash": "a3216a75d53d7f54071b229cabe4729d",
     "semantic_hash": ""
   },
   ".sc/last-chat-settings.json": {
@@ -3040,8 +3040,8 @@
     "semantic_hash": ""
   },
   "app/api/ops/audit/route.ts": {
-    "mtime": 1782769723.2325382,
-    "ast_hash": "6fed17a5aa493d7243de15f8aadeab62",
+    "mtime": 1782887720.21947,
+    "ast_hash": "f54f6a51c9d07c5044fc23cdc4cb1ab6",
     "semantic_hash": ""
   },
   "app/api/threads/[threadRef]/review/resolve/route.ts": {
@@ -3055,8 +3055,8 @@
     "semantic_hash": ""
   },
   "components/inbox-mui/components/OpsLogView.tsx": {
-    "mtime": 1782770814.805384,
-    "ast_hash": "0968beaa43b9f4d3909512c663cba5ff",
+    "mtime": 1782887806.8220952,
+    "ast_hash": "e20d0537897d9a52034bedc6966ec614",
     "semantic_hash": ""
   },
   "db/migrations/018_request_audit_events.sql": {
@@ -3105,8 +3105,8 @@
     "semantic_hash": ""
   },
   "lib/requestAudit.ts": {
-    "mtime": 1782769694.738961,
-    "ast_hash": "cf8919f1c1154ff32352358aba3f518e",
+    "mtime": 1782887676.7846322,
+    "ast_hash": "de43fe941a232986350887d5b55e6c5c",
     "semantic_hash": ""
   },
   "lumenosis-site/lib/theme-transition.ts": {
@@ -3385,8 +3385,8 @@
     "semantic_hash": ""
   },
   "lib/propertyRetrieval.ts": {
-    "mtime": 1782776707.8991866,
-    "ast_hash": "b17adce99da74bd4641ca69fa7f9aac8",
+    "mtime": 1782977662.9446092,
+    "ast_hash": "b61335a0741a894fd74f550afad33364",
     "semantic_hash": ""
   },
   "scripts/backfill-property-embeddings.mjs": {
@@ -3405,8 +3405,8 @@
     "semantic_hash": ""
   },
   "tests/ts/propertyRetrieval.test.ts": {
-    "mtime": 1782779518.2623239,
-    "ast_hash": "23d149928c073a7d0ee08a4a454f3297",
+    "mtime": 1782977679.1435404,
+    "ast_hash": "e0c40f73b6e2b6500497c7039f07f450",
     "semantic_hash": ""
   },
   "docs/property-rag-plan.md": {
@@ -3422,6 +3422,56 @@
   "tests/ts/leadProfileCapture.test.ts": {
     "mtime": 1782793767.794021,
     "ast_hash": "9c50daf59cf0b97060fd603d019df210",
+    "semantic_hash": ""
+  },
+  "app/api/agent/actions/route.ts": {
+    "mtime": 1782946989.7643661,
+    "ast_hash": "6d044d555349e1fbb5be1b1b98b024a8",
+    "semantic_hash": ""
+  },
+  "lib/agentActions.ts": {
+    "mtime": 1782947267.988805,
+    "ast_hash": "c769d891bcd6531a296acb4c929f72f4",
+    "semantic_hash": ""
+  },
+  "lib/instagramBrowserBridge.ts": {
+    "mtime": 1782889947.4048119,
+    "ast_hash": "bb7b7bdfaf6c6cfc6eab78ecc17fce70",
+    "semantic_hash": ""
+  },
+  "lib/mediaUnderstanding.ts": {
+    "mtime": 1782814869.849816,
+    "ast_hash": "877d4774d190eb01c78926fbeaa03e10",
+    "semantic_hash": ""
+  },
+  "lib/propertyImportFallback.ts": {
+    "mtime": 1782977628.6608088,
+    "ast_hash": "f7f62a6aa532785f3ace815f662e44b0",
+    "semantic_hash": ""
+  },
+  "scripts/sync-instagram-browser-thread.mjs": {
+    "mtime": 1782890901.973239,
+    "ast_hash": "48e72a7e97c3bfa25adfe0dc3dfb6c4d",
+    "semantic_hash": ""
+  },
+  "tests/ts/agentActions.test.ts": {
+    "mtime": 1782946989.771045,
+    "ast_hash": "d30c12b274012f1a014ce378626f8dcd",
+    "semantic_hash": ""
+  },
+  "tests/ts/mediaUnderstanding.test.ts": {
+    "mtime": 1782814857.5451908,
+    "ast_hash": "dc2fb7848c480208fefa27d179c40b8a",
+    "semantic_hash": ""
+  },
+  "tests/ts/propertyImportFallback.test.ts": {
+    "mtime": 1782977706.0224328,
+    "ast_hash": "ddc5e836bb2429d3b988b0a357e393f1",
+    "semantic_hash": ""
+  },
+  "docs/agent-action-api.md": {
+    "mtime": 1782947543.832796,
+    "ast_hash": "cee84d205ffd76019dc2c1ce7d744096",
     "semantic_hash": ""
   }
 }
