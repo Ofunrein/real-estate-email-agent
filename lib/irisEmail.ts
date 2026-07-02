@@ -28,6 +28,7 @@ import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/m
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { understandMediaItems } from "@/lib/mediaUnderstanding";
+import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -742,6 +743,7 @@ async function generateClaudeIrisEmailReplyText(
 Write only the email body, no markdown and no subject line.
 Rules:
 - Keep it concise and useful.
+${advancedQualificationPlaybook()}
 - Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
 - The app will render property facts in an HTML property card above your body, so do not repeat the full price/beds/baths/sqft block in prose.
 - Mention the primary address at most once.

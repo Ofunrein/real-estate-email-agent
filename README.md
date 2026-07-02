@@ -466,6 +466,48 @@ CADENCE_TASK_BATCH_SIZE=10
 ```
 
 Stop/hold rules: if the lead replies, opts out, books, needs human review, or has a channel disabled, cadence must not blindly continue. Blocked/sent/skipped state is stored so the dashboard and Ops Log can explain what happened.
+
+---
+
+## Advanced buyer and seller qualification
+
+All channels use the same qualification logic, including voice. The goal is not to interrogate leads; it is to naturally collect the missing fields needed to help them and move toward a real next step.
+
+Shared playbook lives in:
+
+```text
+lib/qualificationPlaybooks.ts
+lib/conversationPlaybooks.ts
+```
+
+It is injected into:
+
+| Agent/path | Coverage |
+|---|---|
+| Theo text brain | SMS, WhatsApp, Instagram, Messenger, website chat |
+| Iris email brain | Email replies and Gmail-driven lead memory |
+| Aria voice brain | Inbound/outbound calls and Vapi tool flow |
+| Voice `qualifyLead` tool | Persists role, budget, area, timeline, beds, baths, sell-before-buy, property interest, consent, preferred channel |
+
+Qualification rules:
+
+- General: identify buying, selling, both, renting, investing, or value-checking.
+- Seller: capture property address, Realtor/representation status, timeline, motivation, updates/renovations, condition, occupancy/access, and whether they also need to buy.
+- Buyer: capture area, budget, beds/baths, property type, must-haves, timeline, financing/pre-approval status without giving lending advice, and whether they need to sell first.
+- Dual move: if someone says they are selling one home and moving/buying elsewhere, keep both tracks active. Example: value the current property and help with the destination search.
+- Realtor guard: if a seller already has a Realtor or listing agreement, do not solicit. Give safe general info only and route sensitive/representation questions to a human.
+- Appointment rule: checking openings is not booking. Do not say an appointment is scheduled until the booking/calendar tool confirms.
+
+Example CloseBot-style path now expected across text and voice:
+
+```text
+Lead: My wife and I are moving to the area and selling our place in Lancaster.
+Agent: I can help with both selling your Lancaster home and your new search. Are you already working with a Realtor, or still looking at options?
+Lead: 120 Savo Ave, Lancaster PA. We are interviewing Realtors.
+Agent: Based on the address, I can start a valuation. Have you made any major updates or renovations since buying it? Also, where are you planning to move?
+Lead: Akron area.
+Agent: Got it. I can help with the Akron search too. I have openings tomorrow between 8:00 AM and 4:30 PM. What time works best for you and your wife?
+```
 ---
 
 ## GoHighLevel / CloseBot-style actions

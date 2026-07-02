@@ -26,6 +26,12 @@ export type ChannelIngestInput = {
   leadRole?: string;
   intent?: string;
   propertyInterest?: string;
+  budget?: string;
+  area?: string;
+  timeline?: string;
+  bedrooms?: string;
+  bathrooms?: string;
+  sellBeforeBuy?: string;
   preferredChannel?: string;
   smsConsent?: string;
   callConsent?: string;
@@ -107,6 +113,12 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
         lead_role: input.leadRole || "",
         intent: input.intent || input.eventType || "",
         property_interest: input.propertyInterest || "",
+        budget: input.budget || "",
+        area: input.area || "",
+        timeline: input.timeline || "",
+        bedrooms: input.bedrooms || "",
+        bathrooms: input.bathrooms || "",
+        sell_before_buy: input.sellBeforeBuy || "",
         preferred_channel: input.preferredChannel || input.channel,
         sms_consent: input.smsConsent || "",
         call_consent: input.callConsent || "",
