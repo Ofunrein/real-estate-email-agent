@@ -125,13 +125,13 @@ export function OverviewView({ active = true, onOpenActivityEvent }: {active?: b
           <StatCard label="AI reply rate" value={`${aiRate}%`} hint={`${metrics.aiReplies} AI replies`} accent="#6366f1" icon={<AutoAwesomeIcon fontSize="small" />} progress={aiRate} trend={statTrends.aiRate} trendSuffix="%" active={active} replayDelay={360} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="Qualified" value={metrics.qualifiedLeads} hint="Budget/criteria captured" accent="#8b5cf6" icon={<SpeedIcon fontSize="small" />} active={active} replayDelay={480} />
+          <StatCard label="Qualified" value={metrics.qualifiedLeads} hint="Verified qualified leads" accent="#8b5cf6" icon={<SpeedIcon fontSize="small" />} trend={statTrends.qualified} active={active} replayDelay={480} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="Appointments" value={metrics.appointments} hint="Showings or callbacks" accent="#7c3aed" icon={<CalendarIcon fontSize="small" />} active={active} replayDelay={600} />
+          <StatCard label="Appointments" value={metrics.appointments} hint="Booked showings/callbacks" accent="#7c3aed" icon={<CalendarIcon fontSize="small" />} trend={statTrends.appointments} active={active} replayDelay={600} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="Transfers" value={metrics.liveTransfers} hint="Human/agent handoffs" accent="#ec4899" icon={<TransferIcon fontSize="small" />} active={active} replayDelay={720} />
+          <StatCard label="Transfers" value={metrics.liveTransfers} hint="Completed handoffs" accent="#ec4899" icon={<TransferIcon fontSize="small" />} trend={statTrends.transfers} active={active} replayDelay={720} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard label="Media understood" value={`${mediaRate}%`} hint={`${metrics.mediaTranscripts}/${metrics.mediaItems} media transcribed`} accent="#14b8a6" icon={<MediaIcon fontSize="small" />} progress={mediaRate} active={active} replayDelay={840} />

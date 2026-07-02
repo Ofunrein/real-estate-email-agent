@@ -510,18 +510,109 @@ function realChannelToViewRaw(view: string): string {
   return view === "website" ? "website_chat" : view;
 }
 
+type DayBin = {
+  key: string;
+  label: string;
+  events: number;
+  inbound: number;
+  outbound: number;
+  needReview: number;
+  contacts: Set<string>;
+  qualifiedContacts: Set<string>;
+  appointments: Set<string>;
+  transfers: Set<string>;
+};
+
+function cleanToken(value?: string): string {
+  return String(value || "").trim();
+}
+
+function operationalEventText(event: SheetRow): string {
+  return [event.event_type, event.ai_action, event.status, event.outcome_code, event.thread_status, event.handoff_reason, event.ended_reason, event.disposition]
+    .map(cleanToken)
+    .join(" ")
+    .toLowerCase();
+}
+
+function operationalLeadText(lead: SheetRow): string {
+  return [lead.handoff_status, lead.next_action, lead.intent, lead.lead_role, lead.status, lead.source_detail]
+    .map(cleanToken)
+    .join(" ")
+    .toLowerCase();
+}
+
+function leadIdentity(lead: SheetRow, fallback: string): string {
+  return cleanToken(lead.email) || cleanToken(lead.phone) || cleanToken(lead.thread_ref) || cleanToken(lead.full_name) || fallback;
+}
+
+function actualAppointmentEvent(event: SheetRow): boolean {
+  if (cleanToken(event.appointment_id)) return true;
+  const text = operationalEventText(event);
+  return /\b(?:appointment_(?:booked|scheduled|confirmed|created)|showing_(?:booked|scheduled|confirmed)|tour_(?:booked|scheduled|confirmed)|callback_scheduled|booking_confirmed|calendar_(?:event|booking)_created|meeting_scheduled|call_scheduled)\b/i.test(text);
+}
+
+function operationalRowTime(row: SheetRow): string {
+  return cleanToken(row.event_at) || cleanToken(row.ended_at) || cleanToken(row.started_at) || cleanToken(row.created_at);
+}
+
+function actualAppointmentKey(event: SheetRow): string {
+  return cleanToken(event.appointment_id)
+    || cleanToken(event.provider_message_id)
+    || cleanToken(event.call_id)
+    || `${conversationKey(event, eventChannel(event))}:${operationalRowTime(event)}:${cleanToken(event.ai_action) || cleanToken(event.event_type)}`;
+}
+
+function actualTransferEvent(event: SheetRow): boolean {
+  const text = operationalEventText(event);
+  return /\b(?:live_transfer(?:_completed)?|transfer_completed|transferred|human_handoff|handoff_alert_sent|handoff_sent|route_human|routed_to_human|agent_handoff|owner_handoff|assistant-forwarded-call|call_forwarded|forwarded_to_(?:agent|owner|human))\b/i.test(text);
+}
+
+function actualTransferKey(event: SheetRow): string {
+  return cleanToken(event.provider_message_id)
+    || cleanToken(event.call_id)
+    || `${conversationKey(event, eventChannel(event))}:${operationalRowTime(event)}:${cleanToken(event.ai_action) || cleanToken(event.event_type)}`;
+}
+
+function actualQualifiedLead(lead: SheetRow): boolean {
+  const score = Number(lead.lead_score || 0);
+  const appointmentCount = Number(lead.appointment_count || 0);
+  if (Number.isFinite(score) && score >= 70) return true;
+  if (Number.isFinite(appointmentCount) && appointmentCount > 0) return true;
+  const text = operationalLeadText(lead);
+  if (/\b(?:qualified|hot_lead|buyer_ready|ready_buyer|seller_valuation|valuation_ready|showing_scheduled|appointment_booked|appointment_scheduled|preapproved|pre_approved)\b/i.test(text)) return true;
+  const hasCoreIntent = /\b(?:buyer|buy|seller|sell|valuation|showing|tour)\b/i.test(text);
+  const hasNeed = Boolean(cleanToken(lead.property_interest) || cleanToken(lead.area) || cleanToken(lead.bedrooms) || cleanToken(lead.bathrooms));
+  const hasCommitment = Boolean(cleanToken(lead.budget) || cleanToken(lead.timeline) || cleanToken(lead.sell_before_buy));
+  return hasCoreIntent && hasNeed && hasCommitment;
+}
+
+function actualQualifiedEvent(event: SheetRow): boolean {
+  const text = operationalEventText(event);
+  return /\b(?:lead_qualified|qualification_completed|qualified_lead|buyer_qualified|seller_qualified|hot_lead|qualification_status:qualified|appointment_booked|appointment_scheduled|showing_scheduled)\b/i.test(text) || actualAppointmentEvent(event);
+}
+
+function leadTimestamp(lead: SheetRow): string {
+  return cleanToken(lead.last_ai_touch_at) || cleanToken(lead.updated_at) || cleanToken(lead.created_at) || cleanToken(lead.event_at);
+}
+
+function buildOperationalMetrics(data: AgentInboxData) {
+  const qualified = new Set<string>();
+  data.leads.forEach((lead, index) => {
+    if (actualQualifiedLead(lead)) qualified.add(leadIdentity(lead, `lead:${index}`));
+  });
+  const operationalRows = [...data.events, ...data.voiceCalls];
+  operationalRows.forEach((event) => {
+    if (actualQualifiedEvent(event)) qualified.add(conversationKey(event, eventChannel(event)) || actualAppointmentKey(event));
+  });
+  const appointments = new Set(operationalRows.filter(actualAppointmentEvent).map(actualAppointmentKey));
+  const transfers = new Set(operationalRows.filter(actualTransferEvent).map(actualTransferKey));
+  return { qualified: qualified.size, appointments: appointments.size, transfers: transfers.size };
+}
+
 // Build 14-day day bins from events, returning per-day aggregates.
 function buildDayBins(events: SheetRow[]) {
   const now = new Date();
-  const bins: {
-    key: string;
-    label: string;
-    events: number;
-    inbound: number;
-    outbound: number;
-    needReview: number;
-    contacts: Set<string>;
-  }[] = [];
+  const bins: DayBin[] = [];
   const index = new Map<string, number>();
   for (let i = DAYS - 1; i >= 0; i -= 1) {
     const d = new Date(now);
@@ -529,7 +620,18 @@ function buildDayBins(events: SheetRow[]) {
     d.setDate(d.getDate() - i);
     const key = dayKey(d);
     index.set(key, bins.length);
-    bins.push({ key, label: dayLabelFormatter.format(d), events: 0, inbound: 0, outbound: 0, needReview: 0, contacts: new Set() });
+    bins.push({
+      key,
+      label: dayLabelFormatter.format(d),
+      events: 0,
+      inbound: 0,
+      outbound: 0,
+      needReview: 0,
+      contacts: new Set(),
+      qualifiedContacts: new Set(),
+      appointments: new Set(),
+      transfers: new Set(),
+    });
   }
   for (const event of events) {
     const parsed = new Date(event.event_at || "");
@@ -542,8 +644,36 @@ function buildDayBins(events: SheetRow[]) {
     else if (event.direction === "outbound") bin.outbound += 1;
     if (eventNeedsHuman(event)) bin.needReview += 1;
     bin.contacts.add(event.thread_ref || event.email || event.phone || event.full_name || "unknown");
+    if (actualQualifiedEvent(event)) bin.qualifiedContacts.add(conversationKey(event, eventChannel(event)) || actualAppointmentKey(event));
+    if (actualAppointmentEvent(event)) bin.appointments.add(actualAppointmentKey(event));
+    if (actualTransferEvent(event)) bin.transfers.add(actualTransferKey(event));
   }
   return bins;
+}
+
+function addQualifiedLeadsToDayBins(bins: DayBin[], leads: SheetRow[]) {
+  const index = new Map(bins.map((bin, slot) => [bin.key, slot]));
+  leads.forEach((lead, leadIndex) => {
+    if (!actualQualifiedLead(lead)) return;
+    const parsed = new Date(leadTimestamp(lead));
+    if (Number.isNaN(parsed.getTime())) return;
+    const slot = index.get(dayKey(parsed));
+    if (slot === undefined) return;
+    bins[slot].qualifiedContacts.add(leadIdentity(lead, `lead:${leadIndex}`));
+  });
+}
+
+function addVoiceOperationsToDayBins(bins: DayBin[], voiceCalls: SheetRow[]) {
+  const index = new Map(bins.map((bin, slot) => [bin.key, slot]));
+  voiceCalls.forEach((call) => {
+    const parsed = new Date(operationalRowTime(call));
+    if (Number.isNaN(parsed.getTime())) return;
+    const slot = index.get(dayKey(parsed));
+    if (slot === undefined) return;
+    if (actualQualifiedEvent(call)) bins[slot].qualifiedContacts.add(conversationKey(call, eventChannel(call)) || actualAppointmentKey(call));
+    if (actualAppointmentEvent(call)) bins[slot].appointments.add(actualAppointmentKey(call));
+    if (actualTransferEvent(call)) bins[slot].transfers.add(actualTransferKey(call));
+  });
 }
 
 function buildSparkline(bins: ReturnType<typeof buildDayBins>): { sparkline: number[]; peakDay: string; peakCount: number } {
@@ -1076,27 +1206,12 @@ function eventHasTranscript(event: SheetRow): boolean {
   });
 }
 
-function leadText(lead: SheetRow): string {
-  return [lead.intent, lead.summary, lead.next_action, lead.property_interest, lead.timeline, lead.budget, lead.lead_role]
-    .join(" ")
-    .toLowerCase();
-}
-
-function eventSearchText(event: SheetRow): string {
-  return [event.event_type, event.ai_action, event.summary, event.message_text, event.handoff_reason]
-    .join(" ")
-    .toLowerCase();
-}
-
-function buildPipelineStages(data: AgentInboxData) {
+function buildPipelineStages(data: AgentInboxData, operationalMetrics = buildOperationalMetrics(data)) {
   const events = data.events;
   const activeThreads = Object.keys(data.threads).length;
-  const qualified = Math.max(
-    data.leads.filter((lead) => /qualified|hot|showing|valuation|seller|buyer|appointment|book/i.test(leadText(lead))).length,
-    Object.values(data.threads).filter((threadEvents) => threadEvents.some((event) => /qualified|budget|bed|bath|timeline|showing|valuation|appointment/i.test(eventSearchText(event)))).length,
-  );
-  const appointments = events.filter((event) => /appointment|book|scheduled|showing/i.test(eventSearchText(event))).length;
-  const transfers = events.filter((event) => /transfer|handoff|human|owner|agent/i.test(eventSearchText(event))).length;
+  const qualified = operationalMetrics.qualified;
+  const appointments = operationalMetrics.appointments;
+  const transfers = operationalMetrics.transfers;
   const media = events.filter(eventHasMedia).length;
   return [
     { key: "new", label: "New lead", value: data.leads.length, color: "#c4b5fd" },
@@ -1205,6 +1320,8 @@ function buildReviewQueue(data: AgentInboxData): ReviewItem[] {
 
 export function adaptInboxData(data: AgentInboxData): InboxModel {
   const bins = buildDayBins(data.events);
+  addQualifiedLeadsToDayBins(bins, data.leads);
+  addVoiceOperationsToDayBins(bins, data.voiceCalls);
   const { sparkline, peakDay, peakCount } = buildSparkline(bins);
   const responsesByDay = responseSamplesByDay(data.events);
   const todayResponses = responsesByDay.get(dayKey(new Date())) || [];
@@ -1213,7 +1330,8 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
   const handled = data.metrics.inbound_messages + data.metrics.outbound_replies;
   const aiRate = handled ? Math.round((data.metrics.outbound_replies / handled) * 100) : 0;
   const channelStats = buildChannelStats(data);
-  const pipelineStages = buildPipelineStages(data);
+  const operationalMetrics = buildOperationalMetrics(data);
+  const pipelineStages = buildPipelineStages(data, operationalMetrics);
   const mediaItems = data.events.filter(eventHasMedia).length;
   const mediaTranscripts = data.events.filter(eventHasTranscript).length;
 
@@ -1273,9 +1391,9 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
       avgResponseSeconds,
       avgResponseLabel: formatResponseDuration(avgResponseSeconds),
       avgResponseSamples: todayResponses.length,
-      qualifiedLeads: pipelineStages.find((stage) => stage.key === "qualified")?.value || 0,
-      appointments: pipelineStages.find((stage) => stage.key === "appointment")?.value || 0,
-      liveTransfers: pipelineStages.find((stage) => stage.key === "transfer")?.value || 0,
+      qualifiedLeads: operationalMetrics.qualified,
+      appointments: operationalMetrics.appointments,
+      liveTransfers: operationalMetrics.transfers,
       mediaItems,
       mediaTranscripts,
     },
@@ -1291,6 +1409,9 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
         return { value: h ? Math.round((b.outbound / h) * 100) : 0 };
       }),
       avgResponse: bins.map((b) => ({ value: average(responsesByDay.get(b.key) || []) })),
+      qualified: bins.map((b) => ({ value: b.qualifiedContacts.size })),
+      appointments: bins.map((b) => ({ value: b.appointments.size })),
+      transfers: bins.map((b) => ({ value: b.transfers.size })),
     },
     drafts: data.drafts as Record<string, unknown>,
     inboxSettings: data.inboxSettings,

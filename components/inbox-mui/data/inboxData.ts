@@ -309,6 +309,9 @@ export interface InboxModel {
     events: TrendPoint[];
     aiRate: TrendPoint[];
     avgResponse: TrendPoint[];
+    qualified: TrendPoint[];
+    appointments: TrendPoint[];
+    transfers: TrendPoint[];
   };
   drafts: Record<string, unknown>;
   inboxSettings: InboxSettings;
