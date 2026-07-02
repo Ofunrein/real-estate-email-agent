@@ -22,6 +22,7 @@ import type {
   CrmImportAdapter,
   CrmLeadImportCursor,
   CrmActivity,
+  CrmCustomFieldValue,
 } from "@/lib/crm/types";
 
 const GHL_API_BASE = "https://services.leadconnectorhq.com";
@@ -118,6 +119,18 @@ function toImportedLead(raw: Record<string, unknown>): CrmImportedLead {
     notes: contact.lastNote ? String(contact.lastNote) : undefined,
     updatedAt: contact.dateUpdated ? String(contact.dateUpdated) : contact.updatedAt ? String(contact.updatedAt) : undefined,
     raw: contact,
+  };
+}
+
+
+export function buildGhlCustomFieldsPayload(fields: CrmCustomFieldValue[]): { customFields: Array<Record<string, string>> } {
+  return {
+    customFields: fields
+      .filter((field) => (field.id || field.key) && field.fieldValue.trim())
+      .map((field) => ({
+        ...(field.id ? { id: field.id } : { key: field.key || "" }),
+        fieldValue: field.fieldValue,
+      })),
   };
 }
 
@@ -237,6 +250,12 @@ export function createGhlAdapter(config: GhlConfig, request: GhlRequest = realRe
         type: config.messageType || "InternalComment",
         message: activity.body,
       });
+    },
+
+    async updateContactCustomFields(contactId: string, fields: CrmCustomFieldValue[]) {
+      const payload = buildGhlCustomFieldsPayload(fields);
+      if (!payload.customFields.length) return;
+      await request(`/contacts/${encodeURIComponent(contactId)}`, "PUT", payload);
     },
   };
 }

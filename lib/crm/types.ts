@@ -67,6 +67,12 @@ export type CrmActivity = {
   type?: string; // note | call | message ...
 };
 
+export type CrmCustomFieldValue = {
+  id?: string;
+  key?: string;
+  fieldValue: string;
+};
+
 export type CrmLeadImportCursor = {
   limit?: number;
   cursor?: string;
@@ -104,6 +110,7 @@ export interface CrmAdapter {
   cancelAppointment(appointmentId: string): Promise<void>;
 
   logActivity(activity: CrmActivity): Promise<void>;
+  updateContactCustomFields?(contactId: string, fields: CrmCustomFieldValue[]): Promise<void>;
 }
 
 export function hasCrmImport(adapter: CrmAdapter | null): adapter is CrmAdapter & CrmImportAdapter {
