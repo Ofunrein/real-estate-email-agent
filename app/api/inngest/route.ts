@@ -9,6 +9,8 @@ import { sheetsChangedSync } from "@/lib/inngest/functions/sheetsChangedSync";
 import { threadSummaryRefresh } from "@/lib/inngest/functions/threadSummaryRefresh";
 import { gmailWatchRenewal } from "@/lib/inngest/functions/gmailWatchRenewal";
 import { gmailPushReceived } from "@/lib/inngest/functions/gmailPushReceived";
+import { cadencePlan } from "@/lib/inngest/functions/cadencePlan";
+import { cadenceTaskRun } from "@/lib/inngest/functions/cadenceTaskRun";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,6 +26,8 @@ const inngestHandler = serve({
     threadSummaryRefresh,
     gmailWatchRenewal,
     gmailPushReceived,
+    cadencePlan,
+    cadenceTaskRun,
   ],
 });
 
@@ -37,6 +41,8 @@ const activeRawInngestFunctionIds = [
   "thread-summary-refresh",
   "gmail-watch-renewal",
   "gmail-push-received",
+  "cadence-plan",
+  "cadence-task-run",
 ];
 
 const retiredRawInngestFunctionIds = [

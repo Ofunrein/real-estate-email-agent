@@ -1,5 +1,6 @@
 import { appendConversationEventToDatabase, databaseEnabled, upsertLeadMemoryToDatabase } from "@/lib/database";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { scheduleCadenceAfterInteraction } from "@/lib/cadenceScheduler";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -150,6 +151,12 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     provider_metadata: input.providerMetadata ? JSON.stringify(input.providerMetadata) : "",
     reply_job_id: input.replyJobId || "",
   });
+
+  try {
+    await scheduleCadenceAfterInteraction({ lead, event });
+  } catch (error) {
+    console.warn("[Cadence] schedule skipped", { error: error instanceof Error ? error.message : "cadence_schedule_failed" });
+  }
 
   return { event, lead };
 }
