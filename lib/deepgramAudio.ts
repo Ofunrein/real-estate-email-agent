@@ -1,3 +1,5 @@
+import { normalizeMediaForTranscription } from "@/lib/audioTranscode";
+
 type DeepgramAlternative = {
   transcript?: string;
   confidence?: number;
@@ -47,13 +49,14 @@ export async function transcribeDeepgramAudio(file: File): Promise<{
   const apiKey = deepgramApiKey();
   if (!apiKey) throw new Error("DEEPGRAM_API_KEY is required");
 
+  const normalized = await normalizeMediaForTranscription(file);
   const response = await fetch(deepgramListenUrl(), {
     method: "POST",
     headers: {
       Authorization: `Token ${apiKey}`,
-      "Content-Type": file.type || "application/octet-stream",
+      "Content-Type": normalized.type || "application/octet-stream",
     },
-    body: Buffer.from(await file.arrayBuffer()),
+    body: Buffer.from(await normalized.arrayBuffer()),
   });
 
   if (!response.ok) {

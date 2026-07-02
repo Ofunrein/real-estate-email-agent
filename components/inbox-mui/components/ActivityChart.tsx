@@ -22,7 +22,7 @@ const dayLabels = [
 'S'];
 
 export function ActivityChart({ active = true }: {active?: boolean;}) {
-  const { sparkline, metrics } = useInboxModel();
+  const { sparkline, metrics, channelStats } = useInboxModel();
   const max = Math.max(...sparkline);
   const { ref, playKey } = useReplayKey(active);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -220,7 +220,7 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
         
         <Chip
           size="small"
-          label="Email · Iris · 68"
+          label={`Email · Iris · ${channelStats.email?.aiReplies || 0}`}
           sx={{
             bgcolor: 'action.selected',
             color: 'primary.main',
@@ -229,10 +229,22 @@ export function ActivityChart({ active = true }: {active?: boolean;}) {
         
         <Chip
           size="small"
-          label="SMS · Iris · 51"
+          label={`SMS · Iris · ${channelStats.sms?.aiReplies || 0}`}
           sx={{
             bgcolor: 'action.selected',
             color: 'secondary.main',
+            fontWeight: 700
+          }} />
+        <Chip
+          size="small"
+          label={`Social media · ${(
+            (channelStats.instagram?.aiReplies || 0) +
+            (channelStats.messenger?.aiReplies || 0) +
+            (channelStats.whatsapp?.aiReplies || 0)
+          )}`}
+          sx={{
+            bgcolor: 'action.selected',
+            color: 'success.main',
             fontWeight: 700
           }} />
         
