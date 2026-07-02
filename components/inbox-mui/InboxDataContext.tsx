@@ -43,7 +43,7 @@ const emptyModel: InboxModel = {
   pipelineStages: [],
   channelQuality: [],
   sparkline: [],
-  statTrends: { needReview: [], leadsTotal: [], events: [], aiRate: [], avgResponse: [] },
+  statTrends: { needReview: [], leadsTotal: [], events: [], aiRate: [], avgResponse: [], qualified: [], appointments: [], transfers: [] },
   drafts: {},
   inboxSettings: DEFAULT_INBOX_SETTINGS,
 };
