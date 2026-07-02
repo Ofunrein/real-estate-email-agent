@@ -28,8 +28,15 @@ function shouldTranscodeForVoiceClone(file: File): boolean {
 }
 
 function m4aFilename(name: string, prefix = "manual-voice-note"): string {
-  const converted = name.replace(/\.(webm|ogg)$/i, ".m4a");
+  const converted = name.replace(/\.(webm|ogg|mp4|mov|m4v|mp3|wav|aac|caf)$/i, ".m4a");
   return converted === name ? `${prefix}-${Date.now()}.m4a` : converted;
+}
+
+function inputExtension(file: File): string {
+  const nameMatch = file.name.toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  if (nameMatch) return nameMatch[1];
+  const subtype = (file.type || "").split("/")[1]?.split(";")[0]?.replace(/[^a-z0-9]/gi, "");
+  return subtype || "bin";
 }
 
 async function resolveFfmpegPath(): Promise<string> {
@@ -58,7 +65,7 @@ async function transcodeToM4a(file: File, prefix: string): Promise<File> {
   }
 
   const id = randomUUID();
-  const inputPath = join(tmpdir(), `${id}.webm`);
+  const inputPath = join(tmpdir(), `${id}.${inputExtension(file)}`);
   const outputPath = join(tmpdir(), `${id}.m4a`);
 
   try {
@@ -102,4 +109,17 @@ export async function normalizeManualVoiceUpload(file: File): Promise<File> {
 export async function normalizeVoiceCloneSample(file: File): Promise<File> {
   if (!shouldTranscodeForVoiceClone(file)) return file;
   return transcodeToM4a(file, "voice-clone-sample");
+}
+
+export function isTranscribableMedia(file: File): boolean {
+  const type = (file.type || "").toLowerCase();
+  const name = file.name.toLowerCase();
+  return type.startsWith("audio/")
+    || type.startsWith("video/")
+    || /\.(aac|caf|m4a|mp3|mp4|m4v|mov|ogg|opus|wav|webm)$/i.test(name);
+}
+
+export async function normalizeMediaForTranscription(file: File): Promise<File> {
+  if (!isTranscribableMedia(file)) return file;
+  return transcodeToM4a(file, "media-transcript");
 }

@@ -981,3 +981,46 @@ test("adaptInboxData calculates today's average response time from actual thread
   assert.equal(model.metrics.avgResponseLabel, "45s");
   assert.equal(model.metrics.avgResponseSamples, 1);
 });
+
+test("adaptInboxData exposes pipeline, channel quality, and media-understanding metrics", () => {
+  const data = composeInboxData(
+    [
+      { full_name: "Buyer One", intent: "qualified buyer", next_action: "book showing" } as SheetRow,
+    ],
+    [
+      {
+        channel: "sms",
+        direction: "inbound",
+        phone: "+15125550100",
+        thread_ref: "sms:+15125550100",
+        message_text: "I want a 3 bed house under 500k in Austin.",
+        event_at: "2026-07-01T15:00:00.000Z",
+      } as SheetRow,
+      {
+        channel: "sms",
+        direction: "outbound",
+        phone: "+15125550100",
+        thread_ref: "sms:+15125550100",
+        message_text: "I found a few. Want to book a showing today?",
+        ai_action: "appointment_scheduled",
+        event_at: "2026-07-01T15:01:00.000Z",
+      } as SheetRow,
+      {
+        channel: "instagram",
+        direction: "inbound",
+        thread_ref: "instagram:lead1",
+        message_text: "Voice note transcript: looking for something like this reel",
+        media_json: JSON.stringify([{ type: "video", url: "https://cdn.example.com/reel.mp4", transcript: "looking for something like this reel" }]),
+        event_at: "2026-07-01T15:02:00.000Z",
+      } as SheetRow,
+    ],
+    [],
+  );
+
+  const model = adaptInboxData(data);
+  assert.ok(model.pipelineStages.some((stage) => stage.key === "qualified" && stage.value >= 1));
+  assert.equal(model.metrics.appointments, 1);
+  assert.equal(model.metrics.mediaItems, 1);
+  assert.equal(model.metrics.mediaTranscripts, 1);
+  assert.ok(model.channelQuality.some((row) => row.channel === "sms" && row.quality >= 90));
+});
