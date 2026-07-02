@@ -85,3 +85,56 @@ test("retrievePropertiesForAgent: voice channel skips RAG unless explicitly enab
   assert.equal(embedded, false);
   assert.deepEqual(result.map((row) => row.address), ["A", "B"]);
 });
+
+test("retrievePropertiesForAgent: imports missing properties when structured search is empty", async () => {
+  let fallbackCalled = false;
+  const imported = [property("Imported Apify Match")];
+  const result = await retrievePropertiesForAgent("3 bed home in Austin under 500k", 2, { channel: "sms" }, {
+    structured: async () => [],
+    embed: async () => {
+      throw new Error("should not embed empty structured results");
+    },
+    semantic: async () => [],
+    fallback: async (_query, limit, options) => {
+      fallbackCalled = true;
+      assert.equal(limit, 2);
+      assert.equal(options.channel, "sms");
+      return imported;
+    },
+  });
+
+  assert.equal(fallbackCalled, true);
+  assert.deepEqual(result.map((row) => row.address), ["Imported Apify Match"]);
+});
+
+test("retrievePropertiesForAgent: does not import missing properties for voice by default", async () => {
+  let fallbackCalled = false;
+  const result = await retrievePropertiesForAgent("3 bed home in Austin under 500k", 2, { channel: "voice" }, {
+    structured: async () => [],
+    embed: async () => null,
+    semantic: async () => [],
+    fallback: async () => {
+      fallbackCalled = true;
+      return [property("Should Not Import")];
+    },
+  });
+
+  assert.equal(fallbackCalled, false);
+  assert.deepEqual(result, []);
+});
+
+test("retrievePropertiesForAgent: does not import when structured results exist", async () => {
+  let fallbackCalled = false;
+  const result = await retrievePropertiesForAgent("modern kitchen", 2, { channel: "instagram", enableRag: false }, {
+    structured: async () => [property("Existing Match")],
+    embed: async () => null,
+    semantic: async () => [],
+    fallback: async () => {
+      fallbackCalled = true;
+      return [property("Should Not Import")];
+    },
+  });
+
+  assert.equal(fallbackCalled, false);
+  assert.deepEqual(result.map((row) => row.address), ["Existing Match"]);
+});
