@@ -17,6 +17,8 @@ import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAud
 import { createRequestAudit, type RequestAuditInput } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { appendLeadProfileCaptureAsk, decideLeadProfileCapture, leadProfileMemoryPatch } from "@/lib/leadProfileCapture";
+import { understandMediaItems, mediaVisionEnabled } from "@/lib/mediaUnderstanding";
+import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -236,12 +238,25 @@ function inboundVoiceMediaIndexes(payload: Record<string, string>): number[] {
 }
 
 function extensionForMediaType(contentType: string): string {
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return "jpg";
+  if (contentType.includes("png")) return "png";
+  if (contentType.includes("webp")) return "webp";
+  if (contentType.includes("gif")) return "gif";
+  if (contentType.includes("mp4") && contentType.includes("video")) return "mp4";
   if (contentType.includes("mp4") || contentType.includes("m4a")) return "m4a";
   if (contentType.includes("mpeg") || contentType.includes("mp3")) return "mp3";
   if (contentType.includes("ogg") || contentType.includes("opus")) return "ogg";
   if (contentType.includes("wav")) return "wav";
   if (contentType.includes("webm")) return "webm";
   return "m4a";
+}
+
+function twilioMediaType(contentType: string): OmnichannelMedia["type"] {
+  const type = contentType.toLowerCase();
+  if (type.startsWith("image/")) return "image";
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("audio/")) return "audio";
+  return "file";
 }
 
 async function fetchTwilioMediaFile(url: string, contentType: string, index: number): Promise<File> {
@@ -256,6 +271,45 @@ async function fetchTwilioMediaFile(url: string, contentType: string, index: num
   const mediaType = response.headers.get("content-type") || contentType || "audio/mp4";
   const bytes = await response.arrayBuffer();
   return new File([bytes], `inbound-voice-note-${index}.${extensionForMediaType(mediaType)}`, { type: mediaType });
+}
+
+async function twilioInboundMediaItems(payload: Record<string, string>): Promise<OmnichannelMedia[]> {
+  const count = Math.max(0, Number(payload.NumMedia || "0") || 0);
+  const media: OmnichannelMedia[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const url = (payload[`MediaUrl${index}`] || "").trim();
+    if (!url) continue;
+    const contentType = payload[`MediaContentType${index}`] || "";
+    const item: OmnichannelMedia = {
+      id: payload.MessageSid ? `${payload.MessageSid}:${index}` : undefined,
+      url,
+      type: twilioMediaType(contentType),
+      contentType,
+      filename: `twilio-media-${index}.${extensionForMediaType(contentType)}`,
+      providerMetadata: {
+        provider: "twilio",
+        mediaIndex: index,
+      },
+    };
+    if (mediaVisionEnabled() && item.type === "image") {
+      try {
+        const file = await fetchTwilioMediaFile(url, contentType, index);
+        item.contentType = file.type || contentType;
+        item.providerMetadata = {
+          ...item.providerMetadata,
+          visionContentType: file.type || contentType,
+          visionBytesBase64: Buffer.from(await file.arrayBuffer()).toString("base64"),
+        };
+      } catch (error) {
+        logTheo("image vision fetch skipped", {
+          mediaIndex: index,
+          error: error instanceof Error ? error.message : "media_fetch_failed",
+        });
+      }
+    }
+    media.push(item);
+  }
+  return media;
 }
 
 async function payloadWithVoiceTranscripts(payload: Record<string, string>): Promise<Record<string, string>> {
@@ -365,18 +419,31 @@ export async function POST(request: NextRequest) {
         reply_sent: false,
       });
     }
-    const transcriptStarted = nowMs();
-    payload = await payloadWithVoiceTranscripts(payload);
-    if (elapsedMs(transcriptStarted) > 10) {
-      logTheo("voice media transcript processed", {
-        from: payload.From,
-        voiceMedia: inboundVoiceMediaIndexes(payload).length,
-        hasTranscript: /voice note transcript:/i.test(payload.Body || ""),
-        elapsedMs: elapsedMs(transcriptStarted),
-      });
-    }
-    const inboundInput = twilioSmsIngestInput(payload);
-    const inboundWriteStarted = nowMs();
+      const transcriptStarted = nowMs();
+      payload = await payloadWithVoiceTranscripts(payload);
+      const mediaStarted = nowMs();
+      const inboundMedia = await understandMediaItems(await twilioInboundMediaItems(payload));
+      if (elapsedMs(transcriptStarted) > 10) {
+        logTheo("voice media transcript processed", {
+          from: payload.From,
+          voiceMedia: inboundVoiceMediaIndexes(payload).length,
+          hasTranscript: /voice note transcript:/i.test(payload.Body || ""),
+          elapsedMs: elapsedMs(transcriptStarted),
+        });
+      }
+      const inboundInput = twilioSmsIngestInput(payload);
+      if (inboundMedia.length) {
+        inboundInput.mediaJson = inboundMedia;
+        inboundInput.messageText = normalizedMessageText({ text: payload.Body || "", media: inboundMedia });
+        inboundInput.summary = `Inbound SMS with ${inboundMedia.length} media item${inboundMedia.length === 1 ? "" : "s"}.`;
+        logTheo("media understanding processed", {
+          from: payload.From,
+          mediaCount: inboundMedia.length,
+          visionCount: inboundMedia.filter((item) => String(item.providerMetadata?.mediaContext && (item.providerMetadata.mediaContext as Record<string, unknown>).model || "").includes("claude")).length,
+          elapsedMs: elapsedMs(mediaStarted),
+        });
+      }
+      const inboundWriteStarted = nowMs();
     const result = await recordChannelInteraction(inboundInput);
     logTheo("inbound logged", {
       threadRef: result.event.thread_ref,
