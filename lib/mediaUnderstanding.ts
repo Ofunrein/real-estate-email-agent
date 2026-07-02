@@ -29,12 +29,12 @@ function anthropicKey(): string {
   return process.env.ANTHROPIC_API_KEY || "";
 }
 
-function anthropicVisionEnabled(): boolean {
-  return envFlag(process.env.ENABLE_SOCIAL_MEDIA_VISION) && Boolean(anthropicKey());
+export function mediaVisionEnabled(): boolean {
+  return (envFlag(process.env.ENABLE_MEDIA_VISION) || envFlag(process.env.ENABLE_SOCIAL_MEDIA_VISION)) && Boolean(anthropicKey());
 }
 
 function visionModel(): string {
-  return process.env.SOCIAL_MEDIA_VISION_MODEL || process.env.THEO_REPLY_MODEL || "claude-sonnet-4-6";
+  return process.env.MEDIA_VISION_MODEL || process.env.SOCIAL_MEDIA_VISION_MODEL || process.env.THEO_REPLY_MODEL || "claude-sonnet-4-6";
 }
 
 function clean(value: unknown): string {
@@ -56,9 +56,7 @@ function providerMetadata(item: OmnichannelMedia): Record<string, unknown> {
 function existingMediaContext(item: OmnichannelMedia): Record<string, unknown> {
   const metadata = providerMetadata(item);
   const context = metadata.mediaContext || metadata.media_context;
-  return context && typeof context === "object" && !Array.isArray(context)
-    ? context as Record<string, unknown>
-    : {};
+  return context && typeof context === "object" && !Array.isArray(context) ? context as Record<string, unknown> : {};
 }
 
 function mediaUrl(item: OmnichannelMedia): string {
@@ -94,7 +92,6 @@ function inferMediaType(item: OmnichannelMedia): string {
 }
 
 function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
-  const url = mediaUrl(item);
   const linkUrl = mediaLinkUrl(item);
   const label = mediaLabel(item);
   const transcript = truncate(clean(item.transcript), 900);
@@ -111,7 +108,7 @@ function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
   if (linkUrl && isSharedSocialUrl(linkUrl)) {
     return {
       mediaType: type === "attachment" ? "shared_social_content" : type,
-      summary: `${label || "Lead shared social content"}: ${linkUrl}. Treat it as context for the current conversation; if the content is inaccessible, ask one short clarifying question instead of ignoring it.`,
+      summary: `${label || "Lead shared social content"}: ${linkUrl}. Treat it as context for the current real estate conversation; if content is inaccessible, ask one short clarifying question instead of ignoring it.`,
       confidence: 0.62,
       needsHuman: false,
       model: "heuristic_social_link",
@@ -120,7 +117,7 @@ function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
   if (type === "image") {
     return {
       mediaType: "image",
-      summary: `${label || "Lead sent an image"}. Use it as visual context; if the listing, document, or screenshot details are unclear, ask a concise clarifying question.`,
+      summary: `${label || "Lead sent an image"}. Use it as visual context; if listing, document, screenshot, or room details are unclear, ask one concise clarifying question.`,
       confidence: 0.58,
       needsHuman: false,
       model: "heuristic_image",
@@ -129,7 +126,7 @@ function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
   if (type === "video") {
     return {
       mediaType: "video",
-      summary: `${label || "Lead sent a video"}. Use the transcript if available; otherwise acknowledge the video and ask what they want checked from it.`,
+      summary: `${label || "Lead sent a video"}. Use transcript if available; otherwise acknowledge the video and ask what they want checked from it.`,
       confidence: 0.52,
       needsHuman: false,
       model: "heuristic_video",
@@ -144,16 +141,28 @@ function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
   };
 }
 
+async function imageBytesForVision(item: OmnichannelMedia): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const metadata = providerMetadata(item);
+  const inlineBase64 = clean(metadata.visionBytesBase64 || metadata.vision_bytes_base64);
+  const inlineType = mimeFromContentType(clean(metadata.visionContentType || metadata.vision_content_type || item.contentType));
+  if (inlineBase64) {
+    const buffer = Buffer.from(inlineBase64, "base64");
+    return buffer.length ? { buffer, contentType: inlineType } : null;
+  }
+  if (!item.url) return null;
+  const response = await fetch(item.url, { signal: timeoutSignal(6000) });
+  if (!response.ok) return null;
+  const contentType = mimeFromContentType(response.headers.get("content-type") || item.contentType || "");
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return buffer.length ? { buffer, contentType } : null;
+}
+
 async function anthropicVisionContext(item: OmnichannelMedia): Promise<MediaContext | null> {
-  if (!anthropicVisionEnabled() || inferMediaType(item) !== "image" || !item.url) return null;
+  if (!mediaVisionEnabled() || inferMediaType(item) !== "image") return null;
   try {
-    const response = await fetch(item.url, { signal: timeoutSignal(6000) });
-    if (!response.ok) return null;
-    const contentType = mimeFromContentType(response.headers.get("content-type") || item.contentType || "");
-    if (!contentType.startsWith("image/")) return null;
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (!buffer.length || buffer.byteLength > MAX_VISION_BYTES) return null;
-    const prompt = "Summarize this real estate DM image for an omnichannel agent. Return compact JSON only with keys summary, extractedText, needsHuman, confidence. Focus on property details, screenshots, addresses, prices, appointment intent, and lead preferences. Do not infer protected-class traits.";
+    const image = await imageBytesForVision(item);
+    if (!image || !image.contentType.startsWith("image/") || image.buffer.byteLength > MAX_VISION_BYTES) return null;
+    const prompt = "Summarize this real estate lead image for an omnichannel agent. Return compact JSON only with keys summary, extractedText, needsHuman, confidence. Focus on listing photos, rooms/features, screenshots, addresses, prices, appointment intent, lead preferences, and visible text. Do not infer protected-class traits.";
     const vision = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -172,8 +181,8 @@ async function anthropicVisionContext(item: OmnichannelMedia): Promise<MediaCont
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: contentType,
-                  data: buffer.toString("base64"),
+                  media_type: image.contentType,
+                  data: image.buffer.toString("base64"),
                 },
               },
               { type: "text", text: prompt },
@@ -203,15 +212,24 @@ async function anthropicVisionContext(item: OmnichannelMedia): Promise<MediaCont
   }
 }
 
+function publicProviderMetadata(item: OmnichannelMedia): Record<string, unknown> {
+  const metadata = { ...providerMetadata(item) };
+  delete metadata.visionBytesBase64;
+  delete metadata.vision_bytes_base64;
+  delete metadata.visionContentType;
+  delete metadata.vision_content_type;
+  return metadata;
+}
+
 export async function understandMediaItem(item: OmnichannelMedia): Promise<OmnichannelMedia> {
-  if (existingMediaContext(item).summary) return item;
+  if (existingMediaContext(item).summary) return { ...item, providerMetadata: publicProviderMetadata(item) };
   const heuristic = heuristicMediaContext(item);
   const vision = await anthropicVisionContext(item);
   const context = vision || heuristic;
   return {
     ...item,
     providerMetadata: {
-      ...providerMetadata(item),
+      ...publicProviderMetadata(item),
       mediaContext: context,
     },
   };

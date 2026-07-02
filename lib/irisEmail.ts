@@ -27,6 +27,8 @@ import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { understandMediaItems } from "@/lib/mediaUnderstanding";
+import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
@@ -92,6 +94,7 @@ export type IrisEmailMessage = {
   references?: string;
   receivedAt?: string;
   mailboxEmail?: string;
+  media?: OmnichannelMedia[];
 };
 
 export type IrisEmailExecution = {
@@ -963,6 +966,7 @@ export function buildIrisEmailConversationEventRow(
     gmail_thread_id: message.threadId,
     gmail_message_id: message.id,
     thread_status: message.mailboxEmail ? "current_mailbox_thread" : "",
+    media_json: JSON.stringify(message.media || []),
   };
 }
 
@@ -1180,6 +1184,85 @@ function bodyFromPayload(payload: Record<string, unknown> | undefined): string {
   return parts.map((part) => bodyFromPayload(part)).filter(Boolean).join("\n").trim();
 }
 
+function gmailPartFilename(part: Record<string, unknown>): string {
+  return String(part.filename || "").trim();
+}
+
+function gmailPartBody(part: Record<string, unknown>): { data?: string; attachmentId?: string; size?: number } {
+  return (part.body && typeof part.body === "object" ? part.body : {}) as { data?: string; attachmentId?: string; size?: number };
+}
+
+function gmailMediaType(mimeType: string): OmnichannelMedia["type"] {
+  const lower = mimeType.toLowerCase();
+  if (lower.startsWith("image/")) return "image";
+  if (lower.startsWith("audio/")) return "audio";
+  if (lower.startsWith("video/")) return "video";
+  return "file";
+}
+
+function collectGmailAttachmentParts(payload: Record<string, unknown> | undefined, out: Record<string, unknown>[] = []): Record<string, unknown>[] {
+  if (!payload) return out;
+  const mimeType = String(payload.mimeType || "");
+  const body = gmailPartBody(payload);
+  const filename = gmailPartFilename(payload);
+  if ((filename || body.attachmentId) && !/text\/plain|text\/html/i.test(mimeType)) out.push(payload);
+  const parts = payload.parts as Record<string, unknown>[] | undefined;
+  for (const part of parts || []) collectGmailAttachmentParts(part, out);
+  return out;
+}
+
+async function gmailAttachmentBytes(gmail: GmailClient, messageId: string, part: Record<string, unknown>): Promise<string> {
+  const body = gmailPartBody(part);
+  if (body.data) return body.data;
+  if (!body.attachmentId) return "";
+  const attachment = await gmail.users.messages.attachments.get({
+    userId: "me",
+    messageId,
+    id: body.attachmentId,
+  });
+  return attachment.data.data || "";
+}
+
+async function mediaFromGmailPayload(
+  gmail: GmailClient,
+  messageId: string,
+  payload: Record<string, unknown> | undefined,
+): Promise<OmnichannelMedia[]> {
+  const parts = collectGmailAttachmentParts(payload).slice(0, 6);
+  const media: OmnichannelMedia[] = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    const mimeType = String(part.mimeType || "application/octet-stream");
+    const filename = gmailPartFilename(part) || `gmail-attachment-${index}`;
+    const item: OmnichannelMedia = {
+      id: `${messageId}:${index}`,
+      type: gmailMediaType(mimeType),
+      contentType: mimeType,
+      filename,
+      providerMetadata: {
+        provider: "gmail",
+        attachmentId: gmailPartBody(part).attachmentId || "",
+      },
+    };
+    if (item.type === "image") {
+      try {
+        const data = await gmailAttachmentBytes(gmail, messageId, part);
+        if (data) {
+          item.providerMetadata = {
+            ...item.providerMetadata,
+            visionContentType: mimeType,
+            visionBytesBase64: data.replace(/-/g, "+").replace(/_/g, "/"),
+          };
+        }
+      } catch {
+        // Keep heuristic attachment context if Gmail attachment download fails.
+      }
+    }
+    media.push(item);
+  }
+  return understandMediaItems(media);
+}
+
 function gmailSearchToken(value: string): string {
   return value.replace(/[\\"]/g, "").trim();
 }
@@ -1230,22 +1313,25 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
   const messages: IrisEmailMessage[] = [];
   for (const ref of refs) {
     if (!ref.id) continue;
-    const detail = await gmail.users.messages.get({ userId: "me", id: ref.id, format: "full" });
-    const payload = detail.data.payload as Record<string, unknown> | undefined;
-    const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
-    const message = {
-      id: ref.id,
-      threadId: detail.data.threadId || ref.threadId || ref.id,
-      from: header(headers, "From"),
-      to: header(headers, "To"),
-      subject: header(headers, "Subject"),
-      body: bodyFromPayload(payload),
-      snippet: detail.data.snippet || "",
-      messageId: header(headers, "Message-ID"),
-      references: header(headers, "References"),
-      receivedAt: header(headers, "Date"),
-      mailboxEmail,
-    };
+      const detail = await gmail.users.messages.get({ userId: "me", id: ref.id, format: "full" });
+      const payload = detail.data.payload as Record<string, unknown> | undefined;
+      const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
+      const body = bodyFromPayload(payload);
+      const media = await mediaFromGmailPayload(gmail, ref.id, payload);
+      const message = {
+        id: ref.id,
+        threadId: detail.data.threadId || ref.threadId || ref.id,
+        from: header(headers, "From"),
+        to: header(headers, "To"),
+        subject: header(headers, "Subject"),
+        body: normalizedMessageText({ text: body, media }),
+        snippet: detail.data.snippet || "",
+        messageId: header(headers, "Message-ID"),
+        references: header(headers, "References"),
+        receivedAt: header(headers, "Date"),
+        mailboxEmail,
+        media,
+      };
     const sender = parseEmailContact(message.from).email;
     if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;
     if (isIrisEligibleEmail(message)) messages.push(message);
@@ -1262,18 +1348,21 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
     if (!labelIds.includes("INBOX") || !labelIds.includes("UNREAD")) continue;
     const payload = detail.data.payload as Record<string, unknown> | undefined;
     const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
+    const body = bodyFromPayload(payload);
+    const media = await mediaFromGmailPayload(gmail, id, payload);
     const message = {
       id,
       threadId: detail.data.threadId || id,
       from: header(headers, "From"),
       to: header(headers, "To"),
       subject: header(headers, "Subject"),
-      body: bodyFromPayload(payload),
+      body: normalizedMessageText({ text: body, media }),
       snippet: detail.data.snippet || "",
       messageId: header(headers, "Message-ID"),
       references: header(headers, "References"),
       receivedAt: header(headers, "Date"),
       mailboxEmail,
+      media,
     };
     const sender = parseEmailContact(message.from).email;
     if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;

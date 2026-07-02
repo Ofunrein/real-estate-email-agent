@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import { isUnsafeSmsRecipient } from "@/lib/twilioSms";
+import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
 
 export type MetaWhatsAppSendResult = {
   sent: boolean;
@@ -19,6 +20,7 @@ export type MetaWhatsAppInboundMessage = {
   phoneNumberId: string;
   displayPhoneNumber: string;
   messageType: string;
+  media?: OmnichannelMedia[];
 };
 
 function envFlag(value?: string): boolean {
@@ -158,6 +160,27 @@ function textFromMessage(message: Record<string, unknown>): string {
   return `[Unsupported WhatsApp ${type || "message"} received]`;
 }
 
+function mediaFromMessage(message: Record<string, unknown>): OmnichannelMedia[] {
+  const type = String(message.type || "");
+  const source = message[type] && typeof message[type] === "object" ? message[type] as Record<string, unknown> : {};
+  const mediaTypes = new Set(["image", "audio", "video", "document", "sticker"]);
+  if (!mediaTypes.has(type)) return [];
+  const id = String(source.id || "").trim();
+  const mimeType = String(source.mime_type || source.mimeType || "").trim();
+  return [{
+    id,
+    type: type === "document" ? "file" : type === "sticker" ? "image" : type as OmnichannelMedia["type"],
+    contentType: mimeType,
+    filename: String(source.filename || source.caption || `whatsapp-${type}`).trim(),
+    providerMetadata: {
+      provider: "meta_whatsapp",
+      mediaId: id,
+      caption: String(source.caption || "").trim(),
+      sha256: String(source.sha256 || "").trim(),
+    },
+  }];
+}
+
 export function extractMetaWhatsAppMessages(payload: Record<string, unknown>): MetaWhatsAppInboundMessage[] {
   const messages: MetaWhatsAppInboundMessage[] = [];
   const entries = Array.isArray(payload.entry) ? payload.entry : [];
@@ -185,10 +208,11 @@ export function extractMetaWhatsAppMessages(payload: Record<string, unknown>): M
           body: textFromMessage(messageObject),
           profileName: contactByWaId.get(from) || "",
           messageId: String(messageObject.id || ""),
-          phoneNumberId: String(metadata.phone_number_id || ""),
-          displayPhoneNumber: String(metadata.display_phone_number || ""),
-          messageType: String(messageObject.type || ""),
-        });
+        phoneNumberId: String(metadata.phone_number_id || ""),
+        displayPhoneNumber: String(metadata.display_phone_number || ""),
+        messageType: String(messageObject.type || ""),
+        media: mediaFromMessage(messageObject),
+      });
       }
     }
   }
