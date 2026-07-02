@@ -73,7 +73,7 @@ const ALLOWED_ROUTE_REASONS = new Set<SocialDmRouteReason>([
   "manual_agent_route",
 ]);
 
-const REAL_ESTATE_INTENT = /\b(?:\d{3,6}\s+[a-z0-9 .'-]+|available|availability|price|tour|showing|view it|walkthrough|bed|beds|bath|baths|sqft|square feet|listing|address|property|home|house|condo|buyer|buy|sell|selling|valuation|home value|worth|neighborhood|area|zip|photos?|pictures?|images?)\b/i;
+const REAL_ESTATE_INTENT = /\b(?:\d{3,6}\s+[a-z0-9 .'-]+|available|availability|price|tour|showing|view it|walkthrough|bed|beds|bath|baths|sqft|square feet|listing|address|property|home|house|condo|inventory|options?|buyer|buy|sell|selling|valuation|home value|worth|neighborhood|area|zip|photos?|pictures?|images?)\b/i;
 const HANDOFF_INTENT = /\b(?:contract|offer terms|inspection|legal|attorney|lawsuit|commission|representation|mortgage|loan officer|pre.?approved|preapproval|credit score|apr|interest rate|angry|upset|complaint|scam|wtf|fuck|bullshit|human|person|agent|representative)\b/i;
 const PERSONAL_SOCIAL = /\b(?:happy birthday|congrats|congratulations|coffee|lunch|party|date|hang out|personal|friend|family|lol|haha|meme|how are you|what's up|whats up)\b/i;
 
@@ -155,9 +155,9 @@ export function shouldTheoHandleDirectMetaDm(input: SocialDmPayload): SocialDmGu
   if (guard.reason !== "Low-confidence social DM route") return guard;
   return {
     allowed: true,
-    needsHuman: false,
-    reason: "",
-    intent: "direct_meta_dm",
+    needsHuman: true,
+    reason: "Low-confidence direct Meta DM route",
+    intent: "low_confidence_media_or_dm",
   };
 }
 
@@ -213,7 +213,8 @@ export function buildSocialRouterResult(input: {
 }): SocialDmRouterResult {
   const reply = input.reply;
   const needsHuman = Boolean(input.guard?.needsHuman || reply?.status === "needs_human" || reply?.handoffReason);
-  const sendable = Boolean(reply?.shouldSend && reply.reply);
+  const lowConfidence = input.guard?.intent === "low_confidence" || input.guard?.intent === "low_confidence_media_or_dm" || input.guard?.intent === "personal_social";
+  const sendable = Boolean(reply?.shouldSend && reply.reply && !lowConfidence);
   const mediaUrls = sendable ? socialMediaUrls(reply?.mediaUrls || [], input.baseUrl) : [];
   return {
     ok: true,

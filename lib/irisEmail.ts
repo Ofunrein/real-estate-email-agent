@@ -353,9 +353,11 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   let role: IrisLeadRole = "unknown";
   const opportunityTags: string[] = [];
 
-  const spamLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution)/i.test(latestClean);
-  const realEstateLike = /(home|house|condo|property|listing|showing|tour|buy|sell|rent|lease|realtor|real estate|bedroom|mortgage)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
-  if (spamLike && !realEstateLike) {
+  const systemEmailLike = /(confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|verification link|welcome to .{0,40}(?:checker|platform|portal)|bulk email checker)/i.test(latestClean);
+  const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
+  const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
+  const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
+  if (spamLike) {
     intent = "spam";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
@@ -837,16 +839,19 @@ async function generateIrisEmailReplyRich(
   const latestBody = cleanBody(latestEmailBody(message.body));
   const contextAddresses = extractAddresses(threadContextBody(message.body));
   const excludeAddresses = classification.opportunity_tags.includes("property_pivot") ? contextAddresses.slice(0, 1) : [];
-  const properties = classification.addresses.length && classification.intent !== "property_search"
-    ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
-    : await retrievePropertiesForAgent({
-      query: latestBody,
-      area: classification.lead_fields.area || latestBody,
-      beds: classification.lead_fields.beds || undefined,
-      maxPrice: classification.lead_fields.budget || undefined,
-      excludeAddresses,
-      mode: "general",
-    }, 4, { channel: "email" });
+  const shouldAttachProperties = ["property_search", "property_details", "showing_request"].includes(classification.intent);
+  const properties = !shouldAttachProperties
+    ? []
+    : classification.addresses.length && classification.intent !== "property_search"
+      ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
+      : await retrievePropertiesForAgent({
+        query: latestBody,
+        area: classification.lead_fields.area || latestBody,
+        beds: classification.lead_fields.beds || undefined,
+        maxPrice: classification.lead_fields.budget || undefined,
+        excludeAddresses,
+        mode: "general",
+      }, 4, { channel: "email" });
   const plain = await generateClaudeIrisEmailReplyText(message, classification, properties).catch(() => null) || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
@@ -1296,9 +1301,9 @@ export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "su
   if (/^(sales|marketing|partnerships?|outreach|hello|team|founder|growth)@/i.test(sender)) return false;
   if (/@(?:.*\.)?(?:accounts\.google\.com|google\.com|gohighlevel\.com|github\.com|vercel\.com|calendly\.com|luckyfours\.com)$/i.test(sender)) return false;
   const text = `${message.subject || ""}\n${message.body || ""}`;
-  if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run)/i.test(text)) return false;
-  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update)/i.test(text)) return false;
-  if (/\b(api|saas|software|platform|automation|cold email|lead gen|partnership|integrat(?:e|ion)|demo|quick re|quick question|checking in)\b/i.test(text)
+  if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|bulk email checker)/i.test(text)) return false;
+  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update|zero slide decks?|technical founders?|prospects sell themselves|want the method|selling all day|deals moving|actual deals)/i.test(text)) return false;
+  if (/\b(api|saas|software|platform|automation|cold email|lead gen|partnership|partners?|integrat(?:e|ion)|demo|quick re|quick question|checking in|outreach|prospects?)\b/i.test(text)
     && !/\b(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|real estate|bed(?:room)?|bath|mortgage|valuation|zillow|mls)\b/i.test(text)) {
     return false;
   }

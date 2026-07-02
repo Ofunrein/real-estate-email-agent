@@ -371,6 +371,7 @@ export function SmsBubble({
           });
         })()
       : message.html;
+  const inlineSocialPreviewBody = Boolean(imageMedia.length === 1 && imageMedia[0]?.linkUrl && displayBody && !cleanHtml);
   return (
     <Box
       ref={registerTarget}
@@ -428,7 +429,7 @@ export function SmsBubble({
               color: 'text.secondary'
             }}>
 
-            {isIris ? 'Iris sent' : isOwner ? 'Owner sent' : `${contact} received`}
+            {isIris ? 'Iris sent' : isOwner ? 'Owner sent' : `Inbound from ${contact}`}
           </Typography>
           <Typography
             sx={{
@@ -443,7 +444,8 @@ export function SmsBubble({
         <SmsMediaGallery
           media={imageMedia}
           isIris={isOutbound}
-          hasText={Boolean(displayBody || cleanHtml || voiceTranscripts.length || videoMedia.length || audioMedia.length)} />
+          hasText={Boolean(displayBody || cleanHtml || voiceTranscripts.length || videoMedia.length || audioMedia.length)}
+          caption={inlineSocialPreviewBody ? displayBody : ""} />
         }
         {!!videoMedia.length &&
         <Stack spacing={0.75} sx={{ mt: imageMedia.length ? 0.7 : 0, mb: (displayBody || cleanHtml || audioMedia.length) ? 0.7 : 0, alignSelf: isOutbound ? 'flex-end' : 'flex-start' }}>
@@ -557,7 +559,7 @@ export function SmsBubble({
           ))}
         </Stack>
         }
-        {(displayBody || cleanHtml) &&
+        {((displayBody && !inlineSocialPreviewBody) || cleanHtml) &&
         <Box
           sx={{
             mt: message.media?.length ? 0.7 : 0,
@@ -702,11 +704,13 @@ function reactionGlyph(value: string) {
 export function SmsMediaGallery({
   media,
   isIris,
-  hasText
+  hasText,
+  caption = ""
 }: {
   media: NonNullable<SmsMessage['media']>;
   isIris: boolean;
   hasText: boolean;
+  caption?: string;
 }) {
   const visible = media.slice(0, Math.min(media.length, 4));
   const count = media.length;
@@ -715,7 +719,8 @@ export function SmsMediaGallery({
       <SocialLinkPreview
         item={visible[0]}
         isIris={isIris}
-        hasText={hasText} />
+        hasText={hasText}
+        caption={caption} />
     );
   }
   const cardHeight = count === 1 ? 220 : 118;
@@ -836,11 +841,13 @@ function canRenderPreviewImage(value = "") {
 function SocialLinkPreview({
   item,
   isIris,
-  hasText
+  hasText,
+  caption = ""
 }: {
   item: NonNullable<SmsMessage['media']>[number];
   isIris: boolean;
   hasText: boolean;
+  caption?: string;
 }) {
   const host = linkHost(item.linkUrl || "");
   const previewImage = item.thumbnailUrl || (canRenderPreviewImage(item.url) ? item.url : "");
@@ -938,6 +945,11 @@ function SocialLinkPreview({
           {item.label || item.alt || 'Instagram media'}
         </Typography>
         {host && <Typography sx={{ mt: 0.35, fontSize: 11, color: 'text.secondary', fontWeight: 700 }}>{host}</Typography>}
+        {caption && (
+          <Typography sx={{ mt: 0.75, fontSize: 12, color: 'text.secondary', lineHeight: 1.4, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+            {caption}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

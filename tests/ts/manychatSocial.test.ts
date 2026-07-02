@@ -67,8 +67,8 @@ test("shouldTheoHandleSocialDm: defaults low-confidence social DMs to reply plus
   });
 
   assert.equal(guard.allowed, true);
-  assert.equal(guard.needsHuman, true);
-  assert.equal(guard.intent, "low_confidence");
+assert.equal(guard.needsHuman, false);
+assert.equal(guard.intent, "real_estate_intent");
 });
 
 test("shouldTheoHandleDirectMetaDm: defaults direct channel DMs to the agent without human flag", () => {
@@ -88,7 +88,7 @@ test("shouldTheoHandleDirectMetaDm: defaults direct channel DMs to the agent wit
 
   assert.equal(guard.allowed, true);
   assert.equal(guard.needsHuman, false);
-  assert.equal(guard.intent, "direct_meta_dm");
+  assert.equal(guard.intent, "real_estate_intent");
 });
 
 test("shouldTheoHandleDirectMetaDm: still blocks clearly human-required messages", () => {
@@ -199,4 +199,38 @@ test("socialMediaUrls: caps image URLs and returns direct URLs", () => {
   assert.match(urls[0], /^https:\/\/photos\.zillowstatic\.com\//);
   if (prior == null) delete process.env.SOCIAL_DM_MAX_IMAGES;
   else process.env.SOCIAL_DM_MAX_IMAGES = prior;
+});
+
+test("shouldTheoHandleDirectMetaDm: low-confidence shared posts are review-only", () => {
+  const guard = shouldTheoHandleDirectMetaDm({
+    channel: "instagram",
+    messageText: "Attachment context: motivational entrepreneurship reel instagram.com/reel/example",
+    contactId: "contact_7",
+    threadId: "contact_7",
+    senderName: "Lead Seven",
+    senderUsername: "lead.seven",
+    accountLabel: "Instagram",
+    routeReason: "",
+    campaign: "",
+    listingAddress: "",
+    sourceUrl: "",
+  });
+  const result = buildSocialRouterResult({
+    channel: "instagram",
+    threadRef: "instagram:contact_7",
+    guard,
+    reply: {
+      shouldSend: true,
+      reply: "What would you like me to look for from that post?",
+      mediaUrls: [],
+      classification: { intent: "general_question", leadRole: "unknown", handoffReason: "", status: "ready_to_reply" },
+    },
+  });
+
+  assert.equal(guard.allowed, true);
+  assert.equal(guard.needsHuman, true);
+  assert.equal(guard.intent, "low_confidence_media_or_dm");
+  assert.equal(result.should_send, false);
+  assert.equal(result.status, "needs_human");
+  assert.equal(result.reply, "");
 });
