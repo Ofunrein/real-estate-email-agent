@@ -145,3 +145,13 @@ This is set automatically by `aria:provision` when `PUBLIC_BASE_URL` is in env.
 
 **Name saved wrong**
 → Iris asks for confirmation before saving. If STT mishears: caller corrects it, Iris re-calls `qualifyLead` with corrected name.
+
+
+### Supported CRM provider ids
+
+| `ghl` / `highlevel` | `GHL_PRIVATE_INTEGRATION_TOKEN`, `GHL_LOCATION_ID`, `GHL_CALENDAR_ID` | Clients already on GoHighLevel / HighLevel |
+| `fub` / `followupboss` | `FUB_API_KEY` | Follow Up Boss clients |
+| `kvcore` / `lofty` / `chime` | `KVCORE_API_KEY`, optional `KVCORE_BASE_URL` | kvCORE / Lofty-family API clients |
+| `hubspot`, `salesforce`, `pipedrive`, `zoho` | `COMPOSIO_API_KEY`, `COMPOSIO_IMPORT_TOOL_SLUG`, `COMPOSIO_IMPORT_RESULT_PATH` | Composio-backed CRM imports/actions |
+| `acculynx`, `agentlocator`, `boomtown`, `brivity`, `builder_prime`, `buildertrend`, `cinc`, `firepoint`, `housecall_pro`, `improveit_360`, `jobber`, `jobnimbus`, `jungo`, `leadperfection`, `leap`, `marketsharp`, `realgeeks`, `servicemonster`, `servicetitan`, `sierra_interactive`, `wise_agent`, `other` | CSV export first, direct adapter if client API access exists | Supported onboarding/import fallback |
+| `none` | none | No external CRM. Store leads in Lumenosis lead memory. |
