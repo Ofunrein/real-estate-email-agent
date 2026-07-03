@@ -8,9 +8,10 @@ import { createGhlAdapter } from "@/lib/crm/ghl";
 import { createKvcoreAdapter } from "@/lib/crm/kvcore";
 import { createFollowUpBossAdapter } from "@/lib/crm/followupboss";
 import type { CrmAdapter } from "@/lib/crm/types";
+import { directCrmAdapterKey } from "@/lib/crm/providers";
 
 export function resolveCrmAdapter(config: ClientConfig = clientConfig(), env: Record<string, string | undefined> = process.env): CrmAdapter | null {
-  switch (config.crmProvider) {
+  switch (directCrmAdapterKey(config.crmProvider) || config.crmProvider) {
     case "ghl": {
       const token = env.GHL_PRIVATE_INTEGRATION_TOKEN || env.GHL_LOCATION_PIT || "";
       const locationId = env.GHL_LOCATION_ID || "";

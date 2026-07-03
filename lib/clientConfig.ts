@@ -1,4 +1,5 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { normalizeCrmProvider } from "@/lib/crm/providers";
 
 // Per-client customization layer. Resolved by client_id from env today;
 // a DB/file source can back this later without changing consumers.
@@ -84,7 +85,7 @@ export function resolveClientConfig(env: Env = process.env): ClientConfig {
     },
     brandVoice: str(env, "BRAND_VOICE", `Warm, concise, professional. Represents ${teamName}.`),
     voiceId: str(env, "ARIA_VOICE_ID"),
-    crmProvider: str(env, "CRM_PROVIDER", "ghl").toLowerCase(),
+    crmProvider: normalizeCrmProvider(str(env, "CRM_PROVIDER", "ghl")),
     calendarId: str(env, "GHL_CALENDAR_ID"),
     humanTransferNumber: str(env, "HUMAN_TRANSFER_NUMBER"),
     cadence: {

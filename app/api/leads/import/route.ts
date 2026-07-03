@@ -4,6 +4,7 @@ import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { composioEnabled } from "@/lib/composioConnection";
 import { composioImportConfig, pullComposioLeadRows } from "@/lib/composioLeadImport";
 import { resolveCrmAdapter } from "@/lib/crm";
+import { CRM_PROVIDER_DEFINITIONS, directCrmAdapterKey, normalizeCrmProvider } from "@/lib/crm/providers";
 import { hasCrmImport } from "@/lib/crm/types";
 import { readLeadImportBatchesFromDatabase, readLeadImportItemsFromDatabase } from "@/lib/database";
 import { readSheet } from "@/lib/googleSheets";
@@ -32,15 +33,69 @@ function configured(value: string | undefined): boolean {
 
 function connectorStatuses() {
   const adapter = resolveCrmAdapter();
-  const activeCrmProvider = adapter?.provider || process.env.CRM_PROVIDER || "ghl";
+  const activeCrmProvider = normalizeCrmProvider(adapter?.provider || process.env.CRM_PROVIDER || "ghl");
   const activeCrmSupportsImport = hasCrmImport(adapter);
   const hasGhlCredentials = configured(process.env.GHL_PRIVATE_INTEGRATION_TOKEN || process.env.GHL_LOCATION_PIT)
     && configured(process.env.GHL_LOCATION_ID);
+  const hasKvcoreCredentials = configured(process.env.KVCORE_API_KEY);
+  const hasFubCredentials = configured(process.env.FUB_API_KEY);
   const hasGoogleSheets = configured(process.env.GOOGLE_SHEET_ID);
   const hasComposio = composioEnabled();
   const composioImport = composioImportConfig();
-  const hasFollowUpBossAuthConfig = configured(process.env.COMPOSIO_FOLLOW_UP_BOSS_AUTH_CONFIG_ID);
-  const hasFollowUpBossConnection = configured(process.env.COMPOSIO_FOLLOW_UP_BOSS_CONNECTED_ACCOUNT_ID);
+
+  const directStatus = (providerId: string) => {
+    if (providerId === "ghl") return activeCrmProvider === "ghl" && activeCrmSupportsImport ? "ready" : hasGhlCredentials ? "configured" : "needs_config";
+    if (providerId === "fub") return activeCrmProvider === "fub" && adapter ? "configured" : hasFubCredentials ? "configured" : "needs_config";
+    if (providerId === "kvcore" || providerId === "lofty_chime") return (activeCrmProvider === providerId || directCrmAdapterKey(providerId) === "kvcore") && adapter ? "configured" : hasKvcoreCredentials ? "configured" : "needs_config";
+    return "needs_config";
+  };
+
+  const crmConnectors = CRM_PROVIDER_DEFINITIONS.map((provider) => {
+    if (provider.id === "none") {
+      return {
+        id: provider.id,
+        label: provider.label,
+        provider: provider.id,
+        path: provider.path,
+        status: "fallback",
+        detail: provider.detail,
+        action: "Use lead memory",
+      };
+    }
+    if (provider.path === "direct_adapter") {
+      const status = directStatus(provider.id);
+      return {
+        id: provider.id,
+        label: provider.label,
+        provider: provider.id,
+        path: provider.path,
+        status,
+        detail: status === "ready" ? "Active CRM adapter supports lead import." : provider.detail,
+        action: status === "ready" ? "Preview CRM leads" : "Configure CRM",
+      };
+    }
+    if (provider.path === "composio") {
+      const ready = hasComposio && Boolean(composioImport);
+      return {
+        id: provider.id,
+        label: provider.label,
+        provider: provider.id,
+        path: provider.path,
+        status: ready ? "ready" : hasComposio ? "configured" : "needs_config",
+        detail: ready ? `Ready through Composio import tool ${composioImport?.toolSlug}.` : provider.detail,
+        action: ready ? "Preview CRM leads" : "Connect via Composio",
+      };
+    }
+    return {
+      id: provider.id,
+      label: provider.label,
+      provider: provider.id,
+      path: provider.path,
+      status: provider.path === "csv_first" ? "fallback" : "planned",
+      detail: provider.detail,
+      action: "Import CSV",
+    };
+  });
 
   return [
     {
@@ -61,72 +116,7 @@ function connectorStatuses() {
       detail: hasGoogleSheets ? "Sheet source is configured." : "Needs GOOGLE_SHEET_ID before import.",
       action: hasGoogleSheets ? "Preview sheet leads" : "Configure sheet",
     },
-    {
-      id: "composio",
-      label: "CRM connections",
-      provider: "composio",
-      path: "preferred",
-      status: hasComposio && composioImport ? "ready" : hasComposio ? "configured" : "needs_config",
-      detail: hasComposio && composioImport
-        ? `Ready via ${composioImport.toolSlug}.`
-        : hasComposio
-          ? "Powered by Composio. Good targets: Follow Up Boss, HubSpot, Salesforce, Pipedrive, and Close. Add COMPOSIO_IMPORT_TOOL_SLUG for live lead pulls."
-          : "Needs COMPOSIO_API_KEY and connected accounts.",
-      action: hasComposio && composioImport ? "Preview CRM leads" : "Configure CRM import",
-    },
-    {
-      id: "ghl",
-      label: "GoHighLevel",
-      provider: "ghl",
-      path: "direct_adapter",
-      status: activeCrmProvider === "ghl" && activeCrmSupportsImport ? "ready" : hasGhlCredentials ? "configured" : "needs_config",
-      detail: activeCrmProvider === "ghl" && activeCrmSupportsImport
-        ? "Active CRM adapter supports lead import."
-        : hasGhlCredentials
-          ? "Credentials exist; activate CRM_PROVIDER=ghl for this client."
-          : "Needs GHL token and location ID.",
-      action: activeCrmProvider === "ghl" && activeCrmSupportsImport ? "Preview CRM leads" : "Configure GHL",
-    },
-    {
-      id: "follow_up_boss",
-      label: "Follow Up Boss",
-      provider: "follow_up_boss",
-      path: "composio_api_key",
-      status: hasFollowUpBossConnection && composioImport ? "ready" : hasFollowUpBossAuthConfig ? "configured" : "needs_config",
-      detail: hasFollowUpBossConnection && composioImport
-        ? "FUB connection and import tool are configured."
-        : hasFollowUpBossAuthConfig
-          ? "Composio FUB auth config exists. Add a FUB API key connection, then set the import tool slug/result path."
-          : "Needs a Follow Up Boss API-key auth config or CSV export.",
-      action: hasFollowUpBossConnection && composioImport ? "Preview FUB leads" : "Need FUB API key",
-    },
-    {
-      id: "lofty_chime",
-      label: "Lofty / Chime",
-      provider: "lofty",
-      path: "direct_adapter",
-      status: "planned",
-      detail: "Direct adapter planned. CSV export import works now.",
-      action: "Use CSV fallback",
-    },
-    {
-      id: "kvcore",
-      label: "kvCORE",
-      provider: "kvcore",
-      path: "direct_adapter",
-      status: "planned",
-      detail: "Direct adapter planned. CSV export import works now.",
-      action: "Use CSV fallback",
-    },
-    {
-      id: "other_crm",
-      label: "Sierra / Real Geeks / BoomTown / CINC",
-      provider: "real_estate_crm_export",
-      path: "csv_first",
-      status: "fallback",
-      detail: "CSV first, direct adapter after client demand proves depth is needed.",
-      action: "Import CSV",
-    },
+    ...crmConnectors,
   ];
 }
 

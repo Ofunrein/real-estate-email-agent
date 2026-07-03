@@ -282,59 +282,55 @@ export function ImportsView() {
   }
 
   function connectorDisabled(connector: ConnectorStatus): boolean {
-    if (loading) return true;
-    if (connector.id === 'csv') return !file;
-    if (connector.id === 'composio') return connector.status !== 'ready';
-    if (connector.id === 'ghl' || connector.id === 'google_sheets') {
-      return connector.status !== 'ready' && connector.status !== 'configured';
-    }
-    if (connector.id === 'follow_up_boss') return false;
-    return true;
-  }
+if (loading) return true;
+if (connector.id === 'csv') return !file;
+if (connector.id === 'google_sheets') return connector.status !== 'ready' && connector.status !== 'configured';
+if (connector.path === 'direct_adapter') return connector.status !== 'ready' && connector.status !== 'configured';
+if (connector.path === 'composio') return connector.status !== 'ready';
+if (connector.path === 'csv_first' || connector.path === 'fallback') return !file;
+return connector.status === 'planned' || connector.status === 'needs_config';
+}
 
-  function importLatestSource() {
-    if (lastPreviewSource === 'csv') {
-      void submitCsv(false);
-    } else if (lastPreviewSource === 'crm') {
-      void pullCrm(false);
-    } else if (lastPreviewSource === 'google_sheets') {
-      void pullSheets(false);
-    } else if (lastPreviewSource === 'composio') {
-      void pullComposio(false);
-    } else {
-      setError('Run a preview before importing.');
-    }
-  }
+function importLatestSource() {
+if (lastPreviewSource === 'csv') {
+void submitCsv(false);
+} else if (lastPreviewSource === 'crm') {
+void pullCrm(false);
+} else if (lastPreviewSource === 'google_sheets') {
+void pullSheets(false);
+} else if (lastPreviewSource === 'composio') {
+void pullComposio(false);
+} else {
+setError('Run a preview before importing.');
+}
+}
 
-  function connectorAction(connector: ConnectorStatus) {
-    if (connector.id === 'csv') {
-      void submitCsv(true);
-      return;
-    }
-    if (connector.id === 'ghl') {
-      void pullCrm(true);
-      return;
-    }
-    if (connector.id === 'google_sheets') {
-      void pullSheets(true);
-      return;
-    }
-    if (connector.id === 'composio') {
-      void pullComposio(true);
-      return;
-    }
-    if (connector.id === 'follow_up_boss') {
-      if (connector.status === 'ready') {
-        void pullComposio(true);
-      } else {
-        setError('Follow Up Boss Composio auth config is ready. To connect it, add a FUB API key starting with fka_ as a Composio connected account, then set COMPOSIO_IMPORT_TOOL_SLUG and COMPOSIO_IMPORT_RESULT_PATH.');
-      }
-      return;
-    }
-    setError(`${connector.label} is not directly connected yet. Export CSV from that CRM and use the CSV fallback.`);
-  }
+function connectorAction(connector: ConnectorStatus) {
+if (connector.id === 'csv') {
+void submitCsv(true);
+return;
+}
+if (connector.id === 'google_sheets') {
+void pullSheets(true);
+return;
+}
+if (connector.path === 'direct_adapter') {
+void pullCrm(true);
+return;
+}
+if (connector.path === 'composio') {
+void pullComposio(true);
+return;
+}
+if (connector.path === 'csv_first' || connector.path === 'fallback') {
+if (file) void submitCsv(true);
+else setError(`Choose a CSV export from ${connector.label} first.`);
+return;
+}
+setError(`${connector.label} is not connected yet. Export CSV from that CRM and use the CSV fallback.`);
+}
 
-  return (
+return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: { xs: 'visible', lg: 'auto' }, pb: 1 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
         <Box>

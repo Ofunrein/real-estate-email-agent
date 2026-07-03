@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "lib/clientConfig.ts": {
-    "mtime": 1781957108.7741165,
-    "ast_hash": "3cb91f6e35f7834e94e2bb0c45a38b90",
+    "mtime": 1783064138.648223,
+    "ast_hash": "1c8118e7dc75117d698be6c07aee7027",
     "semantic_hash": ""
   },
   "lib/crm/ghl.ts": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "lib/crm/index.ts": {
-    "mtime": 1783026202.1137145,
-    "ast_hash": "11cfa17671d926ec8d74e11f6137e787",
+    "mtime": 1783064138.649988,
+    "ast_hash": "6e7b75118d7e57d12b2f6859908e9e4f",
     "semantic_hash": ""
   },
   "lib/crm/types.ts": {
@@ -2500,13 +2500,13 @@
     "semantic_hash": ""
   },
   "app/api/leads/import/route.ts": {
-    "mtime": 1782084366.431413,
-    "ast_hash": "e579ac16843733c2fd7b3ff87096f912",
+    "mtime": 1783064639.0965254,
+    "ast_hash": "733d4f0dcb361f9c35ceb51f3b341a38",
     "semantic_hash": ""
   },
   "components/inbox-mui/components/ImportsView.tsx": {
-    "mtime": 1782088933.7933712,
-    "ast_hash": "df2509cf28234a241bb4d520d76b8dde",
+    "mtime": 1783064448.1924872,
+    "ast_hash": "32502a24a726d21d25aa22e37be79bb5",
     "semantic_hash": ""
   },
   "components/inbox-mui/hooks/useActivityEventTarget.ts": {
@@ -3150,8 +3150,8 @@
     "semantic_hash": ""
   },
   "docs/client-onboarding.md": {
-    "mtime": 1782638677.9272535,
-    "ast_hash": "9f6be5937af405151fb4e15ac81609b6",
+    "mtime": 1783064530.6564965,
+    "ast_hash": "125b74f57f77604e3cf93f7c4663017c",
     "semantic_hash": ""
   },
   "docs/google-calendar-setup.md": {
@@ -3547,6 +3547,16 @@
   "tests/ts/qualificationPlaybooks.test.ts": {
     "mtime": 1783030273.4518676,
     "ast_hash": "262b3ecdbf048736157c33bb9c3f36b6",
+    "semantic_hash": ""
+  },
+  "lib/crm/providers.ts": {
+    "mtime": 1783064639.092251,
+    "ast_hash": "b00b2295fdf1def51997a5a6c5e193e8",
+    "semantic_hash": ""
+  },
+  "tests/ts/crmProviders.test.ts": {
+    "mtime": 1783064639.1018243,
+    "ast_hash": "14edcf1f14695ee8a3524af62f8eb2e7",
     "semantic_hash": ""
   }
 }
