@@ -2336,14 +2336,18 @@ def generate_multi_property_html(listings_data: list[dict], calendly: str) -> tu
             plain_lines.append(f"  {listing_url}")
 
     cal_btn = ""
+    showing_ask = ""
     if calendly:
+        showing_ask = '<p>Would you like to schedule a showing for either of these?</p>'
         cal_btn = f'<p><a href="{calendly}" style="display:inline-block;padding:10px 24px;background:#0066cc;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Schedule a Showing</a></p>'
-        plain_lines.append(f"\nTo schedule a showing: {calendly}")
+        plain_lines.append("\nWould you like to schedule a showing for either of these?")
+        plain_lines.append(f"To schedule a showing: {calendly}")
 
     html = f"""<div style="font-family:Arial,sans-serif;max-width:620px;color:#222">
 <p>Hello,</p>
 <p>Here are the details on the {len(listings_data)} properties you asked about.</p>
 {cards_html}
+{showing_ask}
 {cal_btn}
 {sig}
 </div>"""
