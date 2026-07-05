@@ -4,11 +4,14 @@ import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { normalizeVoiceCloneSample } from "@/lib/audioTranscode";
 import { cloneCartesiaVoice } from "@/lib/cartesiaAudio";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session?.user?.email) return unauthorizedResponse();
   const audit = createRequestAudit({

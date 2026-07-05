@@ -15,6 +15,7 @@ import {
 import { sendManualReply } from "@/lib/manualReply";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +114,8 @@ async function syncGmailDraft(input: {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const { threadRef } = await params;

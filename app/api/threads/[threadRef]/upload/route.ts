@@ -4,6 +4,7 @@ import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { normalizeManualVoiceUpload } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ const ALLOWED = new Set([
 ]);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const loadTestBlock = blockLoadTestMutation(req);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const { threadRef } = await params;

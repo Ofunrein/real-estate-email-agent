@@ -13,6 +13,7 @@ import {
 import { syncComposioSocialConnections } from "@/lib/composioChannelSync";
 import { composioEnabled, createComposioClient } from "@/lib/composioConnection";
 import { metaSocialDirectEnabled } from "@/lib/metaSocial";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const body = await request.json().catch(() => ({}));

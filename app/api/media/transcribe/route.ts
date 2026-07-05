@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { transcribeDeepgramAudio } from "@/lib/deepgramAudio";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session?.user?.email) return unauthorizedResponse();
 

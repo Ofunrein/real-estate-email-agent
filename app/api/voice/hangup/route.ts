@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,8 @@ const VAPI_BASE = "https://api.vapi.ai";
 // End an in-progress Vapi call from the dashboard. Session-protected.
 // POST { callId }
 export async function POST(request: NextRequest) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   try {
     const { callId } = (await request.json().catch(() => ({}))) as { callId?: string };
     if (!callId) {
