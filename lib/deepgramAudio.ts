@@ -53,7 +53,8 @@ export async function createDeepgramVoiceNote(input: {
   }
   const bytes = Buffer.from(await response.arrayBuffer());
   const filename = audioFilename("deepgram-voice-note", "mp3");
-  const file = new File([bytes], filename, { type: "audio/mpeg" });
+  const rawFile = new File([bytes], filename, { type: "audio/mpeg" });
+  const file = input.smsCompatible ? await normalizeGeneratedVoiceNote(rawFile) : rawFile;
   const uploaded = await saveMediaUpload({
     file,
     threadRef: input.threadRef || "deepgram-voice-note",
