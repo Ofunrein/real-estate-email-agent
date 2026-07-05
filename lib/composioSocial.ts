@@ -1,5 +1,6 @@
 import { composioExternalUserId, createComposioClient } from "@/lib/composioConnection";
 import { listChannelConnections, type ChannelConnectionRecord } from "@/lib/channelConnections";
+import { removeEmDashes } from "@/lib/noEmDash";
 
 export type ComposioSocialChannel = "instagram" | "messenger" | "whatsapp";
 export type ComposioSocialSendResult =
@@ -20,6 +21,14 @@ type SocialSenderConfig = {
   connectedAccountId?: string;
   arguments: Record<string, unknown>;
 };
+
+function envFlag(value?: string): boolean {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+export function composioSocialSendsEnabled(): boolean {
+  return envFlag(process.env.IRIS_ENABLE_COMPOSIO_SOCIAL_SENDS);
+}
 
 function parseJsonObject(value: string | undefined): Record<string, unknown> {
   if (!value?.trim()) return {};
@@ -200,6 +209,10 @@ export async function sendComposioSocialMessage(input: {
   mediaUrls?: string[];
   threadRef?: string;
 }): Promise<ComposioSocialSendResult> {
+  const body = removeEmDashes(input.body);
+  if (!composioSocialSendsEnabled()) {
+    return { ok: false, error: "Composio social sends are disabled. Use Meta direct webhooks for Instagram/Messenger replies." };
+  }
   const config = configFor(input.channel);
   if (!config) {
     const envPrefix = input.channel === "instagram"
@@ -219,9 +232,9 @@ export async function sendComposioSocialMessage(input: {
   const templatedArgs = fillTemplate(baseArgs, {
     to: input.to,
     recipient: input.to,
-    body: input.body,
-    text: input.body,
-    message: input.body,
+    body,
+    text: body,
+    message: body,
     mediaUrl: input.mediaUrls?.[0] || "",
     mediaUrlsJson: JSON.stringify(input.mediaUrls || []),
     threadRef: input.threadRef || input.to,

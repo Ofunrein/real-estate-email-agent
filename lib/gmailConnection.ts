@@ -14,6 +14,7 @@ import {
   decryptEmailAccountToken,
   encryptEmailAccountToken,
 } from "@/lib/emailAccountCrypto";
+import { removeEmDashesFromRecord } from "@/lib/noEmDash";
 
 export type GmailTokenJson = Record<string, unknown> & {
   access_token?: string;
@@ -296,7 +297,8 @@ export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput)
   return sendGmailReplyWithOptions(gmail, input, { mailboxEmail: "" });
 }
 
-function buildGmailReplyMessage(input: GmailReplyInput): { raw: string; normalizedThreadId: string } {
+function buildGmailReplyMessage(inputRaw: GmailReplyInput): { raw: string; normalizedThreadId: string } {
+  const input = removeEmDashesFromRecord(inputRaw, ["subject", "body", "htmlBody"]);
   const subjectRaw = input.subject || "(no subject)";
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
   const boundary = `boundary_${Date.now().toString(36)}`;

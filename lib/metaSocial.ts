@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { removeEmDashes } from "@/lib/noEmDash";
 
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
@@ -438,7 +439,7 @@ export async function sendMetaSocialMessage(input: {
     };
   }
   const recipientId = cleanText(input.to);
-  const body = cleanText(input.body);
+  const body = cleanText(removeEmDashes(input.body));
   const mediaUrls = sendableMediaUrls(input.mediaUrls);
   if (!recipientId || (!body && !mediaUrls.length)) {
     return {
