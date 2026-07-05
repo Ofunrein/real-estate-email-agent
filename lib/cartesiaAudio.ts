@@ -126,7 +126,8 @@ export async function createCartesiaVoiceNote(input: {
 
   const bytes = Buffer.from(await response.arrayBuffer());
   const filename = audioFilename("cartesia-voice-note", "mp3");
-  const file = new File([bytes], filename, { type: "audio/mpeg" });
+  const rawFile = new File([bytes], filename, { type: "audio/mpeg" });
+  const file = input.smsCompatible ? await normalizeGeneratedVoiceNote(rawFile) : rawFile;
   const uploaded = await saveMediaUpload({
     file,
     threadRef: input.threadRef || "cartesia-voice-note",
