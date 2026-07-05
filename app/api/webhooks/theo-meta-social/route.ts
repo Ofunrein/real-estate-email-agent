@@ -425,7 +425,7 @@ async function processInbound(input: {
   }
 
   const settings = await readInboxSettingsFromDatabase();
-  if (!guard.allowed || !channelEnabled(settings, input.channel) || await isTakeoverActive(threadRef)) {
+  if (!guard.allowed || !channelEnabled(settings, input.channel) || await isTakeoverActive(threadRef, input.channel)) {
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: input.channel,

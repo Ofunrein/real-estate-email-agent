@@ -538,7 +538,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
   }
 
   const settings = await readInboxSettingsFromDatabase();
-  if (!guard.allowed || !channelEnabled(settings, message.channel) || await isTakeoverActive(threadRef)) {
+  if (!guard.allowed || !channelEnabled(settings, message.channel) || await isTakeoverActive(threadRef, message.channel)) {
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: message.channel,

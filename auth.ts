@@ -21,7 +21,9 @@ export function isAllowedAuthEmail(email?: string | null) {
 }
 
 export function localAuthBypassEnabled() {
-  return process.env.NODE_ENV !== "production" && process.env.ALLOW_LOCAL_AUTH_BYPASS === "1";
+  const localBypass = process.env.NODE_ENV !== "production" && process.env.ALLOW_LOCAL_AUTH_BYPASS === "1";
+  const previewBypass = process.env.VERCEL_ENV === "preview" && process.env.ALLOW_PREVIEW_AUTH_BYPASS === "1";
+  return localBypass || previewBypass;
 }
 
 export function authEmailListLabel() {
