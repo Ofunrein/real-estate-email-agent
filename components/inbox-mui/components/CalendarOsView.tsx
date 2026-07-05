@@ -526,6 +526,10 @@ export function CalendarOsView() {
 
   useEffect(() => {
     void loadCalendar();
+    const timer = window.setInterval(() => {
+      void loadCalendar();
+    }, 60000);
+    return () => window.clearInterval(timer);
   }, [loadCalendar]);
 
   async function syncCalendar() {
