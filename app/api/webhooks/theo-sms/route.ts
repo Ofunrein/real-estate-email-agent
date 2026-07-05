@@ -544,7 +544,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Human takeover: owner is handling this thread — log inbound, skip AI reply.
-    if (await isTakeoverActive(result.event.thread_ref)) {
+    if (await isTakeoverActive(result.event.thread_ref, result.event.channel)) {
       logTheo("human takeover active — skipping AI reply", {
         leadPhone: payload.From,
         threadRef: result.event.thread_ref,

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { adaptInboxData } from "@/lib/inboxDataAdapter";
 import type { AgentInboxData } from "@/lib/inboxData";
-import { InboxPage } from "./InboxPage";
+import { IrisDashboard } from "@/components/iris-dashboard/IrisDashboard";
 import { ColorModeProvider } from "./theme/ColorModeContext";
 import { CategoryColorProvider } from "./theme/CategoryColorContext";
 import { InboxDataProvider } from "./InboxDataContext";
@@ -64,7 +64,7 @@ export function InboxApp({ data }: InboxAppProps) {
     <ColorModeProvider>
       <InboxDataProvider model={model} onDraftChanged={handleDraftChanged} onDataRefresh={refreshData}>
         <CategoryColorProvider categories={model.leadCategories}>
-          <InboxPage />
+          <IrisDashboard />
         </CategoryColorProvider>
       </InboxDataProvider>
     </ColorModeProvider>

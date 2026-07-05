@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { activateTakeover, getTakeover, releaseTakeover } from "@/lib/humanTakeover";
 import { createRequestAudit } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
   const { threadRef } = await params;
-  return NextResponse.json(await getTakeover(threadRef));
+  const channel = req.nextUrl.searchParams.get("channel") || undefined;
+  return NextResponse.json(await getTakeover(threadRef, channel));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
   const { threadRef } = await params;
   const audit = createRequestAudit({
     headers: req.headers,
@@ -27,12 +33,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
       await audit.write("validate", "failed", { statusCode: 400, errorMessage: "channel required" });
       return NextResponse.json({ ok: false, error: "channel required" }, { status: 400 });
     }
-    await activateTakeover(threadRef, body.channel, body.takenBy ?? "owner");
+    await activateTakeover(threadRef, body.channel, body.takenBy ?? session.user?.email ?? "owner");
     await audit.write("takeover", "sent", { channel: body.channel, statusCode: 200, metadata: { action: "take" } });
     return NextResponse.json({ ok: true, isActive: true });
   }
   if (body.action === "release") {
-    await releaseTakeover(threadRef);
+    await releaseTakeover(threadRef, body.channel);
     await audit.write("takeover", "sent", { channel: body.channel, statusCode: 200, metadata: { action: "release" } });
     return NextResponse.json({ ok: true, isActive: false });
   }

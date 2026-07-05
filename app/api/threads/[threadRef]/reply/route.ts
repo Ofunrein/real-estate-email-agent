@@ -320,7 +320,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     return NextResponse.json({ ok: false, error: "channel, to, and body/media required" }, { status: 400 });
   }
 
-  if (!(await isTakeoverActive(threadRef))) {
+  if (!(await isTakeoverActive(threadRef, input.channel))) {
     await audit.write("takeover_guard", "blocked", {
       channel: input.channel,
       contactRef: input.to,
