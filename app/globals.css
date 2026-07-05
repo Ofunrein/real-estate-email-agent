@@ -4954,3 +4954,231 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
 .iris-voice-note-bubble a,.iris-voice-note-bubble em{color:var(--iris-text-subtle)!important;font-size:11px;text-decoration:none;font-style:normal;}
 @keyframes irisVoicePulse{from{transform:scaleY(.62);opacity:.68}to{transform:scaleY(1.08);opacity:1}}
 @media (prefers-reduced-motion:reduce){.iris-voice-note-bubble.is-playing .iris-waveform i{animation:none!important}}
+
+/* QA: fix channel badge alignment, hidden horizontal strips, and theme-safe message previews. */
+.iris-redesign-shell,
+.iris-redesign-shell *{
+ box-sizing:border-box;
+}
+.iris-redesign-shell{
+ max-width:100vw!important;
+ overflow:hidden!important;
+}
+.iris-dashboard-grid,
+.iris-main,
+.iris-wide-panel,
+.iris-thread-col,
+.iris-convo-col,
+.iris-message-scroll,
+.iris-thread-list,
+.iris-context-col,
+.iris-activity-col,
+.iris-overview-grid,
+.iris-overview-panel,
+.iris-overview-feed,
+.iris-recent-card,
+.iris-activity-chart-card{
+ overflow-x:hidden!important;
+}
+.iris-redesign-shell ::-webkit-scrollbar:horizontal{
+ height:0!important;
+ display:none!important;
+}
+.iris-redesign-shell{
+ scrollbar-gutter:stable;
+}
+.iris-avatar-token{
+ position:relative!important;
+ display:inline-grid!important;
+ place-items:center!important;
+ overflow:visible!important;
+ line-height:1!important;
+ isolation:isolate!important;
+ flex:0 0 auto!important;
+ color:var(--iris-text-muted)!important;
+}
+.iris-avatar-token .iris-channel-badge{
+ position:absolute!important;
+ right:-4px!important;
+ bottom:-4px!important;
+ width:20px!important;
+ height:20px!important;
+ min-width:20px!important;
+ min-height:20px!important;
+ display:grid!important;
+ place-items:center!important;
+ padding:0!important;
+ margin:0!important;
+ border:2px solid var(--iris-surface)!important;
+ border-radius:999px!important;
+ background:var(--iris-surface)!important;
+ box-shadow:0 1px 4px rgba(15,23,42,.18)!important;
+ line-height:0!important;
+ transform:none!important;
+ z-index:2!important;
+ overflow:hidden!important;
+}
+.dark .iris-avatar-token .iris-channel-badge{
+ border-color:#141b24!important;
+ background:#1b2430!important;
+ box-shadow:0 0 0 1px rgba(255,255,255,.08)!important;
+}
+.iris-avatar-token.large .iris-channel-badge{
+ right:-3px!important;
+ bottom:-3px!important;
+ width:21px!important;
+ height:21px!important;
+ min-width:21px!important;
+ min-height:21px!important;
+}
+.iris-lead-profile-button{
+ overflow:hidden!important;
+ min-width:0!important;
+}
+.iris-lead-profile-copy{
+ min-width:0!important;
+ display:block!important;
+ color:var(--iris-text)!important;
+}
+.iris-lead-profile-copy strong,
+.iris-lead-profile-copy em{
+ display:block!important;
+ overflow:hidden!important;
+ text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+}
+.iris-lead-profile-copy em{
+ font-style:normal!important;
+ color:var(--iris-text-subtle)!important;
+}
+.iris-bubble,
+.iris-media-card,
+.iris-media-copy,
+.iris-property-card,
+.iris-property-body{
+ color:var(--iris-text)!important;
+}
+.iris-bubble :where(p,span,div,li,small,em),
+.iris-media-copy :where(p,span,div,li,small,em),
+.iris-property-body :where(p,span,div,li,small,em){
+ color:var(--iris-text-muted)!important;
+}
+.iris-bubble :where(strong,b,h1,h2,h3,h4),
+.iris-media-copy :where(strong,b,h1,h2,h3,h4),
+.iris-property-body :where(strong,b,h1,h2,h3,h4){
+ color:var(--iris-text)!important;
+}
+.iris-message-row.out .iris-bubble:not(.has-html){
+ color:var(--iris-on-primary)!important;
+}
+.iris-message-row.out .iris-bubble:not(.has-html) :where(p,span,div,li,small,em,strong,b){
+ color:var(--iris-on-primary)!important;
+}
+.iris-email-html,
+.iris-email-html *{
+ text-shadow:none!important;
+}
+.dark .iris-email-html,
+.dark .iris-email-html *{
+ color:#1f2937!important;
+}
+.dark .iris-email-html :where(h1,h2,h3,h4,strong,b){
+ color:#111827!important;
+}
+.dark .iris-email-html a{
+ color:#8a6512!important;
+}
+
+
+/* QA: force message and media preview surfaces to render as cards in both themes. */
+.iris-bubble{
+ background:var(--iris-surface)!important;
+ border:1px solid var(--iris-card-bd)!important;
+ box-shadow:var(--iris-card-hi),var(--iris-elev)!important;
+}
+.iris-message-row.out .iris-bubble:not(.has-html){
+ background:var(--iris-primary)!important;
+ border-color:var(--iris-primary)!important;
+}
+.iris-media-card{
+ display:block!important;
+ overflow:hidden!important;
+ border:1px solid var(--iris-card-bd)!important;
+ border-radius:14px!important;
+ background:var(--iris-card)!important;
+ box-shadow:var(--iris-card-hi),var(--iris-elev)!important;
+}
+.iris-media-copy{
+ display:grid!important;
+ gap:4px!important;
+ padding:12px!important;
+ background:var(--iris-card)!important;
+ color:var(--iris-text)!important;
+}
+.iris-media-copy b{color:var(--iris-text)!important;}
+.iris-media-copy small{color:var(--iris-text-subtle)!important;}
+.iris-media-copy em{color:var(--iris-text-muted)!important;}
+.dark .iris-bubble,
+.dark .iris-media-card,
+.dark .iris-media-copy{
+ background:var(--iris-card)!important;
+ color:var(--iris-text)!important;
+}
+.dark .iris-message-row.out .iris-bubble:not(.has-html){
+ background:var(--iris-primary)!important;
+ color:var(--iris-on-primary)!important;
+}
+.dark .iris-email-html a[style*="background"],
+.dark .iris-email-html a[bgcolor],
+.dark .iris-email-html [role="button"]{
+ color:#fff!important;
+}
+
+/* QA: contain wide HTML emails inside the conversation pane, not the viewport. */
+.iris-message-row,
+.iris-message-stack,
+.iris-bubble,
+.iris-bubble.has-html,
+.iris-email-html{
+ min-width:0!important;
+ max-width:100%!important;
+}
+.iris-bubble.has-html{
+ overflow:hidden!important;
+}
+.iris-email-html{
+ display:block!important;
+ width:100%!important;
+ overflow-x:auto!important;
+}
+.iris-email-html table,
+.iris-email-html tbody,
+.iris-email-html tr,
+.iris-email-html td,
+.iris-email-html th{
+ max-width:100%!important;
+}
+.iris-email-html table{
+ width:100%!important;
+ table-layout:fixed!important;
+}
+.iris-email-html img{
+ max-width:100%!important;
+ height:auto!important;
+}
+.iris-email-html :where(p,div,span,td,th,li,small,em,strong,b,h1,h2,h3,h4){
+ overflow-wrap:anywhere!important;
+ word-break:normal!important;
+}
+
+/* QA: long invite/email text must wrap inside message bubbles. */
+.iris-bubble{
+ overflow:hidden!important;
+ overflow-wrap:anywhere!important;
+ word-break:break-word!important;
+}
+.iris-bubble :where(p,div,span,td,th,li,small,em,strong,b,h1,h2,h3,h4){
+ max-width:100%!important;
+ overflow-wrap:anywhere!important;
+ word-break:break-word!important;
+}
