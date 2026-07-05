@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { clientConfig } from "@/lib/clientConfig";
 import { placeOutboundCall, type OutboundConfig } from "@/lib/outbound";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
+import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const callReason = String(body.callReason || body.reason || "your real estate request");
     const leadContext = String(body.leadContext || body.context || body.summary || "");
 
-    const result = await placeOutboundCall(outboundConfig(), {
+    const callInput = {
       customerNumber: phone,
       leadName: String(body.leadName || body.name || ""),
       leadEmail: String(body.leadEmail || body.email || ""),
@@ -42,12 +43,31 @@ export async function POST(request: NextRequest) {
       leadContext,
       clientId: config.clientId,
       trigger: "manual",
+    };
+    const safety = await claimProviderAction({
+      idempotencyKey: request.headers.get("x-idempotency-key") || request.headers.get("x-iris-idempotency-key") || "",
+      action: "voice_call",
+      channel: "voice",
+      target: phone,
+      threadRef: String(body.threadRef || ""),
+      payload: callInput,
+      maxPerMinute: Number(process.env.IRIS_VOICE_CALLS_PER_MINUTE || 4),
     });
+    if (!safety.ok) {
+      return NextResponse.json(
+        safety.replay ? { ...(safety.result || {}), idempotentReplay: true } : { ok: false, error: safety.error },
+        { status: safety.status },
+      );
+    }
+
+    const result = await placeOutboundCall(outboundConfig(), callInput);
+    const response = result.ok ? { ok: true, callId: result.id } : { ok: false, error: result.error };
+    await completeProviderAction(safety.key, result.ok, response, result.ok ? "" : result.error || "Voice call failed");
 
     if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+      return NextResponse.json(response, { status: 502 });
     }
-    return NextResponse.json({ ok: true, callId: result.id });
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to place outbound call.";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
