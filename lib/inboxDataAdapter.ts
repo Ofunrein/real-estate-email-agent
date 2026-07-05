@@ -614,10 +614,15 @@ function buildDayBins(events: SheetRow[]) {
   const now = new Date();
   const bins: DayBin[] = [];
   const index = new Map<string, number>();
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   for (let i = DAYS - 1; i >= 0; i -= 1) {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - i);
+    // Step by fixed 24h increments from "now" rather than mutating local
+    // machine time (setHours/setDate), so day boundaries stay anchored to
+    // DISPLAY_TIME_ZONE (via dayKey/dayLabelFormatter) regardless of the
+    // host's local TZ. Previously this used local-time midnight, which
+    // diverges from the Chicago-anchored dayKey() below on hosts running
+    // in UTC (e.g. CI), silently dropping same-day events into no bin.
+    const d = new Date(now.getTime() - i * ONE_DAY_MS);
     const key = dayKey(d);
     index.set(key, bins.length);
     bins.push({
