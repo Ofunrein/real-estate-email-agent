@@ -16,6 +16,7 @@ import { readMediaUpload } from "@/lib/mediaUploads";
 import { createRequestAudit } from "@/lib/requestAudit";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
+import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
 
 export const dynamic = "force-dynamic";
 
@@ -385,10 +386,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
     }, { status: 409 });
   }
 
+  const safety = await claimProviderAction({
+    requestId: audit.requestId,
+    idempotencyKey: req.headers.get("x-idempotency-key") || req.headers.get("x-iris-idempotency-key") || "",
+    action: "manual_reply",
+    channel: input.channel,
+    target: input.to,
+    threadRef,
+    payload: { body: input.body, mediaUrls: input.mediaUrls || [], subject: input.subject || "", messageId: input.messageId || "" },
+  });
+  if (!safety.ok) {
+    await audit.write("provider_safety", safety.replay ? "replayed" : "blocked", {
+      channel: input.channel,
+      contactRef: input.to,
+      statusCode: safety.status,
+      errorCode: safety.replay ? "idempotent_replay" : "provider_safety_block",
+      errorMessage: safety.error,
+      metadata: { idempotencyKey: safety.key },
+    });
+    return NextResponse.json(
+      safety.replay ? { ...(safety.result || {}), idempotentReplay: true } : { ok: false, error: safety.error },
+      { status: safety.status },
+    );
+  }
+
   const result = await sendManualReply({
     ...input,
     attachments: await resolveAttachments(input.mediaUrls, input.channel),
   });
+  await completeProviderAction(safety.key, result.ok, result as unknown as Record<string, unknown>, result.ok ? "" : result.error);
   if (!result.ok) {
     await audit.write("send", "failed", {
       channel: input.channel,
