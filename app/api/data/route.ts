@@ -16,11 +16,30 @@ import { composeInboxData } from "@/lib/inboxData";
 
 export const dynamic = "force-dynamic";
 
+const CACHE_TTL_MS = Number(process.env.IRIS_DASHBOARD_DATA_CACHE_MS || 5_000);
 const LIVE_DASHBOARD_CACHE = {
   headers: {
     "Cache-Control": "private, max-age=5, stale-while-revalidate=10",
   },
 };
+
+type CachedDashboardData = {
+  body: string;
+  expiresAt: number;
+};
+
+let dashboardDataCache: CachedDashboardData | null = null;
+let dashboardDataInflight: Promise<string> | null = null;
+
+function jsonResponse(body: string, cacheStatus: "HIT" | "MISS" | "WAIT" | "STALE") {
+  return new NextResponse(body, {
+    headers: {
+      ...LIVE_DASHBOARD_CACHE.headers,
+      "Content-Type": "application/json; charset=utf-8",
+      "X-Iris-Data-Cache": cacheStatus,
+    },
+  });
+}
 
 function selectedConnectionLabel(connection: ChannelConnectionRecord) {
   const metadata = connection.metadata || {};
@@ -45,8 +64,7 @@ function channelAccountOverrides(status: Awaited<ReturnType<typeof dashboardChan
   const directMeta = new Set(["instagram", "messenger"]);
   return Object.fromEntries(
     Object.entries(labels).flatMap(([channel, label]) => {
-      const connections = status.channels[channel]?.connections || [];
-      const connected = [...connections]
+      const connected = status.channels[channel]?.connections
         .filter((connection) => connection.status === "connected")
         .sort((a, b) => {
           const aRank = directMeta.has(channel) && a.provider === "meta_direct" ? 0 : 1;
@@ -54,8 +72,9 @@ function channelAccountOverrides(status: Awaited<ReturnType<typeof dashboardChan
           return aRank - bRank || Date.parse(b.updated_at || "") - Date.parse(a.updated_at || "");
         })[0];
       if (!connected) return [];
-      const needsPageToken = directMeta.has(channel) && connected.provider === "meta_direct";
-      const ready = !needsPageToken || Boolean(connected.page_access_token || connected.metadata?.page_access_token);
+      const ready = directMeta.has(channel)
+        ? connected.provider === "meta_direct" && Boolean(connected.page_access_token || connected.metadata?.page_access_token)
+        : true;
       return [[channel, {
         label,
         value: selectedConnectionLabel(connected),
@@ -65,36 +84,59 @@ function channelAccountOverrides(status: Awaited<ReturnType<typeof dashboardChan
   );
 }
 
+async function loadDashboardDataBody() {
+  const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
+  if (!databaseEnabled()) {
+    return JSON.stringify(composeInboxData(leads, events, properties, voiceCalls));
+  }
+  const [inboxCategories, inboxSettings, drafts, defaultEmailAccount, threadReadStates, connectionStatus] = await Promise.all([
+    readInboxCategoriesFromDatabase(),
+    readInboxSettingsFromDatabase(),
+    readActiveAiDraftsFromDatabase(),
+    readDefaultEmailAccountFromDatabase(),
+    readThreadReadStatesFromDatabase(),
+    dashboardChannelConnectionStatus(),
+  ]);
+  return JSON.stringify(composeInboxData(leads, events, properties, voiceCalls, {
+    inboxCategories,
+    inboxSettings,
+    drafts,
+    emailCapabilities: emailCapabilitiesForScopes(defaultEmailAccount?.scopes || []),
+    threadReadStates,
+    channelAccounts: channelAccountOverrides(connectionStatus),
+  }));
+}
+
+async function cachedDashboardDataBody() {
+  const now = Date.now();
+  if (dashboardDataCache && dashboardDataCache.expiresAt > now) {
+    return { body: dashboardDataCache.body, status: "HIT" as const };
+  }
+  if (dashboardDataInflight) {
+    const body = await dashboardDataInflight;
+    return { body, status: "WAIT" as const };
+  }
+  dashboardDataInflight = loadDashboardDataBody()
+    .then((body) => {
+      dashboardDataCache = { body, expiresAt: Date.now() + CACHE_TTL_MS };
+      return body;
+    })
+    .finally(() => {
+      dashboardDataInflight = null;
+    });
+  const body = await dashboardDataInflight;
+  return { body, status: "MISS" as const };
+}
+
 export async function GET() {
   const session = await requireDashboardAuth();
-
-  if (!session) {
-    return unauthorizedResponse();
-  }
-
+  if (!session) return unauthorizedResponse();
   try {
-    const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
-    if (!databaseEnabled()) {
-      return NextResponse.json(composeInboxData(leads, events, properties, voiceCalls), LIVE_DASHBOARD_CACHE);
-    }
-    const [inboxCategories, inboxSettings, drafts, defaultEmailAccount, threadReadStates, connectionStatus] = await Promise.all([
-      readInboxCategoriesFromDatabase(),
-      readInboxSettingsFromDatabase(),
-      readActiveAiDraftsFromDatabase(),
-      readDefaultEmailAccountFromDatabase(),
-      readThreadReadStatesFromDatabase(),
-      dashboardChannelConnectionStatus(),
-    ]);
-    return NextResponse.json(composeInboxData(leads, events, properties, voiceCalls, {
-      inboxCategories,
-      inboxSettings,
-      drafts,
-      emailCapabilities: emailCapabilitiesForScopes(defaultEmailAccount?.scopes || []),
-      threadReadStates,
-      channelAccounts: channelAccountOverrides(connectionStatus),
-    }), LIVE_DASHBOARD_CACHE);
+    const result = await cachedDashboardDataBody();
+    return jsonResponse(result.body, result.status);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load Google Sheets data.";
+    if (dashboardDataCache) return jsonResponse(dashboardDataCache.body, "STALE");
+    const message = error instanceof Error ? error.message : "Unable load Google Sheets data.";
     return NextResponse.json({ error: message }, { status: 503 });
   }
 }
