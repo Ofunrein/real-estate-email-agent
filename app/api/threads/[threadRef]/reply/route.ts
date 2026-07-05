@@ -15,6 +15,7 @@ import {
 import { readMediaUpload } from "@/lib/mediaUploads";
 import { createRequestAudit } from "@/lib/requestAudit";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -296,6 +297,8 @@ function canonicalReplyThreadRef(threadRef: string, channel: ReplyBody["channel"
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const loadTestBlock = blockLoadTestMutation(req);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const { threadRef } = await params;

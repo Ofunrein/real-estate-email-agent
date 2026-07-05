@@ -7,6 +7,7 @@ import { createGmailReplyDraftWithOptions, createIrisGmailSession } from "@/lib/
 import { runIrisConversationBrain } from "@/lib/irisConversationBrain";
 import { type Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ function emailSubject(events: SheetRow[]): string {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   const { threadRef } = await params;

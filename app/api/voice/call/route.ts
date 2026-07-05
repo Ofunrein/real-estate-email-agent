@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { clientConfig } from "@/lib/clientConfig";
 import { placeOutboundCall, type OutboundConfig } from "@/lib/outbound";
+import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ function outboundConfig(): OutboundConfig {
 // memory via getCallerContext at call start. Body: { phone, leadName?, leadEmail?,
 // callReason?, leadContext? }.
 export async function POST(request: NextRequest) {
+  const loadTestBlock = blockLoadTestMutation(request);
+  if (loadTestBlock) return loadTestBlock;
   try {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const phone = String(body.phone || body.number || "");

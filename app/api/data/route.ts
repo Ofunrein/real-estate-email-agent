@@ -13,23 +13,15 @@ import {
 import { emailCapabilitiesForScopes } from "@/lib/gmailConnection";
 import { dashboardChannelConnectionStatus, type ChannelConnectionRecord } from "@/lib/channelConnections";
 import { composeInboxData } from "@/lib/inboxData";
+import { cachedDashboardData, dashboardDataCacheMode } from "@/lib/dashboardDataCache";
 
 export const dynamic = "force-dynamic";
 
-const CACHE_TTL_MS = Number(process.env.IRIS_DASHBOARD_DATA_CACHE_MS || 5_000);
 const LIVE_DASHBOARD_CACHE = {
   headers: {
     "Cache-Control": "private, max-age=5, stale-while-revalidate=10",
   },
 };
-
-type CachedDashboardData = {
-  body: string;
-  expiresAt: number;
-};
-
-let dashboardDataCache: CachedDashboardData | null = null;
-let dashboardDataInflight: Promise<string> | null = null;
 
 function jsonResponse(body: string, cacheStatus: "HIT" | "MISS" | "WAIT" | "STALE") {
   return new NextResponse(body, {
@@ -37,6 +29,7 @@ function jsonResponse(body: string, cacheStatus: "HIT" | "MISS" | "WAIT" | "STAL
       ...LIVE_DASHBOARD_CACHE.headers,
       "Content-Type": "application/json; charset=utf-8",
       "X-Iris-Data-Cache": cacheStatus,
+      "X-Iris-Data-Cache-Mode": dashboardDataCacheMode(),
     },
   });
 }
@@ -86,9 +79,8 @@ function channelAccountOverrides(status: Awaited<ReturnType<typeof dashboardChan
 
 async function loadDashboardDataBody() {
   const { leads, events, properties, voiceCalls } = await loadAgentInboxData();
-  if (!databaseEnabled()) {
-    return JSON.stringify(composeInboxData(leads, events, properties, voiceCalls));
-  }
+  if (!databaseEnabled()) return JSON.stringify(composeInboxData(leads, events, properties, voiceCalls));
+
   const [inboxCategories, inboxSettings, drafts, defaultEmailAccount, threadReadStates, connectionStatus] = await Promise.all([
     readInboxCategoriesFromDatabase(),
     readInboxSettingsFromDatabase(),
@@ -97,6 +89,7 @@ async function loadDashboardDataBody() {
     readThreadReadStatesFromDatabase(),
     dashboardChannelConnectionStatus(),
   ]);
+
   return JSON.stringify(composeInboxData(leads, events, properties, voiceCalls, {
     inboxCategories,
     inboxSettings,
@@ -107,35 +100,13 @@ async function loadDashboardDataBody() {
   }));
 }
 
-async function cachedDashboardDataBody() {
-  const now = Date.now();
-  if (dashboardDataCache && dashboardDataCache.expiresAt > now) {
-    return { body: dashboardDataCache.body, status: "HIT" as const };
-  }
-  if (dashboardDataInflight) {
-    const body = await dashboardDataInflight;
-    return { body, status: "WAIT" as const };
-  }
-  dashboardDataInflight = loadDashboardDataBody()
-    .then((body) => {
-      dashboardDataCache = { body, expiresAt: Date.now() + CACHE_TTL_MS };
-      return body;
-    })
-    .finally(() => {
-      dashboardDataInflight = null;
-    });
-  const body = await dashboardDataInflight;
-  return { body, status: "MISS" as const };
-}
-
 export async function GET() {
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   try {
-    const result = await cachedDashboardDataBody();
-    return jsonResponse(result.body, result.status);
+    const result = await cachedDashboardData(`dashboard:data:${process.env.CLIENT_ID || "default"}`, loadDashboardDataBody);
+    return jsonResponse(result.value, result.cacheStatus);
   } catch (error) {
-    if (dashboardDataCache) return jsonResponse(dashboardDataCache.body, "STALE");
     const message = error instanceof Error ? error.message : "Unable load Google Sheets data.";
     return NextResponse.json({ error: message }, { status: 503 });
   }
