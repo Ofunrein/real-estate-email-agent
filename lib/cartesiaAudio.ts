@@ -1,3 +1,4 @@
+import { normalizeGeneratedVoiceNote } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
 
 const CARTESIA_VERSION = process.env.CARTESIA_VERSION || "2026-03-01";
@@ -94,6 +95,7 @@ export async function createCartesiaVoiceNote(input: {
   voiceId?: string;
   requestUrl: string;
   threadRef?: string;
+ smsCompatible?: boolean;
 }): Promise<{ url: string; filename: string; contentType: string; storage: string }> {
   const text = input.text.trim();
   if (!text) throw new Error("Voice note text is required");
@@ -130,5 +132,5 @@ export async function createCartesiaVoiceNote(input: {
     threadRef: input.threadRef || "cartesia-voice-note",
     requestUrl: input.requestUrl,
   });
-  return { url: uploaded.url, filename: uploaded.filename, contentType: "audio/mpeg", storage: uploaded.storage };
+  return { url: uploaded.url, filename: uploaded.filename, contentType: file.type || "audio/mpeg", storage: uploaded.storage };
 }

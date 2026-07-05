@@ -101,6 +101,10 @@ async function transcodeToM4a(file: File, prefix: string): Promise<File> {
   }
 }
 
+export async function normalizeGeneratedVoiceNote(file: File): Promise<File> {
+ return transcodeToM4a(file, "iris-voice-note");
+}
+
 export async function normalizeManualVoiceUpload(file: File): Promise<File> {
   if (!shouldTranscodeForSmsAudio(file)) return file;
   return transcodeToM4a(file, "manual-voice-note");

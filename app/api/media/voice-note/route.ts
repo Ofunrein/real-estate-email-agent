@@ -26,9 +26,12 @@ export async function POST(request: NextRequest) {
     model?: string;
     provider?: "deepgram" | "cartesia";
     threadRef?: string;
+    channel?: string;
+    smsCompatible?: boolean;
   };
   try {
     const provider = input.provider || process.env.VOICE_GENERATION_PROVIDER as "deepgram" | "cartesia" | undefined || "deepgram";
+    const smsCompatible = Boolean(input.smsCompatible || ["sms", "whatsapp"].includes(String(input.channel || "").toLowerCase()));
     if (provider === "cartesia") {
       if (!cartesiaAudioEnabled()) {
         await audit.write("voice_note", "failed", {
@@ -68,6 +71,7 @@ export async function POST(request: NextRequest) {
       model: input.model || input.voiceId || input.referenceId,
       requestUrl: request.url,
       threadRef: input.threadRef,
+        smsCompatible,
     });
     await audit.write("voice_note", "sent", {
       threadRef: input.threadRef,

@@ -1,4 +1,4 @@
-import { normalizeMediaForTranscription } from "@/lib/audioTranscode";
+import { normalizeGeneratedVoiceNote, normalizeMediaForTranscription } from "@/lib/audioTranscode";
 
 import { saveMediaUpload } from "@/lib/mediaUploads";
 
@@ -31,6 +31,7 @@ export async function createDeepgramVoiceNote(input: {
   model?: string;
   requestUrl: string;
   threadRef?: string;
+ smsCompatible?: boolean;
 }): Promise<{ url: string; filename: string; contentType: string; storage: string; model: string }> {
   const apiKey = deepgramApiKey();
   if (!apiKey) throw new Error("DEEPGRAM_API_KEY is required");
@@ -58,7 +59,7 @@ export async function createDeepgramVoiceNote(input: {
     threadRef: input.threadRef || "deepgram-voice-note",
     requestUrl: input.requestUrl,
   });
-  return { url: uploaded.url, filename: uploaded.filename, contentType: "audio/mpeg", storage: uploaded.storage, model };
+  return { url: uploaded.url, filename: uploaded.filename, contentType: file.type || "audio/mpeg", storage: uploaded.storage, model };
 }
 
 
