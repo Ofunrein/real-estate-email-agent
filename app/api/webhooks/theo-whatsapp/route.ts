@@ -317,7 +317,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      if (await isTakeoverActive(result.event.thread_ref)) {
+      if (await isTakeoverActive(result.event.thread_ref, result.event.channel)) {
         logTheoWhatsApp("human takeover active - skipping AI reply", {
           leadPhone: inbound.from,
           threadRef: result.event.thread_ref,

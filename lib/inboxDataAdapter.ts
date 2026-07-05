@@ -1092,6 +1092,7 @@ function buildProperties(data: AgentInboxData): Property[] {
     zip: p.zip || "",
     photo: p.photo_url || undefined,
     broker: p.agent_name || "",
+    listingUrl: p.listing_url || p.url || p.source_url || undefined,
   }));
 }
 

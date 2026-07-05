@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
         reason: `${socialChannel} channel disabled in inbox settings`,
       });
     }
-    if (await isTakeoverActive(result.event.thread_ref)) {
+    if (await isTakeoverActive(result.event.thread_ref, result.event.channel)) {
       const takeoverGuard = { allowed: false, needsHuman: true, reason: "Human takeover active", intent: guard.intent };
       await audit.write("terminal", "blocked", {
         channel: socialChannel,

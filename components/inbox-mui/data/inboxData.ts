@@ -142,6 +142,7 @@ export interface PropertyCard {
   broker?: string;
   photo?: string;
   blurb?: string;
+  listingUrl?: string;
 }
 
 export interface EmailMessage {
@@ -248,6 +249,7 @@ export interface Property {
   zip: string;
   photo?: string;
   broker: string;
+  listingUrl?: string;
 }
 
 export interface PropertyHealth {
