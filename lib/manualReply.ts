@@ -1,9 +1,10 @@
 import { createIrisGmailSession, sendGmailReplyWithOptions } from "@/lib/gmailConnection";
-import { sendComposioSocialMessage } from "@/lib/composioSocial";
+import { composioSocialSendsEnabled, sendComposioSocialMessage } from "@/lib/composioSocial";
 import { listChannelConnections } from "@/lib/channelConnections";
 import { sendInstagramBrowserThreadMessage } from "@/lib/instagramBrowserBridge";
 import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
+import { removeEmDashesFromRecord } from "@/lib/noEmDash";
 
 export type EmailAttachment = { filename: string; contentType: string; path?: string; data?: Buffer };
 export type ManualReplyInput = {
@@ -38,7 +39,8 @@ function instagramUsernameTarget(value: string): string {
   return clean.replace(/^@+/, "").trim();
 }
 
-export async function sendManualReply(input: ManualReplyInput): Promise<ManualReplyResult> {
+export async function sendManualReply(inputRaw: ManualReplyInput): Promise<ManualReplyResult> {
+  const input = removeEmDashesFromRecord(inputRaw, ["body", "subject"]);
   try {
     switch (input.channel) {
       case "sms": {

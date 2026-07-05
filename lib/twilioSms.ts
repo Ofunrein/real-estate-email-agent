@@ -1,5 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mediaProxyUrl } from "@/lib/mediaProxy";
+import { removeEmDashes } from "@/lib/noEmDash";
 
 export type TwilioSendResult = {
   sent: boolean;
@@ -80,7 +81,7 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
   }
 
   const recipient = smsRecipientAddress(to);
-  const message = body.trim();
+  const message = removeEmDashes(body).trim();
   if (!recipient || (!message && !cleanUrls.length)) {
     return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or message media", mediaCount: cleanUrls.length };
   }

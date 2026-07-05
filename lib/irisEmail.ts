@@ -1,4 +1,5 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { removeEmDashes } from "@/lib/noEmDash";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
@@ -752,6 +753,7 @@ ${advancedQualificationPlaybook()}
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
 - If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.
 - Ask at most one next-step question.
+- Never use em dashes. Use commas, periods, or simple hyphens instead.
 - End exactly with:
 Best,
 ${IRIS_AGENT_NAME}`;
@@ -858,9 +860,9 @@ async function generateIrisEmailReplyRich(
 
 function normalizeReplyDraft(reply: string | IrisEmailReplyDraft | null): IrisEmailReplyDraft | null {
   if (!reply) return null;
-  if (typeof reply === "string") return { text: reply };
+  if (typeof reply === "string") return { text: removeEmDashes(reply) };
   if (!reply.text.trim() && !reply.html?.trim()) return null;
-  return reply;
+  return { ...reply, text: removeEmDashes(reply.text), html: removeEmDashes(reply.html || "") };
 }
 
 async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEmailMessage> {
