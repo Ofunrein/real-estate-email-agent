@@ -51,6 +51,18 @@ function humanRisk(text: string) {
   return /\b(section 8|voucher|safe neighborhood|crime|school|pre.?approved|mortgage|credit score|legal|contract|commission|angry|complaint|human|person|agent)\b/i.test(text);
 }
 
+function draftForReview(input: IrisBrainInput): string {
+  const name = latestLeadName(input.lead, input.events);
+  const prefix = name ? `${name}, ` : "";
+  const text = clean(input.latestMessage);
+  if (/\b(section 8|voucher)\b/i.test(text)) return `${prefix}thanks for sharing that. Send me the address or area you want, and I will check which available homes fit the voucher requirements before I send options.`;
+  if (/\b(school|crime|safe neighborhood)\b/i.test(text)) return `${prefix}I can help narrow this down. For schools and neighborhood fit, I will point you to the official resources and send homes that match your price, commute, and area preferences. What area should I start with?`;
+  if (/\b(pre.?approved|mortgage|credit score|financ)\b/i.test(text)) return `${prefix}that makes sense. What price range are you comfortable with, and are you already pre-approved or still comparing financing options?`;
+  if (/\b(legal|contract|commission)\b/i.test(text)) return `${prefix}I can help with the next step here. Send me the property or question you want checked, and I will keep the reply specific while we verify anything that needs exact contract guidance.`;
+  if (/\b(angry|complaint|upset)\b/i.test(text)) return `${prefix}I hear you. Send me what happened and the best outcome you want, and I will help get this cleaned up quickly.`;
+  return `${prefix}I can help with that. Send me the property, area, budget, or timeline you want to focus on, and I will narrow it down from here.`;
+}
+
 function draftForProperty(input: IrisBrainInput): string {
   const property = input.properties?.find((row) => clean(row.address));
   if (!property) return "";
@@ -86,7 +98,7 @@ export function runIrisConversationBrain(input: IrisBrainInput): IrisBrainOutput
   const needsHuman = humanRisk(latestText);
   const propertyDraft = !needsHuman ? draftForProperty(input) : "";
   const draft = needsHuman
-    ? "I'm going to have a real person follow up on that so we handle it correctly."
+    ? draftForReview(input)
     : propertyDraft || draftForGeneral(input);
   const propertyContext = (input.properties || []).map((property) => clean(property.address)).filter(Boolean).slice(0, 3);
   const fingerprint = crypto

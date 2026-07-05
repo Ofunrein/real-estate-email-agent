@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { normalizeManualVoiceUpload } from "@/lib/audioTranscode";
 import { saveMediaUpload } from "@/lib/mediaUploads";
 import { createRequestAudit } from "@/lib/requestAudit";
@@ -29,6 +30,8 @@ const ALLOWED = new Set([
 ]);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ threadRef: string }> }) {
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
   const { threadRef } = await params;
   const audit = createRequestAudit({
     headers: req.headers,
@@ -53,12 +56,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ thr
       await audit.write("upload", "failed", { statusCode: 413, errorMessage: "File too large (max 10MB)", metadata: { size: file.size, type: file.type } });
       return NextResponse.json({ ok: false, error: "File too large (max 10MB)" }, { status: 413 });
     }
-    if (!ALLOWED.has(file.type)) {
+    const baseType = (file.type || "").split(";", 1)[0].trim().toLowerCase();
+    if (!ALLOWED.has(baseType)) {
       await audit.write("upload", "failed", { statusCode: 415, errorMessage: `Type not allowed: ${file.type || "unknown"}`, metadata: { size: file.size, type: file.type } });
       return NextResponse.json({ ok: false, error: `Type not allowed: ${file.type || "unknown"}` }, { status: 415 });
     }
 
-    const normalizedFile = await normalizeManualVoiceUpload(file);
+    const uploadFile = file.type === baseType ? file : new File([file], file.name, { type: baseType });
+    const normalizedFile = await normalizeManualVoiceUpload(uploadFile);
     const uploaded = await saveMediaUpload({ file: normalizedFile, threadRef, requestUrl: req.url });
     await audit.write("upload", "sent", {
       statusCode: 200,

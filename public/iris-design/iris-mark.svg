@@ -1,0 +1,28 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#232019"></stop>
+      <stop offset="1" stop-color="#131110"></stop>
+    </linearGradient>
+    <linearGradient id="roof" x1="50" y1="16" x2="50" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e2bd78"></stop>
+      <stop offset="1" stop-color="#c49a52"></stop>
+    </linearGradient>
+    <linearGradient id="body" x1="50" y1="46" x2="50" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#cfa661"></stop>
+      <stop offset="1" stop-color="#b1863f"></stop>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="97" height="97" rx="24" fill="url(#tile)" stroke="#3a352b" stroke-width="1"></rect>
+  <rect x="1.5" y="1.5" width="97" height="97" rx="24" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1"></rect>
+
+  <path d="M50 20.5 L79.5 45.2 a3 3 0 0 1 -1.9 5.3 H72 L50 32 L28 50.5 H22.4 a3 3 0 0 1 -1.9 -5.3 Z" fill="url(#roof)"></path>
+
+  <path d="M29 49 L50 31.5 L71 49 V78 a4 4 0 0 1 -4 4 H33 a4 4 0 0 1 -4 -4 Z" fill="url(#body)"></path>
+
+  <path d="M44.5 82 V64.5 a5.5 5.5 0 0 1 11 0 V82 Z" fill="#171310" fill-opacity="0.92"></path>
+
+  <rect x="34.5" y="55" width="8.5" height="8.5" rx="2" fill="#fbeccb" fill-opacity="0.9"></rect>
+
+  <path d="M50 22.5 L74 42.5" stroke="#fbeccb" stroke-opacity="0.5" stroke-width="1.6" stroke-linecap="round"></path>
+</svg>

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   await updateAiDraftStatusInDatabase({ threadRef, channel, status: "dismissed" });
-  if (body.releaseTakeover) await releaseTakeover(threadRef);
+  if (body.releaseTakeover) await releaseTakeover(threadRef, channel);
   await recordChannelInteraction({
     channel,
     direction: "outbound",
