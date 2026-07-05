@@ -5182,3 +5182,103 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
  overflow-wrap:anywhere!important;
  word-break:break-word!important;
 }
+
+/* QA: outbound Iris email, SMS, media, property, and voice-note groups sit on sender side. */
+.iris-message-row.out{
+  align-self:flex-end!important;
+  justify-content:flex-start!important;
+  max-width:min(82%,860px)!important;
+  margin-left:auto!important;
+  margin-right:0!important;
+}
+.iris-message-row.out .iris-message-stack{
+  display:grid!important;
+  justify-items:end!important;
+  justify-content:end!important;
+  width:min(100%,760px)!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:0!important;
+}
+.iris-message-row.out .iris-bubble,
+.iris-message-row.out .iris-media-strip,
+.iris-message-row.out .iris-message-stack>.iris-property-card,
+.iris-message-row.out .iris-voice-note-bubble{
+  justify-self:end!important;
+  align-self:end!important;
+  margin-left:auto!important;
+  margin-right:0!important;
+}
+.iris-message-row.out .iris-bubble:not(.has-html){
+  max-width:min(760px,100%)!important;
+  border-radius:18px 6px 18px 18px!important;
+}
+.iris-message-row.out .iris-bubble.has-html{
+  width:min(760px,100%)!important;
+  max-width:min(760px,100%)!important;
+  justify-self:end!important;
+  align-self:end!important;
+  margin-left:auto!important;
+  margin-right:0!important;
+  border-radius:18px 6px 18px 18px!important;
+}
+.iris-message-row.out .iris-bubble.has-html .iris-email-html{
+  width:100%!important;
+  max-width:100%!important;
+}
+.iris-message-row.out .iris-voice-note-bubble{
+  width:min(380px,100%)!important;
+  max-width:min(380px,100%)!important;
+}
+.iris-message-row.out .iris-media-strip{
+  width:min(520px,100%)!important;
+  max-width:min(520px,100%)!important;
+}
+@media (max-width:900px){
+  .iris-message-row.out{
+    max-width:92%!important;
+  }
+  .iris-message-row.out .iris-message-stack,
+  .iris-message-row.out .iris-bubble,
+  .iris-message-row.out .iris-voice-note-bubble,
+  .iris-message-row.out .iris-media-strip{
+    width:100%!important;
+    max-width:100%!important;
+  }
+}
+
+/* QA: settings action pills keep labels centered and rows aligned. */
+.iris-settings-card a,
+.iris-settings-card button,
+.iris-settings-actions button{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:40px!important;
+  line-height:1!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+.iris-connection-tile{
+  grid-template-rows:auto minmax(44px,1fr) auto!important;
+  align-items:start!important;
+}
+.iris-connection-tile>div:last-child{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  flex-wrap:wrap!important;
+  min-height:44px!important;
+  margin-top:auto!important;
+}
+.iris-connection-tile>div:last-child a{
+  min-height:42px!important;
+  padding-inline:16px!important;
+}
+.iris-appointments-calendar-shell{
+  margin-top:16px;
+  min-height:680px;
+  display:flex;
+  flex-direction:column;
+}
