@@ -7,7 +7,6 @@ import {
   Card,
   Chip,
   CircularProgress,
-  Divider,
   FormControlLabel,
   LinearProgress,
   Stack,
@@ -17,7 +16,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Typography } from
+  Typography,
+  useTheme } from
 '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFileOutlined';
 import CloudSyncIcon from '@mui/icons-material/CloudSyncOutlined';
@@ -124,6 +124,12 @@ function connectorIcon(id: string) {
 }
 
 export function ImportsView() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  // Iris Dashboard.dc.html --card-hi / --elev shadow recipe, translated to MUI boxShadow.
+  const cardShadow = isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.04), 0 18px 50px rgba(0,0,0,.4)'
+    : 'inset 0 1px 0 rgba(255,255,255,.9), 0 1px 1px rgba(15,23,42,.04), 0 8px 18px rgba(15,23,42,.08), 0 24px 60px rgba(15,23,42,.06)';
   const [file, setFile] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -141,6 +147,12 @@ export function ImportsView() {
     const counts = summary?.segmentCounts || {};
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
   }, [summary]);
+
+  // Design calls for an "Active CRM: name" line — derived from the ready/configured
+  // connector already returned by GET /api/leads/import (no backend change needed).
+  const activeConnector = useMemo(() => {
+    return connectors.find((c) => c.status === 'ready') || connectors.find((c) => c.status === 'configured') || null;
+  }, [connectors]);
 
   const campaignReview = useMemo(() => {
     if (!summary) {
@@ -336,7 +348,7 @@ export function ImportsView() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: { xs: 'visible', lg: 'auto' }, pb: 1 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={1.5} sx={{ mb: 2 }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={1.5} sx={{ mb: 1.5 }}>
         <Box>
           <Typography variant="h6">Lead Reopen</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -344,6 +356,30 @@ export function ImportsView() {
           </Typography>
         </Box>
         <Chip icon={<SafetyIcon />} color="success" variant="outlined" label="No auto-send on import" />
+      </Stack>
+
+      {/* Active CRM line + CRM chip list, ported from Iris Dashboard.dc.html CRM & imports view */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          Active CRM:{' '}
+          <Typography component="span" variant="body2" sx={{ fontWeight: 800, color: activeConnector ? 'primary.main' : 'text.secondary' }}>
+            {activeConnector ? activeConnector.label : 'Not connected'}
+          </Typography>
+        </Typography>
+      </Stack>
+      <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mb: 2 }}>
+        {(connectors.length ? connectors : []).map((connector) => (
+          <Chip
+            key={connector.id}
+            size="small"
+            variant={connector.id === activeConnector?.id ? 'filled' : 'outlined'}
+            color={connector.id === activeConnector?.id ? 'primary' : 'default'}
+            label={connector.label}
+          />
+        ))}
+        {!connectors.length && (
+          <Typography variant="caption" color="text.secondary">CRM connector list loads from the import API.</Typography>
+        )}
       </Stack>
 
       <Box
@@ -355,7 +391,7 @@ export function ImportsView() {
         }}>
         <Box>
           <Stack spacing={2}>
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CheckCircleIcon color="primary" />
@@ -417,7 +453,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <UploadFileIcon color="primary" />
@@ -452,7 +488,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CloudSyncIcon color="primary" />
@@ -474,7 +510,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <TableChartIcon color="primary" />
@@ -499,7 +535,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <SegmentIcon color="primary" />
@@ -522,7 +558,7 @@ export function ImportsView() {
             {error && <Alert severity="error" icon={<WarningIcon />}>{error}</Alert>}
             {batchesError && <Alert severity="warning" icon={<WarningIcon />}>{batchesError}</Alert>}
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Typography variant="subtitle2">Latest import result</Typography>
                 {summary ? (
@@ -568,7 +604,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ p: 2 }}>
+            <Card sx={{ p: 2, boxShadow: cardShadow }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -659,7 +695,7 @@ export function ImportsView() {
               </Stack>
             </Card>
 
-            <Card sx={{ overflow: 'hidden' }}>
+            <Card sx={{ overflow: 'hidden', boxShadow: cardShadow }}>
               <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Typography variant="subtitle2">Preview rows</Typography>
                 <Typography variant="caption" color="text.secondary">First 25 rows from the latest preview or import.</Typography>
@@ -707,29 +743,56 @@ export function ImportsView() {
               </Box>
             </Card>
 
-            <Card sx={{ p: 2 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                <Typography variant="subtitle2">Recent batches</Typography>
+            <Card sx={{ overflow: 'hidden', boxShadow: cardShadow }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2, pb: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Box>
+                  <Typography variant="subtitle2">Import history</Typography>
+                  <Typography variant="caption" color="text.secondary">Recent batches across CSV, CRM, and Sheets sources.</Typography>
+                </Box>
                 {batchesLoading ? <CircularProgress size={18} /> : <Button size="small" onClick={loadBatches}>Refresh</Button>}
               </Stack>
-              <Divider sx={{ mb: 1 }} />
-              <Stack spacing={1}>
-                {batches.length ? batches.map((batch) => (
-                  <Stack key={batch.id} direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
-                    <Box>
-                      <Typography variant="body2" fontWeight={700}>{batch.source_name || batch.source_provider || batch.source_type}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {batch.total_rows} rows · {batch.imported_count} imported · {batch.merged_count} merged · {batch.campaign_eligible_count} eligible
-                      </Typography>
-                    </Box>
-                    <Chip size="small" color={statusColor(batch.status)} label={batch.status} />
-                  </Stack>
-                )) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No persisted import batches yet. Real imports appear here after the migration is applied.
-                  </Typography>
-                )}
-              </Stack>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { textTransform: 'uppercase', fontSize: 10, fontWeight: 700, letterSpacing: '0.03em', color: 'text.secondary', bgcolor: 'action.hover' } }}>
+                      <TableCell>Source</TableCell>
+                      <TableCell align="right">Rows</TableCell>
+                      <TableCell align="right">Mapped</TableCell>
+                      <TableCell align="right">Dupes</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {batches.length ? batches.map((batch) => (
+                      <TableRow key={batch.id}>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={700}>{batch.source_name || batch.source_provider || batch.source_type}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: 'text.secondary' }}>{batch.total_rows}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: 'text.secondary' }}>{batch.imported_count}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: 'text.secondary' }}>{batch.duplicate_count}</Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip size="small" color={statusColor(batch.status)} label={batch.status} sx={{ height: 20, '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 } }} />
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Typography variant="body2" color="text.secondary">
+                            No persisted import batches yet. Real imports appear here after the migration is applied.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </Box>
             </Card>
           </Stack>
         </Box>

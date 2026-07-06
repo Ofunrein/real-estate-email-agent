@@ -4,6 +4,7 @@ import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar
 import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
@@ -18,6 +19,23 @@ import { useInboxModel } from '../InboxDataContext';
 import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
+import type { ThreadTemperature } from './ConversationList';
+
+// Temperature/status are derived from the existing lead-category id — the
+// data model has no separate hot/warm/cold or per-thread status field.
+// Categories with no clear signal render no chip rather than inventing one.
+function categoryTemperature(category: LeadCategoryId): ThreadTemperature | undefined {
+  if (category === 'hot-lead') return 'hot';
+  if (category === 'showing' || category === 'financing') return 'warm';
+  if (category === 'nurture' || category === 'closed') return 'cold';
+  return undefined;
+}
+function categoryStatus(category: LeadCategoryId, needsReview?: boolean): { label: string; tone: 'accent' | 'warning' | 'success' | 'info' | 'neutral' } | undefined {
+  if (needsReview || category === 'needs-human') return { label: 'Needs human', tone: 'warning' };
+  if (category === 'hot-lead' || category === 'needs-reply') return { label: 'Iris active', tone: 'accent' };
+  if (category === 'showing') return { label: 'Booked', tone: 'success' };
+  return undefined;
+}
 
 type SmsViewProps = {
   onOpenVoice?: (threadId?: string) => void;
@@ -203,15 +221,22 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
         
         <ConversationList
           title="Conversations"
-          items={visibleThreads.map((t) => ({
-            id: t.id,
-            title: t.contact,
-            time: t.time,
-	            preview: t.preview,
-	            meta: `${t.messageCount} messages`,
-	            categoryLabel: categoryMeta[t.category]?.label,
-	            categoryColor: colors[t.category]
-	          }))}
+          items={visibleThreads.map((t) => {
+            const status = categoryStatus(t.category);
+            return {
+              id: t.id,
+              title: t.contact,
+              time: t.time,
+              preview: t.preview,
+              meta: `${t.messageCount} messages`,
+              categoryLabel: categoryMeta[t.category]?.label,
+              categoryColor: colors[t.category],
+              channel: 'sms' as const,
+              temperature: categoryTemperature(t.category),
+              statusLabel: status?.label,
+              statusTone: status?.tone
+            };
+          })}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
         
@@ -310,11 +335,36 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
             p: 4,
             minHeight: 200
           }}>
-          
+
+          <Stack
+            spacing={1.25}
+            alignItems="center"
+            sx={{
+              textAlign: 'center',
+              maxWidth: 320,
+              width: '100%',
+              py: 4,
+              px: 3,
+              borderRadius: 3,
+              border: '1px dashed',
+              borderColor: 'divider'
+            }}>
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '11px',
+                bgcolor: 'action.hover',
+                color: 'text.secondary'
+              }}>
+              <InboxOutlinedIcon fontSize="small" />
+            </Avatar>
             <Typography variant="body2" color="text.secondary">
               No conversations in this category.
             </Typography>
-          </Card>
+          </Stack>
+        </Card>
         }
       </Box>
     </Box>);
@@ -425,15 +475,15 @@ export function SmsBubble({
             sx={{
               fontSize: '11px',
               fontWeight: 700,
-              color: 'text.secondary'
+              color: isIris ? 'iris.accentInk' : isOwner ? 'primary.main' : 'text.secondary'
             }}>
 
-            {isIris ? 'Iris sent' : isOwner ? 'Owner sent' : `${contact} received`}
+            {isIris ? 'Iris sent, auto' : isOwner ? 'Austin Realty sent' : `${contact}, inbound`}
           </Typography>
           <Typography
             sx={{
               fontSize: '10px',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               color: 'text.secondary'
             }}>
             {message.time}
@@ -566,14 +616,10 @@ export function SmsBubble({
             borderRadius: '16px',
             borderBottomRightRadius: isOutbound ? '4px' : '16px',
             borderBottomLeftRadius: isOutbound ? '16px' : '4px',
-            bgcolor: (theme) => isIris
-              ? theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)'
-              : isOwner
-                ? theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.16)' : theme.palette.action.hover
-                : theme.palette.action.hover,
-            color: 'text.primary',
-            border: highlighted ? '1px solid' : '1px solid',
-            borderColor: highlighted ? 'primary.main' : 'divider',
+            bgcolor: isIris ? 'primary.main' : isOwner ? 'background.paper' : 'iris.surface2',
+            color: isIris ? 'primary.contrastText' : 'text.primary',
+            border: '1px solid',
+            borderColor: highlighted ? 'primary.main' : isOwner ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
           }}>
 
@@ -582,7 +628,7 @@ export function SmsBubble({
             sx={{
               fontSize: '0.875rem',
               lineHeight: 1.5,
-              color: 'text.primary',
+              color: isIris ? 'primary.contrastText' : 'text.primary',
               overflowWrap: 'anywhere',
               '& a': { color: 'primary.main' },
               '& img': { maxWidth: '100%', borderRadius: 1, display: 'block', my: 0.75 },

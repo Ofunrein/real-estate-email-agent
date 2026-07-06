@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
@@ -17,6 +18,23 @@ import { useInboxModel } from '../InboxDataContext';
 import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { useCategoryColors } from '../theme/CategoryColorContext';
+import type { ThreadTemperature } from './ConversationList';
+
+// Temperature/status are derived from the existing lead-category id — the
+// data model has no separate hot/warm/cold or per-thread status field.
+// Categories with no clear signal render no chip rather than inventing one.
+function categoryTemperature(category: LeadCategoryId): ThreadTemperature | undefined {
+  if (category === 'hot-lead') return 'hot';
+  if (category === 'showing' || category === 'financing') return 'warm';
+  if (category === 'nurture' || category === 'closed') return 'cold';
+  return undefined;
+}
+function categoryStatus(category: LeadCategoryId, needsReview?: boolean): { label: string; tone: 'accent' | 'warning' | 'success' | 'info' | 'neutral' } | undefined {
+  if (needsReview || category === 'needs-human') return { label: 'Needs human', tone: 'warning' };
+  if (category === 'hot-lead' || category === 'needs-reply') return { label: 'Iris active', tone: 'accent' };
+  if (category === 'showing') return { label: 'Booked', tone: 'success' };
+  return undefined;
+}
 
 export function EmailView() {
   const { emailThreads, leadCategories } = useInboxModel();
@@ -130,16 +148,23 @@ export function EmailView() {
         
         <ConversationList
           title="Conversations"
-          items={visibleThreads.map((t) => ({
-            id: t.id,
-            title: t.contact,
-            time: t.time,
-	            preview: t.preview,
-	            meta: `${t.messageCount} messages`,
-	            categoryLabel: categoryMeta[t.category]?.label,
-	            categoryColor: colors[t.category],
-	            needsReview: t.needsReview
-          }))}
+          items={visibleThreads.map((t) => {
+            const status = categoryStatus(t.category, t.needsReview);
+            return {
+              id: t.id,
+              title: t.contact,
+              time: t.time,
+              preview: t.preview,
+              meta: `${t.messageCount} messages`,
+              categoryLabel: categoryMeta[t.category]?.label,
+              categoryColor: colors[t.category],
+              needsReview: t.needsReview,
+              channel: 'email' as const,
+              temperature: categoryTemperature(t.category),
+              statusLabel: status?.label,
+              statusTone: status?.tone
+            };
+          })}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
         
@@ -250,10 +275,35 @@ function EmptyThreadCard() {
         p: 4,
         minHeight: 200
       }}>
-      
-      <Typography variant="body2" color="text.secondary">
-        No conversations in this category.
-      </Typography>
+
+      <Stack
+        spacing={1.25}
+        alignItems="center"
+        sx={{
+          textAlign: 'center',
+          maxWidth: 320,
+          width: '100%',
+          py: 4,
+          px: 3,
+          borderRadius: 3,
+          border: '1px dashed',
+          borderColor: 'divider'
+        }}>
+        <Avatar
+          variant="rounded"
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '11px',
+            bgcolor: 'action.hover',
+            color: 'text.secondary'
+          }}>
+          <InboxOutlinedIcon fontSize="small" />
+        </Avatar>
+        <Typography variant="body2" color="text.secondary">
+          No conversations in this category.
+        </Typography>
+      </Stack>
     </Card>);
 
 }
@@ -271,10 +321,10 @@ function EmailBubble({
   const alignRight = isIris || isOwner;
   const outbound = alignRight;
   const headerLabel = isIris ?
-  'Iris sent' :
+  'Iris sent, auto' :
   isOwner ?
-  'Owner sent' :
-  `${senderName} received`;
+  'Austin Realty sent' :
+  `${senderName}, inbound`;
   const imageMedia = message.media?.filter((item) => (item.kind || 'image') === 'image') || [];
   const audioMedia = message.media?.filter((item) => item.kind === 'audio') || [];
   const fileMedia = message.media?.filter((item) => item.kind === 'file') || [];
@@ -286,7 +336,7 @@ function EmailBubble({
         justifyContent: alignRight ? 'flex-end' : 'flex-start',
         scrollMargin: '24px'
       }}>
-      
+
       <Box
         sx={{
           maxWidth: {
@@ -298,18 +348,16 @@ function EmailBubble({
             sm: message.subject && !message.body ? 220 : 280
           }
         }}>
-        
+
         <Box
           sx={{
             p: 1.75,
             borderRadius: 2.5,
             border: '1px solid',
-            borderColor: highlighted ? 'primary.main' : 'divider',
+            borderColor: highlighted ? 'primary.main' : isOwner ? 'primary.main' : 'divider',
             boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none',
-            bgcolor: outbound
-              ? (theme) => theme.palette.mode === 'dark' ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)'
-              : 'action.hover',
-            color: 'text.primary'
+            bgcolor: isIris ? 'primary.main' : isOwner ? 'background.paper' : 'iris.surface2',
+            color: isIris ? 'primary.contrastText' : 'text.primary'
           }}>
 
           <Stack
@@ -320,22 +368,22 @@ function EmailBubble({
             sx={{
               mb: message.body || message.subject ? 1 : 0
             }}>
-            
+
             <Stack direction="row" spacing={0.75} alignItems="center">
               <Avatar
                 src={isIris ? agentAvatar : undefined}
                 alt={isIris ? 'Iris, AI agent' : undefined}
                 sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: isIris ? 'primary.main' : 'action.selected',
-                  color: isIris ? 'primary.contrastText' : 'text.secondary'
+                  width: 22,
+                  height: 22,
+                  bgcolor: isIris ? 'primary.contrastText' : 'action.selected',
+                  color: isIris ? 'primary.main' : 'text.secondary'
                 }}>
 
                 {!isIris &&
                 <PersonIcon
                   sx={{
-                    fontSize: 16
+                    fontSize: 14
                   }} />
 
                 }
@@ -344,19 +392,20 @@ function EmailBubble({
                 variant="caption"
                 sx={{
                   fontWeight: 700,
-                  color: isIris ? 'primary.main' : 'text.primary'
+                  color: isIris ? 'iris.accentInk' : isOwner ? 'primary.main' : 'text.secondary'
                 }}>
-                
+
                 {headerLabel}
               </Typography>
             </Stack>
             <Typography
               variant="caption"
               sx={{
-                fontFamily: 'monospace',
-                color: 'text.secondary'
+                fontFamily: 'var(--font-mono)',
+                color: isIris ? 'primary.contrastText' : 'text.secondary',
+                opacity: isIris ? 0.7 : 1
               }}>
-              
+
               {message.time}
             </Typography>
           </Stack>
@@ -366,7 +415,7 @@ function EmailBubble({
             variant="body2"
             sx={{
               fontWeight: 700,
-              color: 'text.primary',
+              color: isIris ? 'primary.contrastText' : 'text.primary',
               mb: 1
             }}>
 
@@ -469,7 +518,7 @@ function EmailBubble({
                   whiteSpace: 'pre-line',
                   lineHeight: 1.6,
                   mt: message.subject ? 0.5 : 0,
-                  color: 'text.primary',
+                  color: isIris ? 'primary.contrastText' : 'text.primary',
                 }}
               >
                 {message.body}

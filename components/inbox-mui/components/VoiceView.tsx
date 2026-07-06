@@ -10,7 +10,6 @@ import {
   Button,
   IconButton,
   Avatar,
-  Slider,
   CircularProgress,
   Tooltip } from
 '@mui/material';
@@ -24,6 +23,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import GraphicEqIcon from '@mui/icons-material/GraphicEqOutlined';
 import PhoneIcon from '@mui/icons-material/Phone';
+import { useTheme } from '@mui/material/styles';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
@@ -36,12 +36,16 @@ import {
 import { useInboxModel } from '../InboxDataContext';
 import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useActivityEventTarget';
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
-const outcomeColor: Record<CallOutcome, string> = {
-  voicemail: '#fbbf24',
-  'silence-timed-out': '#94a3b8',
-  'assistant-forwarded-call': '#38bdf8',
-  'assistant-ended-call': '#34d399'
-};
+import type { IrisPalette } from '../theme/tokens';
+function outcomeColor(outcome: CallOutcome, iris: IrisPalette): string {
+  const map: Record<CallOutcome, string> = {
+    voicemail: iris.warning,
+    'silence-timed-out': iris.textSubtle,
+    'assistant-forwarded-call': iris.info,
+    'assistant-ended-call': iris.success
+  };
+  return map[outcome];
+}
 export function VoiceView() {
   const { voiceContacts } = useInboxModel();
   const voiceContactIds = React.useMemo(
@@ -251,7 +255,9 @@ export function VoiceView() {
 }
 function CallCard({ call, highlighted, registerTarget }: {call: Call;highlighted?: boolean;registerTarget?: (node: HTMLDivElement | null) => void;}) {
   const [rawOpen, setRawOpen] = useState(false);
-  const accent = outcomeColor[call.outcome];
+  const theme = useTheme();
+  const iris = theme.iris;
+  const accent = outcomeColor(call.outcome, iris);
   return (
     <Card
       ref={registerTarget}
@@ -260,7 +266,7 @@ function CallCard({ call, highlighted, registerTarget }: {call: Call;highlighted
         p: 1.75,
         scrollMargin: '24px',
         borderColor: highlighted ? 'primary.main' : undefined,
-        boxShadow: highlighted ? '0 0 0 3px rgba(99,102,241,0.18)' : 'none'
+        boxShadow: highlighted ? `0 0 0 3px ${theme.palette.mode === 'dark' ? 'rgba(240,238,235,0.18)' : 'rgba(26,24,21,0.14)'}` : 'none'
       }}>
       
       <Stack
@@ -330,12 +336,7 @@ function CallCard({ call, highlighted, registerTarget }: {call: Call;highlighted
                   p: 1,
                   px: 1.25,
                   borderRadius: 2,
-                  bgcolor: isAgent ?
-                  (t) =>
-                  t.palette.mode === 'dark' ?
-                  'rgba(99,102,241,0.14)' :
-                  'rgba(99,102,241,0.08)' :
-                  'action.hover'
+                  bgcolor: isAgent ? iris.accentSoft : 'action.hover'
                 }}>
                 
                 <Typography
@@ -433,7 +434,11 @@ function CallCard({ call, highlighted, registerTarget }: {call: Call;highlighted
         </Box>
       </Collapse>
 
-      <RecordingPlayer duration={call.duration} accent={accent} recordingUrl={call.recordingUrl} />
+      <RecordingPlayer
+        duration={call.duration}
+        accent={accent}
+        recordingUrl={call.recordingUrl}
+        transcript={call.report} />
     </Card>);
 
 }
@@ -459,13 +464,26 @@ function formatTime(seconds: number): string {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
+// Deterministic bar heights derived from duration — not real audio amplitude.
+// Same seed always produces the same pattern for a given call/duration.
+function waveformBars(seed: number, count = 28): number[] {
+  const bars: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const x = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453;
+    const frac = x - Math.floor(x);
+    bars.push(0.28 + frac * 0.72);
+  }
+  return bars;
+}
 function RecordingPlayer({
   duration,
   accent,
-  recordingUrl
+  recordingUrl,
+  transcript
 
-
-}: {duration: string;accent: string;recordingUrl?: string;}) {
+}: {duration: string;accent: string;recordingUrl?: string;transcript?: string;}) {
+  const theme = useTheme();
+  const iris = theme.iris;
   const fallbackTotal = parseDuration(duration);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -480,6 +498,7 @@ function RecordingPlayer({
       : `/api/media/audio?url=${encodeURIComponent(recordingUrl)}`
     : '';
   const total = hasRecording ? audioTotal || fallbackTotal : fallbackTotal;
+  const bars = React.useMemo(() => waveformBars(fallbackTotal || 1), [fallbackTotal]);
 
   // Real audio playback when a recording URL exists.
   useEffect(() => {
@@ -522,6 +541,8 @@ function RecordingPlayer({
   }, [muted]);
 
   const finished = current >= total && total > 0;
+  const progress = total > 0 ? Math.min(1, current / total) : 0;
+  const playedBars = Math.round(progress * bars.length);
 
   const togglePlay = () => {
     const el = audioRef.current;
@@ -584,102 +605,148 @@ function RecordingPlayer({
         No recording available for this call.
       </Typography>
       }
-      <Stack
-        direction="row"
-        spacing={1.25}
-        alignItems="center"
+
+      {/* Voice-note waveform card — deterministic bar pattern derived from
+          duration, not real amplitude. Accent = played, muted tone = unplayed. */}
+      <Box
         sx={{
-          p: 1,
-          pr: 1.5,
-          borderRadius: 999,
+          p: 1.25,
+          borderRadius: 2.5,
           border: '1px solid',
           borderColor: 'divider',
-          bgcolor: 'background.paper',
-          opacity: hasRecording ? 1 : 0.55
+          bgcolor: 'action.hover',
+          opacity: hasRecording || fallbackTotal > 0 ? 1 : 0.55
         }}>
 
-        <Tooltip title={finished ? 'Replay' : playing ? 'Pause' : 'Play'}>
-          <span>
-          <IconButton
-            size="small"
-            disabled={!hasRecording && fallbackTotal === 0}
-            onClick={togglePlay}
-            aria-label={
-            finished ?
-            'Replay recording' :
-            playing ?
-            'Pause recording' :
-            'Play recording'
-            }
-            sx={{
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              width: 32,
-              height: 32,
-              '&:hover': {
-                bgcolor: 'primary.dark'
+        <Stack direction="row" spacing={1.25} alignItems="center">
+          <Tooltip title={finished ? 'Replay' : playing ? 'Pause' : 'Play'}>
+            <span>
+            <IconButton
+              size="small"
+              disabled={!hasRecording && fallbackTotal === 0}
+              onClick={togglePlay}
+              aria-label={
+              finished ?
+              'Replay recording' :
+              playing ?
+              'Pause recording' :
+              'Play recording'
               }
+              sx={{
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                width: 34,
+                height: 34,
+                flexShrink: 0,
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                }
+              }}>
+
+              {finished ?
+              <ReplayIcon fontSize="small" /> :
+              playing ?
+              <PauseIcon fontSize="small" /> :
+
+              <PlayArrowIcon fontSize="small" />
+              }
+            </IconButton>
+            </span>
+          </Tooltip>
+
+          <Box
+            role="slider"
+            aria-label="Seek recording"
+            aria-valuemin={0}
+            aria-valuemax={total || 1}
+            aria-valuenow={current}
+            tabIndex={hasRecording || fallbackTotal > 0 ? 0 : -1}
+            onClick={(e) => {
+              if (!(hasRecording || fallbackTotal > 0)) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+              seek(ratio * (total || 0));
+            }}
+            onKeyDown={(e) => {
+              if (!(hasRecording || fallbackTotal > 0) || !total) return;
+              if (e.key === 'ArrowRight') seek(Math.min(total, current + 5));
+              else if (e.key === 'ArrowLeft') seek(Math.max(0, current - 5));
+            }}
+            sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              height: 28,
+              cursor: hasRecording || fallbackTotal > 0 ? 'pointer' : 'default'
             }}>
 
-            {finished ?
-            <ReplayIcon fontSize="small" /> :
-            playing ?
-            <PauseIcon fontSize="small" /> :
+            {bars.map((h, i) => (
+              <Box
+                key={i}
+                sx={{
+                  flex: 1,
+                  height: `${Math.round(h * 100)}%`,
+                  minHeight: 3,
+                  borderRadius: 999,
+                  bgcolor: i < playedBars ? accent : iris.textSubtle,
+                  opacity: i < playedBars ? 0.95 : 0.35,
+                  transition: 'opacity 0.15s'
+                }} />
+            ))}
+          </Box>
 
-            <PlayArrowIcon fontSize="small" />
-            }
-          </IconButton>
-          </span>
-        </Tooltip>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              fontFamily: 'var(--font-mono)',
+              fontVariantNumeric: 'tabular-nums',
+              flexShrink: 0,
+              minWidth: 76,
+              textAlign: 'right'
+            }}>
 
+            {formatTime(current)} / {formatTime(total)}
+          </Typography>
+
+          <Tooltip title={muted ? 'Unmute' : 'Mute'}>
+            <IconButton
+              size="small"
+              onClick={() => setMuted((m) => !m)}
+              aria-label={muted ? 'Unmute recording' : 'Mute recording'}
+              sx={{
+                color: 'text.secondary',
+                flexShrink: 0
+              }}>
+
+              {muted ?
+              <VolumeOffIcon fontSize="small" /> :
+
+              <VolumeUpIcon fontSize="small" />
+              }
+            </IconButton>
+          </Tooltip>
+        </Stack>
+
+        {transcript &&
         <Typography
           variant="caption"
           color="text.secondary"
           sx={{
-            fontVariantNumeric: 'tabular-nums',
-            flexShrink: 0,
-            minWidth: 76
+            display: 'block',
+            mt: 1,
+            pt: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            lineHeight: 1.5
           }}>
 
-          {formatTime(current)} / {formatTime(total)}
+          <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>Transcript · </Box>
+          {transcript}
         </Typography>
-
-        <Slider
-          size="small"
-          value={current}
-          max={total || 1}
-          onChange={(_, v) => {
-            const next = Array.isArray(v) ? v[0] : v;
-            seek(next);
-          }}
-          aria-label="Seek recording"
-          sx={{
-            flex: 1,
-            color: accent,
-            '& .MuiSlider-thumb': {
-              width: 12,
-              height: 12
-            }
-          }} />
-
-
-        <Tooltip title={muted ? 'Unmute' : 'Mute'}>
-          <IconButton
-            size="small"
-            onClick={() => setMuted((m) => !m)}
-            aria-label={muted ? 'Unmute recording' : 'Mute recording'}
-            sx={{
-              color: 'text.secondary'
-            }}>
-
-            {muted ?
-            <VolumeOffIcon fontSize="small" /> :
-
-            <VolumeUpIcon fontSize="small" />
-            }
-          </IconButton>
-        </Tooltip>
-      </Stack>
+        }
+      </Box>
 
       {hasRecording &&
       <Button

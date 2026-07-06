@@ -1,36 +1,50 @@
 import { createTheme, type Theme } from '@mui/material/styles';
+import { irisPalette, IRIS_FONT_UI, type IrisPalette } from './tokens';
 
-// Restrained neutral light + dark palettes for Agent Inbox (ElevenLabs-inspired).
-// Dark mode uses charcoal surfaces (#18181D paper, #111115 bg) not navy.
+declare module '@mui/material/styles' {
+  interface Theme {
+    iris: IrisPalette;
+  }
+  interface ThemeOptions {
+    iris?: IrisPalette;
+  }
+}
+
+// Iris Design System — warm paper light mode, deep charcoal dark mode.
+// `primary` (ink) drives structural chrome — buttons, active states.
+// `theme.iris.accent` (amber) is reserved for "Iris did this" AI signals —
+// avatar rings, draft banners, AI-active badges. Never use it for generic UI.
 export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
   const isDark = mode === 'dark';
+  const p = irisPalette(mode);
   return createTheme({
+    iris: p,
     palette: {
       mode,
       primary: {
-        main: '#7C6AF5',
-        light: '#9B8FFF',
-        dark: '#6356D4',
-        contrastText: '#ffffff'
+        main: p.primary,
+        light: isDark ? '#FFFFFF' : '#3A362F',
+        dark: isDark ? '#D8D5CE' : '#000000',
+        contrastText: p.onPrimary
       },
-      secondary: { main: '#22d3ee' },
-      success: { main: isDark ? '#34C678' : '#16A34A' },
-      warning: { main: isDark ? '#D97706' : '#b45309' },
-      error: { main: isDark ? '#f87171' : '#b91c1c' },
-      info: { main: isDark ? '#60A5FA' : '#38bdf8' },
+      secondary: { main: p.accent },
+      success: { main: p.success },
+      warning: { main: p.warning },
+      error: { main: p.danger },
+      info: { main: p.info },
       background: {
-        default: isDark ? '#111115' : '#F4F4F7',
-        paper: isDark ? '#18181D' : '#ffffff'
+        default: p.bg,
+        paper: p.card
       },
       text: {
-        primary: isDark ? '#EDEDF5' : '#0a0e1a',
-        secondary: isDark ? '#D0D0E8' : '#1A1A2E'
+        primary: p.text,
+        secondary: p.textMuted
       },
-      divider: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.10)'
+      divider: p.cardBorder
     },
     shape: { borderRadius: 12 },
     typography: {
-      fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+      fontFamily: IRIS_FONT_UI,
       h4: { fontWeight: 700, letterSpacing: '-0.02em' },
       h5: { fontWeight: 700, letterSpacing: '-0.02em' },
       h6: { fontWeight: 700, letterSpacing: '-0.01em' },
@@ -43,7 +57,7 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: 'var(--s-bg)'
+            backgroundColor: p.bg
           }
         }
       },
@@ -51,10 +65,8 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            border: isDark ?
-            '1px solid rgba(255,255,255,0.07)' :
-            '1px solid rgba(15,23,42,0.10)',
-            backgroundColor: isDark ? '#18181D' : '#ffffff'
+            border: `1px solid ${p.cardBorder}`,
+            backgroundColor: p.card
           }
         }
       },
@@ -63,9 +75,9 @@ export function makeIrisTheme(mode: 'light' | 'dark'): Theme {
       MuiTooltip: {
         styleOverrides: {
           tooltip: {
-            backgroundColor: isDark ? '#242429' : '#E8E8EF',
+            backgroundColor: isDark ? '#1B2430' : '#EFEDE4',
             fontSize: 12,
-            border: isDark ? '1px solid rgba(255,255,255,0.06)' : 'none'
+            border: isDark ? '1px solid rgba(255,255,255,0.09)' : 'none'
           }
         }
       }

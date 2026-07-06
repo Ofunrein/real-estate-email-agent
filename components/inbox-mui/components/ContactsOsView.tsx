@@ -24,7 +24,6 @@ import LinkOffIcon from '@mui/icons-material/LinkOffOutlined';
 import LocalOfferIcon from '@mui/icons-material/LocalOfferOutlined';
 import PhoneIcon from '@mui/icons-material/PhoneOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import StarIcon from '@mui/icons-material/StarOutline';
 import SyncIcon from '@mui/icons-material/SyncOutlined';
 import UploadFileIcon from '@mui/icons-material/UploadFileOutlined';
 import WorkspacesIcon from '@mui/icons-material/WorkspacesOutlined';
@@ -126,6 +125,59 @@ function statusColor(status: string): 'default' | 'success' | 'warning' | 'info'
   if (normalized.includes('review') || normalized.includes('nurture')) return 'warning';
   if (normalized.includes('valuation') || normalized.includes('active')) return 'info';
   return 'default';
+}
+
+type LeadSide = 'buyer' | 'seller' | 'unknown';
+
+function leadSideFrom(role: string): LeadSide {
+  const normalized = role.toLowerCase();
+  if (normalized.includes('sell')) return 'seller';
+  if (normalized.includes('buy') || normalized.includes('rent')) return 'buyer';
+  return 'unknown';
+}
+
+type QualificationField = { label: string; value: string };
+
+// Two-column label/value grid + section divider pattern from
+// Iris Dashboard.dc.html's context/lead panel. Only fields backed by real
+// contact data render here — see ContactsOsView summary for backend gaps
+// (beds/baths, financing/preapproval, must-haves, showing availability,
+// ownership/condition/motivation, target price, valuation appointment,
+// transfer/handoff need) that have no field in lib/contactOs.ts today.
+function qualificationFields(contact: ContactRecord, side: LeadSide): QualificationField[] {
+  const fields: QualificationField[] = [];
+  if (contact.budget) fields.push({ label: side === 'seller' ? 'Target price' : 'Budget', value: contact.budget });
+  if (contact.address) fields.push({ label: side === 'seller' ? 'Address' : 'Area / property', value: contact.address });
+  if (contact.nextStep) fields.push({ label: side === 'seller' ? 'Selling timeline' : 'Timeline', value: contact.nextStep });
+  if (contact.source) fields.push({ label: 'Source', value: contact.source });
+  return fields;
+}
+
+function QualificationPanel({ contact }: { contact: ContactRecord }) {
+  const side = leadSideFrom(contact.role);
+  const fields = qualificationFields(contact, side);
+  const sideLabel = side === 'seller' ? 'Seller' : side === 'buyer' ? 'Buyer' : contact.role;
+
+  return (
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.25 }}>
+        <Typography variant="subtitle2">Qualification</Typography>
+        <Chip size="small" variant="outlined" label={sideLabel} />
+      </Stack>
+      {fields.length ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
+          {fields.map((field) => (
+            <Box key={field.label}>
+              <Typography variant="caption" color="text.secondary">{field.label}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>{field.value}</Typography>
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Typography variant="body2" color="text.secondary">No qualification fields captured for this contact yet.</Typography>
+      )}
+    </Box>
+  );
 }
 
 export function ContactsOsView() {
@@ -404,9 +456,10 @@ export function ContactsOsView() {
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
                       <ProfileMetric icon={<PhoneIcon fontSize="small" />} label="Phone" value={selected.phone || 'Not provided'} />
                       <ProfileMetric icon={<AlternateEmailIcon fontSize="small" />} label="Email" value={selected.email || 'Not provided'} />
-                      <ProfileMetric icon={<HomeIcon fontSize="small" />} label="Area or property" value={selected.address} />
-                      <ProfileMetric icon={<StarIcon fontSize="small" />} label="Budget / timeline" value={selected.budget} />
                     </Box>
+
+                    <Divider sx={{ my: 2 }} />
+                    <QualificationPanel contact={selected} />
 
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2" sx={{ mb: 0.75 }}>Profile notes</Typography>

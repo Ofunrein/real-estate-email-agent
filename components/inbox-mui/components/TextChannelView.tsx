@@ -1,8 +1,9 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
+import { Avatar, Box, Button, Card, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import { ConversationList } from './ConversationList';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
+import { ConversationList, type ThreadTemperature } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ReaderFooter } from './ReaderFooter';
 import { CategoryFilter, type CategoryFilterValue } from './CategoryFilter';
@@ -18,6 +19,22 @@ import { clearActivityEventTarget, useActivityEventTarget } from '../hooks/useAc
 import { usePersistedSelection } from '../hooks/usePersistedSelection';
 import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 import { useCategoryColors } from '../theme/CategoryColorContext';
+
+// Temperature/status are derived from the existing lead-category id — the
+// data model has no separate hot/warm/cold or per-thread status field.
+// Categories with no clear signal render no chip rather than inventing one.
+function categoryTemperature(category: LeadCategoryId): ThreadTemperature | undefined {
+  if (category === 'hot-lead') return 'hot';
+  if (category === 'showing' || category === 'financing') return 'warm';
+  if (category === 'nurture' || category === 'closed') return 'cold';
+  return undefined;
+}
+function categoryStatus(category: LeadCategoryId, needsReview?: boolean): { label: string; tone: 'accent' | 'warning' | 'success' | 'info' | 'neutral' } | undefined {
+  if (needsReview || category === 'needs-human') return { label: 'Needs human', tone: 'warning' };
+  if (category === 'hot-lead' || category === 'needs-reply') return { label: 'Iris active', tone: 'accent' };
+  if (category === 'showing') return { label: 'Booked', tone: 'success' };
+  return undefined;
+}
 
 type TextChannelId = Extract<ChannelId, 'instagram' | 'messenger' | 'whatsapp' | 'website'>;
 
@@ -279,18 +296,25 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
 
         <ConversationList
           title="Conversations"
-          items={visibleThreads.map((t) => ({
-            id: t.id,
-            title: t.contact,
-            time: t.time,
-            preview: t.preview,
-            meta: `${t.messageCount} messages`,
-            categoryLabel: categoryMeta[t.category]?.label,
-            categoryColor: colors[t.category],
-            fallbackUsed: t.fallbackUsed,
-            unreadCount: seenOverrides[t.id] ? 0 : t.unreadCount,
-            seen: seenOverrides[t.id] ? true : t.seen
-          }))}
+          items={visibleThreads.map((t) => {
+            const status = categoryStatus(t.category);
+            return {
+              id: t.id,
+              title: t.contact,
+              time: t.time,
+              preview: t.preview,
+              meta: `${t.messageCount} messages`,
+              categoryLabel: categoryMeta[t.category]?.label,
+              categoryColor: colors[t.category],
+              fallbackUsed: t.fallbackUsed,
+              unreadCount: seenOverrides[t.id] ? 0 : t.unreadCount,
+              seen: seenOverrides[t.id] ? true : t.seen,
+              channel,
+              temperature: categoryTemperature(t.category),
+              statusLabel: status?.label,
+              statusTone: status?.tone
+            };
+          })}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
 
@@ -413,9 +437,34 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
             p: 4,
             minHeight: 200
           }}>
-          <Typography variant="body2" color="text.secondary">
-            No {meta.label.toLowerCase()} conversations yet.
-          </Typography>
+          <Stack
+            spacing={1.25}
+            alignItems="center"
+            sx={{
+              textAlign: 'center',
+              maxWidth: 320,
+              width: '100%',
+              py: 4,
+              px: 3,
+              borderRadius: 3,
+              border: '1px dashed',
+              borderColor: 'divider'
+            }}>
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '11px',
+                bgcolor: 'action.hover',
+                color: meta.accent
+              }}>
+              <InboxOutlinedIcon fontSize="small" />
+            </Avatar>
+            <Typography variant="body2" color="text.secondary">
+              No {meta.label.toLowerCase()} conversations yet.
+            </Typography>
+          </Stack>
         </Card>
         }
       </Box>

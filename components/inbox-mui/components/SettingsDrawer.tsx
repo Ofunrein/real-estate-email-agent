@@ -13,9 +13,16 @@ import {
   Chip,
   Divider,
   Tooltip,
-  Alert } from
+  Alert,
+  useTheme } from
 '@mui/material';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import EmailIcon from '@mui/icons-material/EmailOutlined';
+import SmsIcon from '@mui/icons-material/SmsOutlined';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import MessengerIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import InstagramIcon from '@mui/icons-material/CameraAltOutlined';
+import LanguageIcon from '@mui/icons-material/LanguageOutlined';
 import { signOut } from 'next-auth/react';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
@@ -50,6 +57,17 @@ const socialConnections = [
   ['whatsapp', 'WhatsApp'],
 ] as const;
 
+const CHANNEL_ICON: Record<string, React.ElementType> = {
+  email: EmailIcon,
+  sms: SmsIcon,
+  whatsapp: WhatsAppIcon,
+  messenger: MessengerIcon,
+  instagram: InstagramIcon,
+  website_chat: LanguageIcon,
+};
+
+// Integration card layout ported from Iris Dashboard.dc.html settings/integrations grid:
+// icon square, name, description, status pill (Connected = success, Off = warning outline).
 function ToggleGrid({
   items,
   values,
@@ -65,64 +83,72 @@ function ToggleGrid({
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 112px), 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))',
         gap: {
           xs: 0.75,
           sm: 1
         }
       }}>
-      {items.map(([key, label]) =>
-      <Box
-        key={key}
-        component="label"
-        sx={{
-          minWidth: 0,
-          p: {
-            xs: 0.75,
-            sm: 1
-          },
-          border: '1px solid',
-          borderColor: values[key] ? 'primary.main' : 'divider',
-          borderRadius: 1.25,
-          bgcolor: values[key] ? 'action.selected' : 'background.paper',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto',
-          alignItems: 'center',
-          gap: {
-            xs: 0.25,
-            sm: 0.5
-          },
-          cursor: 'pointer'
-        }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="body2"
+      {items.map(([key, label]) => {
+        const Icon = CHANNEL_ICON[key] || EmailIcon;
+        const on = Boolean(values[key]);
+        return (
+          <Box
+            key={key}
+            component="label"
             sx={{
-              fontWeight: 800,
-              lineHeight: 1.1,
-              fontSize: { xs: 11.5, sm: 13 }
-            }}
-            noWrap>
-            {label}
-          </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{
-              display: 'block',
-              lineHeight: 1.12,
-              fontSize: { xs: 10.5, sm: 11 }
+              minWidth: 0,
+              p: { xs: 1, sm: 1.15 },
+              border: '1px solid',
+              borderColor: on ? 'primary.main' : 'divider',
+              borderRadius: 1.5,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 1,
+              cursor: 'pointer',
+              boxShadow: on ? 'inset 0 0 0 1px rgba(196,154,82,0.18)' : 'none',
             }}>
-            {suffix}
-          </Typography>
-        </Box>
-        <Checkbox
-          size="small"
-          checked={values[key]}
-          onChange={(e) => onChange(key, e.target.checked)}
-          sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 17, sm: 19 } } }} />
-      </Box>
-      )}
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 1.25,
+                bgcolor: 'action.hover',
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: on ? 'primary.main' : 'text.secondary',
+              }}>
+              <Icon sx={{ fontSize: 17 }} />
+            </Box>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 700, lineHeight: 1.15, fontSize: { xs: 12, sm: 13 } }}
+                  noWrap>
+                  {label}
+                </Typography>
+                <Checkbox
+                  size="small"
+                  checked={on}
+                  onChange={(e) => onChange(key, e.target.checked)}
+                  sx={{ p: 0, flexShrink: 0, '& .MuiSvgIcon-root': { fontSize: { xs: 17, sm: 19 } } }} />
+              </Stack>
+              <Chip
+                size="small"
+                label={on ? `${suffix} on` : `${suffix} off`}
+                color={on ? 'success' : 'default'}
+                variant={on ? 'filled' : 'outlined'}
+                sx={{ height: 18, mt: 0.5, '& .MuiChip-label': { px: 0.75, fontSize: 9.5, fontWeight: 700 } }} />
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
   );
 }
@@ -191,12 +217,14 @@ function SocialConnectionGrid({
           );
           const missing = missingSetup(connection);
           const ready = connected && display.ready;
-          const pill = ready ? 'Ready' : connected ? 'Setup needed' : authConfigured ? 'Connect' : 'Setup needed';
-          const tone = ready ? 'success' : connected ? 'warning' : authConfigured ? 'info' : 'warning';
+          // Status pill mapping: Connected = success, Syncing/Needs setup = warning, Token issue/Not connected = danger.
+          const pill = ready ? 'Connected' : connected ? 'Needs setup' : authConfigured ? 'Not connected' : 'Not connected';
+          const tone: 'success' | 'warning' | 'error' = ready ? 'success' : connected ? 'warning' : 'error';
           const labelText = accountLabel(connection);
           const detail = connected ? labelText || 'Connected account' : authConfigured ? 'Choose account' : 'Needs setup';
           const actionLabel = connected ? 'Change' : 'Connect';
           const connectUrl = connectUrlForSlug(slug);
+          const Icon = CHANNEL_ICON[slug] || EmailIcon;
           return (
         <Box
           key={slug}
@@ -234,19 +262,36 @@ function SocialConnectionGrid({
             }
           }}>
           <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          {display.avatarUrl && (
+          {display.avatarUrl ? (
             <Avatar
               src={display.avatarUrl}
               alt={display.value}
               sx={{
-                width: 30,
-                height: 30,
-                borderRadius: 1,
+                width: 34,
+                height: 34,
+                borderRadius: 1.25,
                 border: '1px solid',
                 borderColor: 'divider',
                 flexShrink: 0
               }}
             />
+          ) : (
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 1.25,
+                bgcolor: 'action.hover',
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: ready ? 'success.main' : 'text.secondary',
+              }}>
+              <Icon sx={{ fontSize: 17 }} />
+            </Box>
           )}
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between" sx={{ minWidth: 0 }}>
@@ -304,6 +349,12 @@ function SocialConnectionGrid({
   );
 }
 export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  // Iris Dashboard.dc.html --card-hi / --elev shadow recipe, translated to MUI boxShadow.
+  const cardShadow = isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.04), 0 18px 50px rgba(0,0,0,.4)'
+    : 'inset 0 1px 0 rgba(255,255,255,.9), 0 1px 1px rgba(15,23,42,.04), 0 8px 18px rgba(15,23,42,.08), 0 24px 60px rgba(15,23,42,.06)';
   const { leadCategories, inboxSettings } = useInboxModel();
   const { colors, setColor } = useCategoryColors();
   const [draftFirst, setDraftFirst] = useState(inboxSettings.draft_first);
@@ -454,6 +505,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          boxShadow: cardShadow,
           p: {
             xs: 1.25,
             sm: 2
@@ -504,6 +556,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          boxShadow: cardShadow,
           p: {
             xs: 1.25,
             sm: 2
@@ -536,6 +589,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          boxShadow: cardShadow,
           p: {
             xs: 1.25,
             sm: 2
@@ -573,6 +627,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          boxShadow: cardShadow,
           p: {
             xs: 1.25,
             sm: 2
@@ -677,6 +732,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          boxShadow: cardShadow,
           p: {
             xs: 1.25,
             sm: 2

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Chip, Stack, Typography, Button, TextField, IconButton, CircularProgress, Tooltip } from '@mui/material';
+import { Alert, Avatar, Box, Chip, Stack, Typography, Button, TextField, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import AttachFileIcon from '@mui/icons-material/AttachFileOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
@@ -12,6 +12,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAltOutlined';
 import SendIcon from '@mui/icons-material/Send';
 import SmartToyIcon from '@mui/icons-material/SmartToyOutlined';
 import StopCircleIcon from '@mui/icons-material/StopCircleOutlined';
+import { agentAvatar } from '../data/inboxData';
 
 type ManualChannel = 'email' | 'sms' | 'whatsapp' | 'instagram' | 'messenger' | 'website';
 
@@ -453,9 +454,9 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
           }}
         >
           <Stack direction="row" spacing={0.75} alignItems="center">
-            <CircleIcon sx={{ fontSize: 10, color: 'success.main' }} />
-            <Typography variant="body2" color="text.secondary">
-              AI active
+            <Avatar src={agentAvatar} alt="Iris" sx={{ width: 18, height: 18 }} />
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'iris.accentInk' }}>
+              Iris active
             </Typography>
           </Stack>
           <Button
@@ -511,10 +512,10 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
         <Stack direction="row" spacing={0.75} alignItems="center">
           <CircleIcon sx={{ fontSize: 10, color: 'warning.main' }} />
           <Typography variant="caption" sx={{ fontWeight: 600, color: 'warning.main' }}>
-            You have control
+            You are handling this thread
           </Typography>
         </Stack>
-        <Tooltip title="Hand conversation back to AI">
+        <Tooltip title="Hand conversation back to Iris">
           <Button
             size="small"
             variant="text"
@@ -523,7 +524,7 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
             disabled={handingBack}
             sx={{ color: 'text.secondary', fontSize: 11 }}
           >
-            Hand back to AI
+            Hand back to Iris
           </Button>
         </Tooltip>
       </Stack>
@@ -643,6 +644,16 @@ export function ReaderFooter({ threadId, channel = 'sms', to, subject, disabledR
               aria-label="Attach file">
               {uploading ? <CircularProgress size={14} /> : <AttachFileIcon sx={{ fontSize: 16 }} />}
             </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Insert a listing into this reply — coming soon">
+          <span>
+            <Chip
+              size="small"
+              label="Listing"
+              disabled
+              sx={{ flexShrink: 0, height: 34, borderRadius: 1.5, fontSize: 11, color: 'text.secondary' }}
+            />
           </span>
         </Tooltip>
         {recordingVoice && <RecordingWaveform seconds={recordingSeconds} />}

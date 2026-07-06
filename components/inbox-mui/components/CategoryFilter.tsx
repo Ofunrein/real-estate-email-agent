@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Box, Chip } from '@mui/material';
+import { Box, Chip, useTheme } from '@mui/material';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useCategoryColors } from '../theme/CategoryColorContext';
@@ -33,6 +33,7 @@ export function CategoryFilter({
 }: CategoryFilterProps) {
   const { leadCategories } = useInboxModel();
   const { colors } = useCategoryColors();
+  const theme = useTheme();
   return (
     <Box
       role="tablist"
@@ -52,14 +53,14 @@ export function CategoryFilter({
           bgcolor: 'divider'
         }
       }}>
-      
+
       <FilterChip
         label="All"
         count={totalCount}
-        color="#7C6AF5"
+        color={theme.iris.accentInk}
         selected={value === 'all'}
         onClick={() => onChange('all')} />
-      
+
       {leadCategories.map((cat) =>
       <FilterChip
         key={cat.id}
@@ -79,12 +80,6 @@ function FilterChip({
   color,
   selected,
   onClick
-
-
-
-
-
-
 }: {label: string;count: number;color: string;selected: boolean;onClick: () => void;}) {
   return (
     <Chip
@@ -100,48 +95,49 @@ function FilterChip({
           alignItems: 'center',
           gap: 0.75
         }}>
-        
+
           <Box
           component="span"
           sx={{
-            fontWeight: selected ? 700 : 600,
-            color: selected ? '#fff' : color
+            fontWeight: selected ? 600 : 500,
+            color: selected ? 'primary.contrastText' : 'text.secondary'
           }}>
-          
+
             {label}
           </Box>
           <Box
           component="span"
           sx={{
-            fontSize: 11,
-            fontWeight: 700,
-            px: 0.65,
+            fontSize: 10,
+            fontWeight: 600,
+            fontFamily: 'var(--font-mono)',
+            px: 0.7,
             borderRadius: 999,
             bgcolor: selected ?
-            'rgba(255,255,255,0.25)' :
-            withAlpha(color, 0.18),
-            color: selected ? '#fff' : color,
+            'rgba(255,255,255,0.22)' :
+            withAlpha(color, 0.16),
+            color: selected ? 'primary.contrastText' : color,
             lineHeight: 1.6
           }}>
-          
+
             {count}
           </Box>
         </Box>
       }
       sx={{
         flexShrink: 0,
-        height: 32,
-        borderRadius: 2,
+        height: 30,
+        borderRadius: 999,
         border: '1px solid',
-        // Always color-coded: tinted bg + colored border, even when unselected.
-        borderColor: selected ? color : withAlpha(color, 0.5),
-        bgcolor: selected ? withAlpha(color, 0.85) : withAlpha(color, 0.1),
+        borderColor: selected ? 'primary.main' : 'divider',
+        bgcolor: selected ? 'primary.main' : 'background.default',
+        transition: 'background-color .15s, border-color .15s',
         '& .MuiChip-label': {
-          px: 1.25
+          px: 1.4
         },
         '&:hover': {
-          bgcolor: selected ? withAlpha(color, 0.95) : withAlpha(color, 0.2),
-          borderColor: color
+          bgcolor: selected ? 'primary.main' : 'action.hover',
+          borderColor: selected ? 'primary.main' : 'divider'
         }
       }} />);
 

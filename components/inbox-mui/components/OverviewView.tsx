@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Card, Chip, Grid, LinearProgress, Stack, Typography } from '@mui/material';
 import ReviewsIcon from '@mui/icons-material/RateReviewOutlined';
 import GroupsIcon from '@mui/icons-material/GroupsOutlined';
@@ -10,7 +10,8 @@ import CalendarIcon from '@mui/icons-material/EventAvailableOutlined';
 import TransferIcon from '@mui/icons-material/PhoneForwardedOutlined';
 import MediaIcon from '@mui/icons-material/PermMediaOutlined';
 import SpeedIcon from '@mui/icons-material/SpeedOutlined';
-import { StatCard } from './StatCards';
+import WhatshotIcon from '@mui/icons-material/WhatshotOutlined';
+import { StatCard, computeTrendDelta } from './StatCards';
 import { ActivityChart } from './ActivityChart';
 import { ActivityFeed } from './ActivityFeed';
 import { type ActivityEvent } from '../data/inboxData';
@@ -96,9 +97,30 @@ function ChannelQualityPanel() {
 }
 
 export function OverviewView({ active = true, onOpenActivityEvent }: {active?: boolean;onOpenActivityEvent?: (event: ActivityEvent) => void;}) {
-  const { metrics, statTrends } = useInboxModel();
+  const { metrics, statTrends, emailThreads, smsThreads, textThreads } = useInboxModel();
   const aiRate = metrics.events ? Math.round(metrics.aiReplies / metrics.events * 100) : 0;
   const mediaRate = metrics.mediaItems ? Math.round(metrics.mediaTranscripts / metrics.mediaItems * 100) : 0;
+
+  // Hot leads: real count of threads categorized 'hot-lead' across every
+  // channel — no invented number. There's no day-bucketed history for this
+  // count, so its trend delta is intentionally omitted (see brief: only show
+  // a delta when computable from real historical data).
+  const hotLeadsCount = useMemo(() => {
+    const allThreads = [
+      ...emailThreads,
+      ...smsThreads,
+      ...textThreads.instagram,
+      ...textThreads.messenger,
+      ...textThreads.whatsapp,
+      ...textThreads.website,
+    ];
+    return allThreads.filter((t) => t.category === 'hot-lead').length;
+  }, [emailThreads, smsThreads, textThreads]);
+
+  // Shared hoverBucket state — ports Iris Dashboard.dc.html's
+  // agentActivityData(): hovering a chart bar or a feed row sets the same
+  // state, so both surfaces highlight together.
+  const [hoverBucket, setHoverBucket] = useState<number | null>(null);
 
   return (
     <Box
@@ -111,6 +133,59 @@ export function OverviewView({ active = true, onOpenActivityEvent }: {active?: b
         minHeight: 0,
         overflowY: { xs: 'visible', lg: 'auto' }
       }}>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Booked appointments"
+            value={metrics.appointments > 0 ? metrics.appointments : '—'}
+            hint="Actual scheduled calendar appointments"
+            accent="#16A34A"
+            icon={<CalendarIcon fontSize="small" />}
+            trend={statTrends.appointments}
+            delta={computeTrendDelta(statTrends.appointments)}
+            tint
+            active={active}
+            replayDelay={0} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Qualified transfers"
+            value={metrics.liveTransfers > 0 ? metrics.liveTransfers : '—'}
+            hint="Completed handoffs to a human"
+            accent="#2F5D7C"
+            icon={<TransferIcon fontSize="small" />}
+            trend={statTrends.transfers}
+            delta={computeTrendDelta(statTrends.transfers)}
+            tint
+            active={active}
+            replayDelay={120} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Avg response"
+            value={metrics.avgResponseSamples > 0 ? metrics.avgResponseLabel : '—'}
+            hint={metrics.avgResponseSamples > 0 ? `${metrics.avgResponseSamples} replies today` : 'No replies yet today'}
+            accent="#C49A52"
+            icon={<SpeedIcon fontSize="small" />}
+            trend={metrics.avgResponseSamples > 0 ? statTrends.avgResponse : undefined}
+            delta={metrics.avgResponseSamples > 0 ? computeTrendDelta(statTrends.avgResponse) : null}
+            tint
+            active={active}
+            replayDelay={240} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Hot leads"
+            value={hotLeadsCount > 0 ? hotLeadsCount : '—'}
+            hint="Threads categorized as hot"
+            accent="#DC2626"
+            icon={<WhatshotIcon fontSize="small" />}
+            tint
+            active={active}
+            replayDelay={360} />
+        </Grid>
+      </Grid>
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard label="Need review" value={metrics.needReview} hint="Flagged for human approval" accent="#f59e0b" icon={<ReviewsIcon fontSize="small" />} trend={statTrends.needReview} active={active} replayDelay={0} />
@@ -128,19 +203,13 @@ export function OverviewView({ active = true, onOpenActivityEvent }: {active?: b
           <StatCard label="Qualified" value={metrics.qualifiedLeads} hint="Verified qualified leads" accent="#8b5cf6" icon={<SpeedIcon fontSize="small" />} trend={statTrends.qualified} active={active} replayDelay={480} />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="Appointments" value={metrics.appointments} hint="Booked showings/callbacks" accent="#7c3aed" icon={<CalendarIcon fontSize="small" />} trend={statTrends.appointments} active={active} replayDelay={600} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <StatCard label="Transfers" value={metrics.liveTransfers} hint="Completed handoffs" accent="#ec4899" icon={<TransferIcon fontSize="small" />} trend={statTrends.transfers} active={active} replayDelay={720} />
-        </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
           <StatCard label="Media understood" value={`${mediaRate}%`} hint={`${metrics.mediaTranscripts}/${metrics.mediaItems} media transcribed`} accent="#14b8a6" icon={<MediaIcon fontSize="small" />} progress={mediaRate} active={active} replayDelay={840} />
         </Grid>
       </Grid>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 7 }}>
-          <ActivityChart active={active} />
+          <ActivityChart active={active} hoverBucket={hoverBucket} onHoverBucketChange={setHoverBucket} />
         </Grid>
         <Grid size={{ xs: 12, lg: 5 }}>
           <PipelineOverview />
@@ -149,7 +218,13 @@ export function OverviewView({ active = true, onOpenActivityEvent }: {active?: b
           <ChannelQualityPanel />
         </Grid>
         <Grid size={{ xs: 12, lg: 7 }}>
-          <ActivityFeed channel="all" onOpenEvent={onOpenActivityEvent} />
+          <ActivityFeed
+            channel="all"
+            onOpenEvent={onOpenActivityEvent}
+            hoverBucket={hoverBucket}
+            onHoverBucketChange={setHoverBucket}
+            bucketCount={metrics.activityDays}
+          />
         </Grid>
       </Grid>
     </Box>
