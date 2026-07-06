@@ -8,7 +8,6 @@ import {
   IconButton,
   Button,
   Avatar,
-  Chip,
   CircularProgress,
   Tooltip } from
 '@mui/material';
@@ -16,7 +15,9 @@ import CallEndIcon from '@mui/icons-material/CallEnd';
 import VoicemailIcon from '@mui/icons-material/Voicemail';
 import GraphicEqIcon from '@mui/icons-material/GraphicEqOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTheme } from '@mui/material/styles';
 import { agentAvatar } from '../data/inboxData';
+import type { IrisPalette } from '../theme/tokens';
 
 type LiveTurn = { speaker: 'ai' | 'lead'; text: string };
 
@@ -28,21 +29,21 @@ interface LiveCallPanelProps {
 
 const POLL_MS = 1500;
 
-function statusLabel(status: string, isVoicemail: boolean): { text: string; color: string } {
-  if (isVoicemail) return { text: 'Voicemail detected', color: '#fbbf24' };
+function statusLabel(status: string, isVoicemail: boolean, iris: IrisPalette): { text: string; color: string } {
+  if (isVoicemail) return { text: 'Voicemail detected', color: iris.warning };
   switch (status) {
     case 'queued':
-      return { text: 'Queued', color: '#94a3b8' };
+      return { text: 'Queued', color: iris.textSubtle };
     case 'ringing':
-      return { text: 'Ringing…', color: '#38bdf8' };
+      return { text: 'Ringing…', color: iris.info };
     case 'in-progress':
-      return { text: 'Connected', color: '#34d399' };
+      return { text: 'Connected', color: iris.success };
     case 'forwarding':
-      return { text: 'Transferring…', color: '#a78bfa' };
+      return { text: 'Transferring…', color: iris.accent };
     case 'ended':
-      return { text: 'Call ended', color: '#94a3b8' };
+      return { text: 'Call ended', color: iris.textSubtle };
     default:
-      return { text: status, color: '#94a3b8' };
+      return { text: status, color: iris.textSubtle };
   }
 }
 
@@ -53,6 +54,8 @@ function fmt(sec: number): string {
 }
 
 export function LiveCallPanel({ callId, contactName, onClose }: LiveCallPanelProps) {
+  const theme = useTheme();
+  const iris = theme.iris;
   const [status, setStatus] = useState('queued');
   const [isVoicemail, setIsVoicemail] = useState(false);
   const [transcript, setTranscript] = useState<LiveTurn[]>([]);
@@ -113,7 +116,7 @@ export function LiveCallPanel({ callId, contactName, onClose }: LiveCallPanelPro
     }
   };
 
-  const sl = statusLabel(status, isVoicemail);
+  const sl = statusLabel(status, isVoicemail, iris);
   const ended = status === 'ended';
   const live = status === 'in-progress' || status === 'ringing' || status === 'forwarding';
 
@@ -133,16 +136,30 @@ export function LiveCallPanel({ callId, contactName, onClose }: LiveCallPanelPro
         spacing={1.5}
         sx={{
           p: 1.75,
-          bgcolor: (t) =>
-          isVoicemail
-            ? t.palette.mode === 'dark' ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.07)'
-            : live
-            ? t.palette.mode === 'dark' ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.07)'
-            : 'background.paper',
+          bgcolor: isVoicemail ? iris.warningSoft : live ? iris.successSoft : 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
         }}>
-        <Avatar src={agentAvatar} alt="Iris AI" sx={{ width: 36, height: 36 }} />
+        <Box sx={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+          <Avatar src={agentAvatar} alt="Iris AI" sx={{ width: 36, height: 36 }} />
+          {live && (
+            <Box
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                inset: -3,
+                borderRadius: '50%',
+                border: '2px solid',
+                borderColor: iris.accent,
+                animation: 'irisCallRipple 2.2s infinite',
+                '@keyframes irisCallRipple': {
+                  '0%': { transform: 'scale(0.85)', opacity: 0.9 },
+                  '100%': { transform: 'scale(1.5)', opacity: 0 },
+                },
+              }}
+            />
+          )}
+        </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>
             {live ? 'Iris is calling' : 'Call'} {contactName}

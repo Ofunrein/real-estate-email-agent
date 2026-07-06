@@ -19,6 +19,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RepeatIcon from '@mui/icons-material/RepeatOutlined';
+import EventAvailableIcon from '@mui/icons-material/EventAvailableOutlined';
 import {
   agentAvatar,
   type ChannelId,
@@ -28,13 +30,36 @@ import { useInboxData, useInboxModel } from '../InboxDataContext';
 
 const contextRailWidth = 'clamp(232px, 24vw, 312px)';
 
+// Optional per-lead cadence/appointment signal. Not present in InboxModel
+// today — ContextColumn only receives aggregate channelStats, not a
+// selected-lead record. These render nothing until that data is wired up;
+// see final summary for the backend gap.
+interface NextFollowUp {
+  label: string;
+  channel: string;
+  dueLabel: string;
+}
+interface UpcomingAppointment {
+  dateLabel: string;
+  dayNumber: string;
+  title: string;
+  timeLabel: string;
+  statusLabel: string;
+}
+
 interface ContextColumnProps {
   channel: ChannelId;
   inDrawer?: boolean;
+  /** Optional — only rendered when a caller supplies real per-lead cadence data. */
+  nextFollowUp?: NextFollowUp;
+  /** Optional — only rendered when a caller supplies a real per-lead appointment. */
+  upcomingAppointment?: UpcomingAppointment;
 }
 export function ContextColumn({
   channel,
-  inDrawer = false
+  inDrawer = false,
+  nextFollowUp,
+  upcomingAppointment
 }: ContextColumnProps) {
   const { channelStats, reviewQueue, channelMeta, metrics } = useInboxModel();
   const { onDataRefresh } = useInboxData();
@@ -114,7 +139,29 @@ export function ContextColumn({
       {/* Iris status + today */}
       <Card sx={{ p: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1.25}>
-          <Avatar src={agentAvatar} alt="Iris AI agent" sx={{ width: 34, height: 34 }} />
+          <Box sx={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
+            <Avatar
+              src={agentAvatar}
+              alt="Iris AI agent"
+              sx={{
+                width: 34,
+                height: 34,
+                border: '2px solid',
+                borderColor: 'iris.accent'
+              }} />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: -1,
+                right: -1,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                bgcolor: 'success.main',
+                border: '2px solid',
+                borderColor: 'background.paper'
+              }} />
+          </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
               Iris
@@ -461,16 +508,70 @@ export function ContextColumn({
             }
             color="#6366f1"
             pct={total ? stats.aiReplies / total * 100 : 0} />
-          
+
         </Stack>
       </Card>
+
+      {/* Next follow-up — only rendered when a caller supplies real per-lead cadence data */}
+      {nextFollowUp &&
+      <Card sx={{ p: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+          Next follow-up
+        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1.25} sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 2.5 }}>
+          <RepeatIcon sx={{ fontSize: 15, color: 'warning.main' }} aria-hidden />
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography sx={{ fontSize: '12px', fontWeight: 600 }}>
+              {nextFollowUp.label} · rotate to {nextFollowUp.channel}
+            </Typography>
+            <Typography sx={{ fontSize: '11px', color: 'text.secondary' }}>
+              {nextFollowUp.dueLabel}
+            </Typography>
+          </Box>
+        </Stack>
+      </Card>
+      }
+
+      {/* Upcoming appointment — only rendered when a caller supplies a real per-lead appointment */}
+      {upcomingAppointment &&
+      <Card sx={{ p: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+          Upcoming
+        </Typography>
+        <Stack direction="row" spacing={1.5}>
+          <Box sx={{ textAlign: 'center', px: 1.5, py: 1, borderRadius: 2.5, bgcolor: 'action.hover', flexShrink: 0 }}>
+            <Typography sx={{ fontSize: '10px', fontWeight: 700, color: 'error.main', textTransform: 'uppercase' }}>
+              {upcomingAppointment.dateLabel}
+            </Typography>
+            <Typography sx={{ fontSize: '20px', fontWeight: 700, lineHeight: 1 }}>
+              {upcomingAppointment.dayNumber}
+            </Typography>
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+              {upcomingAppointment.title}
+            </Typography>
+            <Typography sx={{ fontSize: '11px', color: 'text.secondary', mt: 0.25 }}>
+              {upcomingAppointment.timeLabel}
+            </Typography>
+            <Chip
+              size="small"
+              icon={<EventAvailableIcon sx={{ fontSize: '13px !important' }} />}
+              label={upcomingAppointment.statusLabel}
+              color="success"
+              variant="outlined"
+              sx={{ mt: 1, height: 20, fontSize: 10 }} />
+          </Box>
+        </Stack>
+      </Card>
+      }
 
       {/* Data readiness */}
       <Card
         sx={{
           p: 2
         }}>
-        
+
         <Stack
           direction="row"
           spacing={1}
@@ -479,7 +580,7 @@ export function ContextColumn({
             mb: 1,
             minWidth: 0
           }}>
-          
+
           <HomeIcon
             fontSize="small"
             sx={{

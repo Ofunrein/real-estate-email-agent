@@ -13,7 +13,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText } from
+  ListItemText,
+  useTheme } from
 '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -22,7 +23,6 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { signOut } from 'next-auth/react';
-import { Moon, Sun } from 'lucide-react';
 import {
   calendarChannelMeta,
   contactsChannelMeta,
@@ -31,7 +31,7 @@ import {
   type MessageChannelId
 } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
-import { useColorMode } from '../theme/ColorModeContext';
+import { ColorModeToggle } from './ColorModeToggle';
 import { displayForChannelConnection, useChannelConnectionStatus } from '../hooks/useChannelConnectionStatus';
 interface TopBarProps {
   channel: ChannelId;
@@ -54,6 +54,54 @@ function channelConnectHref(channel: ChannelId) {
   return connectSlug ? `/api/settings/composio/connect/${connectSlug}` : undefined;
 }
 
+// Circular icon button matching the Iris mockup's header controls: card
+// surface, soft layered shadow, hover lift with deeper shadow.
+function HeaderIconButton({
+  children,
+  onClick,
+  ariaLabel,
+  borderColor,
+  round = true
+}: {
+  children: React.ReactNode;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
+  ariaLabel: string;
+  borderColor?: string;
+  round?: boolean;
+}) {
+  const theme = useTheme();
+  const isLight = theme.palette.mode === 'light';
+  return (
+    <IconButton
+      onClick={onClick}
+      aria-label={ariaLabel}
+      sx={{
+        position: 'relative',
+        width: round ? 38 : 'auto',
+        height: 38,
+        px: round ? 0 : 0.5,
+        borderRadius: round ? '50%' : 999,
+        bgcolor: 'background.paper',
+        border: '1px solid',
+        borderColor: borderColor || 'divider',
+        boxShadow: isLight
+          ? 'inset 0 1px 0 rgba(255,255,255,.9), 0 1px 1px rgba(15,23,42,.04), 0 8px 18px rgba(15,23,42,.08), 0 24px 60px rgba(15,23,42,.06)'
+          : 'inset 0 1px 0 rgba(255,255,255,.04), 0 18px 50px rgba(0,0,0,.4)',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+        '&:hover': {
+          transform: 'translateY(-1px)',
+          boxShadow: isLight
+            ? 'inset 0 1px 0 rgba(255,255,255,.9), 0 2px 3px rgba(15,23,42,.05), 0 14px 28px rgba(15,23,42,.10), 0 34px 80px rgba(15,23,42,.08)'
+            : 'inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(196,154,82,.18), 0 22px 70px rgba(0,0,0,.5)'
+        },
+        '&:active': { transform: 'translateY(0)' }
+      }}
+    >
+      {children}
+    </IconButton>
+  );
+}
+
 export function TopBar({
   channel,
   onOpenNav,
@@ -62,7 +110,7 @@ export function TopBar({
   showNavToggle = false,
   showContextToggle = false
 }: TopBarProps) {
-  const { mode, toggle } = useColorMode();
+  const theme = useTheme();
   const { channelMeta, channelAccounts } = useInboxModel();
   const { status: connectionStatus } = useChannelConnectionStatus(true);
   const [profileAnchor, setProfileAnchor] = React.useState<HTMLElement | null>(null);
@@ -104,7 +152,7 @@ export function TopBar({
         py: 1.5,
         borderBottom: '1px solid',
         borderColor: 'divider',
-        backgroundColor: 'var(--s-sidebar-bg)',
+        backgroundColor: 'background.paper',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -117,7 +165,7 @@ export function TopBar({
           md: 2
         }
       }}>
-      
+
       <Box
         sx={{
           display: 'flex',
@@ -129,7 +177,7 @@ export function TopBar({
             sm: '1 1 auto'
           }
         }}>
-        
+
         {showNavToggle &&
         <IconButton
           onClick={onOpenNav}
@@ -140,7 +188,7 @@ export function TopBar({
             borderRadius: 2,
             flexShrink: 0
           }}>
-          
+
             <MenuIcon fontSize="small" />
           </IconButton>
         }
@@ -164,13 +212,15 @@ export function TopBar({
                 xs: 'none',
                 sm: 'inline-flex'
               },
-              bgcolor: 'action.selected',
-              color: agentReady ? 'success.main' : 'warning.main',
+              borderRadius: 999,
+              fontWeight: 600,
+              bgcolor: agentReady ? theme.iris.successSoft : theme.iris.warningSoft,
+              color: agentReady ? theme.iris.success : theme.iris.warning,
               '& .MuiChip-icon': {
-                color: agentReady ? 'success.main' : 'warning.main'
+                color: agentReady ? theme.iris.success : theme.iris.warning
               }
             }} />
-          
+
         </Stack>
       </Box>
 
@@ -193,7 +243,7 @@ export function TopBar({
             sm: 'flex-end'
           }
         }}>
-        
+
         {/* Connected account headline */}
         <Box
           sx={{
@@ -232,7 +282,7 @@ export function TopBar({
               border: '1px solid',
               borderColor: 'divider'
             }}>
-            
+
               <AccountIcon sx={{ fontSize: 15 }} aria-hidden />
             </Box>
           }
@@ -245,19 +295,19 @@ export function TopBar({
                 lineHeight: 1.15
               }}
           noWrap>
-              
+
               {accountDisplay.value}
             </Typography>
             <Typography
               variant="caption"
-              color={agentReady ? 'success.main' : 'warning.main'}
               sx={{
                 display: 'block',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                color: agentReady ? theme.iris.success : theme.iris.warning
               }}>
-              
+
               {accountDisplay.status}
             </Typography>
           </Box>
@@ -288,47 +338,20 @@ export function TopBar({
             fontWeight: 700,
             flexShrink: 0
           }}>
-          
+
           {agentReady ? 'Change' : 'Set up'}
         </Button>
 
-        {/* Light / dark toggle: sun in dark mode, moon in light mode */}
-        <Tooltip
-          title={
-          mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-          }>
-          
-          <IconButton
-            onClick={toggle}
-            aria-label={
-            mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-            }
-            sx={{
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 2
-            }}>
-            
-            {mode === 'dark' ?
-            <Sun size={16} color="#fbbf24" /> :
-            <Moon size={16} color="#6366f1" />
-            }
-          </IconButton>
-        </Tooltip>
+        {/* Light / dark toggle */}
+        <ColorModeToggle />
 
         {showContextToggle &&
         <Tooltip title="Open insights panel">
-            <IconButton
-            onClick={onOpenContext}
-            aria-label="Open insights panel"
-            sx={{
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 2
-            }}>
-            
-              <InsightsIcon fontSize="small" />
-            </IconButton>
+          <span>
+            <HeaderIconButton onClick={onOpenContext} ariaLabel="Open insights panel">
+              <InsightsIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+            </HeaderIconButton>
+          </span>
           </Tooltip>
         }
 
@@ -342,47 +365,33 @@ export function TopBar({
               sm: 'block'
             }
           }} />
-        
 
-        <CircleIcon
-          sx={{
-            fontSize: 10,
-            color: agentReady ? 'success.main' : 'warning.main',
-            display: {
-              xs: 'none',
-              sm: 'block'
-            }
-          }} />
-        
 
         <Tooltip title="Open profile menu">
-          <IconButton
-            onClick={(event) => setProfileAnchor(event.currentTarget)}
-            aria-label="Open profile menu"
-            aria-controls={profileOpen ? 'profile-menu' : undefined}
-            aria-haspopup="menu"
-            aria-expanded={profileOpen ? 'true' : undefined}
-            sx={{
-              border: '1px solid',
-              borderColor: profileOpen ? 'primary.main' : 'divider',
-              borderRadius: 999,
-              p: 0.25,
-              gap: 0.25
-            }}>
-            <Avatar
-              sx={{
-                width: 30,
-                height: 30,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                fontWeight: 700,
-                fontSize: 13
-              }}>
-              
-              ML
-            </Avatar>
-            <KeyboardArrowDownIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.25 }} />
-          </IconButton>
+          <span>
+            <HeaderIconButton
+              onClick={(event) => setProfileAnchor(event.currentTarget)}
+              ariaLabel="Open profile menu"
+              borderColor={profileOpen ? 'primary.main' : undefined}
+              round={false}
+            >
+              <Stack direction="row" alignItems="center" spacing={0.25}>
+                <Avatar
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    fontWeight: 700,
+                    fontSize: 10
+                  }}>
+
+                  ML
+                </Avatar>
+                <KeyboardArrowDownIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+              </Stack>
+            </HeaderIconButton>
+          </span>
         </Tooltip>
         <Menu
           id="profile-menu"

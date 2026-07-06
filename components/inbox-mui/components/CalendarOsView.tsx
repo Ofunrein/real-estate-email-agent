@@ -7,7 +7,6 @@ import {
   Card,
   Chip,
   CircularProgress,
-  Divider,
   IconButton,
   Stack,
   Tab,
@@ -27,6 +26,11 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 import SyncIcon from '@mui/icons-material/SyncOutlined';
 import TuneIcon from '@mui/icons-material/TuneOutlined';
 import { useColorMode } from '../theme/ColorModeContext';
+import { useTheme } from '@mui/material/styles';
+import type { IrisPalette } from '../theme/tokens';
+import EventAvailableIcon from '@mui/icons-material/EventAvailableOutlined';
+import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 
 type CalendarViewMode = 'day' | 'week' | 'month';
 type CalendarTab = 'appointments' | 'settings';
@@ -154,13 +158,21 @@ function timeLabel(value: string): string {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOUR_SLOTS = Array.from({ length: 13 }, (_, i) => i + 8); // 8–20
 
-function typeColor(type: string): string {
+function typeColor(type: string, iris: IrisPalette): string {
   const t = type.toLowerCase();
-  if (t.includes('show')) return '#7C6AF5';       // purple
-  if (t.includes('valuat') || t.includes('apprais')) return '#10b981'; // teal
-  if (t.includes('follow') || t.includes('call')) return '#f59e0b';   // amber
-  if (t.includes('consult') || t.includes('meet')) return '#3b82f6';  // blue
-  return '#6b7280';
+  if (t.includes('show')) return iris.channel.calendar;
+  if (t.includes('valuat') || t.includes('apprais')) return iris.success;
+  if (t.includes('follow') || t.includes('call')) return iris.warning;
+  if (t.includes('consult') || t.includes('meet')) return iris.info;
+  return iris.textSubtle;
+}
+
+function statusPillColors(status: string, iris: IrisPalette): { fg: string; bg: string; label: string } {
+  const s = status.toLowerCase();
+  if (s.includes('confirm')) return { fg: iris.success, bg: iris.successSoft, label: 'Confirmed' };
+  if (s.includes('cancel')) return { fg: iris.danger, bg: iris.dangerSoft, label: 'Canceled' };
+  if (s.includes('reschedul')) return { fg: iris.info, bg: iris.infoSoft, label: 'Rescheduled' };
+  return { fg: iris.warning, bg: iris.warningSoft, label: 'Pending' };
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -213,10 +225,12 @@ interface CalendarGridProps {
 
 function CalendarGrid({ appointments, viewMode, currentDate }: CalendarGridProps) {
   const { mode } = useColorMode();
+  const theme = useTheme();
+  const iris = theme.iris;
   const isDark = mode === 'dark';
 
   const gridBorder = isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.07)';
-  const todayBg = isDark ? 'rgba(124,106,245,0.15)' : 'rgba(124,106,245,0.07)';
+  const todayBg = iris.accentSoft;
   const headerBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
   const today = new Date();
 
@@ -288,7 +302,7 @@ function CalendarGrid({ appointments, viewMode, currentDate }: CalendarGridProps
                             px: 0.75,
                             py: 0.2,
                             borderRadius: '3px',
-                            background: typeColor(a.type),
+                            background: typeColor(a.type, iris),
                             overflow: 'hidden',
                             cursor: 'default',
                           }}
@@ -375,7 +389,7 @@ function CalendarGrid({ appointments, viewMode, currentDate }: CalendarGridProps
                           px: 0.75,
                           py: 0.3,
                           borderRadius: '3px',
-                          background: typeColor(a.type),
+                          background: typeColor(a.type, iris),
                           cursor: 'default',
                           overflow: 'hidden',
                         }}
@@ -426,7 +440,7 @@ function CalendarGrid({ appointments, viewMode, currentDate }: CalendarGridProps
                     px: 1.25,
                     py: 0.75,
                     borderRadius: '4px',
-                    background: typeColor(a.type),
+                    background: typeColor(a.type, iris),
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 0.25,
@@ -445,6 +459,94 @@ function CalendarGrid({ appointments, viewMode, currentDate }: CalendarGridProps
           </Box>
         );
       })}
+    </Box>
+  );
+}
+
+// ─── Upcoming appointment card ──────────────────────────────────────────────
+// Iris Dashboard.dc.html — date block (weekday + day number), title, a
+// time · location · contact line, a status pill (Confirmed / Pending /
+// Canceled / Rescheduled), and Reschedule / Cancel actions.
+function UpcomingAppointmentCard({ appointment }: { appointment: CalendarAppointment }) {
+  const theme = useTheme();
+  const iris = theme.iris;
+  const isDark = theme.palette.mode === 'dark';
+  const elev = isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 50px rgba(0,0,0,0.4)'
+    : '0 1px 1px rgba(15,23,42,0.04), 0 8px 18px rgba(15,23,42,0.08), 0 24px 60px rgba(15,23,42,0.06)';
+  const cardHi = isDark ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'inset 0 1px 0 rgba(255,255,255,0.9)';
+
+  const startDate = new Date(appointment.start);
+  const hasValidDate = !Number.isNaN(startDate.getTime());
+  const weekday = hasValidDate ? startDate.toLocaleDateString([], { weekday: 'short' }).toUpperCase() : '—';
+  const dayNumber = hasValidDate ? startDate.getDate() : '–';
+  const pill = statusPillColors(appointment.status, iris);
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        gap: 1.5,
+        p: 1.5,
+        border: '1px solid',
+        borderColor: iris.cardBorder,
+        borderRadius: 3,
+        bgcolor: iris.card,
+        boxShadow: `${cardHi}, ${elev}`,
+      }}
+    >
+      <Box
+        sx={{
+          textAlign: 'center',
+          px: 1.5,
+          py: 1,
+          borderRadius: 2.5,
+          bgcolor: iris.surface2,
+          flexShrink: 0,
+          minWidth: 52,
+        }}
+      >
+        <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: iris.danger, textTransform: 'uppercase', fontSize: '0.65rem' }}>
+          {weekday}
+        </Typography>
+        <Typography variant="h6" sx={{ lineHeight: 1, fontWeight: 700 }}>
+          {dayNumber}
+        </Typography>
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {appointment.title}
+          </Typography>
+          <Chip
+            size="small"
+            label={pill.label}
+            sx={{ color: pill.fg, bgcolor: pill.bg, fontSize: '0.65rem', height: 20, fontWeight: 600 }}
+          />
+        </Stack>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 0.5, mb: 1.25 }}>
+          <Stack direction="row" spacing={0.4} alignItems="center">
+            <EventAvailableIcon sx={{ fontSize: 13 }} color="disabled" />
+            <Typography variant="caption" color="text.secondary">{timeLabel(appointment.start)}</Typography>
+          </Stack>
+          <Stack direction="row" spacing={0.4} alignItems="center">
+            <RoomOutlinedIcon sx={{ fontSize: 13 }} color="disabled" />
+            <Typography variant="caption" color="text.secondary" noWrap>{appointment.location}</Typography>
+          </Stack>
+          <Stack direction="row" spacing={0.4} alignItems="center">
+            <GroupOutlinedIcon sx={{ fontSize: 13 }} color="disabled" />
+            <Typography variant="caption" color="text.secondary" noWrap>{appointment.contact}</Typography>
+          </Stack>
+        </Stack>
+        <Stack direction="row" spacing={1}>
+          <Button size="small" variant="outlined" sx={{ minWidth: 0, px: 1.25, fontSize: '0.7rem' }}>
+            Reschedule
+          </Button>
+          <Button size="small" variant="text" color="error" sx={{ minWidth: 0, px: 1.25, fontSize: '0.7rem' }}>
+            Cancel
+          </Button>
+        </Stack>
+      </Box>
     </Box>
   );
 }
@@ -564,6 +666,17 @@ export function CalendarOsView() {
     return { confirmed, review, total: displayAppointments.length };
   }, [displayAppointments]);
 
+  const upcomingAppointments = useMemo(() => {
+    const now = Date.now();
+    return displayAppointments
+      .filter((item) => {
+        const t = new Date(item.start).getTime();
+        return !Number.isNaN(t) && t >= now;
+      })
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+      .slice(0, 2);
+  }, [displayAppointments]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 2 }}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }}>
@@ -626,16 +739,20 @@ export function CalendarOsView() {
                 <Chip size="small" color="success" variant="outlined" label={`${counts.confirmed} confirmed`} />
                 <Chip size="small" color={counts.review ? 'warning' : 'default'} variant="outlined" label={`${counts.review} review`} />
               </Stack>
-              <Divider />
-              <Stack spacing={1}>
-                {displaySettings.slice(0, 3).map((setting) => (
-                  <Box key={setting.id}>
-                    <Typography variant="caption" color="text.secondary">{setting.label}</Typography>
-                    <Typography variant="body2">{setting.value}</Typography>
-                  </Box>
+            </Stack>
+          </Card>
+
+          <Card sx={{ p: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1.25 }}>Upcoming</Typography>
+            {upcomingAppointments.length ? (
+              <Stack spacing={1.25}>
+                {upcomingAppointments.map((appointment) => (
+                  <UpcomingAppointmentCard key={appointment.id} appointment={appointment} />
                 ))}
               </Stack>
-            </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">No upcoming appointments scheduled.</Typography>
+            )}
           </Card>
 
           <Card sx={{ p: 2 }}>

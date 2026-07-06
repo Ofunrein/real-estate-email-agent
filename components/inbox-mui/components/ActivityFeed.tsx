@@ -20,6 +20,11 @@ import { useInboxModel } from '../InboxDataContext';
 interface ActivityFeedProps {
   channel: ChannelId;
   onOpenEvent?: (event: ActivityEvent) => void;
+  /** Shared with ActivityChart via OverviewView — matching rows highlight when set. */
+  hoverBucket?: number | null;
+  onHoverBucketChange?: (index: number | null) => void;
+  /** Total day buckets the chart is showing (metrics.activityDays), used to rebuild day labels. */
+  bucketCount?: number;
 }
 
 function activityPreviewBody(event: ActivityEvent) {
@@ -32,12 +37,56 @@ function activityPreviewBody(event: ActivityEvent) {
   return event.body;
 }
 
-export function ActivityFeed({ channel, onOpenEvent }: ActivityFeedProps) {
+const BUCKET_DAY_LABEL_RE = /^([A-Za-z]{3})\s+(\d{1,2})/;
+
+// Rebuilds the same "last N days ending today" window the sparkline uses
+// server-side (lib/inboxDataAdapter.ts buildDayBins), then maps each
+// event's displayed "MMM d, h:mm A" timestamp onto a bucket index. This is a
+// best-effort client-side correlation — ActivityEvent carries no raw
+// timestamp or bucket field, so a mismatch (e.g. unparsable time strings)
+// just means that row doesn't highlight, never a fabricated match.
+function buildBucketDayKeys(bucketCount: number): string[] {
+  const now = new Date();
+  const keys: string[] = [];
+  for (let i = bucketCount - 1; i >= 0; i -= 1) {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    keys.push(`${d.getMonth()}-${d.getDate()}`);
+  }
+  return keys;
+}
+
+const MONTH_ABBR: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+// Mirrors ActivityChart's weekday-letter axis labels so a feed row's
+// "bucket: X" caption visually matches the letter under the bar it links to.
+function dayLabelForIndex(index: number): string {
+  const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  return letters[index % 7];
+}
+
+function eventBucketIndex(event: ActivityEvent, bucketDayKeys: string[]): number | null {
+  const match = BUCKET_DAY_LABEL_RE.exec(event.time);
+  if (!match) return null;
+  const month = MONTH_ABBR[match[1].toLowerCase()];
+  if (month === undefined) return null;
+  const day = Number.parseInt(match[2], 10);
+  const key = `${month}-${day}`;
+  const index = bucketDayKeys.indexOf(key);
+  return index === -1 ? null : index;
+}
+
+export function ActivityFeed({ channel, onOpenEvent, hoverBucket = null, onHoverBucketChange, bucketCount = 14 }: ActivityFeedProps) {
   const { activityEvents, channelMeta } = useInboxModel();
   const events =
   channel === 'all' ?
   activityEvents :
   activityEvents.filter((e) => e.channel === channel);
+  const bucketDayKeys = React.useMemo(() => buildBucketDayKeys(bucketCount), [bucketCount]);
   return (
     <Card
       sx={{
@@ -83,15 +132,40 @@ export function ActivityFeed({ channel, onOpenEvent }: ActivityFeedProps) {
         aria-label="Activity feed">
         
         <Stack spacing={0}>
-          {events.map((e, index) =>
-	          <EventRow key={e.id} event={e} isLast={index === events.length - 1} onOpen={onOpenEvent} />
-          )}
+          {events.map((e, index) => {
+            const bucketIndex = eventBucketIndex(e, bucketDayKeys);
+            return (
+              <EventRow
+                key={e.id}
+                event={e}
+                isLast={index === events.length - 1}
+                onOpen={onOpenEvent}
+                bucketIndex={bucketIndex}
+                isBucketHovered={bucketIndex !== null && hoverBucket !== null && bucketIndex === hoverBucket}
+                onHoverBucketChange={onHoverBucketChange}
+              />
+            );
+          })}
         </Stack>
       </Box>
     </Card>);
 
 }
-function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boolean;onOpen?: (event: ActivityEvent) => void;}) {
+function EventRow({
+  event,
+  isLast,
+  onOpen,
+  bucketIndex,
+  isBucketHovered,
+  onHoverBucketChange,
+}: {
+  event: ActivityEvent;
+  isLast: boolean;
+  onOpen?: (event: ActivityEvent) => void;
+  bucketIndex: number | null;
+  isBucketHovered: boolean;
+  onHoverBucketChange?: (index: number | null) => void;
+}) {
   const { channelMeta } = useInboxModel();
   const meta = channelMeta[event.channel];
   const Icon = meta?.icon;
@@ -104,11 +178,13 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
       component={onOpen ? 'button' : 'div'}
       type={onOpen ? 'button' : undefined}
       onClick={() => onOpen?.(event)}
+      onMouseEnter={() => bucketIndex !== null && onHoverBucketChange?.(bucketIndex)}
+      onMouseLeave={() => onHoverBucketChange?.(null)}
       sx={{
         width: '100%',
         textAlign: 'left',
         border: 0,
-        bgcolor: 'transparent',
+        bgcolor: isBucketHovered ? 'action.selected' : 'transparent',
         color: 'inherit',
         font: 'inherit',
         display: 'flex',
@@ -117,7 +193,8 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
         borderBottom: isLast ? '0' : '1px solid',
         borderColor: 'divider',
         borderRadius: 0,
-        transition: 'background-color .15s',
+        transform: isBucketHovered ? 'translateX(2px)' : 'none',
+        transition: 'background-color .15s, transform .15s',
         cursor: onOpen ? 'pointer' : 'default',
         '&:hover': {
           bgcolor: 'action.hover'
@@ -128,7 +205,7 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
           outlineOffset: -2
         }
       }}>
-      
+
       <Box
         sx={{
           position: 'relative',
@@ -283,7 +360,7 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
           sx={{
             mt: 0.5
           }}>
-          
+
           <Typography
             variant="caption"
             sx={{
@@ -294,10 +371,23 @@ function EventRow({ event, isLast, onOpen }: {event: ActivityEvent;isLast: boole
               borderRadius: 1,
               fontWeight: 600
             }}>
-            
+
               {event.intent}
             </Typography>
         </Stack>
+        }
+        {bucketIndex !== null &&
+        <Typography
+          variant="caption"
+          sx={{
+            mt: 0.5,
+            display: 'block',
+            fontSize: 9,
+            color: isBucketHovered ? 'text.primary' : 'text.secondary',
+            fontWeight: isBucketHovered ? 700 : 400,
+          }}>
+          bucket: {dayLabelForIndex(bucketIndex)}
+        </Typography>
         }
       </Box>
     </Box>);

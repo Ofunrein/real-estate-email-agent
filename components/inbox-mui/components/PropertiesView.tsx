@@ -9,12 +9,17 @@ import {
   TextField,
   InputAdornment,
   Button,
-  ListItemButton } from
-'@mui/material';
+  ButtonGroup,
+  ListItemButton,
+  useTheme,
+} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/SwapVert';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
-import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
+import ViewListIcon from '@mui/icons-material/ViewListOutlined';
+import ViewModuleIcon from '@mui/icons-material/ViewModuleOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import EventAvailableIcon from '@mui/icons-material/EventAvailableOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { type Property } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
@@ -24,11 +29,15 @@ const emptyProperty: Property = {
   id: '', address: '', city: '', price: 'Blank', priceNum: '', beds: '', baths: '',
   sqft: '', year: '', type: '', neighborhood: '', zip: '', broker: '',
 };
+
+type ViewMode = 'sheet' | 'grid';
+
 export function PropertiesView() {
   const { properties, propertyHealth } = useInboxModel();
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(properties[0]?.id ?? '');
   const [modalProperty, setModalProperty] = useState<Property | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('sheet');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return properties;
@@ -48,16 +57,40 @@ export function PropertiesView() {
         flex: 1,
         minHeight: 0
       }}>
-      
-      <Typography
-        variant="h6"
-        sx={{
-          mb: 2
-        }}>
-        
-        Properties
-      </Typography>
 
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography variant="h6">Properties</Typography>
+        <ButtonGroup size="small" aria-label="Properties view mode">
+          <Button
+            variant={viewMode === 'sheet' ? 'contained' : 'outlined'}
+            disableElevation
+            startIcon={<ViewListIcon fontSize="small" />}
+            onClick={() => setViewMode('sheet')}
+          >
+            Sheet
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'contained' : 'outlined'}
+            disableElevation
+            startIcon={<ViewModuleIcon fontSize="small" />}
+            onClick={() => setViewMode('grid')}
+          >
+            Grid
+          </Button>
+        </ButtonGroup>
+      </Stack>
+
+      {viewMode === 'grid' ? (
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <PropertyHealthStrip propertyHealth={propertyHealth} />
+          <PropertiesGrid
+            properties={filtered}
+            query={query}
+            onQueryChange={setQuery}
+            onOpenModal={(p) => setModalProperty(p)}
+          />
+        </Box>
+      ) : (
       <Box
         sx={{
           display: 'flex',
@@ -73,7 +106,7 @@ export function PropertiesView() {
             lg: 'visible'
           }
         }}>
-        
+
         {/* Data health */}
         <Card
           sx={{
@@ -88,7 +121,7 @@ export function PropertiesView() {
               lg: 'flex-start'
             }
           }}>
-          
+
           <Stack
             direction="row"
             justifyContent="space-between"
@@ -96,7 +129,7 @@ export function PropertiesView() {
             sx={{
               mb: 1
             }}>
-            
+
             <Typography variant="subtitle2">Property Data Health</Typography>
           </Stack>
           <Chip
@@ -107,14 +140,14 @@ export function PropertiesView() {
             sx={{
               mb: 1.5
             }} />
-          
+
           <Stack direction="row" alignItems="baseline" spacing={0.5}>
             <Typography
               variant="h3"
               sx={{
                 fontWeight: 800
               }}>
-              
+
               {propertyHealth.score}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -127,14 +160,14 @@ export function PropertiesView() {
             sx={{
               mt: 2
             }}>
-            
+
             <Card
               variant="outlined"
               sx={{
                 p: 1.25,
                 flex: 1
               }}>
-              
+
               <Typography variant="caption" color="text.secondary">
                 MISSING CORE
               </Typography>
@@ -146,7 +179,7 @@ export function PropertiesView() {
                 p: 1.25,
                 flex: 1
               }}>
-              
+
               <Typography variant="caption" color="text.secondary">
                 DUPLICATE GROUPS
               </Typography>
@@ -170,14 +203,14 @@ export function PropertiesView() {
               lg: 0
             }
           }}>
-          
+
           <Box
             sx={{
               p: 1.75,
               borderBottom: '1px solid',
               borderColor: 'divider'
             }}>
-            
+
             <Stack
               direction="row"
               justifyContent="space-between"
@@ -185,13 +218,13 @@ export function PropertiesView() {
               sx={{
                 mb: 1.5
               }}>
-              
+
               <Typography variant="subtitle1">Property Sheet</Typography>
               <Chip
                 size="small"
                 variant="outlined"
                 label={`${propertyHealth.rows} rows`} />
-              
+
             </Stack>
             <Stack
               direction="row"
@@ -199,7 +232,7 @@ export function PropertiesView() {
               alignItems="center"
               flexWrap="wrap"
               useFlexGap>
-              
+
               <TextField
                 sx={{
                   flex: 1,
@@ -217,7 +250,7 @@ export function PropertiesView() {
 
                 }}
                 aria-label="Search properties" />
-              
+
               <Chip
                 size="small"
                 variant="outlined"
@@ -225,7 +258,7 @@ export function PropertiesView() {
                 sx={{
                   flexShrink: 0
                 }} />
-              
+
               <Button
                 size="small"
                 variant="outlined"
@@ -233,7 +266,7 @@ export function PropertiesView() {
                 sx={{
                   flexShrink: 0
                 }}>
-                
+
                 Sheet order
               </Button>
             </Stack>
@@ -247,7 +280,7 @@ export function PropertiesView() {
               display: 'flex',
               flexDirection: 'column'
             }}>
-            
+
             {/* Column header */}
             <Box
               sx={{
@@ -259,7 +292,7 @@ export function PropertiesView() {
                 borderColor: 'divider',
                 bgcolor: 'action.hover'
               }}>
-              
+
               <Typography
                 variant="caption"
                 color="text.secondary"
@@ -267,7 +300,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   flex: 1
                 }}>
-                
+
                 ADDRESS
               </Typography>
               <Typography
@@ -277,7 +310,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 110
                 }}>
-                
+
                 PRICE
               </Typography>
               <Typography
@@ -287,7 +320,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 50
                 }}>
-                
+
                 BEDS
               </Typography>
               <Typography
@@ -297,7 +330,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 56
                 }}>
-                
+
                 BATHS
               </Typography>
               <Typography
@@ -307,7 +340,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 56
                 }}>
-                
+
                 PHOTO
               </Typography>
               <Typography
@@ -317,7 +350,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 56
                 }}>
-                
+
                 SQFT
               </Typography>
               <Typography
@@ -327,7 +360,7 @@ export function PropertiesView() {
                   fontWeight: 700,
                   width: 48
                 }}>
-                
+
                 YEAR
               </Typography>
             </Box>
@@ -338,7 +371,7 @@ export function PropertiesView() {
                 flex: 1,
                 minWidth: 620
               }}>
-              
+
               {filtered.map((p) =>
               <PropertyRow
                 key={p.id}
@@ -354,6 +387,7 @@ export function PropertiesView() {
         {/* Selected detail */}
         <PropertyDetail property={selected} onOpenModal={() => setModalProperty(selected)} />
       </Box>
+      )}
 
       <PropertyModal
         property={modalProperty}
@@ -364,6 +398,207 @@ export function PropertiesView() {
     );
 
 }
+
+function PropertyHealthStrip({ propertyHealth }: { propertyHealth: ReturnType<typeof useInboxModel>['propertyHealth'] }) {
+  return (
+    <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+      <Chip
+        size="small"
+        color="success"
+        variant="outlined"
+        label={`${propertyHealth.clean} · ${propertyHealth.rows} rows`}
+      />
+      <Chip size="small" variant="outlined" label={`Score ${propertyHealth.score} of ${propertyHealth.total}`} />
+      <Chip size="small" variant="outlined" label={`${propertyHealth.missingCore} missing core`} />
+      <Chip size="small" variant="outlined" label={`${propertyHealth.duplicateGroups} duplicate groups`} />
+    </Stack>
+  );
+}
+
+function PropertiesGrid({
+  properties,
+  query,
+  onQueryChange,
+  onOpenModal,
+}: {
+  properties: Property[];
+  query: string;
+  onQueryChange: (v: string) => void;
+  onOpenModal: (p: Property) => void;
+}) {
+  return (
+    <Box>
+      <TextField
+        sx={{ mb: 2, maxWidth: 420, width: '100%' }}
+        size="small"
+        placeholder="Search address, city, zip, price, beds, features..."
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon fontSize="small" />
+            </InputAdornment>
+          ),
+        }}
+        aria-label="Search properties"
+      />
+      {properties.length === 0 ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            py: 6,
+            color: 'text.secondary',
+          }}
+        >
+          <Typography variant="body2">No properties match this search.</Typography>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: 2.25,
+          }}
+        >
+          {properties.map((p) => (
+            <PropertyGridCard key={p.id} property={p} onOpenModal={() => onOpenModal(p)} />
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function PropertyGridCard({ property, onOpenModal }: { property: Property; onOpenModal: () => void }) {
+  const theme = useTheme();
+  const iris = theme.iris;
+  const isDark = theme.palette.mode === 'dark';
+  const elev = isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 50px rgba(0,0,0,0.4)'
+    : '0 1px 1px rgba(15,23,42,0.04), 0 8px 18px rgba(15,23,42,0.08), 0 24px 60px rgba(15,23,42,0.06)';
+  const elevHover = isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(196,154,82,0.18), 0 22px 70px rgba(0,0,0,0.5)'
+    : '0 2px 3px rgba(15,23,42,0.05), 0 14px 28px rgba(15,23,42,0.10), 0 34px 80px rgba(15,23,42,0.08)';
+  const cardHi = isDark ? 'inset 0 1px 0 rgba(255,255,255,0.06)' : 'inset 0 1px 0 rgba(255,255,255,0.9)';
+  const isBlank = (v?: string) => !v || v === 'Blank';
+
+  const details = [
+    !isBlank(property.beds) && `${property.beds} bd`,
+    !isBlank(property.baths) && `${property.baths} ba`,
+    !isBlank(property.sqft) && `${property.sqft} sf`,
+    !isBlank(property.type) && property.type,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <Box
+      sx={{
+        borderRadius: 4.5,
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: iris.cardBorder,
+        bgcolor: iris.card,
+        boxShadow: `${cardHi}, ${elev}`,
+        transition: 'transform .2s cubic-bezier(.4,0,.2,1), box-shadow .2s',
+        '&:hover': { transform: 'translateY(-3px)', boxShadow: `${cardHi}, ${elevHover}` },
+      }}
+    >
+      {/* Hero */}
+      <Box
+        onClick={onOpenModal}
+        sx={{ position: 'relative', height: 158, bgcolor: iris.surface2, cursor: 'pointer' }}
+      >
+        {property.photo ? (
+          <>
+            <Box
+              component="img"
+              src={property.photo}
+              alt={property.address}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.34)' }} />
+          </>
+        ) : (
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: iris.textSubtle,
+            }}
+          >
+            <ImageNotSupportedIcon aria-hidden />
+          </Box>
+        )}
+        {!isBlank(property.status) && (
+          <Box
+            component="span"
+            sx={{
+              position: 'absolute', top: 10, left: 10, px: 1.15, py: 0.35,
+              fontSize: 11, fontWeight: 500, borderRadius: 999, bgcolor: iris.success, color: '#fff',
+            }}
+          >
+            {property.status}
+          </Box>
+        )}
+        {property.photo && (
+          <Box
+            component="span"
+            sx={{
+              position: 'absolute', bottom: 12, left: 12, color: '#fff',
+              fontSize: 20, fontWeight: 700, letterSpacing: '-0.01em',
+              textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+            }}
+          >
+            {property.price}
+          </Box>
+        )}
+      </Box>
+
+      {/* Detail */}
+      <Box sx={{ p: 1.9 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{property.address}</Typography>
+        <Typography variant="caption" sx={{ color: iris.textSubtle, display: 'block', mt: 0.25 }}>
+          {[property.neighborhood, property.city].filter((v) => !isBlank(v)).join(' · ')}
+        </Typography>
+        {details && (
+          <Typography
+            variant="body2"
+            sx={{ fontFamily: 'var(--font-mono)', color: 'text.secondary', mt: 1.25 }}
+          >
+            {details}
+          </Typography>
+        )}
+        <Stack direction="row" spacing={0.75} sx={{ mt: 1.5 }}>
+          <Button
+            size="small"
+            variant="contained"
+            disableElevation
+            startIcon={<SendOutlinedIcon sx={{ fontSize: 15 }} />}
+            sx={{ flex: 1, fontSize: 12 }}
+          >
+            Send details
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EventAvailableIcon sx={{ fontSize: 15 }} />}
+            sx={{ flex: 1, fontSize: 12 }}
+          >
+            Book showing
+          </Button>
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
+
 function PropertyRow({
   property,
   selected,
@@ -386,20 +621,20 @@ function PropertyRow({
         borderBottom: '1px solid',
         borderBottomColor: 'divider'
       }}>
-      
+
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           pr: 1
         }}>
-        
+
         <Typography
           variant="body2"
           sx={{
             fontWeight: 600
           }}>
-          
+
           {property.address}
         </Typography>
         <Typography variant="caption" color="text.secondary">
@@ -421,7 +656,7 @@ function PropertyRow({
           width: 110,
           flexShrink: 0
         }}>
-        
+
         {property.price}
       </Typography>
       <Typography
@@ -430,7 +665,7 @@ function PropertyRow({
           width: 50,
           flexShrink: 0
         }}>
-        
+
         {property.beds}
       </Typography>
       <Typography
@@ -439,7 +674,7 @@ function PropertyRow({
           width: 56,
           flexShrink: 0
         }}>
-        
+
         {property.baths}
       </Typography>
       <Box
@@ -447,7 +682,7 @@ function PropertyRow({
           width: 56,
           flexShrink: 0
         }}>
-        
+
         {property.photo ?
         <Box
           component="img"
@@ -472,12 +707,12 @@ function PropertyRow({
             justifyContent: 'center',
             color: 'text.secondary'
           }}>
-          
+
             <ImageNotSupportedIcon
             sx={{
               fontSize: 14
             }} />
-          
+
           </Box>
         }
       </Box>
@@ -487,7 +722,7 @@ function PropertyRow({
           width: 56,
           flexShrink: 0
         }}>
-        
+
         {property.sqft}
       </Typography>
       <Typography
@@ -496,13 +731,15 @@ function PropertyRow({
           width: 48,
           flexShrink: 0
         }}>
-        
+
         {property.year}
       </Typography>
     </ListItemButton>);
 
 }
 function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenModal: () => void;}) {
+  const theme = useTheme();
+  const iris = theme.iris;
   const previewFeatures = [
     property.neighborhood && property.neighborhood !== 'Blank' ? property.neighborhood : '',
     property.type && property.type !== 'Blank' ? property.type : '',
@@ -531,12 +768,12 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
           lg: '100%'
         }
       }}>
-      
+
       <Box
         sx={{
           position: 'relative'
         }}>
-        
+
         {property.photo ?
         <Box
           component="img"
@@ -563,14 +800,14 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
             justifyContent: 'center',
             color: 'text.secondary'
           }}>
-          
+
             <ImageNotSupportedIcon />
           </Box>
         }
         <Button
           size="small"
           variant="contained"
-          startIcon={<PhoneIphoneIcon />}
+          startIcon={<SendOutlinedIcon />}
           onClick={onOpenModal}
           sx={{
             position: 'absolute',
@@ -581,8 +818,8 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
               bgcolor: 'rgba(0,0,0,0.85)'
             }
           }}>
-          
-          Mobile preview
+
+          View details
         </Button>
       </Box>
 
@@ -590,7 +827,7 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
         sx={{
           p: 2
         }}>
-        
+
         <Typography variant="overline" color="text.secondary">
           Selected property
         </Typography>
@@ -599,7 +836,7 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
           sx={{
             mb: 1.5
           }}>
-          
+
           {property.address} · {property.city.split(' · ')[0]}, TX,{' '}
           {property.zip}
         </Typography>
@@ -611,12 +848,12 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
             gap: 1,
             mb: 2
           }}>
-          
+
           <DetailCell label="PRICE" value={property.priceNum} />
           <DetailCell
             label="BEDS / BATHS"
             value={`${property.beds} bd / ${property.baths} bth`} />
-          
+
           <DetailCell label="SQFT" value={property.sqft} />
           <DetailCell label="YEAR BUILT" value={property.year} />
           <DetailCell label="TYPE" value={property.type} />
@@ -641,7 +878,7 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
               color: 'text.primary',
               lineHeight: 1.45
             }}>
-            
+
             {description}
           </Typography>
 
@@ -656,7 +893,7 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
             sx={{
               mb: 1.5
             }}>
-            
+
             {previewFeatures.map((feature) =>
             <Chip
               key={feature}
@@ -664,9 +901,10 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
               size="small"
               sx={{
                 height: 22,
-                bgcolor: 'rgba(99,102,241,0.12)',
+                bgcolor: iris.accentSoft,
                 color: 'text.primary',
-                border: '1px solid rgba(99,102,241,0.22)',
+                border: '1px solid',
+                borderColor: iris.accentSoft,
                 '& .MuiChip-label': {
                   px: 0.75,
                   fontSize: 11,
@@ -691,14 +929,14 @@ function PropertyDetail({ property, onOpenModal }: {property: Property; onOpenMo
             sx={{
               color: 'success.main'
             }} />
-          
+
           <Typography
             variant="body2"
             color="success.main"
             sx={{
               fontWeight: 600
             }}>
-            
+
             Core data complete
           </Typography>
         </Stack>
@@ -723,7 +961,7 @@ function DetailCell({
         border: '1px solid',
         borderColor: 'divider'
       }}>
-      
+
       <Typography
         variant="caption"
         color="text.secondary"
@@ -731,7 +969,7 @@ function DetailCell({
           fontWeight: 700,
           fontSize: 10
         }}>
-        
+
         {label}
       </Typography>
       <Typography
@@ -740,7 +978,7 @@ function DetailCell({
           fontWeight: 600,
           color: muted ? 'text.secondary' : 'text.primary'
         }}>
-        
+
         {value}
       </Typography>
     </Box>);

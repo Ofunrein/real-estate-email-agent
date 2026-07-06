@@ -37,25 +37,32 @@ export function EmptyChannelView({ channel }: EmptyChannelViewProps) {
           justifyContent: 'center',
           p: 4
         }}>
-        
+
         <Stack
           spacing={1.5}
           alignItems="center"
           sx={{
             textAlign: 'center',
-            maxWidth: 360
+            maxWidth: 360,
+            width: '100%',
+            py: 5,
+            px: 3,
+            borderRadius: 3,
+            border: '1px dashed',
+            borderColor: 'divider'
           }}>
-          
+
           <Avatar
             variant="rounded"
             sx={{
-              width: 56,
-              height: 56,
+              width: 44,
+              height: 44,
+              borderRadius: '12px',
               bgcolor: 'action.hover',
               color: meta.accent
             }}>
-            
-            <Icon />
+
+            <Icon fontSize="small" />
           </Avatar>
           <Typography variant="subtitle1">
             No {meta.label.toLowerCase()} conversations yet

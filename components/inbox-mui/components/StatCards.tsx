@@ -1,9 +1,37 @@
 "use client";
 import React, { useId } from 'react';
-import { Box, Card, Stack, Typography, LinearProgress } from '@mui/material';
+import { Box, Card, Stack, Typography, LinearProgress, useTheme } from '@mui/material';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { TrendPoint } from '../data/inboxData';
 import { useReplayKey } from '../hooks/useReplayKey';
+
+// Ports Iris Dashboard.dc.html's metric card: a roughly 6% opacity tint of the
+// metric's accent color washed across the card background (see the mockup's
+// `inset 0 0 0 200px rgba({tint},.06)` box-shadow trick), a mono numeral, and
+// a success-colored delta pill — only rendered when computed from real trend
+// data (see computeTrendDelta below), never fabricated.
+function hexToRgb(hex: string): string {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const num = Number.parseInt(full, 16);
+  if (Number.isNaN(num)) return '99,102,241';
+  return `${(num >> 16) & 255},${(num >> 8) & 255},${num & 255}`;
+}
+
+// Real-data-only delta: compares the second half of a trend window against
+// the first half. Returns null (render nothing) if there isn't enough real
+// history to compute an honest percentage — never shows a fake positive.
+export function computeTrendDelta(trend?: TrendPoint[]): string | null {
+  if (!trend || trend.length < 4) return null;
+  const mid = Math.floor(trend.length / 2);
+  const first = trend.slice(0, mid).reduce((sum, p) => sum + p.value, 0);
+  const second = trend.slice(mid).reduce((sum, p) => sum + p.value, 0);
+  if (first <= 0) return null;
+  const pct = Math.round(((second - first) / first) * 100);
+  if (pct === 0) return null;
+  return `${pct > 0 ? '+' : ''}${pct}%`;
+}
+
 interface StatCardProps {
   label: string;
   value: React.ReactNode;
@@ -15,6 +43,10 @@ interface StatCardProps {
   trendSuffix?: string;
   active?: boolean;
   replayDelay?: number;
+  /** Success-colored delta pill next to the value. Omit when not computable from real data. */
+  delta?: string | null;
+  /** Wash a ~6% opacity tint of `accent` across the card background, per the mockup. */
+  tint?: boolean;
 }
 export function StatCard({
   label,
@@ -26,19 +58,31 @@ export function StatCard({
   trend,
   trendSuffix = '',
   active = true,
-  replayDelay = 0
+  replayDelay = 0,
+  delta,
+  tint = false
 }: StatCardProps) {
   const gradientId = useId().replace(/:/g, '');
   const { ref, playKey } = useReplayKey(active);
+  const theme = useTheme();
+  const rimGlow = theme.palette.mode === 'dark'
+    ? '0 0 0 1px rgba(196,154,82,0.35), 0 12px 44px rgba(196,154,82,0.2)'
+    : '0 0 0 1px rgba(196,154,82,0.4), 0 10px 34px rgba(196,154,82,0.22)';
   return (
     <Card
       sx={{
         p: 2,
         height: '100%',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        position: 'relative',
+        ...(tint
+          ? { boxShadow: (t) => `${t.shadows[1]}, inset 0 0 0 200px rgba(${hexToRgb(accent)},0.06)` }
+          : {}),
+        transition: 'transform .2s ease, box-shadow .2s ease',
+        '&:hover': tint ? { transform: 'translateY(-2px)', boxShadow: (t) => `${t.shadows[1]}, ${rimGlow}` } : undefined,
       }}>
-      
+
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -92,16 +136,30 @@ export function StatCard({
             minWidth: 0
           }}>
           
-          <Typography
-            variant="h5"
-            sx={{
-              color: 'text.primary',
-              fontWeight: 800,
-              letterSpacing: '-0.02em'
-            }}>
-            
-            {value}
-          </Typography>
+          <Stack direction="row" alignItems="baseline" spacing={1}>
+            <Typography
+              variant="h5"
+              sx={{
+                color: 'text.primary',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                fontFamily: 'var(--font-mono)'
+              }}>
+
+              {value}
+            </Typography>
+            {delta &&
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                color: 'success.main'
+              }}>
+
+              {delta}
+            </Typography>
+            }
+          </Stack>
           {hint &&
           <Typography
             variant="caption"

@@ -17,15 +17,19 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircleOutline';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import SendIcon from '@mui/icons-material/SendOutlined';
+import WarningAmberIcon from '@mui/icons-material/WarningAmberOutlined';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import { useTheme } from '@mui/material/styles';
+import { agentAvatar } from '../data/inboxData';
 import { useInboxData, useInboxModel } from '../InboxDataContext';
 export function ReviewPanel() {
   const { reviewQueue, channelMeta } = useInboxModel();
   const { onDraftChanged } = useInboxData();
+  const theme = useTheme();
+  const iris = theme.iris;
   const [index, setIndex] = useState(0);
   const [resolved, setResolved] = useState<
     Record<string, 'approved' | 'dismissed'>>(
@@ -80,11 +84,11 @@ export function ReviewPanel() {
   const confidencePct = item ? Math.round(item.confidence * 100) : 0;
   const confColor = item
     ? (item.confidence >= 0.7
-        ? '#34d399'
+        ? iris.success
         : item.confidence >= 0.6
-          ? '#fbbf24'
-          : '#f87171')
-    : '#94a3b8';
+          ? iris.warning
+          : iris.danger)
+    : iris.textSubtle;
   if (!item) {
     return (
       <Card sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -164,12 +168,12 @@ export function ReviewPanel() {
             <Avatar
               variant="rounded"
               sx={{
-                bgcolor: 'rgba(148,163,184,0.14)',
+                bgcolor: 'action.selected',
                 color: meta?.accent,
                 width: 36,
                 height: 36
               }}>
-              
+
               {Icon ? <Icon fontSize="small" /> : null}
             </Avatar>
             <Box
@@ -190,32 +194,32 @@ export function ReviewPanel() {
             icon={<FlagIcon />}
             label={item.intent}
             sx={{
-              bgcolor: 'rgba(251,191,36,0.12)',
-              color: 'warning.main',
+              bgcolor: iris.warningSoft,
+              color: iris.warning,
               '& .MuiChip-icon': {
-                color: 'warning.main',
+                color: iris.warning,
                 fontSize: 14
               }
             }} />
-          
+
         </Stack>
 
         <Box
           sx={{
             p: 1.5,
             borderRadius: 2,
-            bgcolor: 'rgba(148,163,184,0.06)',
+            bgcolor: 'action.hover',
             border: '1px solid',
             borderColor: 'divider'
           }}>
-          
+
           <Typography
             variant="caption"
             color="text.secondary"
             sx={{
               fontWeight: 600
             }}>
-            
+
             Inbound message
           </Typography>
           <Typography
@@ -224,37 +228,54 @@ export function ReviewPanel() {
               mt: 0.5,
               lineHeight: 1.5
             }}>
-            
+
             {item.inbound}
           </Typography>
         </Box>
 
+        {/* "Needs a human" warning banner — warning-soft bg, icon square, matches
+            the mockup's AI status card handoff banner pattern. */}
         <Stack
           direction="row"
-          spacing={1}
+          spacing={1.25}
           alignItems="center"
           sx={{
             mt: 1.5,
-            p: 1,
+            p: 1.25,
             borderRadius: 2,
-            bgcolor: 'rgba(251,191,36,0.08)'
+            bgcolor: iris.warningSoft,
+            border: '1px solid',
+            borderColor: iris.warning
           }}>
-          
-          <FlagIcon
-            fontSize="small"
+
+          <Box
             sx={{
-              color: 'warning.main'
-            }} />
-          
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'warning.main',
-              fontWeight: 600
+              width: 28,
+              height: 28,
+              borderRadius: 1.5,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: iris.warning,
+              color: '#fff'
             }}>
-            
-            {item.reason}
-          </Typography>
+            <WarningAmberIcon sx={{ fontSize: 16 }} />
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }}>
+              Needs a human
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: iris.warning,
+                fontWeight: 600
+              }}>
+
+              {item.reason}
+            </Typography>
+          </Box>
         </Stack>
       </Box>
 
@@ -276,12 +297,7 @@ export function ReviewPanel() {
           }}>
           
           <Stack direction="row" spacing={1} alignItems="center">
-            <AutoAwesomeIcon
-              fontSize="small"
-              sx={{
-                color: 'primary.light'
-              }} />
-            
+            <Avatar src={agentAvatar} alt="Iris" sx={{ width: 20, height: 20 }} />
             <Typography variant="subtitle2">Iris's drafted reply</Typography>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="center">
@@ -307,13 +323,13 @@ export function ReviewPanel() {
             height: 5,
             borderRadius: 3,
             mb: 1.5,
-            bgcolor: 'rgba(148,163,184,0.18)',
+            bgcolor: 'action.selected',
             '& .MuiLinearProgress-bar': {
               bgcolor: confColor,
               borderRadius: 3
             }
           }} />
-        
+
 
         {editing ?
         <TextField
@@ -330,7 +346,7 @@ export function ReviewPanel() {
           autoFocus
           sx={{
             '& .MuiOutlinedInput-root': {
-              bgcolor: 'rgba(129,140,248,0.06)',
+              bgcolor: iris.accentSoft,
               fontSize: 14,
               lineHeight: 1.6
             }
@@ -341,17 +357,17 @@ export function ReviewPanel() {
           sx={{
             p: 1.75,
             borderRadius: 2,
-            bgcolor: 'rgba(129,140,248,0.07)',
+            bgcolor: iris.accentSoft,
             border: '1px solid',
-            borderColor: 'rgba(129,140,248,0.2)'
+            borderColor: iris.accent
           }}>
-          
+
             <Typography
             variant="body2"
             sx={{
               lineHeight: 1.6
             }}>
-            
+
               {draftValue}
             </Typography>
           </Box>
@@ -376,25 +392,25 @@ export function ReviewPanel() {
             borderRadius: 2,
             bgcolor:
             status === 'approved' ?
-            'rgba(52,211,153,0.12)' :
-            'rgba(148,163,184,0.1)'
+            iris.successSoft :
+            'action.hover'
           }}>
-          
+
             <CheckCircleIcon
             fontSize="small"
             sx={{
               color:
-              status === 'approved' ? 'success.main' : 'text.secondary'
+              status === 'approved' ? iris.success : 'text.secondary'
             }} />
-          
+
             <Typography
             variant="body2"
             sx={{
               color:
-              status === 'approved' ? 'success.main' : 'text.secondary',
+              status === 'approved' ? iris.success : 'text.secondary',
               fontWeight: 600
             }}>
-            
+
               {status === 'approved' ?
             'Approved & sent by you' :
             'Dismissed — Iris will not send'}
