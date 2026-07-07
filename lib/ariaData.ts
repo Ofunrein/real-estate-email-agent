@@ -142,24 +142,53 @@ const DIGIT_WORDS: Record<string, string> = {
 };
 
 function speakAddress(address?: string): string {
-  return clean(address).replace(/^\d+/, (digits) => digits.split("").map((digit) => DIGIT_WORDS[digit] || digit).join(" "));
+ return clean(address).replace(/^\d+/, (digits) => digits.split("").map((digit) => DIGIT_WORDS[digit] || digit).join(" "));
+}
+
+function shortFact(value?: string, maxWords = 14): string {
+ const text = clean(value).replace(/\s+/g, " ");
+ if (!text) return "";
+ const sentence = text.split(/(?<=[.!?])\s+/)[0] || text;
+ const words = sentence.split(/\s+/).filter(Boolean);
+ return words.slice(0, maxWords).join(" ");
+}
+
+function featureFacts(value?: string): string {
+ return unique(
+  clean(value)
+   .split(/[,;|•\n]/)
+   .map((part) => part.trim())
+   .filter(Boolean),
+ )
+  .slice(0, 3)
+  .join(", ");
 }
 
 // Natural spoken sentence for a property (no markdown, no URLs — this is read aloud).
 export function speakProperty(property: SheetRow): string {
-  const price = formatPrice(property.price);
-  const bedsBaths = property.beds && property.baths ? `${property.beds} bed, ${property.baths} bath` : "";
-  const sqft = formatSqft(property.sqft);
-  const where = clean(property.neighborhood) || clean(property.city);
-  const facts = [
-    price ? `listed at ${price}` : "",
-    bedsBaths,
-    sqft,
-    where ? `in ${where}` : "",
-  ].filter(Boolean).join(", ");
-  const address = clean(property.address);
-  if (!facts) return address ? `I found ${address}, but I don't have the full details handy.` : "I couldn't find that property.";
-  return `${speakAddress(address)} is ${facts}.`;
+ const price = formatPrice(property.price);
+ const bedsBaths = property.beds && property.baths ? `${property.beds} bed, ${property.baths} bath` : "";
+ const sqft = formatSqft(property.sqft);
+ const where = clean(property.neighborhood) || clean(property.city);
+ const propertyType = clean(property.property_type);
+ const status = clean(property.status);
+ const features = featureFacts(property.features);
+ const description = shortFact(property.description);
+ const daysOnMarket = clean(property.days_on_market);
+ const facts = [
+  status ? `status ${status}` : "",
+  price ? `listed at ${price}` : "",
+  bedsBaths,
+  sqft,
+  propertyType,
+  where ? `in ${where}` : "",
+  features ? `with ${features}` : "",
+  description && !features ? description : "",
+  daysOnMarket ? `${daysOnMarket} days on market` : "",
+ ].filter(Boolean).join(", ");
+ const address = clean(property.address);
+ if (!facts) return address ? `I found ${address}, but I don't have full details handy.` : "I couldn't find property.";
+ return `${speakAddress(address)} is ${facts}.`;
 }
 
 // Concise SMS body for the timeout fallback (full details, links allowed).
@@ -277,11 +306,11 @@ export async function lookupPropertyForVoice(
 
 // Short spoken option for a search result line (no address-only fluff).
 function speakSearchOption(property: SheetRow, index: number): string {
-  const price = formatPrice(property.price);
-  const bedsBaths = property.beds && property.baths ? `${property.beds} bed, ${property.baths} bath` : "";
-  const where = clean(property.neighborhood) || clean(property.city);
-  const facts = [price, bedsBaths, where].filter(Boolean).join(", ");
-  return `${index + 1}. ${speakAddress(property.address)}${facts ? `, ${facts}` : ""}`;
+ const price = formatPrice(property.price);
+ const bedsBaths = property.beds && property.baths ? `${property.beds} bed, ${property.baths} bath` : "";
+ const where = clean(property.neighborhood) || clean(property.city);
+ const facts = [price, bedsBaths, formatSqft(property.sqft), clean(property.property_type), where].filter(Boolean).join(", ");
+ return `${index + 1}. ${speakAddress(property.address)}${facts ? `, ${facts}` : ""}`;
 }
 
 export function speakSearchResults(properties: SheetRow[]): string {
