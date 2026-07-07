@@ -82,6 +82,13 @@ class AriaVoiceContractTests(unittest.TestCase):
             self.assertIn(f'ariaToolUrl(publicUrl, secret, "{tool}")', provision, f"Tool {tool} missing server URL call in provision")
 
 
+
+    def test_property_context_capsule_in_voice_prompt(self):
+        assistant = read("lib/ariaAssistant.ts")
+        self.assertIn("Property context capsule", assistant)
+        self.assertIn("included utilities/appliances", assistant)
+        self.assertIn("Use property context before generic qualification", assistant)
+
     def test_luron_concierge_psychology_in_voice_prompt(self):
         assistant = read("lib/ariaAssistant.ts")
         self.assertIn("Luron-style concierge psychology", assistant)

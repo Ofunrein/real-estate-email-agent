@@ -43,6 +43,26 @@ test("speakProperty: partial data still readable", () => {
   assert.match(spoken, /nine Oak Dr/);
 });
 
+test("speakProperty: includes rich property context when available", () => {
+  const spoken = speakProperty(property({
+    address: "2159 Prospect Park West",
+    price: "3950/month",
+    beds: "3",
+    baths: "2",
+    sqft: "1400",
+    neighborhood: "Prospect Park",
+    property_type: "rental unit",
+    status: "available",
+    features: "heat included, water included, kitchen appliances, reserved parking",
+    days_on_market: "12",
+  }));
+  assert.match(spoken, /status available/);
+  assert.match(spoken, /\$3,950 per month/);
+  assert.match(spoken, /rental unit/);
+  assert.match(spoken, /heat included, water included, kitchen appliances/);
+  assert.match(spoken, /12 days on market/);
+});
+
 test("propertySmsBody: includes address, facts, link", () => {
   const body = propertySmsBody(property({ address: "123 Main St", price: "450000", beds: "3", baths: "2", listing_url: "https://z/123" }));
   assert.match(body, /123 Main St/);

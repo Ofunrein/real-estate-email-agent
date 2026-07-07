@@ -87,7 +87,7 @@ function buildVapiPlatformTools(publicUrl, secret) {
       type: "function",
       function: {
         name: "lookupProperty",
-        description: "Look up confirmed details for one specific property/address during a call. Use before answering questions about price, beds, baths, sqft, neighborhood, or listing details for a named address.",
+        description: "Look up confirmed details for one specific property/address during the call. Use before answering questions about availability/status, price/rent, beds, baths, sqft, neighborhood, property type, included utilities/appliances, parking, fees, pets, days on market, listing details, or named address.",
         parameters: {
           type: "object",
           properties: {
