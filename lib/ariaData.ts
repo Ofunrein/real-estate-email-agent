@@ -173,6 +173,14 @@ export function speakProperty(property: SheetRow): string {
  const propertyType = clean(property.property_type);
  const status = clean(property.status);
  const features = featureFacts(property.features);
+ const utilities = featureFacts(property.utilities_included);
+ const appliances = featureFacts(property.appliances_included);
+ const parking = shortFact(property.parking, 10);
+ const petPolicy = shortFact(property.pet_policy, 10);
+ const leaseTerms = shortFact(property.lease_terms, 10);
+ const availableDate = clean(property.available_date);
+ const showingInstructions = shortFact(property.showing_instructions, 12);
+ const negotiabilityNotes = shortFact(property.negotiability_notes, 12);
  const description = shortFact(property.description);
  const daysOnMarket = clean(property.days_on_market);
  const facts = [
@@ -183,6 +191,14 @@ export function speakProperty(property: SheetRow): string {
   propertyType,
   where ? `in ${where}` : "",
   features ? `with ${features}` : "",
+  utilities ? `utilities include ${utilities}` : "",
+  appliances ? `appliances include ${appliances}` : "",
+  parking ? `parking ${parking}` : "",
+  petPolicy ? `pet policy ${petPolicy}` : "",
+  leaseTerms ? `lease terms ${leaseTerms}` : "",
+  availableDate ? `available ${availableDate}` : "",
+  showingInstructions ? `showing notes ${showingInstructions}` : "",
+  negotiabilityNotes ? `pricing notes ${negotiabilityNotes}` : "",
   description && !features ? description : "",
   daysOnMarket ? `${daysOnMarket} days on market` : "",
  ].filter(Boolean).join(", ");
