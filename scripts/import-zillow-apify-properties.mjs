@@ -29,6 +29,20 @@ export const PROPERTIES_HEADERS = [
   "listing_url",
   "agent_name",
   "agent_email",
+ "utilities_included",
+ "appliances_included",
+ "parking",
+ "pet_policy",
+ "deposit",
+ "fees",
+ "lease_terms",
+ "floor",
+ "unit_number",
+ "available_date",
+ "showing_instructions",
+ "negotiability_notes",
+ "listing_agent_name",
+ "listing_agent_phone",
 ];
 
 const DEFAULT_ACTOR = "truefetch~zillow-real-estate-listings";
