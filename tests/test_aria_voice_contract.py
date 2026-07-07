@@ -81,6 +81,13 @@ class AriaVoiceContractTests(unittest.TestCase):
             # provision uses ariaToolUrl(publicUrl, secret, "toolName") — check the call pattern
             self.assertIn(f'ariaToolUrl(publicUrl, secret, "{tool}")', provision, f"Tool {tool} missing server URL call in provision")
 
+
+    def test_luron_concierge_psychology_in_voice_prompt(self):
+        assistant = read("lib/ariaAssistant.ts")
+        self.assertIn("Luron-style concierge psychology", assistant)
+        self.assertIn("Action empathy", assistant)
+        self.assertIn("Confirmation ritual", assistant)
+
     def test_agent_name_comes_from_config_not_hardcoded(self):
         assistant = read("lib/ariaAssistant.ts")
         # Name must come from config, not hardcoded "Aria" literal
