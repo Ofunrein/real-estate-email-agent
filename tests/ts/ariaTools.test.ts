@@ -38,6 +38,8 @@ function deps(overrides: Partial<AriaToolDeps> = {}): AriaToolDeps {
     cancelGHLEvent: async () => false,
     rescheduleGHLEvent: async () => ({ success: false, error: "not_configured" }),
     sendSms: async () => undefined,
+    sendEmail: async () => ({ ok: true, messageId: "msg_1", threadId: "thread_1" }),
+    scheduleCallback: async () => ({ id: "appt_callback_1" }),
     notifyBooking: async () => undefined,
     notifyTransfer: async () => undefined,
     ...overrides,
@@ -368,4 +370,125 @@ test("every tool tags channel voice + Iris", async () => {
     assert.equal(out.ingest.agentName, "Iris");
     assert.equal(out.ingest.phone, ctx.phone);
   }
+});
+
+test("sendMessage: sends arbitrary caller-composed text, not just property details", async () => {
+  let sentTo = "";
+  let sentBody = "";
+  const out = await runAriaTool(
+    "sendMessage",
+    { phone: "+15125550000", body: "Following up on the job posting you asked about." },
+    ctx,
+    deps({ sendSms: async (to: string, body: string) => { sentTo = to; sentBody = body; return { sent: true }; } }),
+  );
+  assert.equal(sentTo, "+15125550000");
+  assert.match(sentBody, /job posting/);
+  assert.equal(out.ingest.aiAction, "generic_sms_sent");
+  assert.equal(out.ingest.status, "sent");
+});
+
+test("sendMessage: asks for phone when missing instead of failing silently", async () => {
+  const out = await runAriaTool("sendMessage", { body: "hello" }, { ...ctx, phone: "" }, deps());
+  assert.equal(out.ingest.aiAction, "generic_sms_needs_phone");
+  assert.equal(out.ingest.status, "awaiting_response");
+});
+
+test("sendMessage: asks for content when body missing", async () => {
+  const out = await runAriaTool("sendMessage", {}, ctx, deps());
+  assert.equal(out.ingest.aiAction, "generic_sms_needs_body");
+});
+
+test("sendMessage: reports send failure without throwing, flags for human follow-up", async () => {
+  const out = await runAriaTool(
+    "sendMessage",
+    { phone: "+15125550000", body: "hello" },
+    ctx,
+    deps({ sendSms: async () => ({ sent: false, error: "twilio_down" }) }),
+  );
+  assert.equal(out.ingest.aiAction, "generic_sms_sent");
+  assert.equal(out.ingest.status, "send_failed");
+  assert.equal(out.ingest.nextAction, "human_follow_up");
+  assert.match(out.result, /didn't go through/);
+});
+
+test("sendEmail: sends with recipient/subject/body from confirmed args — this is the Naomi-call fix", async () => {
+  let capturedInput: unknown = null;
+  const out = await runAriaTool(
+    "sendEmail",
+    { to: "naomi@example.com", subject: "Austin job postings", body: "Here's what we discussed on the call." },
+    ctx,
+    deps({ sendEmail: async (input) => { capturedInput = input; return { ok: true, messageId: "m1", threadId: "t1" }; } }),
+  );
+  assert.deepEqual(capturedInput, {
+    to: "naomi@example.com",
+    subject: "Austin job postings",
+    body: "Here's what we discussed on the call.",
+    channelOrigin: "voice",
+  });
+  assert.equal(out.ingest.aiAction, "email_sent");
+  assert.equal(out.ingest.status, "sent");
+  assert.match(out.result, /naomi@example\.com/);
+});
+
+test("sendEmail: asks for missing recipient/body instead of declining outright", async () => {
+  const out = await runAriaTool("sendEmail", { subject: "hi" }, ctx, deps());
+  assert.equal(out.ingest.aiAction, "email_send_needs_details");
+  assert.equal(out.ingest.status, "awaiting_response");
+});
+
+test("sendEmail: defaults a subject when none given", async () => {
+  let capturedSubject = "";
+  await runAriaTool(
+    "sendEmail",
+    { to: "x@example.com", body: "content" },
+    ctx,
+    deps({ sendEmail: async (input) => { capturedSubject = input.subject; return { ok: true }; } }),
+  );
+  assert.equal(capturedSubject, "Message from a phone call");
+});
+
+test("sendEmail: send failure routes to human follow-up, does not throw", async () => {
+  const out = await runAriaTool(
+    "sendEmail",
+    { to: "x@example.com", body: "content" },
+    ctx,
+    deps({ sendEmail: async () => ({ ok: false, error: "gmail_auth_error" }) }),
+  );
+  assert.equal(out.ingest.status, "send_failed");
+  assert.equal(out.ingest.nextAction, "human_follow_up");
+  assert.equal(out.ingest.handoffReason, "gmail_auth_error");
+});
+
+test("scheduleCallback: logs a generic (non-property) callback — the core Naomi-call fallback fix", async () => {
+  let capturedInput: { topic?: string; callerPhone?: string; channelOrigin?: string } | null = null;
+  const out = await runAriaTool(
+    "scheduleCallback",
+    { phone: "+15125550000", name: "Naomi", topic: "email about Austin job postings", preferredWindow: "3pm" },
+    ctx,
+    deps({ scheduleCallback: async (input) => { capturedInput = input; return { id: "appt_1" } as never; } }),
+  );
+  assert.equal(capturedInput!.callerPhone, "+15125550000");
+  assert.equal(capturedInput!.topic, "email about Austin job postings");
+  assert.equal(capturedInput!.channelOrigin, "voice");
+  assert.equal(out.ingest.aiAction, "callback_scheduled");
+  assert.equal(out.ingest.status, "logged");
+  assert.equal(out.ingest.nextAction, "human_follow_up");
+});
+
+test("scheduleCallback: asks for missing phone/topic instead of just declining", async () => {
+  const out = await runAriaTool("scheduleCallback", {}, { ...ctx, phone: "" }, deps());
+  assert.equal(out.ingest.aiAction, "callback_needs_details");
+  assert.equal(out.ingest.status, "awaiting_response");
+});
+
+test("scheduleCallback: DB failure still gives the caller a clean answer, never throws to Vapi", async () => {
+  const out = await runAriaTool(
+    "scheduleCallback",
+    { phone: "+15125550000", topic: "callback about pricing" },
+    ctx,
+    deps({ scheduleCallback: async () => { throw new Error("connection refused"); } }),
+  );
+  assert.equal(out.ingest.aiAction, "callback_failed");
+  assert.equal(out.ingest.status, "error");
+  assert.doesNotMatch(out.result, /connection refused/, "internal error details must never leak to the caller");
 });

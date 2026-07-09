@@ -2,7 +2,7 @@ import { Pool } from "pg";
 
 import { clientId } from "@/lib/database";
 
-export type AppointmentType = "showing" | "consultation" | "listing_appt" | "follow_up";
+export type AppointmentType = "showing" | "consultation" | "listing_appt" | "follow_up" | "callback";
 export type AppointmentStatus = "confirmed" | "cancelled" | "rescheduled" | "completed" | "no_show";
 
 export type AppointmentRecord = {
@@ -60,7 +60,7 @@ function normalizePhoneForLike(phone: string): string {
 }
 
 function normalizeAppointmentType(value?: string): AppointmentType {
-  if (value === "consultation" || value === "listing_appt" || value === "follow_up") return value;
+  if (value === "consultation" || value === "listing_appt" || value === "follow_up" || value === "callback") return value;
   return "showing";
 }
 
@@ -168,7 +168,9 @@ export async function rescheduleAppointmentById(
 
 export function formatAppointmentForAgent(appt: AppointmentRecord): string {
   const when = appt.scheduled_at_local || appt.scheduled_at;
-  const what = appt.appointment_type === "showing" ? "Showing" : "Appointment";
+  const what = appt.appointment_type === "showing" ? "Showing"
+    : appt.appointment_type === "callback" ? "Callback"
+    : "Appointment";
   const where = appt.property_address ? ` at ${appt.property_address}` : "";
   const via = appt.booked_via_channel ? ` (booked via ${appt.booked_via_channel})` : "";
   return `${what}${where} - ${when}${via} [${appt.status}]`;

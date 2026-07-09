@@ -4,6 +4,8 @@ import { recordChannelInteraction } from "@/lib/channelIngest";
 import { claimEventDedupeInDatabase } from "@/lib/database";
 import { createRequestAudit } from "@/lib/requestAudit";
 import { sendTheoSms } from "@/lib/twilioSms";
+import { triggerOutboundCall } from "@/lib/irisCapabilities";
+import { autoCallEnabled } from "@/lib/metaLeadgenFlags";
 import {
   extractLeadgenIds,
   fetchMetaLeadgenLead,
@@ -92,8 +94,37 @@ export async function POST(request: NextRequest) {
         outcomeCode: sendStatus,
       });
     }
-    results.push({ leadgenId, duplicate: false, channel: normalized.preferredChannel, sent, sendStatus });
+
+    let called = false;
+    let callStatus = "not_attempted";
+    // Guarded by callConsent (not just preferredChannel) — TCPA/consent risk
+    // is real for outbound calls, unlike a reply SMS. Dark-launched behind
+    // autoCallEnabled() until Phase 3's rate-limiting/consent design lands.
+    if (autoCallEnabled() && normalized.phone && normalized.callConsent && normalized.preferredChannel === "voice") {
+      const callResult = await triggerOutboundCall({
+        customerNumber: normalized.phone,
+        leadName: normalized.fullName,
+        leadEmail: normalized.email,
+        callReason: "Facebook/Instagram Lead Ad speed-to-lead callback",
+        trigger: "meta_leadgen",
+      });
+      called = callResult.ok;
+      callStatus = callResult.ok ? "called" : callResult.error || "call_failed";
+      await recordChannelInteraction({
+        ...ingest,
+        direction: "outbound",
+        eventAt: new Date().toISOString(),
+        eventType: "facebook_lead_form_speed_to_lead_call",
+        summary: `Speed-to-lead outbound call ${called ? "placed" : "failed"} (Meta lead ad).`,
+        aiAction: called ? "speed_to_lead_call_placed" : "speed_to_lead_call_failed",
+        status: called ? "sent" : "send_failed",
+        outcomeCode: callStatus,
+      });
+    }
+
+    results.push({ leadgenId, duplicate: false, channel: normalized.preferredChannel, sent, sendStatus, called, callStatus });
   }
+
 
   await audit.write("complete", "processed", { statusCode: 200, metadata: { processed: results.length } });
   return NextResponse.json({ ok: true, processed: results.length, results });
