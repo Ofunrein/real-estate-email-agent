@@ -41,6 +41,9 @@ async function run() {
       timedOut: false,
       fromCache: false,
     }),
+    sendSms: async () => ({ sent: true }),
+    sendEmail: async () => ({ ok: true, messageId: "msg_smoke", threadId: "thread_smoke" }),
+    scheduleCallback: async () => ({ id: "appt_smoke" }),
   };
 
   const ctx = { phone: "+15125550000", callId: "call_1", threadRef: "voice:call_1" };
@@ -65,6 +68,21 @@ async function run() {
   assert.equal(qualify.ingest.aiAction, "lead_qualified");
   assert.equal(qualify.ingest.callConsent, "yes");
   assert.equal(qualify.ingest.intent, "buyer_lead");
+
+  // Omnichannel capability tools: the caller asks for something outside the
+  // property/booking tool list — direct send when possible, callback fallback
+  // when not. This is the Naomi-call fix.
+  const message = await runAriaTool("sendMessage", { phone: "+15125550000", body: "Here's that info you asked for." }, ctx, fakeDeps);
+  console.log("sendMessage ->", message.result);
+  assert.equal(message.ingest.aiAction, "generic_sms_sent");
+
+  const email = await runAriaTool("sendEmail", { to: "naomi@example.com", subject: "Job postings", body: "Following up as discussed." }, ctx, fakeDeps);
+  console.log("sendEmail ->", email.result);
+  assert.equal(email.ingest.aiAction, "email_sent");
+
+  const callback = await runAriaTool("scheduleCallback", { phone: "+15125550000", name: "Naomi", topic: "email about job postings" }, ctx, fakeDeps);
+  console.log("scheduleCallback ->", callback.result);
+  assert.equal(callback.ingest.aiAction, "callback_scheduled");
 
   // end-of-call-report persistence
   const calls = [];

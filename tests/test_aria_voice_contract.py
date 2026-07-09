@@ -75,11 +75,25 @@ class AriaVoiceContractTests(unittest.TestCase):
             "sendPropertyDetailsSms", "checkAvailability", "bookConsultation",
             "qualifyLead", "scheduleShowing", "cancelAppointment",
             "rescheduleAppointment", "syncToCrm",
+            "sendMessage", "sendEmail", "scheduleCallback",
         ]
         for tool in server_tools:
             self.assertIn(f'name: "{tool}"', provision, f"Missing tool in provision: {tool}")
             # provision uses ariaToolUrl(publicUrl, secret, "toolName") — check the call pattern
             self.assertIn(f'ariaToolUrl(publicUrl, secret, "{tool}")', provision, f"Tool {tool} missing server URL call in provision")
+
+    def test_never_decline_without_offering_callback_or_direct_send(self):
+        # Locks in the Naomi-call fix: the assistant must never be told to
+        # simply decline an out-of-scope request. It must always try a
+        # direct send first, then fall back to logging a callback.
+        assistant = read("lib/ariaAssistant.ts")
+        self.assertIn("scheduleCallback", assistant)
+        self.assertIn("do not end the call with nothing captured", assistant)
+        self.assertNotIn("Do not promise unconfigured manual callbacks", assistant)
+
+    def test_never_leaks_internal_policy_language_to_caller(self):
+        assistant = read("lib/ariaAssistant.ts")
+        self.assertIn("Never explain your internal limitations", assistant)
 
 
 

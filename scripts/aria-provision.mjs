@@ -158,6 +158,88 @@ function buildVapiPlatformTools(publicUrl, secret) {
     {
       type: "function",
       function: {
+        name: "sendMessage",
+        description: "Send an arbitrary caller-composed text message by SMS, for content that is not a property listing (use sendPropertyDetailsSms for listings instead). Only call this after reading the message content back to the caller and getting a clear yes.",
+        parameters: {
+          type: "object",
+          properties: {
+            phone: {
+              type: "string",
+              description: "Number to text. Use the caller's number unless they gave a different one.",
+            },
+            body: {
+              type: "string",
+              description: "Exact text message content, as confirmed with the caller.",
+            },
+          },
+          required: ["body"],
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "sendMessage") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "sendEmail",
+        description: "Send an email on the caller's behalf for any request, not limited to real estate. Only call this after confirming the recipient, subject/topic, and body content back to the caller and getting a clear yes — never send from a guess.",
+        parameters: {
+          type: "object",
+          properties: {
+            to: {
+              type: "string",
+              description: "Recipient email address, as confirmed with the caller.",
+            },
+            subject: {
+              type: "string",
+              description: "Email subject line.",
+            },
+            body: {
+              type: "string",
+              description: "Email body content, as confirmed with the caller.",
+            },
+          },
+          required: ["to", "body"],
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "sendEmail") },
+    },
+    {
+      type: "function",
+      function: {
+        name: "scheduleCallback",
+        description: "Log a generic callback request (not a property showing) for a human team member to action. Use this whenever a caller asks for something outside your other tools instead of just declining — always try to capture a callback before ending the call empty-handed.",
+        parameters: {
+          type: "object",
+          properties: {
+            phone: {
+              type: "string",
+              description: "Best number for the callback. Use the caller's number unless they gave a different one.",
+            },
+            name: {
+              type: "string",
+              description: "Caller's name, if given.",
+            },
+            topic: {
+              type: "string",
+              description: "One-sentence summary of what the callback is about.",
+            },
+            preferredWindow: {
+              type: "string",
+              description: "Caller's preferred callback time, e.g. '3pm' or 'tomorrow morning', if given.",
+            },
+            date: {
+              type: "string",
+              description: "Preferred callback date (YYYY-MM-DD) if given, otherwise defaults to today.",
+            },
+          },
+          required: ["topic"],
+        },
+      },
+      server: { url: ariaToolUrl(publicUrl, secret, "scheduleCallback") },
+    },
+    {
+      type: "function",
+      function: {
         name: "checkAvailability",
         description: "Find available consultation slots from Iris' server-side calendar for a requested date, date range, or time of day. Use before offering a specific appointment time.",
         parameters: {

@@ -49,12 +49,16 @@ import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { queryAvailability as queryCalendarAvailability, type AvailabilitySlot } from "@/lib/calendarOs";
 import { resolveCalendarProvider } from "@/lib/calendar/resolver";
+import { sendEmail as irisSendEmail, scheduleCallback as irisScheduleCallback } from "@/lib/irisCapabilities";
 
 export type AriaToolName =
   | "getCallerContext"
   | "lookupProperty"
   | "searchProperties"
   | "sendPropertyDetailsSms"
+  | "sendMessage"
+  | "sendEmail"
+  | "scheduleCallback"
   | "checkAvailability"
   | "bookConsultation"
   | "scheduleShowing"
@@ -87,6 +91,16 @@ export type AriaToolDeps = {
   cancelGHLEvent: (ghlEventId: string) => Promise<boolean>;
   rescheduleGHLEvent: (ghlEventId: string, newDate: string, newTime: string, timezone?: string) => Promise<{ success: boolean; confirmed_time?: string; error?: string }>;
   sendSms: (to: string, body: string, mediaUrls?: string[]) => Promise<unknown>;
+  sendEmail: (input: { to: string; subject: string; body: string; channelOrigin: string }) => Promise<{ ok: boolean; error?: string }>;
+  scheduleCallback: (input: {
+    callerPhone: string;
+    callerName?: string;
+    scheduledAt: string;
+    scheduledAtLocal?: string;
+    topic: string;
+    channelOrigin: string;
+    callId?: string;
+  }) => Promise<unknown>;
   recordSms?: (input: ChannelIngestInput) => Promise<unknown>;
   notifyBooking: typeof notifySlackOnBooking;
   notifyTransfer: typeof notifySlackOnTransfer;
@@ -108,6 +122,8 @@ const defaultDeps: AriaToolDeps = {
   cancelGHLEvent,
   rescheduleGHLEvent,
   sendSms: sendTheoSms,
+  sendEmail: irisSendEmail,
+  scheduleCallback: irisScheduleCallback,
   recordSms: recordChannelInteraction,
   notifyBooking: notifySlackOnBooking,
   notifyTransfer: notifySlackOnTransfer,
@@ -530,6 +546,162 @@ async function sendPropertyDetailsSms(ctx: AriaToolContext, args: Record<string,
   };
 }
 
+/** Generalized text send — unlike sendPropertyDetailsSms, this takes
+ * arbitrary caller-composed content (not just listing details). Used when
+ * the caller asks Aria to text them something that isn't a property lookup
+ * — the message body is dictated/confirmed by the caller, not generated
+ * from a property record. */
+async function sendMessageTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const hydrated = await hydrateContext(ctx, deps);
+  const phone = str(args.phone || args.callerPhone) || hydrated.phone;
+  const body = str(args.body || args.message || args.text);
+  const ingestBase = { ...baseIngest(hydrated), eventType: "voice_generic_sms" };
+
+  if (!phone) {
+    return {
+      result: "What's the best number to text that to?",
+      ingest: { ...ingestBase, aiAction: "generic_sms_needs_phone", status: "awaiting_response", summary: "Caller asked to be texted something, but no number was available." },
+    };
+  }
+  if (!body) {
+    return {
+      result: "What would you like me to text?",
+      ingest: { ...ingestBase, aiAction: "generic_sms_needs_body", status: "awaiting_response", summary: "Caller asked for a text but gave no content to send." },
+    };
+  }
+
+  const sendResult = await deps.sendSms(phone, body);
+  const sent = typeof sendResult === "object" && sendResult !== null && "sent" in sendResult
+    ? Boolean((sendResult as { sent?: unknown }).sent)
+    : true;
+  const sendError = typeof sendResult === "object" && sendResult !== null && "error" in sendResult
+    ? String((sendResult as { error?: unknown }).error || "")
+    : "";
+
+  await deps.recordSms?.({
+    channel: "sms",
+    direction: "outbound",
+    agentName: IRIS_AGENT_NAME,
+    phone,
+    source: "vapi",
+    sourceDetail: ctx.callId ? `voice call ${ctx.callId}` : "voice tool",
+    threadRef: `sms:${phone}`,
+    eventType: "sms_ai_reply",
+    messageText: body,
+    summary: `${IRIS_AGENT_NAME} sent a caller-requested text from a voice call.`,
+    aiAction: "generic_sms_sent",
+    handoffReason: sendError,
+    status: sent ? "sent" : "send_failed",
+    preferredChannel: "sms",
+    smsConsent: "voice_requested_sms",
+    nextAction: sent ? "await_response" : "human_follow_up",
+  }).catch(() => null);
+
+  return {
+    result: sent ? "Sent — that's on its way to your phone now." : "I tried to send that text, but it didn't go through. I've flagged it for the team.",
+    ingest: {
+      ...ingestBase,
+      messageText: body,
+      aiAction: "generic_sms_sent",
+      nextAction: sent ? "generic_sms_sent" : "human_follow_up",
+      status: sent ? "sent" : "send_failed",
+      summary: `${IRIS_AGENT_NAME} sent a caller-requested text from a voice call.`,
+      handoffReason: sendError,
+    },
+  };
+}
+
+/** Sends an arbitrary email on the caller's behalf — not limited to
+ * real-estate content. This is the direct fix for the Naomi call: a caller
+ * asking Aria to email someone about something unrelated to a listing
+ * previously had no path other than "I can't do that" or a live transfer.
+ * The caller must have already stated recipient, subject/topic, and body
+ * content in the call — Aria's system prompt is responsible for confirming
+ * those back before calling this tool; this tool does not re-confirm. */
+async function sendEmailTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const hydrated = await hydrateContext(ctx, deps);
+  const to = str(args.to || args.recipient || args.email);
+  const subject = str(args.subject || args.topic) || "Message from a phone call";
+  const body = str(args.body || args.message || args.content);
+  const ingestBase = { ...baseIngest(hydrated), eventType: "voice_email_send" };
+
+  if (!to || !body) {
+    return {
+      result: "Who should I send that email to, and what should it say?",
+      ingest: { ...ingestBase, aiAction: "email_send_needs_details", status: "awaiting_response", summary: "Caller asked to send an email without a complete recipient/body." },
+    };
+  }
+
+  const sendResult = await deps.sendEmail({ to, subject, body, channelOrigin: "voice" });
+
+  return {
+    result: sendResult.ok
+      ? `Sent — I emailed ${to} now.`
+      : "I tried to send that email, but it didn't go through. I've flagged it for the team to send directly.",
+    ingest: {
+      ...ingestBase,
+      messageText: `${subject}: ${body}`,
+      aiAction: sendResult.ok ? "email_sent" : "email_send_failed",
+      nextAction: sendResult.ok ? "await_response" : "human_follow_up",
+      status: sendResult.ok ? "sent" : "send_failed",
+      summary: `${IRIS_AGENT_NAME} emailed ${to} from a voice call${sendResult.ok ? "" : " (failed)"}.`,
+      handoffReason: sendResult.error || "",
+    },
+  };
+}
+
+/** Books a generic (non-property) callback — the fallback Aria should reach
+ * for whenever a caller asks for something outside its tool list instead of
+ * just declining. Confirmed name/number/topic get logged on the shared
+ * appointments table so a human can action it; this is the single highest-
+ * leverage fix from the Naomi-call review (156s call, zero actions taken). */
+async function scheduleCallbackTool(ctx: AriaToolContext, args: Record<string, unknown>, deps: AriaToolDeps): Promise<AriaToolOutcome> {
+  const hydrated = await hydrateContext(ctx, deps);
+  const phone = str(args.phone || args.callerPhone) || hydrated.phone;
+  const name = str(args.name || args.callerName) || str(hydrated.lead?.full_name);
+  const topic = str(args.topic || args.reason || args.message);
+  const preferredWindow = str(args.preferredWindow || args.when || args.time);
+  const ingestBase = { ...baseIngest(hydrated), eventType: "voice_callback_scheduled" };
+
+  if (!phone || !topic) {
+    return {
+      result: "What's the best number for the callback, and what's it about?",
+      ingest: { ...ingestBase, aiAction: "callback_needs_details", status: "awaiting_response", summary: "Caller asked for a callback without enough detail to log it." },
+    };
+  }
+
+  const scheduledAt = preferredWindow ? parseLocalDateTime(str(args.date) || new Date().toISOString().slice(0, 10), preferredWindow) : new Date().toISOString();
+
+  try {
+    await deps.scheduleCallback({
+      callerPhone: phone,
+      callerName: name,
+      scheduledAt,
+      scheduledAtLocal: preferredWindow || undefined,
+      topic,
+      channelOrigin: "voice",
+      callId: ctx.callId,
+    });
+    return {
+      result: `Got it — I've logged that for the team to call you back${preferredWindow ? ` ${preferredWindow}` : ""} about ${topic}.`,
+      ingest: {
+        ...ingestBase,
+        messageText: topic,
+        aiAction: "callback_scheduled",
+        nextAction: "human_follow_up",
+        status: "logged",
+        summary: `Callback logged for ${name || phone}: ${topic}.`,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return {
+      result: "I couldn't log that callback right now, but I've flagged your request for the team.",
+      ingest: { ...ingestBase, aiAction: "callback_failed", status: "error", summary: `Callback logging failed: ${message}` },
+    };
+  }
+}
+
 function contactFromCtx(ctx: AriaToolContext, args: Record<string, unknown>): ShowingContact {
   return {
     phone: ctx.phone,
@@ -876,6 +1048,12 @@ export async function runAriaTool(
       return searchProperties(await hydrateContext(ctx, deps), args, deps);
     case "sendPropertyDetailsSms":
       return sendPropertyDetailsSms(ctx, args, deps);
+    case "sendMessage":
+      return sendMessageTool(ctx, args, deps);
+    case "sendEmail":
+      return sendEmailTool(ctx, args, deps);
+    case "scheduleCallback":
+      return scheduleCallbackTool(ctx, args, deps);
     case "checkAvailability":
       return checkAvailabilityTool(await hydrateContext(ctx, deps), args, deps);
     case "bookConsultation":
