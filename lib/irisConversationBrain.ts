@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
+import type { LeadContextEnvelope } from "@/lib/leadContext";
 
 export type IrisBrainInput = {
   channel: Exclude<Channel, "voice" | "unknown">;
@@ -12,6 +13,7 @@ export type IrisBrainInput = {
   lead?: Partial<SheetRow>;
   properties?: SheetRow[];
   categories?: InboxCategory[];
+  context?: LeadContextEnvelope;
 };
 
 export type IrisBrainOutput = {
@@ -25,6 +27,7 @@ export type IrisBrainOutput = {
   memory_patch: Partial<SheetRow>;
   property_context_used: string[];
   fingerprint: string;
+  decision: "auto_send" | "draft" | "human_alert" | "stop" | "nurture";
 };
 
 function clean(value?: string): string {
@@ -64,7 +67,18 @@ function draftForReview(input: IrisBrainInput): string {
 }
 
 function draftForProperty(input: IrisBrainInput): string {
-  const property = input.properties?.find((row) => clean(row.address));
+  const captured = input.context?.property || {};
+  const property = input.properties?.find((row) => clean(row.address)) || (clean(String(captured.address || "")) ? {
+    address: clean(String(captured.address || "")),
+    price: clean(String(captured.price || "")),
+    beds: clean(String(captured.beds || "")),
+    baths: clean(String(captured.baths || "")),
+    sqft: clean(String(captured.sqft || "")),
+    neighborhood: clean(String(captured.neighborhood || "")),
+    city: clean(String(captured.city || "")),
+    listing_url: clean(String(captured.listing_url || captured.url || "")),
+    features: clean(String(captured.features || "")),
+  } as SheetRow : undefined);
   if (!property) return "";
   const text = clean(input.latestMessage);
   if (/\b(photo|picture|image|look like)\b/i.test(text)) {
@@ -96,8 +110,10 @@ export function runIrisConversationBrain(input: IrisBrainInput): IrisBrainOutput
   const category = inferCategorySlug(input.events, input.categories);
   const latestText = clean(input.latestMessage || input.events[input.events.length - 1]?.message_text || "");
   const needsHuman = humanRisk(latestText);
+  const stopped = input.context?.consent.doNotContact || /^(stop|unsubscribe|cancel|end|quit)$/i.test(latestText);
+  const takeover = Boolean(input.context?.safety.activeTakeover);
   const propertyDraft = !needsHuman ? draftForProperty(input) : "";
-  const draft = needsHuman
+  const draft = stopped ? "" : needsHuman
     ? draftForReview(input)
     : propertyDraft || draftForGeneral(input);
   const propertyContext = (input.properties || []).map((property) => clean(property.address)).filter(Boolean).slice(0, 3);
@@ -109,18 +125,21 @@ export function runIrisConversationBrain(input: IrisBrainInput): IrisBrainOutput
       latestText,
       propertyContext,
       category,
+      contextFingerprint: input.context?.fingerprint || "",
     }))
     .digest("hex");
+  const decision = stopped ? "stop" : takeover || needsHuman ? "human_alert" : propertyDraft ? "auto_send" : "draft";
   return {
     draft,
     category: needsHuman ? "needs_human" : category,
     confidence: propertyDraft ? 0.82 : needsHuman ? 0.55 : 0.64,
     reason: propertyDraft ? "Resolved against recent property context." : needsHuman ? "Sensitive or human-requested topic." : "General lead follow-up.",
-    next_action: needsHuman ? "mark_human" : "review_draft",
-    needs_human: needsHuman,
-    safe_to_auto_send: Boolean(propertyDraft && !needsHuman),
+    next_action: stopped ? "stop" : needsHuman || takeover ? "mark_human" : propertyDraft ? "send" : "review_draft",
+    needs_human: needsHuman || takeover,
+    safe_to_auto_send: decision === "auto_send",
     memory_patch: {},
     property_context_used: propertyContext,
     fingerprint,
+    decision,
   };
 }

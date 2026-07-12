@@ -61,6 +61,10 @@ export const messageReceived = inngest.createFunction(
     }
 
     await step.run("append conversation event", async () => {
+      const capturedLead = input.providerMetadata?.lead && typeof input.providerMetadata.lead === "object"
+        ? input.providerMetadata.lead as Record<string, unknown> : {};
+      const consent = input.providerMetadata?.consent && typeof input.providerMetadata.consent === "object"
+        ? input.providerMetadata.consent as Record<string, unknown> : {};
       await recordChannelInteraction({
         channel: input.channel,
         direction: input.direction || "inbound",
@@ -68,13 +72,20 @@ export const messageReceived = inngest.createFunction(
         agentName: IRIS_AGENT_NAME,
         phone: input.channel === "email" ? "" : input.contactRef || "",
         email: input.channel === "email" ? input.contactRef || "" : "",
-        fullName: String(input.providerMetadata?.senderName || input.providerMetadata?.senderUsername || ""),
+        fullName: String(capturedLead.name || input.providerMetadata?.senderName || input.providerMetadata?.senderUsername || ""),
         source: input.provider,
+        sourceDetail: String(input.providerMetadata?.source_type || ""),
         threadRef: input.threadRef,
         eventType: `${input.channel}_inbound`,
         messageText: text,
         summary: text ? `Inbound ${input.channel}: ${text}` : `Inbound ${input.channel} attachment`,
         preferredChannel: input.channel,
+        leadRole: String(capturedLead.role || ""),
+        budget: String(capturedLead.budget || ""),
+        area: String(capturedLead.area || ""),
+        timeline: String(capturedLead.timeline || ""),
+        smsConsent: String(consent.sms || ""),
+        callConsent: String(consent.call || ""),
         gmailMessageId: dedupeKey,
         providerMessageId: input.providerMessageId,
         providerThreadId: input.threadRef,

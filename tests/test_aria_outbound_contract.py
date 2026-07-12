@@ -19,7 +19,8 @@ class AriaOutboundContractTests(unittest.TestCase):
         outbound = read("lib/outbound.ts")
         self.assertIn("assistantId: config.assistantId", outbound)
         self.assertIn("phoneNumberId: config.phoneNumberId", outbound)
-        self.assertIn("customer: { number: input.customerNumber }", outbound)
+        self.assertIn("const customer: Record<string, unknown> = { number: input.customerNumber }", outbound)
+        self.assertIn("customer,", outbound)
 
     def test_followup_queue_uses_shared_cadence(self):
         script = read("scripts/aria-followup-queue.mjs")

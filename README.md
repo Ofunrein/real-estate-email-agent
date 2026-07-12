@@ -439,6 +439,16 @@ META_LEADGEN_AUTOREPLY=true
 
 Important rule: Facebook Lead Form data is not the same as Messenger/Instagram DM identity. If a lead form only provides phone/email, first reply should be SMS or email. Reply in Messenger/Instagram only when the lead actually came through a click-to-message path with a real thread ID.
 
+Provider-neutral forms, CRM automations, Make, n8n, valuation pages, listing pages, and QR flows can enter through:
+
+```text
+POST /api/webhooks/lead-capture
+Authorization: Bearer <LEAD_CAPTURE_WEBHOOK_SECRET or CHANNEL_WEBHOOK_SECRET>
+Idempotency-Key: <stable external event id>
+```
+
+The payload carries `provider`, `source_type`, lead identity, campaign, clicked property, behavior, message, and consent. Iris stores that acquisition context before the shared reply decision runs. RentCast enrichment is intentionally excluded because current usage cost is too high.
+
 ---
 
 ## Persistent cadence
