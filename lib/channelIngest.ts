@@ -1,6 +1,8 @@
 import { appendConversationEventToDatabase, databaseEnabled, upsertLeadMemoryToDatabase } from "@/lib/database";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { scheduleCadenceAfterInteraction } from "@/lib/cadenceScheduler";
+import { leadIdentity } from "@/lib/cadenceQueue";
+import { cancelQueuedCadenceForLeadInDatabase } from "@/lib/database";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
@@ -163,6 +165,11 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     provider_metadata: input.providerMetadata ? JSON.stringify(input.providerMetadata) : "",
     reply_job_id: input.replyJobId || "",
   });
+
+  if ((input.direction || "inbound") === "inbound" && hasLeadIdentity) {
+    const identity = leadIdentity(lead);
+    if (identity) await cancelQueuedCadenceForLeadInDatabase(identity, "inbound_reply");
+  }
 
   try {
     await scheduleCadenceAfterInteraction({ lead, event });

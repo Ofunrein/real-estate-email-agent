@@ -2386,6 +2386,25 @@ export async function readCadenceTasksFromDatabase(status = "queued", limit = 50
   return result.rows.map(mapCadenceTask);
 }
 
+export async function cancelQueuedCadenceForLeadInDatabase(
+  leadIdentity: string,
+  reason = "inbound_reply",
+): Promise<number> {
+  if (!leadIdentity || !await tableReady("cadence_tasks")) return 0;
+  const result = await getPool().query(
+    `update cadence_tasks
+        set status = 'cancelled',
+            reason = $3,
+            metadata = metadata || $4::jsonb,
+            updated_at = now()
+      where client_id = $1
+        and lead_identity = $2
+        and status in ('queued', 'running')`,
+    [clientId(), leadIdentity, reason, JSON.stringify({ cancellationReason: reason, cancelledAt: new Date().toISOString() })],
+  );
+  return result.rowCount || 0;
+}
+
 export async function upsertReplyJobInDatabase(input: ReplyJobInput): Promise<ReplyJobRecord | null> {
   const dedupeKey = input.dedupeKey.trim();
   if (!dedupeKey || !await tableReady("reply_jobs")) return null;

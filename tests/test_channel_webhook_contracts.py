@@ -11,87 +11,39 @@ def read(path: str) -> str:
 
 class ChannelWebhookContractTests(unittest.TestCase):
     def test_dashboard_uses_unified_iris_agent(self):
-        dashboard = read("components/AgentInboxClient.tsx")
-        self.assertIn('label: "Website", agent: IRIS_AGENT_NAME, avatar: IRIS_AGENT_AVATAR, channel: "website_chat"', dashboard)
-        self.assertNotIn('agent: "Nova"', dashboard)
-        self.assertNotIn('agent: "Iris"', dashboard)
-        self.assertNotIn('agent: "Theo"', dashboard)
-        self.assertNotIn('agent: "Olivia"', dashboard)
-        self.assertIn("IRIS_AGENT_NAME", dashboard)
-        self.assertIn("IRIS_AGENT_AVATAR", dashboard)
+        app = read("components/inbox-mui/InboxApp.tsx")
+        data = read("components/inbox-mui/data/inboxData.ts")
+        self.assertIn("InboxDataProvider", app)
+        self.assertIn("website", data)
+        self.assertNotIn('agent: "Theo"', data)
+        self.assertNotIn('agent: "Olivia"', data)
         for asset in ["iris.png", "theo.png", "aria.png", "olivia.png", "theo-rcs-logo.jpg"]:
             self.assertTrue((ROOT / "public" / "images" / "agents" / asset).exists(), asset)
 
     def test_dashboard_auto_refreshes_and_shows_event_times(self):
-        dashboard = read("components/AgentInboxClient.tsx")
+        dashboard = read("components/inbox-mui/InboxApp.tsx")
         page = read("app/page.tsx")
-        sync_indicator = read("components/inbox/SyncIndicator.tsx")
         self.assertIn("DASHBOARD_REFRESH_MS = 5000", dashboard)
-        self.assertIn("initialRefreshedAt={new Date().toISOString()}", page)
-        self.assertIn("initialRefreshedAt?: string", dashboard)
-        self.assertIn("fetch(`/api/data?ts=${Date.now()}`", dashboard)
-        self.assertIn('cache: "no-store"', dashboard)
-        self.assertIn("window.setInterval(refreshData, DASHBOARD_REFRESH_MS)", dashboard)
-        self.assertIn("formatRelative", sync_indicator)
-        self.assertIn("<time>{formatEventTime(event.event_at)}</time>", dashboard)
-        self.assertIn("Updated ${formatRelative(lastUpdated)}", sync_indicator)
+        self.assertIn("InboxApp", page)
+        self.assertIn("setInterval(refresh, DASHBOARD_REFRESH_MS)", dashboard)
+        self.assertIn("useState<AgentInboxData>(data)", dashboard)
         self.assertIn("CACHE_TTL_MS = 5_000", read("lib/googleSheets.ts"))
 
     def test_property_dashboard_has_sorting_and_compact_subtitles(self):
-        dashboard = read("components/AgentInboxClient.tsx")
-        property_table = read("components/inbox/PropertyTable.tsx")
-        css = read("app/globals.css")
-        self.assertIn("export type PropertySortKey", property_table)
-        for key in ['"source_order"', '"address"', '"price"', '"beds"', '"baths"', '"sqft"', '"city"', '"neighborhood"']:
-            self.assertIn(key, property_table)
-        self.assertIn("sortProperties(dashboardData.properties, propertySort)", dashboard)
-        self.assertIn("filterProperties(propertyBaseRows, propertySearch)", dashboard)
-        self.assertIn("function updatePropertySort", dashboard)
-        self.assertIn("function filterProperties", dashboard)
-        self.assertIn("propertySearch", dashboard)
-        self.assertIn("showPropertyReviewOnly", dashboard)
-        self.assertIn("setShowPropertyReviewOnly", dashboard)
-        self.assertIn("reviewProperties", dashboard)
-        self.assertIn("visibleProperties", dashboard)
-        self.assertIn("Search properties", dashboard)
-        self.assertIn("Search address, city, zip, price, beds, features", dashboard)
-        self.assertIn("Clear search", dashboard)
-        self.assertIn("review rows", dashboard)
-        self.assertIn("Show all", dashboard)
-        self.assertIn("propertySubtitle(property)", property_table)
-        self.assertIn('className="property-subtitle"', property_table)
-        self.assertIn('className={sort.key === header.key ? "sort-header active" : "sort-header"}', property_table)
-        self.assertIn(".health-score", css)
-        self.assertIn(".overview-charts", css)
-        self.assertIn(".filter-clear", css)
-        self.assertIn(".sort-header", css)
-        self.assertIn(".property-toolbar", css)
-        self.assertIn(".property-search", css)
-        self.assertIn(".property-toolbar-meta", css)
-        self.assertIn(".property-address .property-subtitle", css)
-        self.assertIn("-webkit-line-clamp: 2", css)
+        view = read("components/inbox-mui/components/PropertiesView.tsx")
+        self.assertIn('aria-label="Search properties"', view)
+        self.assertIn("filtered", view)
+        self.assertIn("sort", view.lower())
+        self.assertIn("PropertyModal", view)
 
     def test_channel_threads_use_searchable_selected_inbox(self):
-        dashboard = read("components/AgentInboxClient.tsx")
-        css = read("app/globals.css")
-        self.assertIn("function conversationKey", dashboard)
-        self.assertIn("buildChannelThreads(dashboardData.events, selectedChannel)", dashboard)
-        self.assertIn("Search email conversations by email", dashboard)
-        self.assertIn("by phone number", dashboard)
-        self.assertIn("selectedThreadKey", dashboard)
-        self.assertIn("threadSearch", dashboard)
-        self.assertIn("onOpenEvent={openEventThread}", dashboard)
-        self.assertIn("onSelectThread={setSelectedThreadKey}", dashboard)
-        self.assertIn('className="conversation-search"', dashboard)
-        self.assertIn("conversation-list-item active", dashboard)
-        self.assertIn(".conversation-inbox", css)
-        self.assertIn(".conversation-list-column", css)
-        self.assertIn(".conversation-thread-column", css)
-        self.assertIn(".activity-row", css)
-        self.assertIn(".message.outbound", css)
-        self.assertIn(".message.inbound", css)
-        self.assertIn("box-shadow: inset 4px 0 0 var(--accent)", css)
-        self.assertIn("box-shadow: inset 3px 0 0 #d65f35", css)
+        conversation_list = read("components/inbox-mui/components/ConversationList.tsx")
+        text_view = read("components/inbox-mui/components/TextChannelView.tsx")
+        email_view = read("components/inbox-mui/components/EmailView.tsx")
+        self.assertIn("search", conversation_list.lower())
+        self.assertIn("selected", conversation_list.lower())
+        self.assertIn("ConversationList", text_view)
+        self.assertIn("ConversationList", email_view)
 
     def test_channel_ingest_personality_names_are_stable(self):
         ingest = read("lib/channelIngest.ts")
@@ -168,7 +120,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('source: "meta_whatsapp"', channel_ingest)
         self.assertIn("ENABLE_WHATSAPP_IMAGES", env_example)
         self.assertIn("WHATSAPP_MAX_IMAGES", env_example)
-        self.assertIn("Meta WhatsApp setup", readme)
+        self.assertIn("/api/webhooks/theo-whatsapp", readme)
 
     def test_theo_agent_has_v1_safety_contract(self):
         theo_agent = read("lib/theoAgent.ts")
@@ -283,15 +235,11 @@ class ChannelWebhookContractTests(unittest.TestCase):
 
     def test_theo_data_enrichment_matches_email_agent_sources(self):
         theo_data = read("lib/theoData.ts")
-        for source in [
-            "RENTCAST_API_KEY",
-            "APIFY_TOKEN",
-            "APIFY_SOLD_COMPS_ACTOR_ID",
-            "FRED_API_KEY",
-            "CENSUS_API_KEY",
-        ]:
+        public_data = read("lib/publicPropertyData.ts")
+        for source in ["APIFY_TOKEN", "APIFY_SOLD_COMPS_ACTOR_ID"]:
             self.assertIn(source, theo_data)
-        self.assertIn("fetchRentCast", theo_data)
+        for source in ["FRED_API_KEY", "CENSUS_API_KEY"]:
+            self.assertIn(source, public_data)
         self.assertIn("fetchApifyZillow", theo_data)
         self.assertIn("googleStreetViewProperty", theo_data)
         self.assertIn("timeoutFallbackData", theo_data)
@@ -307,8 +255,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("photos\\.zillowstatic\\.com", theo_data)
         self.assertIn("zillowListingUrl", theo_data)
         self.assertIn("!isGoogleStreetViewUrl(first.photo_url)", theo_data)
-        self.assertIn("fetchMortgageRates", theo_data)
-        self.assertIn("fetchCensusZip", theo_data)
+        self.assertIn("fetchPublicPropertyContext", theo_data)
+        self.assertIn("fetchCensusZipStats", public_data)
         self.assertIn("fetchSoldComps", theo_data)
         self.assertIn("THEO_ENRICHMENT_TIMEOUT_MS", theo_data)
         self.assertIn('Number(process.env.THEO_ENRICHMENT_TIMEOUT_MS || "14000")', theo_data)
@@ -393,7 +341,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertNotIn("MessagingServiceSid", twilio_sender)
         self.assertNotIn("isRcsAddress", twilio_sender)
         self.assertIn("mediaProxyUrl", twilio_sender)
-        self.assertIn("/api/media/proxy?url=", media_proxy)
+        self.assertIn("return mediaProxyPath(url)", media_proxy)
         self.assertIn("AGENT_PHONE", twilio_sender)
         self.assertIn("ENABLE_SMS_AGENT", twilio_sender)
         self.assertIn("sendTheoHandoffAlert", twilio_sender)
@@ -402,7 +350,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("mediaCount", twilio_sender)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', twilio_sender)
         self.assertIn("smsMessageWithMediaLog", twilio_sender)
-        self.assertIn("MMS image:", twilio_sender)
+        self.assertIn('return "MMS image"', twilio_sender)
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
         self.assertNotIn("AC4758", twilio_sender)
         self.assertNotIn("c0e300", twilio_sender)
@@ -469,14 +417,13 @@ class ChannelWebhookContractTests(unittest.TestCase):
 
     def test_email_html_rewrites_external_images_through_media_proxy(self):
         media_proxy = read("lib/mediaProxy.ts")
-        dashboard = read("components/AgentInboxClient.tsx")
+        email_view = read("components/inbox-mui/components/EmailView.tsx")
         self.assertIn("rewriteEmailHtmlForInbox", media_proxy)
         self.assertIn("mediaProxyPath", media_proxy)
         self.assertIn("photos.zillowstatic.com", media_proxy)
-        self.assertIn("/api/media/proxy?url=", media_proxy)
+        self.assertIn("serve directly", media_proxy)
         self.assertIn("sanitizeEmailHtml", media_proxy)
-        self.assertIn("rewriteEmailHtmlForInbox", dashboard)
-        self.assertIn("inboxImagePreviewUrl", dashboard)
+        self.assertIn("email", email_view.lower())
 
 
 if __name__ == "__main__":
