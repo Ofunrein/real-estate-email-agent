@@ -6,7 +6,7 @@ import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { extractMetaWhatsAppMessages, sendMetaWhatsApp, verifyMetaSignature, whatsAppMessageWithMediaLog } from "@/lib/metaWhatsapp";
 import { fetchStyleContext } from "@/lib/styleTraining";
-import { generateTheoReply } from "@/lib/theoAgent";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert } from "@/lib/twilioSms";
@@ -17,6 +17,7 @@ import { createRequestAudit } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { understandMediaItems, mediaVisionEnabled } from "@/lib/mediaUnderstanding";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
+import { queueIrisReplySend } from "@/lib/irisReplyQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -416,7 +417,7 @@ export async function POST(request: NextRequest) {
         errors: cacheResult.errors.slice(0, 2),
       });
 
-      const reply = await generateTheoReply({
+      const reply = await generateIrisTextReply({
         message: messageForReply,
         lead: lead || result.lead,
         properties: enriched.properties,
@@ -487,7 +488,6 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const sendResult = await sendMetaWhatsApp(inbound.from, reply.reply, reply.mediaUrls);
       let handoffAlertSent = false;
       let handoffAlertError = "";
       if (reply.status === "needs_human") {
@@ -501,44 +501,41 @@ export async function POST(request: NextRequest) {
         handoffAlertSent = alertResult.sent;
         handoffAlertError = alertResult.error;
       }
-      await recordTheoWhatsAppOutbound({
-        phone: leadPhone,
-        fullName: inbound.profileName,
-        sourceDetail: inbound.displayPhoneNumber ? `to ${inbound.displayPhoneNumber}` : "",
+      await queueIrisReplySend({
+        dedupeKey: `whatsapp:${inbound.messageId}`,
+        channel: "whatsapp",
+        provider: "meta_whatsapp",
         threadRef: result.event.thread_ref,
-        eventType: reply.status === "needs_human" ? "whatsapp_handoff_reply" : "whatsapp_ai_reply",
-        messageText: whatsAppMessageWithMediaLog(reply.reply, reply.mediaUrls),
-        summary: `Iris ${sendResult.sent ? "sent" : "prepared"} WhatsApp reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
-        aiAction: sendResult.sent ? "reply_sent" : "reply_generated",
-        handoffReason: reply.handoffReason || sendResult.error,
-        status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
-        leadRole: reply.classification.leadRole,
-        intent: reply.classification.intent,
-        handoffStatus: reply.status === "needs_human" ? "needs_human" : "",
-        nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_response",
+        contactRef: inbound.from,
+        replyText: reply.reply,
+        mediaUrls: reply.mediaUrls,
+        nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_reply",
+        metadata: {
+          reason: reply.handoffReason || reply.aiAction,
+          lead: { fullName: inbound.profileName, phone: leadPhone, preferredChannel: "whatsapp", smsConsent: "inbound_text" },
+        },
       });
-      await audit.write("message", sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "failed", {
+      await audit.write("message", "queued", {
         threadRef: result.event.thread_ref,
         contactRef: leadPhone,
         providerMessageId: inbound.messageId,
-        errorMessage: sendResult.error || handoffAlertError || "",
+        errorMessage: handoffAlertError || "",
         metadata: {
           status: reply.status,
           intent: reply.classification.intent,
           handoffReason: reply.handoffReason,
           handoffAlertSent,
-          mediaCount: sendResult.mediaCount,
+          mediaCount: reply.mediaUrls.length,
         },
       });
       results.push({
         message_id: inbound.messageId,
-        status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
-        action: sendResult.sent ? "reply_sent" : "reply_generated",
-        reply_sent: sendResult.sent,
-        media_count: sendResult.mediaCount,
+        status: "queued",
+        action: "reply_queued",
+        reply_sent: false,
+        media_count: reply.mediaUrls.length,
         handoff_alert_sent: handoffAlertSent,
         handoff_alert_error: handoffAlertError || undefined,
-        send_error: sendResult.error || undefined,
       });
     }
 
@@ -550,7 +547,7 @@ export async function POST(request: NextRequest) {
       total_ms: elapsedMs(requestStarted),
       session_cost: formatUsd(theoSessionCost()),
     };
-    await audit.write("processed", results.some((result) => result.reply_sent) ? "sent" : "skipped", {
+    await audit.write("processed", results.some((result) => result.reply_sent) ? "sent" : results.some((result) => result.status === "queued") ? "queued" : "skipped", {
       metadata: { processed: results.length },
     });
     return NextResponse.json(responseBody);

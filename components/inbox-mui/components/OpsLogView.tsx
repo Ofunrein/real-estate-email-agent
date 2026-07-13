@@ -57,6 +57,17 @@ type SocialFallbackHealth = {
   stuckJobs: number;
 };
 
+type FailedReplyJob = {
+  dedupeKey: string;
+  channel: string;
+  threadRef: string;
+  contactRef: string;
+  status: string;
+  attempts: number;
+  error: string;
+  updatedAt: string;
+};
+
 const CHANNELS = ["", "instagram", "messenger", "sms", "whatsapp", "email", "website_chat"];
 const OUTCOMES = ["", "received", "fallback_active", "sent", "drafted", "blocked", "failed", "skipped"];
 
@@ -91,6 +102,8 @@ export function OpsLogView() {
   const [query, setQuery] = useState("");
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [error, setError] = useState("");
+  const [failedReplyJobs, setFailedReplyJobs] = useState<FailedReplyJob[]>([]);
+  const [retrying, setRetrying] = useState("");
 
   const params = useMemo(() => {
     const search = new URLSearchParams({ limit: "100" });
@@ -110,17 +123,37 @@ export function OpsLogView() {
     setError("");
     try {
       const res = await fetch(`/api/ops/audit?${params.toString()}`, { cache: "no-store" });
-      const payload = await res.json().catch(() => ({})) as { events?: AuditEvent[]; summary?: AuditSummary; health?: SocialFallbackHealth; error?: string };
+      const payload = await res.json().catch(() => ({})) as { events?: AuditEvent[]; summary?: AuditSummary; health?: SocialFallbackHealth; failedReplyJobs?: FailedReplyJob[]; error?: string };
       if (!res.ok) throw new Error(payload.error || "Could not load audit events.");
       setEvents(payload.events || []);
       setSummary(payload.summary || { totalCostUsd: 0, rowsWithCost: 0, byService: {} });
       setHealth(payload.health || { fallbackEvents24h: 0, lastFallbackAt: "", lastFallbackChannel: "", lastFallbackThreadRef: "", directMetaLastAt: "", stuckJobs: 0 });
+      setFailedReplyJobs(payload.failedReplyJobs || []);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load audit events.");
     } finally {
       setLoading(false);
     }
   }, [params]);
+
+  const retryReplyJob = React.useCallback(async (dedupeKey: string) => {
+    setRetrying(dedupeKey);
+    setError("");
+    try {
+      const res = await fetch("/api/ops/reply-jobs/retry", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dedupeKey }),
+      });
+      const payload = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(payload.error || "Could not retry reply job.");
+      await load();
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : "Could not retry reply job.");
+    } finally {
+      setRetrying("");
+    }
+  }, [load]);
 
   useEffect(() => {
     void load();
@@ -188,6 +221,25 @@ export function OpsLogView() {
         </Stack>
         {error && <Typography color="error" variant="caption" sx={{ display: "block", mt: 1 }}>{error}</Typography>}
       </Card>
+
+      {failedReplyJobs.length > 0 && (
+        <Card sx={{ p: 1.5, mb: 2, flexShrink: 0 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Failed reply jobs</Typography>
+          <Stack spacing={0.75}>
+            {failedReplyJobs.slice(0, 5).map((job) => (
+              <Stack key={job.dedupeKey} direction="row" spacing={1} alignItems="center">
+                <Chip size="small" label={`${job.channel} · ${job.status}`} color="warning" variant="outlined" />
+                <Typography variant="caption" sx={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
+                  {job.threadRef} · attempt {job.attempts} · {job.error}
+                </Typography>
+                <Button size="small" variant="outlined" disabled={retrying === job.dedupeKey} onClick={() => void retryReplyJob(job.dedupeKey)}>
+                  Retry
+                </Button>
+              </Stack>
+            ))}
+          </Stack>
+        </Card>
+      )}
 
       <Stack spacing={1} sx={{ overflowY: "auto", minHeight: 0, pr: 0.5 }}>
         {events.map((event) => {

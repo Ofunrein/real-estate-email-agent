@@ -7,6 +7,7 @@ import { readEvents, readLeads, readProperties } from "@/lib/dataSource";
 import { getTakeover } from "@/lib/humanTakeover";
 import { buildLeadContextEnvelope, renderChannelReply } from "@/lib/leadContext";
 import { runIrisConversationBrain } from "@/lib/irisConversationBrain";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import type { Channel } from "@/lib/inboxData";
 import { notifySlackOnTransfer } from "@/lib/ariaSlack";
 
@@ -41,8 +42,50 @@ export const messageReplyGenerate = inngest.createFunction(
       }).slice(0, 5);
       const channel = job.channel as Channel;
       const context = buildLeadContextEnvelope({ channel, threadRef: job.threadRef, lead, events, provider: job.provider, providerMetadata, activeTakeover: takeover.isActive });
-      const brain = runIrisConversationBrain({ channel: channel as Exclude<Channel, "voice" | "unknown">, threadRef: job.threadRef, latestMessage: events.at(-1)?.message_text || "", events, lead, properties: selectedProperties, context });
-      return { brain, context, replyText: renderChannelReply(channel, brain.draft) };
+      const latestMessage = events.at(-1)?.message_text || "";
+      if (["sms", "whatsapp", "instagram", "messenger"].includes(channel)) {
+        const textReply = await generateIrisTextReply({
+          message: latestMessage,
+          lead,
+          properties: selectedProperties,
+          propertyInterest: String(lead.property_interest || ""),
+          recentEvents: events,
+          source: channel as "sms" | "whatsapp" | "instagram" | "messenger",
+          dataContext: JSON.stringify({ identity: context.identity, profile: context.profile, property: context.property }),
+        });
+        const needsHuman = textReply.status === "needs_human" || Boolean(textReply.handoffReason);
+        const stopped = !textReply.shouldSend && (context.consent.doNotContact || /^(stop|unsubscribe|cancel|end|quit)$/i.test(latestMessage.trim()));
+        const decision = stopped ? "stop" : needsHuman ? "human_alert" : textReply.shouldSend ? "auto_send" : "draft";
+        return {
+          brain: {
+            draft: textReply.reply,
+            category: textReply.classification.intent,
+            confidence: 0.82,
+            reason: textReply.handoffReason || textReply.aiAction,
+            next_action: stopped ? "do_not_contact" : needsHuman ? "human_follow_up" : "await_reply",
+            needs_human: needsHuman,
+            safe_to_auto_send: decision === "auto_send",
+            memory_patch: {},
+            property_context_used: selectedProperties.map((property) => String(property.address || "")).filter(Boolean),
+            fingerprint: context.fingerprint,
+            decision,
+          },
+          context,
+          mediaUrls: textReply.mediaUrls,
+          replyText: renderChannelReply(channel, textReply.reply),
+          modelClassify: "iris-text-classifier",
+          modelReply: "iris-text-reply",
+        };
+      }
+      const brain = runIrisConversationBrain({ channel: channel as Exclude<Channel, "voice" | "unknown">, threadRef: job.threadRef, latestMessage, events, lead, properties: selectedProperties, context });
+      return {
+        brain,
+        context,
+        mediaUrls: [] as string[],
+        replyText: renderChannelReply(channel, brain.draft),
+        modelClassify: "iris-shared-policy",
+        modelReply: "iris-context-renderer",
+      };
     });
 
     await step.run("persist shared Iris decision", async () => {
@@ -53,9 +96,10 @@ export const messageReplyGenerate = inngest.createFunction(
         threadRef: job.threadRef,
         contactRef: job.contactRef,
         status: generated.brain.decision === "auto_send" ? "ready_to_send" : generated.brain.decision === "stop" ? "stopped" : generated.brain.needs_human ? "needs_human" : "drafted",
-        modelClassify: "iris-shared-policy",
-        modelReply: "iris-context-renderer",
+        modelClassify: generated.modelClassify,
+        modelReply: generated.modelReply,
         replyText: generated.replyText,
+        mediaJson: generated.mediaUrls.map((url) => ({ url, type: "image" })),
         nextAction: generated.brain.next_action,
         metadata: {
           decision: generated.brain.decision,
@@ -65,6 +109,13 @@ export const messageReplyGenerate = inngest.createFunction(
           sourceAttribution: generated.context.source,
           handoffReason: generated.context.state.handoffReason,
           propertyContextUsed: generated.brain.property_context_used,
+          lead: {
+            fullName: generated.context.identity.name,
+            phone: generated.context.identity.phone,
+            email: generated.context.identity.email,
+            preferredChannel: job.channel,
+            smsConsent: generated.context.consent.sms,
+          },
           generatedAt: new Date().toISOString(),
         },
       });

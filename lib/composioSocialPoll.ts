@@ -26,7 +26,7 @@ import {
   type SocialDmPayload,
 } from "@/lib/manychatSocial";
 import { fetchStyleContext } from "@/lib/styleTraining";
-import { generateTheoReply } from "@/lib/theoAgent";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
@@ -567,7 +567,7 @@ async function processMessage(message: ComposioMessage, connection: ChannelConne
     lead: lead || result?.lead,
     properties,
   });
-  const reply = await generateTheoReply({
+  const reply = await generateIrisTextReply({
     message: messageText,
     lead: lead || result?.lead,
     properties: enriched.properties,

@@ -18,7 +18,7 @@ import {
   type SocialDmChannel,
 } from "@/lib/manychatSocial";
 import { fetchStyleContext } from "@/lib/styleTraining";
-import { generateTheoReply } from "@/lib/theoAgent";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
 import { sendTheoHandoffAlert } from "@/lib/twilioSms";
@@ -344,7 +344,7 @@ export async function POST(request: NextRequest) {
     const cacheResult = await cacheTheoProperties(enriched.properties);
     logTheoSocial("property cache processed", cacheResult);
 
-    const reply = await generateTheoReply({
+    const reply = await generateIrisTextReply({
       message: messageForReply,
       lead: leadForReply,
       properties: enriched.properties,

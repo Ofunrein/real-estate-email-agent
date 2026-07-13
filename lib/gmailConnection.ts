@@ -522,7 +522,7 @@ const GMAIL_LABEL_COLORS: Record<string, { backgroundColor: string; textColor: s
   "#ea580c": { backgroundColor: "#e66550", textColor: "#ffffff" }, // showing (orange-red)
   "#0f766e": { backgroundColor: "#0b804b", textColor: "#ffffff" }, // seller/valuation (teal)
   "#2563eb": { backgroundColor: "#285bac", textColor: "#ffffff" }, // financing (blue)
-  "#be123c": { backgroundColor: "#a61c00", textColor: "#ffffff" }, // needs_human (dark red)
+  "#be123c": { backgroundColor: "#cc3a21", textColor: "#ffffff" }, // needs_human (Gmail red)
   "#64748b": { backgroundColor: "#999999", textColor: "#ffffff" }, // nurture (gray)
   "#334155": { backgroundColor: "#444444", textColor: "#ffffff" }, // closed (dark gray)
 };

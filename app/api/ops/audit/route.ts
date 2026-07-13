@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { readRequestAuditEvents, readSocialFallbackHealth, summarizeRequestAuditCosts } from "@/lib/requestAudit";
+import { listFailedReplyJobsInDatabase } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     since: params.get("since") || undefined,
     limit: Number(params.get("limit") || "100"),
   });
-  const health = await readSocialFallbackHealth();
-  return NextResponse.json({ ok: true, events, summary: summarizeRequestAuditCosts(events), health });
+  const [health, failedReplyJobs] = await Promise.all([
+    readSocialFallbackHealth(),
+    listFailedReplyJobsInDatabase(25),
+  ]);
+  return NextResponse.json({ ok: true, events, summary: summarizeRequestAuditCosts(events), health, failedReplyJobs });
 }
