@@ -2430,7 +2430,10 @@ export async function upsertReplyJobInDatabase(input: ReplyJobInput): Promise<Re
         model_reply = coalesce(nullif(excluded.model_reply, ''), reply_jobs.model_reply),
         reply_text = coalesce(nullif(excluded.reply_text, ''), reply_jobs.reply_text),
         media_json = case when excluded.media_json = '[]'::jsonb then reply_jobs.media_json else excluded.media_json end,
-        error = coalesce(nullif(excluded.error, ''), reply_jobs.error),
+        error = case
+          when excluded.status in ('ready_to_send', 'sending', 'sent') then excluded.error
+          else coalesce(nullif(excluded.error, ''), reply_jobs.error)
+        end,
         next_action = coalesce(nullif(excluded.next_action, ''), reply_jobs.next_action),
         metadata = reply_jobs.metadata || excluded.metadata,
         sent_at = case when reply_jobs.sent_at is not null then reply_jobs.sent_at when excluded.status = 'sent' then now() else null end,
@@ -2468,6 +2471,39 @@ export async function readReplyJobByDedupeKeyFromDatabase(dedupeKey: string): Pr
     [clientId(), key],
   );
   return result.rows[0] ? mapReplyJob(result.rows[0]) : null;
+}
+
+export async function incrementReplyJobAttemptInDatabase(dedupeKey: string): Promise<ReplyJobRecord | null> {
+  const key = dedupeKey.trim();
+  if (!key || !await tableReady("reply_jobs")) return null;
+  const result = await getPool().query(
+    `update reply_jobs
+        set attempts = attempts + 1,
+            status = 'sending',
+            error = '',
+            updated_at = now()
+      where client_id = $1
+        and dedupe_key = $2
+        and status <> 'sent'
+      returning *`,
+    [clientId(), key],
+  );
+  return result.rows[0] ? mapReplyJob(result.rows[0]) : null;
+}
+
+export async function listFailedReplyJobsInDatabase(limit = 50): Promise<ReplyJobRecord[]> {
+  if (!await tableReady("reply_jobs")) return [];
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
+  const result = await getPool().query(
+    `select *
+       from reply_jobs
+      where client_id = $1
+        and status = 'send_failed'
+      order by updated_at desc
+      limit $2`,
+    [clientId(), safeLimit],
+  );
+  return result.rows.map(mapReplyJob);
 }
 
 export async function upsertThreadSummaryInDatabase(input: {

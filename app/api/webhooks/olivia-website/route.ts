@@ -4,7 +4,7 @@ import { bookAppointment } from "@/lib/ariaCalendar";
 import { notifySlackOnHotLead } from "@/lib/ariaSlack";
 import { oliviaWebsiteIngestInput, recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findLeadInDatabase, readEventsForThreadFromDatabase } from "@/lib/database";
-import { generateTheoReply, smsOptIn } from "@/lib/theoAgent";
+import { generateIrisTextReply, smsOptIn } from "@/lib/irisTextAgent";
 import { enrichTheoData, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         properties,
         propertyInterest,
       });
-      const reply = await generateTheoReply({
+      const reply = await generateIrisTextReply({
         message: message || propertyInterest || "website inquiry",
         lead: lead || result.lead,
         properties: enriched.properties,

@@ -16,7 +16,7 @@ import {
 } from "@/lib/database";
 import { deepgramAudioEnabled, transcribeDeepgramAudio } from "@/lib/deepgramAudio";
 import { fetchStyleContext } from "@/lib/styleTraining";
-import { generateTheoReply } from "@/lib/theoAgent";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { isTakeoverActive } from "@/lib/humanTakeover";
@@ -36,12 +36,12 @@ import {
   metaSocialVerifyToken,
   normalizeMetaMessage,
   resolvePageAccessToken,
-  sendMetaSocialMessage,
   verifyMetaSocialSignature,
   type MetaSocialChannel,
 } from "@/lib/metaSocial";
 import { isMediaTranscribable, normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { queueIrisReplySend } from "@/lib/irisReplyQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -455,7 +455,7 @@ async function processInbound(input: {
     lead: lead || result?.lead,
     properties,
   });
-  const reply = await generateTheoReply({
+  const reply = await generateIrisTextReply({
     message: messageText,
     lead: lead || result?.lead,
     properties: enriched.properties,
@@ -506,46 +506,24 @@ async function processInbound(input: {
     return "imported" as const;
   }
 
-  const sendResult = await sendMetaSocialMessage({
-    channel: input.channel,
-    to: input.senderId,
-    body: routeResult.reply,
-    mediaUrls: routeResult.media_urls,
-    pageAccessToken: input.pageAccessToken,
-  });
-  await upsertReplyJobInDatabase({
+  await queueIrisReplySend({
     dedupeKey: messageKey,
     channel: input.channel,
     provider: "meta_social",
     threadRef,
     contactRef: input.senderId,
-    status: sendResult.sent ? "sent" : "send_failed",
     modelClassify: "claude-3-5-haiku",
     modelReply: "claude-sonnet-4-6",
     replyText: routeResult.reply,
-    error: sendResult.sent ? "" : sendResult.error,
-    nextAction: sendResult.sent ? "monitor_reply" : "human_review",
-  });
-  await recordChannelInteraction({
-    channel: input.channel,
-    direction: "outbound",
-    agentName: IRIS_AGENT_NAME,
-    phone: identity.contactKey,
-    fullName: identity.displayName,
-    source: "meta_social",
-    sourceDetail: `recipient_id ${input.recipientId}; message_id ${input.messageId}`,
-    threadRef,
-    eventType: routeResult.needs_human ? `${input.channel}_handoff_reply` : `${input.channel}_ai_reply`,
-    messageText: sendResult.deliveredBody,
-    summary: sendResult.sent ? "Iris replied to social DM through Meta webhook/send." : `Meta social send failed: ${sendResult.error}`,
-    aiAction: sendResult.sent ? "social_dm_sent" : "social_dm_send_failed",
-    status: sendResult.sent ? "sent" : "needs_human",
-    handoffReason: sendResult.sent ? routeResult.reason : sendResult.error,
-    handoffStatus: sendResult.sent && routeResult.needs_human ? "needs_human" : "",
-    nextAction: sendResult.sent ? routeResult.needs_human ? "human_follow_up" : "monitor_reply" : "human_follow_up",
+    mediaUrls: routeResult.media_urls,
+    nextAction: routeResult.needs_human ? "human_follow_up" : "monitor_reply",
+    metadata: {
+      reason: routeResult.reason || reply.aiAction,
+      lead: { fullName: identity.displayName, preferredChannel: input.channel },
+    },
   });
 
-  return sendResult.sent ? "replied" as const : "imported" as const;
+  return "queued" as const;
 }
 
 async function processOutboundEcho(input: {
@@ -779,7 +757,7 @@ export async function POST(request: NextRequest) {
     const action = inbound.isEcho || normalized?.isEcho
       ? await processOutboundEcho({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) })
       : await processInbound({ ...inbound, media, pageAccessToken: resolvePageAccessToken(connection) });
-    await audit.write("message", action === "replied" || action === "imported_echo" ? "sent" : action === "skipped" ? "skipped" : "received", {
+    await audit.write("message", action === "imported_echo" ? "sent" : action === "queued" ? "queued" : action === "skipped" ? "skipped" : "received", {
       channel: inbound.channel,
       threadRef: `${inbound.channel}:${inbound.senderId}`,
       contactRef: inbound.senderId,

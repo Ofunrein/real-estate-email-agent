@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   emailCapabilitiesForScopes,
+  ensureGmailLabel,
   GMAIL_AGENT_SCOPES,
   GMAIL_LABELS_SCOPE,
   GMAIL_SEND_SCOPE,
@@ -13,6 +14,27 @@ import {
   signedGmailOAuthState,
   verifyGmailOAuthState,
 } from "@/lib/gmailConnection";
+
+test("needs-human Gmail label uses a supported Gmail palette color", async () => {
+  let requestBody: unknown;
+  const gmail = {
+    users: {
+      labels: {
+        list: async () => ({ data: { labels: [] } }),
+        create: async (input: { requestBody: unknown }) => {
+          requestBody = input.requestBody;
+          return { data: { id: "label-needs-human" } };
+        },
+      },
+    },
+  };
+
+  await ensureGmailLabel(gmail as never, "Iris/Needs Human", "#be123c");
+  assert.deepEqual((requestBody as { color: unknown }).color, {
+    backgroundColor: "#cc3a21",
+    textColor: "#ffffff",
+  });
+});
 
 test("gmail oauth state is signed and carries client/operator", () => {
   const prior = process.env.AUTH_SECRET;

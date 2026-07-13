@@ -56,7 +56,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
 
     def test_theo_sms_route_generates_and_logs_replies(self):
         sms_route = read("app/api/webhooks/theo-sms/route.ts")
-        self.assertIn("generateTheoReply", sms_route)
+        self.assertIn("generateIrisTextReply", sms_route)
         self.assertIn("enrichTheoData", sms_route)
         self.assertIn("sendTheoSms", sms_route)
         self.assertIn("sendTheoHandoffAlert", sms_route)
@@ -70,7 +70,8 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("upsertPropertyToDatabase", sms_route)
         self.assertIn("appendPropertyToSheets", sms_route)
         self.assertIn("property cache processed", sms_route)
-        self.assertIn('"reply_sent"', sms_route)
+        self.assertIn('"reply_queued"', sms_route)
+        self.assertIn("queueIrisReplySend", sms_route)
         self.assertIn("handoff_alert_sent", sms_route)
         self.assertIn("[Theo SMS]", sms_route)
         self.assertIn("logTheoMetrics", sms_route)
@@ -105,7 +106,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         readme = read("README.md")
         self.assertIn("WHATSAPP_WEBHOOK_VERIFY_TOKEN", whatsapp_route)
         self.assertIn("extractMetaWhatsAppMessages", whatsapp_route)
-        self.assertIn("generateTheoReply", whatsapp_route)
+        self.assertIn("generateIrisTextReply", whatsapp_route)
         self.assertIn('source: "whatsapp"', whatsapp_route)
         self.assertIn("sendMetaWhatsApp", whatsapp_route)
         self.assertIn("whatsAppMessageWithMediaLog", whatsapp_route)

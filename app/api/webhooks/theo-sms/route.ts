@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertLeadMemoryToDatabase, upsertPropertyToDatabase } from "@/lib/database";
 import { appendPropertyToSheets } from "@/lib/googleSheets";
-import { generateTheoReply } from "@/lib/theoAgent";
+import { generateIrisTextReply } from "@/lib/irisTextAgent";
 import { isTakeoverActive } from "@/lib/humanTakeover";
 import { enrichTheoData, extractTheoListedPropertyAddresses, extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type TheoMetric } from "@/lib/theoTelemetry";
@@ -19,6 +19,7 @@ import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { appendLeadProfileCaptureAsk, decideLeadProfileCapture, leadProfileMemoryPatch } from "@/lib/leadProfileCapture";
 import { understandMediaItems, mediaVisionEnabled } from "@/lib/mediaUnderstanding";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
+import { queueIrisReplySend } from "@/lib/irisReplyQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -357,7 +358,7 @@ export async function POST(request: NextRequest) {
     details: Partial<RequestAuditInput> & { stage?: string; outcome?: string } = {},
   ) => {
     const statusCode = init.status || (payload.ok === false ? 500 : 200);
-    const outcome = details.outcome || (statusCode >= 400 ? "failed" : payload.reply_sent ? "sent" : payload.status === "review_ready" ? "drafted" : payload.status === "skipped" || payload.reply_sent === false ? "skipped" : "received");
+    const outcome = details.outcome || (statusCode >= 400 ? "failed" : payload.reply_sent ? "sent" : payload.status === "queued" ? "queued" : payload.status === "review_ready" ? "drafted" : payload.status === "skipped" || payload.reply_sent === false ? "skipped" : "received");
     await audit.write(details.stage || "processed", outcome, {
       ...details,
       statusCode,
@@ -730,7 +731,7 @@ export async function POST(request: NextRequest) {
       totalMs: elapsedMs(requestStarted),
     });
     const aiStarted = nowMs();
-    const reply = await generateTheoReply({
+    const reply = await generateIrisTextReply({
       message: messageForReply,
       lead: leadForReply,
       properties: enriched.properties,
@@ -821,9 +822,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const sendStarted = nowMs();
-    const sendResult = await sendTheoSms(payload.From || "", reply.reply, reply.mediaUrls);
-    const sendMs = elapsedMs(sendStarted);
     let handoffAlertSent = false;
     let handoffAlertError = "";
     if (reply.status === "needs_human") {
@@ -861,43 +859,24 @@ export async function POST(request: NextRequest) {
         error: handoffAlertError,
       });
     }
-    logTheo("reply send processed", {
-      leadPhone: payload.From,
-      replySent: sendResult.sent,
-      replyStatus: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
-      elapsedMs: sendMs,
-      mediaCount: sendResult.mediaCount,
-      sendError: sendResult.error || "",
-      handoffAlertSent,
-      handoffAlertError,
-    });
-    const outboundWriteStarted = nowMs();
-    await recordTheoOutbound({
-      phone: leadPhone,
-      fullName: payload.ProfileName || "",
-      sourceDetail: payload.To ? `to ${payload.To}` : "",
+    await queueIrisReplySend({
+      dedupeKey: `sms:${payload.MessageSid || result.event.event_at || result.event.thread_ref}`,
+      channel: "sms",
+      provider: "twilio",
       threadRef: result.event.thread_ref,
-      eventType: reply.status === "needs_human" ? "sms_handoff_reply" : "sms_ai_reply",
-      messageText: smsMessageWithMediaLog(reply.reply, reply.mediaUrls),
-      summary: `Iris ${sendResult.sent ? "sent" : "prepared"} SMS reply for ${reply.classification.intent}${sendResult.mediaCount ? ` with ${sendResult.mediaCount} image(s)` : ""}.`,
-      aiAction: sendResult.sent ? "reply_sent" : "reply_generated",
-      handoffReason: reply.handoffReason || sendResult.error,
-      status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
-      leadRole: reply.classification.leadRole,
-      intent: reply.classification.intent,
-      smsConsent: "inbound_text",
-      handoffStatus: reply.status === "needs_human" ? "needs_human" : "",
-      nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_response",
-    });
-    logTheo("outbound logged", {
-      leadPhone: payload.From,
-      elapsedMs: elapsedMs(outboundWriteStarted),
-      totalMs: elapsedMs(requestStarted),
+      contactRef: payload.From || "",
+      replyText: reply.reply,
+      mediaUrls: reply.mediaUrls,
+      nextAction: reply.status === "needs_human" ? "human_follow_up" : "await_reply",
+      metadata: {
+        reason: reply.handoffReason || reply.aiAction,
+        lead: { fullName: payload.ProfileName || "", phone: leadPhone, preferredChannel: "sms", smsConsent: "inbound_text" },
+      },
     });
     logTheo("webhook complete", {
       leadPhone: payload.From,
-      action: sendResult.sent ? "reply_sent" : "reply_generated",
-      replySent: sendResult.sent,
+      action: "reply_queued",
+      replySent: false,
       totalMs: elapsedMs(requestStarted),
       sessionCost: formatUsd(theoSessionCost()),
     });
@@ -905,12 +884,11 @@ export async function POST(request: NextRequest) {
     return respond( {
       ok: true,
       channel: result.event.channel,
-      status: sendResult.sent ? "sent" : sendResult.skipped ? "skipped" : "send_failed",
-      action: sendResult.sent ? "reply_sent" : "reply_generated",
-      reply_sent: sendResult.sent,
+      status: "queued",
+      action: "reply_queued",
+      reply_sent: false,
       handoff_alert_sent: handoffAlertSent,
       handoff_alert_error: handoffAlertError || undefined,
-      send_error: sendResult.error || undefined,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Iris SMS webhook.";

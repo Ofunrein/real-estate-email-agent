@@ -5,6 +5,7 @@ import { sendInstagramBrowserThreadMessage } from "@/lib/instagramBrowserBridge"
 import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { removeEmDashesFromRecord } from "@/lib/noEmDash";
+import { sendMetaWhatsApp } from "@/lib/metaWhatsapp";
 
 export type EmailAttachment = { filename: string; contentType: string; path?: string; data?: Buffer };
 export type ManualReplyInput = {
@@ -66,6 +67,12 @@ export async function sendManualReply(inputRaw: ManualReplyInput): Promise<Manua
               droppedMediaUrls: r.droppedMediaUrls,
             }
             : r;
+        }
+        if ((process.env.WHATSAPP_PROVIDER || "").toLowerCase() === "meta" || (process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN)) {
+          const r = await sendMetaWhatsApp(input.to, input.body, input.mediaUrls);
+          return r.sent
+            ? { ok: true, deliveredBody: input.body, deliveredMediaUrls: input.mediaUrls ?? [], droppedMediaUrls: [], messageIds: r.messageIds }
+            : { ok: false, error: r.error || "WhatsApp not sent" };
         }
         return await sendWhatsApp(input);
       case "instagram":
