@@ -51,6 +51,38 @@ function humanRisk(text: string) {
   return /\b(section 8|voucher|safe neighborhood|crime|school|pre.?approved|mortgage|credit score|legal|contract|commission|angry|complaint|human|person|agent)\b/i.test(text);
 }
 
+// Lesson from prior RE builds: disqualify BEFORE drafting. The flow used to reply
+// with full energy to junk (gibberish, fake numbers, out-of-area, browsers), which
+// generated noise follow-up tasks. Filter first, draft second.
+const SERVICE_AREA = /\b(round rock|austin|pflugerville|cedar park|georgetown|leander|hutto|kyle|buda|manor|taylor|del valle|lakeway|bee cave|dripping springs)\b/i;
+
+function disqualify(input: IrisBrainInput): { reason: string } | null {
+  const text = clean(input.latestMessage);
+  const lead = input.lead || {};
+  const compact = text.replace(/\s+/g, "");
+  // gibberish / empty: no vowels or too short to carry intent
+  if (compact.length > 0 && compact.length < 4) return { reason: "junk: message too short to carry intent" };
+  if (/^[a-z]{4,}$/i.test(compact) && !/[aeiou]/i.test(compact)) return { reason: "junk: gibberish (no vowels)" };
+  if (/\b(asdf|qwer|test123|zxcv|jkl;)\b/i.test(text)) return { reason: "junk: keyboard-mash marker" };
+  // fake phone: repeated/sequential digits like 0000000000 or 1234567890
+  const phone = clean(lead.phone).replace(/\D/g, "");
+  if (phone && (/^(\d)\1{6,}$/.test(phone) || phone === "1234567890" || phone.length < 7)) {
+    return { reason: "junk: fake or invalid phone number" };
+  }
+  // out-of-area: an explicit non-service metro named with no service-area token
+  if (/\b(dallas|houston|san antonio|new york|los angeles|miami|chicago|phoenix|denver|seattle)\b/i.test(text) && !SERVICE_AREA.test(text)) {
+    return { reason: "out-of-area: named metro outside service area" };
+  }
+  return null;
+}
+
+// Lesson: the FIRST touch should be short — the lead just wants to know a human is
+// alive, not a mini-essay. Save detailed property context for touch 2+.
+function isFirstTouch(input: IrisBrainInput): boolean {
+  const outbound = (input.events || []).filter((e) => clean(e.direction) === "outbound");
+  return outbound.length === 0;
+}
+
 function draftForProperty(input: IrisBrainInput): string {
   const property = input.properties?.find((row) => clean(row.address));
   if (!property) return "";
@@ -83,11 +115,6 @@ function draftForGeneral(input: IrisBrainInput): string {
 export function runIrisConversationBrain(input: IrisBrainInput): IrisBrainOutput {
   const category = inferCategorySlug(input.events, input.categories);
   const latestText = clean(input.latestMessage || input.events[input.events.length - 1]?.message_text || "");
-  const needsHuman = humanRisk(latestText);
-  const propertyDraft = !needsHuman ? draftForProperty(input) : "";
-  const draft = needsHuman
-    ? "I'm going to have a real person follow up on that so we handle it correctly."
-    : propertyDraft || draftForGeneral(input);
   const propertyContext = (input.properties || []).map((property) => clean(property.address)).filter(Boolean).slice(0, 3);
   const fingerprint = crypto
     .createHash("sha256")
@@ -99,6 +126,41 @@ export function runIrisConversationBrain(input: IrisBrainInput): IrisBrainOutput
       category,
     }))
     .digest("hex");
+
+  // Filter before flow: never auto-reply to junk / out-of-area. Flag for review, no send.
+  const dq = disqualify(input);
+  if (dq) {
+    return {
+      draft: "",
+      category: "disqualified",
+      confidence: 0.9,
+      reason: dq.reason,
+      next_action: "skip_no_reply",
+      needs_human: false,
+      safe_to_auto_send: false,
+      memory_patch: { disqualified: "true", disqualified_reason: dq.reason },
+      property_context_used: propertyContext,
+      fingerprint,
+    };
+  }
+
+  const needsHuman = humanRisk(latestText);
+  const propertyDraft = !needsHuman ? draftForProperty(input) : "";
+  let draft = needsHuman
+    ? "I'm going to have a real person follow up on that so we handle it correctly."
+    : propertyDraft || draftForGeneral(input);
+
+  // Short first touch: the lead just wants to know someone is alive. Keep it to a
+  // quick ack + time ask; detailed property context comes on later touches.
+  if (!needsHuman && isFirstTouch(input)) {
+    const firstName = latestLeadName(input.lead, input.events);
+    const prefix = firstName ? `${firstName}, ` : "";
+    const addr = propertyContext[0];
+    draft = addr
+      ? `${prefix}got your inquiry on ${addr}. I'm free to chat today or tomorrow, what time works?`
+      : `${prefix}got your inquiry. I'm free to chat today or tomorrow, what time works?`;
+  }
+
   return {
     draft,
     category: needsHuman ? "needs_human" : category,

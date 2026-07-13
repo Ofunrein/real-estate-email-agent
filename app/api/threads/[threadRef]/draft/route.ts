@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     properties,
     categories,
   });
-  const gmailDraft = channel === "email" && latest.email
+  const gmailDraft = channel === "email" && latest.email && output.draft && output.next_action !== "skip_no_reply"
     ? await (async () => {
       const session = await createIrisGmailSession();
       return createGmailReplyDraftWithOptions(session.gmail, {
