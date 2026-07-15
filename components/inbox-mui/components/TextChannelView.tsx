@@ -1,6 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Card, CircularProgress, IconButton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBackIosNew';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { ConversationList } from './ConversationList';
 import { WorkspaceHeader } from './WorkspaceHeader';
@@ -163,7 +164,13 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
   const handleSelectThread = (id: string) => {
     clearActivityEventTarget();
     setSelectedId(id);
+    setMobileReaderOpen(true);
   };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  const [mobileReaderOpen, setMobileReaderOpen] = useState(false);
+  const showList = !isMobile || !mobileReaderOpen;
+  const showReader = !isMobile || mobileReaderOpen;
   const handleMarkSeen = async () => {
     if (!thread || markingSeenId) return;
     setSeenError(null);
@@ -277,6 +284,7 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
           minHeight: 0
         }}>
 
+        {showList &&
         <ConversationList
           title="Conversations"
           items={visibleThreads.map((t) => ({
@@ -293,8 +301,9 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
           }))}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
+        }
 
-        {thread ?
+        {showReader && (thread ?
         <Card
           ref={cardRef}
           sx={{
@@ -316,7 +325,17 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
                 borderColor: 'divider'
               }}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.5}>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {isMobile &&
+                  <IconButton
+                    onClick={() => setMobileReaderOpen(false)}
+                    size="small"
+                    aria-label="Back to conversations"
+                    sx={{ flexShrink: 0, ml: -0.5, color: 'text.secondary' }}>
+                    <ArrowBackIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                  }
+                  <Box sx={{ minWidth: 0 }}>
                   <Typography variant="subtitle1" noWrap>{thread.contact}</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {threadUnreadCount ? `${threadUnreadCount} unread` : threadSeenAt ? 'Seen in dashboard' : 'Not marked seen'}
@@ -336,6 +355,7 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
                     {reviewError}
                   </Typography>
                   }
+                  </Box>
                 </Box>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
                   {threadNeedsReview &&
@@ -417,7 +437,7 @@ export function TextChannelView({ channel }: { channel: TextChannelId }) {
             No {meta.label.toLowerCase()} conversations yet.
           </Typography>
         </Card>
-        }
+        )}
       </Box>
     </Box>
   );

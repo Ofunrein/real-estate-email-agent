@@ -54,8 +54,10 @@ export function ConversationList({
         },
         flexShrink: 0,
         maxHeight: {
-          xs: 240,
           md: 'none'
+        },
+        minHeight: {
+          xs: 0
         },
         display: 'flex',
         flexDirection: 'column',

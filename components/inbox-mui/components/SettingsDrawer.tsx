@@ -16,6 +16,7 @@ import {
   Alert } from
 '@mui/material';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import EmailIcon from '@mui/icons-material/EmailOutlined';
 import { signOut } from 'next-auth/react';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
@@ -44,9 +45,9 @@ const channelAvailability = [
   ['messenger', 'Messenger'],
   ['instagram', 'Instagram DMs'],
 ] as const;
+// Instagram DMs + Messenger removed: Composio is poll-only (not event-driven),
+// so those fallback connect cards are gone until a direct/event-driven path exists.
 const socialConnections = [
-  ['instagram', 'Instagram DMs'],
-  ['messenger', 'Messenger'],
   ['whatsapp', 'WhatsApp'],
 ] as const;
 
@@ -322,6 +323,37 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
     error: connectionError,
     refresh: refreshConnections,
   } = useChannelConnectionStatus(open);
+  type EmailAccount = {
+    email: string;
+    display_name?: string | null;
+    provider: string;
+    is_default: boolean;
+    status: string;
+    last_error?: string | null;
+  };
+  const [emailState, setEmailState] = useState<{
+    loading: boolean;
+    connected: boolean;
+    accounts: EmailAccount[];
+    oauth_configured: boolean;
+  }>({ loading: true, connected: false, accounts: [], oauth_configured: false });
+  const refreshEmailAccounts = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings/email-account');
+      const data = await res.json().catch(() => ({}));
+      setEmailState({
+        loading: false,
+        connected: Boolean(data.connected),
+        accounts: Array.isArray(data.accounts) ? data.accounts : [],
+        oauth_configured: Boolean(data.oauth_configured),
+      });
+    } catch {
+      setEmailState((prev) => ({ ...prev, loading: false }));
+    }
+  }, []);
+  useEffect(() => {
+    if (open) void refreshEmailAccounts();
+  }, [open, refreshEmailAccounts]);
   const [categoriesOn, setCategoriesOn] = useState<
     Record<LeadCategoryId, boolean>>(
 
@@ -504,6 +536,78 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
       <Card
         variant="outlined"
         sx={{
+          p: { xs: 1.25, sm: 2 },
+          mb: { xs: 1.5, sm: 2 }
+        }}>
+        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+          Email accounts
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
+          Event-driven inbox Iris replies from. Gmail and Outlook connect through Google OAuth.
+        </Typography>
+        <Stack spacing={1.25}>
+          {(['gmail', 'outlook'] as const).map((kind) => {
+            const label = kind === 'gmail' ? 'Gmail' : 'Outlook';
+            const acct = emailState.accounts.find((a) =>
+              kind === 'gmail'
+                ? a.provider === 'gmail' && !/outlook|office365|microsoft/i.test(a.provider)
+                : /outlook|office365|microsoft/i.test(a.provider)
+            );
+            // Outlook currently rides on Google OAuth (create a Google account for the Outlook mailbox),
+            // so a connected Gmail with no dedicated Outlook row still shows Gmail as the live path.
+            const connected = Boolean(acct && acct.status === 'connected');
+            const tone: 'success' | 'error' = connected ? 'success' : 'error';
+            return (
+              <Box
+                key={kind}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  p: { xs: 1, sm: 1.25 },
+                  borderRadius: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  minWidth: 0
+                }}>
+                <Avatar variant="rounded" sx={{ width: 34, height: 34, bgcolor: 'action.hover', color: 'text.secondary' }}>
+                  <EmailIcon fontSize="small" />
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{label}</Typography>
+                    <Chip
+                      size="small"
+                      label={connected ? 'Connected' : 'Not connected'}
+                      color={tone}
+                      variant={connected ? 'filled' : 'outlined'}
+                      sx={{ height: 20, '& .MuiChip-label': { px: 0.75, fontSize: 11 } }} />
+                  </Stack>
+                  <Typography variant="caption" color={connected ? 'text.primary' : 'text.secondary'} sx={{ display: 'block', lineHeight: 1.25, mt: 0.25 }} noWrap>
+                    {connected ? (acct?.email || 'Connected account') : 'Connect via Google OAuth'}
+                  </Typography>
+                  {acct?.last_error ? (
+                    <Typography variant="caption" color="error" sx={{ display: 'block', lineHeight: 1.2, mt: 0.25 }} noWrap>
+                      {acct.last_error}
+                    </Typography>
+                  ) : null}
+                </Box>
+                <Button
+                  href="/api/settings/email-account/connect"
+                  variant={connected ? 'outlined' : 'contained'}
+                  size="small"
+                  sx={{ flexShrink: 0, fontSize: 12, whiteSpace: 'nowrap' }}>
+                  {connected ? 'Reconnect' : 'Connect'}
+                </Button>
+              </Box>
+            );
+          })}
+        </Stack>
+      </Card>
+
+      <Card
+        variant="outlined"
+        sx={{
           p: {
             xs: 1.25,
             sm: 2
@@ -520,10 +624,10 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             display: 'block',
             mb: 0.75
           }}>
-          Connections
+          Other channels
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
-          Social inboxes Iris can operate.
+          Additional inboxes Iris can operate.
         </Typography>
         {(connectionError || disconnectError) && <Alert severity="warning" sx={{ mb: 1 }}>{connectionError || disconnectError}</Alert>}
         <SocialConnectionGrid
