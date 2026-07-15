@@ -1,7 +1,8 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar, Chip, IconButton } from '@mui/material';
+import { Box, Button, Card, CircularProgress, Stack, Tooltip, Typography, Avatar, Chip, IconButton, useMediaQuery, useTheme } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
+import ArrowBackIcon from '@mui/icons-material/ArrowBackIosNew';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { ConversationList } from './ConversationList';
@@ -127,7 +128,13 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
   const handleSelectThread = (id: string) => {
     clearActivityEventTarget();
     setSelectedId(id);
+    setMobileReaderOpen(true);
   };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
+  const [mobileReaderOpen, setMobileReaderOpen] = useState(false);
+  const showList = !isMobile || !mobileReaderOpen;
+  const showReader = !isMobile || mobileReaderOpen;
   const handleCallLead = async () => {
     if (!thread?.contact || dialing) return;
     setDialing(true);
@@ -201,6 +208,7 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
           minHeight: 0
         }}>
         
+        {showList &&
         <ConversationList
           title="Conversations"
           items={visibleThreads.map((t) => ({
@@ -214,9 +222,10 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
 	          }))}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
+        }
         
 
-        {thread ?
+        {showReader && (thread ?
         <Card
           sx={{
             flex: 1,
@@ -235,6 +244,15 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
               alignItems: 'center',
               gap: 1
             }}>
+              {isMobile &&
+              <IconButton
+                onClick={() => setMobileReaderOpen(false)}
+                size="small"
+                aria-label="Back to conversations"
+                sx={{ flexShrink: 0, ml: -0.5, color: 'text.secondary' }}>
+                <ArrowBackIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              }
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="subtitle1">{thread.contact}</Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -314,8 +332,8 @@ export function SmsView({ onOpenVoice }: SmsViewProps = {}) {
             <Typography variant="body2" color="text.secondary">
               No conversations in this category.
             </Typography>
-          </Card>
-        }
+        </Card>
+        )}
       </Box>
     </Box>);
 

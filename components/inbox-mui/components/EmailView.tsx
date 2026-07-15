@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Box, Card, Stack, Typography, Avatar, Chip } from '@mui/material';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Card, Stack, Typography, Avatar, Chip, Button, useMediaQuery, useTheme } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBackIosNew';
 import FlagIcon from '@mui/icons-material/OutlinedFlag';
 import PersonIcon from '@mui/icons-material/PersonOutline';
 import { ConversationList } from './ConversationList';
@@ -92,7 +93,15 @@ export function EmailView() {
   const handleSelectThread = (id: string) => {
     clearActivityEventTarget();
     setSelectedId(id);
+    setMobileReaderOpen(true);
   };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
+  const [mobileReaderOpen, setMobileReaderOpen] = useState(false);
+  // On mobile show list OR reader (master/detail), never both stacked — that
+  // caused the reader panel to bleed through behind the list on small screens.
+  const showList = !isMobile || !mobileReaderOpen;
+  const showReader = !isMobile || mobileReaderOpen;
   return (
     <Box
       sx={{
@@ -128,6 +137,7 @@ export function EmailView() {
           minHeight: 0
         }}>
         
+        {showList &&
         <ConversationList
           title="Conversations"
           items={visibleThreads.map((t) => ({
@@ -142,9 +152,10 @@ export function EmailView() {
           }))}
           selectedId={thread?.id ?? ''}
           onSelect={handleSelectThread} />
+        }
         
 
-        {thread ?
+        {showReader && (thread ?
         <Card
           sx={{
             flex: 1,
@@ -161,6 +172,15 @@ export function EmailView() {
               borderColor: 'divider'
             }}>
             
+              {isMobile &&
+              <Button
+                onClick={() => setMobileReaderOpen(false)}
+                startIcon={<ArrowBackIcon sx={{ fontSize: 14 }} />}
+                size="small"
+                sx={{ mb: 1, ml: -0.5, color: 'text.secondary' }}>
+                Conversations
+              </Button>
+              }
               <Typography variant="subtitle1">{thread.contact}</Typography>
               <Typography variant="caption" color="text.secondary">
                 {thread.contact}
@@ -234,7 +254,7 @@ export function EmailView() {
           </Card> :
 
         <EmptyThreadCard />
-        }
+        )}
       </Box>
     </Box>);
 
