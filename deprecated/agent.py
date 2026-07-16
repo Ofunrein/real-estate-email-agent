@@ -1,8 +1,19 @@
-"""Legacy Iris email daemon.
+"""!!! DEPRECATED — DO NOT READ, EDIT, OR USE THIS FILE FOR DIAGNOSIS !!!
 
-Keep this runtime intact while the Gmail polling, reply generation, handoff,
-and event-writing behavior is migrated into Vercel-hosted TypeScript routes.
+This is the LEGACY Iris email daemon. It is NO LONGER the product runtime.
+The live Iris runs entirely in TypeScript on Vercel + Inngest:
+
+    Gmail push webhook  -> app/api/webhooks/iris-gmail-push/route.ts
+                        -> lib/inngest/functions/gmailPushReceived.ts
+    classification      -> lib/irisEmail.ts  (classifyIrisEmailText)
+    property matching   -> lib/propertyRetrieval.ts  (Neon -> Apify fallback)
+
+If you are debugging why Iris did or did not reply, look ONLY at the files
+above. Nothing in this file executes in production. It is retained for
+historical reference during the TS migration and may be deleted once the
+migration is fully verified. See docs/decisions/2026-07-15-deprecate-agent-py.md.
 """
+
 
 import base64
 import email as email_lib
