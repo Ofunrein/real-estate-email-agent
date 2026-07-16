@@ -25,7 +25,7 @@ import {
   type GmailReplyResult,
 } from "@/lib/gmailConnection";
 import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
-import { isProxiableImageUrl, mediaProxyUrl, usableInboxPhotoUrl } from "@/lib/mediaProxy";
+import { isProxiableImageUrl, mediaProxyUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { understandMediaItems } from "@/lib/mediaUnderstanding";
@@ -221,7 +221,7 @@ function asksForDifferentProperty(text: string): boolean {
 
 function canResolveFromPriorProperty(latestText: string): boolean {
   if (asksForDifferentProperty(latestText)) return false;
-  return /\b(this property|that property|the property|that one|this one|it|same one|first one|second one|third one|take a look|tour|showing|schedule|tomorrow|today|noon|morning|afternoon|evening|this friday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?::\d{2})?\s?(?:am|pm))\b/i.test(latestText);
+  return /\b(this property|that property|the property|that one|this one|it|same one|first(?:\s+(?:one|property|listing|option))?|second(?:\s+(?:one|property|listing|option))?|third(?:\s+(?:one|property|listing|option))?|take a look|tour|showing|schedule|tomorrow|today|noon|morning|afternoon|evening|this friday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?::\d{2})?\s?(?:am|pm))\b/i.test(latestText);
 }
 
 export function parseEmailContact(value = ""): { name: string; email: string } {
@@ -661,7 +661,9 @@ function propertyHighlights(property: SheetRow): string {
 }
 
 function propertyPhotoSrc(property: SheetRow): string {
-  const photo = usableInboxPhotoUrl(property.photo_url);
+  // Email cards are sent directly to Gmail, not rendered in the inbox preview.
+  // A valid Maps Street View URL is a usable hero image here.
+  const photo = (property.photo_url || "").trim();
   if (!photo || !isProxiableImageUrl(photo)) return "";
   return mediaProxyUrl(photo);
 }

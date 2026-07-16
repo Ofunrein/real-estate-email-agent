@@ -393,15 +393,31 @@ test("classifyIrisEmailText: uses prior selected property for scheduling follow-
   assert.deepEqual(classification.addresses, ["9605 Corbe Dr"]);
 });
 
-test("buildHtmlEmailReply: skips Street View photos instead of rendering broken image blocks", () => {
+test("classifyIrisEmailText: resolves first property in prior email cards", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property inquiry",
+    body: [
+      "I'm really interested in the first property. Can you give me more information about that one?",
+      "",
+      "Thread context for classification only:",
+      "2026-07-15 email outbound sent: 700 Whitetail Dr, Round Rock, TX 78681 | 701 Old Ravine Ct, Round Rock, TX 78665",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.intent, "showing_request");
+  assert.equal(classification.address, "700 Whitetail Dr");
+  assert.deepEqual(classification.addresses, ["700 Whitetail Dr"]);
+});
+
+test("buildHtmlEmailReply: renders Street View photos in outbound email cards", () => {
   const reply = buildHtmlEmailReply("Hello,\n\nBest,\nIris", [{
     address: "100 E 51st St #7",
     photo_url: "https://maps.googleapis.com/maps/api/streetview?location=100+E+51st",
     listing_url: "https://www.zillow.com/homedetails/100-E-51st-St-7-Austin-TX-78751/70353702_zpid/",
   } as SheetRow]);
 
-  assert.doesNotMatch(reply.html || "", /<img\b/i);
-  assert.doesNotMatch(reply.html || "", /maps\.googleapis\.com/);
+  assert.match(reply.html || "", /<img\b/i);
+  assert.match(reply.html || "", /maps\.googleapis\.com/);
   assert.match(reply.html || "", /View listing/);
 });
 
