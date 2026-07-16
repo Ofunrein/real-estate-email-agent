@@ -50,6 +50,7 @@ export interface ConnectedAccount {
 
 export type LeadCategoryId =
   | 'needs-reply'
+  | 'waiting-lead'
   | 'hot-lead'
   | 'showing'
   | 'seller'
@@ -65,6 +66,8 @@ export interface LeadCategory {
   slug?: string;
   enabled?: boolean;
   gmailLabelName?: string;
+  tier?: 'status' | 'topic';
+  autoRules?: Record<string, unknown>;
 }
 
 export type EventKind = 'inbound' | 'ai_reply' | 'note' | 'voice';
@@ -356,14 +359,15 @@ export const contactsChannelMeta = { label: 'Contacts', icon: ContactsIcon, acce
 export const opsChannelMeta = { label: 'Ops Log', icon: OpsIcon, accent: '#f59e0b' };
 
 export const leadCategories: LeadCategory[] = [
-  { id: 'needs-reply', label: 'Needs Reply', color: '#8b5cf6' },
-  { id: 'hot-lead', label: 'Hot Lead', color: '#ef4444' },
-  { id: 'showing', label: 'Showing', color: '#f97316' },
-  { id: 'seller', label: 'Seller / Valuation', color: '#14b8a6' },
-  { id: 'financing', label: 'Financing', color: '#3b82f6' },
-  { id: 'needs-human', label: 'Needs Human', color: '#e11d48' },
-  { id: 'nurture', label: 'Nurture', color: '#94a3b8' },
-  { id: 'closed', label: 'Closed / No Reply', color: '#475569' },
+  { id: 'needs-human', label: 'Needs Human', color: '#e11d48', tier: 'status' },
+  { id: 'needs-reply', label: 'Needs Reply', color: '#8b5cf6', tier: 'status' },
+  { id: 'waiting-lead', label: 'Waiting on Lead', color: '#ca8a04', tier: 'status' },
+  { id: 'nurture', label: 'Nurture', color: '#94a3b8', tier: 'status' },
+  { id: 'closed', label: 'Closed / No Reply', color: '#475569', tier: 'status' },
+  { id: 'hot-lead', label: 'Hot Lead', color: '#ef4444', tier: 'topic' },
+  { id: 'showing', label: 'Showing', color: '#f97316', tier: 'topic' },
+  { id: 'seller', label: 'Seller / Valuation', color: '#14b8a6', tier: 'topic' },
+  { id: 'financing', label: 'Financing', color: '#3b82f6', tier: 'topic' },
 ];
 
 // Iris profile picture used wherever the agent's avatar appears.
