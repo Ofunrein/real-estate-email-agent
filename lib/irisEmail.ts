@@ -133,6 +133,28 @@ export type IrisEmailPollResult = {
   results: IrisEmailProcessResult[];
 };
 
+export function coalesceIrisEmailThreadFollowUps(messages: IrisEmailMessage[]): {
+  messages: IrisEmailMessage[];
+  superseded: IrisEmailMessage[];
+} {
+  const groups = new Map<string, Array<{ message: IrisEmailMessage; index: number; receivedAt: number }>>();
+  messages.forEach((message, index) => {
+    const parsed = Date.parse(message.receivedAt || "");
+    const group = groups.get(message.threadId || message.id) || [];
+    group.push({ message, index, receivedAt: Number.isFinite(parsed) ? parsed : -index });
+    groups.set(message.threadId || message.id, group);
+  });
+  const current: IrisEmailMessage[] = [];
+  const superseded: IrisEmailMessage[] = [];
+  for (const group of groups.values()) {
+    group.sort((a, b) => a.receivedAt - b.receivedAt);
+    const latest = group.at(-1)!;
+    current.push({ ...latest.message, body: group.map(({ message }) => message.body.trim()).filter(Boolean).join("\n\n") || latest.message.body });
+    superseded.push(...group.slice(0, -1).map(({ message }) => message));
+  }
+  return { messages: current, superseded };
+}
+
 export type IrisEmailClient = {
   listUnreadMessages(limit: number): Promise<IrisEmailMessage[]>;
   applyLabels(messageId: string, labels: string[]): Promise<void>;
@@ -1118,8 +1140,17 @@ export async function processIrisEmailPoll(
   const syncedCategories = !dryRun && emailClient.syncCategoryLabels
     ? await emailClient.syncCategoryLabels(categories)
     : categories;
-  const messages = await emailClient.listUnreadMessages(limit);
+  const listedMessages = await emailClient.listUnreadMessages(limit);
+  const { messages, superseded } = coalesceIrisEmailThreadFollowUps(listedMessages);
   const results: IrisEmailProcessResult[] = [];
+
+  // Same-thread follow-ups are folded into the newest message. Mark older copies
+  // handled so a later inbox scan cannot send a second reply.
+  if (!dryRun) {
+    for (const message of superseded) {
+      await emailClient.applyLabels(message.id, ["AUTO_REPLIED"]);
+    }
+  }
 
   for (const message of messages) {
     const classificationMessage = await messageWithLeadContext(message);

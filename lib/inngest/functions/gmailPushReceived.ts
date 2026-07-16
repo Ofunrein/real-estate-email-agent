@@ -173,6 +173,10 @@ export const gmailPushReceived = inngest.createFunction(
       limit: 10,
     };
 
+    // Let a buyer's quick add-on land before reading Gmail history. Inngest
+    // persists this wait, so it costs no Vercel runtime and batches one reply.
+    await step.sleep("wait for short email follow-ups", "45s");
+
     const historyTarget = await step.run("resolve Gmail history target", async () => {
       return messageIdsFromGmailHistory(input.historyId);
     });
