@@ -1056,6 +1056,35 @@ export async function updateEmailAccountGmailHistoryCursorInDatabase(input: {
   );
 }
 
+// Recovery helper: parked inbound email events (needs_human / route_human) that
+// still have no outbound reply in their thread. Used to re-run missed real-estate
+// inquiries through the fixed classifier when the Gmail history cursor went stale
+// ("history_id_too_old") and the unread-only fallback poll could not see them
+// because they were already marked read.
+export async function listUnrepliedNeedsHumanEmailMessageIds(limit = 25): Promise<string[]> {
+  if (!databaseEnabled()) return [];
+  const rows = await getPool().query<{ gmail_message_id: string }>(
+    `select distinct ce.gmail_message_id
+       from conversation_events ce
+      where ce.channel = 'email'
+        and ce.direction = 'inbound'
+        and coalesce(ce.gmail_message_id, '') <> ''
+        and (ce.status = 'needs_human' or ce.ai_action = 'route_human' or ce.event_type = 'human_handoff')
+        and ce.created_at > now() - interval '10 days'
+        and not exists (
+          select 1 from conversation_events reply
+           where reply.channel = 'email'
+             and reply.direction = 'outbound'
+             and reply.gmail_thread_id = ce.gmail_thread_id
+             and reply.event_at > ce.event_at
+        )
+      order by ce.gmail_message_id
+      limit $1`,
+    [Math.max(1, Math.min(limit, 50))],
+  );
+  return rows.rows.map((r) => String(r.gmail_message_id || "")).filter(Boolean);
+}
+
 export async function markEmailAccountErrorInDatabase(email: string, error: string): Promise<void> {
   if (!email.trim() || !await emailAccountsTableReady()) return;
   await getPool().query(
