@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Multi-channel real estate AI agent platform. Four named agents share one cross-channel brain:
-- **Iris** — email (`agent.py`, Python daemon, Anthropic API)
+- **Iris** — email. **Live runtime = TypeScript on Vercel + Inngest** (Gmail push webhook `app/api/webhooks/iris-gmail-push/` → `lib/inngest/functions/gmailPushReceived.ts` → `lib/irisEmail.ts` + `lib/propertyRetrieval.ts`). The old `agent.py` daemon is DEPRECATED and lives in `deprecated/agent.py` — do NOT read it to debug Iris. See `docs/decisions/2026-07-15-deprecate-agent-py.md`.
 - **Theo** — SMS/RCS/WhatsApp (`app/api/webhooks/theo-sms/`, `channels/theo*`, Twilio)
 - **Aria** — voice (`app/api/webhooks/aria-voice/`, Vapi + GPT-4o-mini)
 - **Olivia** — website chat (`app/api/webhooks/olivia-website/`)
@@ -55,7 +55,7 @@ The `/api/data` route returns `AgentInboxData` (defined in `lib/inboxData.ts`). 
 
 ### Email agent (Iris)
 
-`agent.py` runs a 60s poll loop: Gmail API → Haiku classify → Sonnet reply → write Sheets + Neon. Classification returns structured lead fields (budget, timeline, area, beds). Compliance flags trigger `NEEDS_HUMAN` Gmail label with no reply. Style training is flag-gated (`ENABLE_STYLE_TRAINING=false` default — off = byte-identical behavior).
+`agent.py` (now in `deprecated/`) is the LEGACY daemon and is not the runtime. Live Iris is the Gmail push webhook → Inngest `gmail.push.received` → `gmailPushReceived.ts` → `classifyIrisEmailText` (in `lib/irisEmail.ts`) → reply via `generateIrisEmailReplyRich` → property matching via `retrievePropertiesForAgent` (`lib/propertyRetrieval.ts`, Neon then Apify fallback). Classification returns structured lead fields (budget, timeline, area, beds) and carries them forward across the thread from the DB lead-context block. Compliance flags trigger `NEEDS_HUMAN` with no reply.
 
 ### Voice agent (Aria)
 

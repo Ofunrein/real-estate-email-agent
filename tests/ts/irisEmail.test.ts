@@ -60,6 +60,29 @@ test("classifyIrisEmailText: detects showing request and lead fields", () => {
   assert.equal(classification.recommended_next_action, "send_booking_link");
 });
 
+test("classifyIrisEmailText: carries forward area and beds from thread context (no re-ask)", () => {
+  const MARKER = "Thread context for classification only:";
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Round Rock home search",
+    body: [
+      "For my budget I want properties in the range of $400,000 to $600,000.",
+      "I am hoping to move in within the next 2 to 3 months.",
+      "",
+      MARKER,
+      "Previous property interest: Round Rock single family",
+      "Known area: Round Rock",
+      "Known bedrooms: 4",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.intent, "property_search");
+  assert.equal(classification.lead_fields.area, "Round Rock");
+  assert.equal(classification.lead_fields.beds, "4");
+  assert.notEqual(classification.lead_fields.budget, null);
+  // All criteria known from the thread -> Iris should search, not re-ask the area.
+  assert.equal(classification.next_best_question, null);
+});
+
 test("classifyIrisEmailText: routes compliance-sensitive questions to human", () => {
   const classification = classifyIrisEmailText(email({
     body: "Is this a safe neighborhood for families with kids, and should I waive inspection?",
