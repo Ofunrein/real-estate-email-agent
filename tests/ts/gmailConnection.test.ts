@@ -30,8 +30,10 @@ test("needs-human Gmail label uses a supported Gmail palette color", async () =>
   };
 
   await ensureGmailLabel(gmail as never, "Iris/Needs Human", "#be123c");
+  // #be123c snaps to the nearest legal Gmail background (#ac2b16, a dark red);
+  // white text is auto-picked for contrast.
   assert.deepEqual((requestBody as { color: unknown }).color, {
-    backgroundColor: "#cc3a21",
+    backgroundColor: "#ac2b16",
     textColor: "#ffffff",
   });
 });
