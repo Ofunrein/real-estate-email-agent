@@ -91,14 +91,17 @@ function dayKey(d: Date) {
 function categorySlugToId(slug: string): LeadCategoryId {
   const map: Record<string, LeadCategoryId> = {
     needs_reply: "needs-reply",
+    waiting_lead: "waiting-lead",
     hot_lead: "hot-lead",
     showing: "showing",
     seller: "seller",
     valuation: "seller",
+    seller_valuation: "seller",
     financing: "financing",
     needs_human: "needs-human",
     nurture: "nurture",
     closed: "closed",
+    closed_no_reply: "closed",
   };
   return map[slug] || "needs-reply";
 }
@@ -1353,6 +1356,8 @@ export function adaptInboxData(data: AgentInboxData): InboxModel {
         slug: c.slug,
         enabled: c.enabled,
         gmailLabelName: c.gmail_label_name,
+        tier: c.auto_rules?.tier === "topic" || ["hot_lead", "showing", "seller", "valuation", "seller_valuation", "financing"].includes(c.slug) ? "topic" : "status",
+        autoRules: c.auto_rules,
       }))
       : leadCategories,
     activityEvents: buildActivityEvents(data),
