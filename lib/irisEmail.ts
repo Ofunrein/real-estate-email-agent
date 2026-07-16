@@ -458,7 +458,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   } else if (/(rent|lease|rental|tenant)/i.test(latestClean)) {
     intent = "renter_lead";
     role = "renter";
-  } else if (/(looking for|homes?|houses?|condos?|available|inventory|options|under \$|bedroom|bd)/i.test(latestClean)) {
+  } else if (/(looking for|homes?|houses?|condos?|properties|property|available|inventory|options|under \$|\$[\d,]+ ?(?:to|-|–|and) ?\$?[\d,]+|price range|budget|move in|relocat|bedroom|bd)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
   } else if (/(buy|purchase|preapproved|pre-approved|mortgage|loan)/i.test(latestClean)) {
