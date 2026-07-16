@@ -5,6 +5,7 @@ import {
   buildHtmlEmailReply,
   buildIrisEmailLeadMemoryRow,
   classifyIrisEmailText,
+  coalesceIrisEmailThreadFollowUps,
   decideIrisEmailExecution,
   irisEmailPollQuery,
   isIrisEligibleEmail,
@@ -58,6 +59,16 @@ test("classifyIrisEmailText: detects showing request and lead fields", () => {
   assert.equal(classification.lead_fields.beds, "3");
   assert.equal(classification.lead_fields.budget, "$650k");
   assert.equal(classification.recommended_next_action, "send_booking_link");
+});
+
+test("coalesceIrisEmailThreadFollowUps: keeps one latest message and combines quick follow-up context", () => {
+  const first = email({ id: "first", threadId: "thread_a", body: "Looking in Round Rock.", receivedAt: "Wed, 15 Jul 2026 10:00:00 -0500" });
+  const followUp = email({ id: "follow_up", threadId: "thread_a", body: "Also need a backyard.", receivedAt: "Wed, 15 Jul 2026 10:01:00 -0500" });
+  const result = coalesceIrisEmailThreadFollowUps([followUp, first]);
+
+  assert.deepEqual(result.superseded.map((message) => message.id), ["first"]);
+  assert.deepEqual(result.messages.map((message) => message.id), ["follow_up"]);
+  assert.match(result.messages[0].body, /Looking in Round Rock\.\n\nAlso need a backyard\./);
 });
 
 test("classifyIrisEmailText: carries forward area and beds from thread context (no re-ask)", () => {
