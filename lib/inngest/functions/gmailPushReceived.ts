@@ -1,5 +1,6 @@
 import {
   databaseEnabled,
+  listUnrepliedNeedsHumanEmailMessageIds,
   readDefaultEmailAccountFromDatabase,
   readInboxSettingsFromDatabase,
   updateEmailAccountGmailHistoryCursorInDatabase,
@@ -188,7 +189,16 @@ export const gmailPushReceived = inngest.createFunction(
         const unreadBacklog = await processIrisEmailPoll({ ...pollOptions, limit: 10 });
         return mergePollResults(targeted, unreadBacklog);
       }
-      return processIrisEmailPoll(pollOptions);
+      // Fallback path (e.g. history_id_too_old): the unread-only poll cannot see
+      // messages already marked read, so parked needs_human real-estate inquiries
+      // never get recovered. Re-run those specific messages by id through the
+      // fixed classifier; the canRecoverNeedsHuman guard re-sends genuine replies
+      // and leaves true non-real-estate handoffs parked.
+      const unreadScan = await processIrisEmailPoll(pollOptions);
+      const parkedIds = await listUnrepliedNeedsHumanEmailMessageIds(25);
+      if (!parkedIds.length) return unreadScan;
+      const recovered = await processIrisEmailMessageIds(parkedIds, pollOptions);
+      return mergePollResults(unreadScan, recovered);
     }).catch(async (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       await step.run("audit Gmail push failed", async () => {
