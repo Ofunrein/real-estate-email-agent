@@ -514,22 +514,57 @@ export async function sendGmailDraftWithOptions(
   };
 }
 
-// Gmail only accepts a fixed palette. Map app hex colors to nearest supported Gmail color.
-// Full palette: https://developers.google.com/gmail/api/reference/rest/v1/users.labels
-const GMAIL_LABEL_COLORS: Record<string, { backgroundColor: string; textColor: string }> = {
-  "#7c3aed": { backgroundColor: "#8e63ce", textColor: "#ffffff" }, // needs_reply (purple)
-  "#dc2626": { backgroundColor: "#cc3a21", textColor: "#ffffff" }, // hot_lead (red)
-  "#ea580c": { backgroundColor: "#e66550", textColor: "#ffffff" }, // showing (orange-red)
-  "#0f766e": { backgroundColor: "#0b804b", textColor: "#ffffff" }, // seller/valuation (teal)
-  "#2563eb": { backgroundColor: "#285bac", textColor: "#ffffff" }, // financing (blue)
-  "#be123c": { backgroundColor: "#cc3a21", textColor: "#ffffff" }, // needs_human (Gmail red)
-  "#64748b": { backgroundColor: "#999999", textColor: "#ffffff" }, // nurture (gray)
-  "#334155": { backgroundColor: "#444444", textColor: "#ffffff" }, // closed (dark gray)
-};
+// Gmail only accepts a fixed background palette for labels. Rather than hardcode a
+// per-category map (which forced any custom dashboard color to fall back to gray),
+// we snap ANY hex the user picks to the nearest legal Gmail background color.
+// Palette: https://developers.google.com/gmail/api/reference/rest/v1/users.labels
+const GMAIL_LABEL_BG_PALETTE = [
+  "#000000", "#434343", "#666666", "#999999", "#cccccc", "#efefef", "#f3f3f3", "#ffffff",
+  "#fb4c2f", "#ffad47", "#fad165", "#16a766", "#43d692", "#4a86e8", "#a479e2", "#f691b3",
+  "#f6c5be", "#ffe6c7", "#fef1d1", "#b9e4d0", "#c6f3de", "#c9daf8", "#e4d7f5", "#fcdee8",
+  "#efa093", "#ffd6a2", "#fce8b3", "#89d3b2", "#a0eac9", "#a4c2f4", "#d0bcf1", "#fbc8d9",
+  "#e66550", "#ffbc6b", "#fcda83", "#44b984", "#68dfa9", "#6d9eeb", "#b694e8", "#f7a7c0",
+  "#cc3a21", "#eaa041", "#f2c960", "#149e60", "#3dc789", "#3c78d8", "#8e63ce", "#e07798",
+  "#ac2b16", "#cf8933", "#d5ae49", "#0b804b", "#2a9c68", "#285bac", "#653e9b", "#b65775",
+  "#822111", "#a46a21", "#aa8831", "#076239", "#1a764d", "#1c4587", "#41236d", "#83334c",
+];
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// Perceived luminance -> pick black or white text for contrast.
+function textColorFor(bg: string): string {
+  const rgb = hexToRgb(bg) || [128, 128, 128];
+  const [r, g, b] = rgb;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? "#000000" : "#ffffff";
+}
+
+function nearestGmailBg(hex: string): string {
+  const target = hexToRgb(hex);
+  if (!target) return "#999999";
+  let best = "#999999";
+  let bestDist = Infinity;
+  for (const candidate of GMAIL_LABEL_BG_PALETTE) {
+    const rgb = hexToRgb(candidate);
+    if (!rgb) continue;
+    const dist = (rgb[0] - target[0]) ** 2 + (rgb[1] - target[1]) ** 2 + (rgb[2] - target[2]) ** 2;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = candidate;
+    }
+  }
+  return best;
+}
 
 function gmailLabelColor(hexColor?: string): { backgroundColor: string; textColor: string } | undefined {
   if (!hexColor) return undefined;
-  return GMAIL_LABEL_COLORS[hexColor.toLowerCase()] || GMAIL_LABEL_COLORS["#64748b"];
+  const backgroundColor = nearestGmailBg(hexColor);
+  return { backgroundColor, textColor: textColorFor(backgroundColor) };
 }
 
 export async function ensureGmailLabel(

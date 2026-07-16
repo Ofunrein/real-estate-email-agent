@@ -46,15 +46,24 @@ export type EmailCapability = {
   granted: boolean;
 };
 
+// Two-tier taxonomy. `tier: "status"` categories are the workflow queue (one per
+// thread, mutually exclusive, sorted first). `tier: "topic"` categories are
+// stackable real-estate subject tags for filtering/reporting. This beats a flat
+// ToRespond/FYI/Waiting model: every thread gets a clear "do I act now?" status
+// AND rich topic context, and auto-send behavior is driven per-status via
+// `auto_rules.auto_send` ("on" | "off" | "inherit").
 export const DEFAULT_INBOX_CATEGORIES: InboxCategory[] = [
-  { slug: "needs_reply", name: "Needs Reply", color: "#7c3aed", sort_order: 10, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Needs Reply", auto_rules: { status: ["received", "awaiting_response"] } },
-  { slug: "hot_lead", name: "Hot Lead", color: "#dc2626", sort_order: 20, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Hot Lead", auto_rules: { words: ["tour", "showing", "today", "available"] } },
-  { slug: "showing", name: "Showing", color: "#ea580c", sort_order: 30, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Showing", auto_rules: { words: ["tour", "showing", "schedule", "appointment"] } },
-  { slug: "seller_valuation", name: "Seller / Valuation", color: "#0f766e", sort_order: 40, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Seller Valuation", auto_rules: { words: ["sell", "valuation", "home value", "list my"] } },
-  { slug: "financing", name: "Financing", color: "#2563eb", sort_order: 50, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Financing", auto_rules: { words: ["preapproved", "mortgage", "loan", "down payment"] } },
-  { slug: "needs_human", name: "Needs Human", color: "#be123c", sort_order: 60, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Needs Human", auto_rules: { status: ["needs_human"] } },
-  { slug: "nurture", name: "Nurture", color: "#64748b", sort_order: 70, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Nurture", auto_rules: { words: ["later", "just looking", "not ready"] } },
-  { slug: "closed_no_reply", name: "Closed / No Reply", color: "#334155", sort_order: 80, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Closed No Reply", auto_rules: { status: ["closed", "do_not_contact"] } },
+  // Status tier (the queue)
+  { slug: "needs_human", name: "Needs Human", color: "#be123c", sort_order: 10, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Needs Human", auto_rules: { tier: "status", auto_send: "off", status: ["needs_human"] } },
+  { slug: "needs_reply", name: "Needs Reply", color: "#7c3aed", sort_order: 20, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Needs Reply", auto_rules: { tier: "status", auto_send: "inherit", status: ["received", "awaiting_response"] } },
+  { slug: "waiting_lead", name: "Waiting on Lead", color: "#ca8a04", sort_order: 30, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Waiting on Lead", auto_rules: { tier: "status", auto_send: "inherit", status: ["awaiting_lead", "replied"] } },
+  { slug: "nurture", name: "Nurture", color: "#64748b", sort_order: 40, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Nurture", auto_rules: { tier: "status", auto_send: "inherit", words: ["later", "just looking", "not ready"] } },
+  { slug: "closed_no_reply", name: "Closed / No Reply", color: "#334155", sort_order: 50, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Closed No Reply", auto_rules: { tier: "status", auto_send: "off", status: ["closed", "do_not_contact"] } },
+  // Topic tier (stackable subject tags)
+  { slug: "hot_lead", name: "Hot Lead", color: "#dc2626", sort_order: 60, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Hot Lead", auto_rules: { tier: "topic", words: ["tour", "showing", "today", "available"] } },
+  { slug: "showing", name: "Showing", color: "#ea580c", sort_order: 70, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Showing", auto_rules: { tier: "topic", words: ["tour", "showing", "schedule", "appointment"] } },
+  { slug: "seller_valuation", name: "Seller / Valuation", color: "#0f766e", sort_order: 80, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Seller Valuation", auto_rules: { tier: "topic", words: ["sell", "valuation", "home value", "list my"] } },
+  { slug: "financing", name: "Financing", color: "#2563eb", sort_order: 90, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Financing", auto_rules: { tier: "topic", words: ["preapproved", "mortgage", "loan", "down payment"] } },
 ];
 
 export const DEFAULT_INBOX_SETTINGS: InboxSettings = {
