@@ -1428,7 +1428,11 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
   for (const id of uniqueIds) {
     const detail = await gmail.users.messages.get({ userId: "me", id, format: "full" });
     const labelIds = detail.data.labelIds || [];
-    if (!labelIds.includes("INBOX") || !labelIds.includes("UNREAD")) continue;
+    // Explicit-id fetch is used for recovery of parked needs_human messages, which
+    // Iris already marked read (UNREAD removed) during first processing. Only require
+    // the message still lives in the inbox; do not require UNREAD, or parked
+    // real-estate inquiries could never be recovered.
+    if (!labelIds.includes("INBOX")) continue;
     const payload = detail.data.payload as Record<string, unknown> | undefined;
     const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
     const body = bodyFromPayload(payload);
