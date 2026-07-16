@@ -178,27 +178,35 @@ export const gmailPushReceived = inngest.createFunction(
     });
 
     const result = await step.run("process Gmail messages", async () => {
+      // Base processing for this push (history-targeted, or unread-inbox scan on
+      // fallback / empty history windows).
+      let base: IrisEmailPollResult;
       if (historyTarget.mode === "history") {
         if (!historyTarget.messageIds.length) {
           // Gmail History can occasionally advance without returning messageAdded
           // rows for the filtered history window. Do not silently skip; scan the
           // unread inbox before advancing the cursor.
-          return processIrisEmailPoll(pollOptions);
+          base = await processIrisEmailPoll(pollOptions);
+        } else {
+          const targeted = await processIrisEmailMessageIds(historyTarget.messageIds, pollOptions);
+          const unreadBacklog = await processIrisEmailPoll({ ...pollOptions, limit: 10 });
+          base = mergePollResults(targeted, unreadBacklog);
         }
-        const targeted = await processIrisEmailMessageIds(historyTarget.messageIds, pollOptions);
-        const unreadBacklog = await processIrisEmailPoll({ ...pollOptions, limit: 10 });
-        return mergePollResults(targeted, unreadBacklog);
+      } else {
+        base = await processIrisEmailPoll(pollOptions);
       }
-      // Fallback path (e.g. history_id_too_old): the unread-only poll cannot see
-      // messages already marked read, so parked needs_human real-estate inquiries
-      // never get recovered. Re-run those specific messages by id through the
-      // fixed classifier; the canRecoverNeedsHuman guard re-sends genuine replies
-      // and leaves true non-real-estate handoffs parked.
-      const unreadScan = await processIrisEmailPoll(pollOptions);
+
+      // Recovery sweep on every push: parked needs_human real-estate inquiries can
+      // be missed when the Gmail history cursor goes stale (history_id_too_old) and
+      // the unread-only scan cannot see already-read messages. The cursor self-heals
+      // after a push or two, so a fallback-only sweep has too narrow a window. Re-run
+      // any unreplied needs_human messages by id through the fixed classifier; the
+      // canRecoverNeedsHuman guard re-sends genuine replies and leaves true
+      // non-real-estate handoffs parked. Dedup-guarded and cheap (one indexed query).
       const parkedIds = await listUnrepliedNeedsHumanEmailMessageIds(25);
-      if (!parkedIds.length) return unreadScan;
+      if (!parkedIds.length) return base;
       const recovered = await processIrisEmailMessageIds(parkedIds, pollOptions);
-      return mergePollResults(unreadScan, recovered);
+      return mergePollResults(base, recovered);
     }).catch(async (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       await step.run("audit Gmail push failed", async () => {
