@@ -204,25 +204,8 @@ export const gmailPushReceived = inngest.createFunction(
       // canRecoverNeedsHuman guard re-sends genuine replies and leaves true
       // non-real-estate handoffs parked. Dedup-guarded and cheap (one indexed query).
       const parkedIds = await listUnrepliedNeedsHumanEmailMessageIds(25);
-      await writeRequestAuditEvent({
-        ...auditBase,
-        stage: "recovery_sweep",
-        outcome: parkedIds.length ? "sent" : "skipped",
-        metadata: { parkedIds: parkedIds.slice(0, 25), parkedCount: parkedIds.length },
-      }).catch(() => {});
       if (!parkedIds.length) return base;
       const recovered = await processIrisEmailMessageIds(parkedIds, pollOptions);
-      await writeRequestAuditEvent({
-        ...auditBase,
-        stage: "recovery_result",
-        outcome: recovered.sent ? "sent" : "skipped",
-        metadata: {
-          recoveredProcessed: recovered.processed,
-          recoveredSent: recovered.sent,
-          recoveredResultIds: recovered.results.map((item) => item.messageId).slice(0, 25),
-          recoveredSkipped: recovered.results.filter((item) => item.skippedDuplicate).length,
-        },
-      }).catch(() => {});
       return mergePollResults(base, recovered);
     }).catch(async (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
