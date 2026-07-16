@@ -270,9 +270,75 @@ function extractPropertyUrls(text: string): string[] {
   return uniq(text.match(PROPERTY_URL_RE) || []);
 }
 
+const BUDGET_TOKEN_RE = /\$ ?\d[\d,.]*(?:\s?[kKmM])?|\b\d[\d,.]*\s?(?:k|m)\b/g;
+
+function budgetTokenToNumber(token: string): number | null {
+  const cleaned = token.replace(/[$,\s]/g, "").toLowerCase();
+  const suffix = cleaned.slice(-1);
+  const base = parseFloat(cleaned.replace(/[km]$/, ""));
+  if (!Number.isFinite(base)) return null;
+  if (suffix === "k") return base * 1_000;
+  if (suffix === "m") return base * 1_000_000;
+  return base;
+}
+
+// Returns [minPrice, maxPrice]. Handles ranges ("$400k to $600k", "between 400-600k")
+// so the LOWER number is the floor and the UPPER number is the ceiling. Previously a
+// range like "$400,000 to $600,000" grabbed only "$400,000" and used it as maxPrice,
+// which silently capped the search at the buyer's floor. See docs/decisions.
+function extractBudgetRange(text: string): { min: number | null; max: number | null } {
+  const tokens = text.match(BUDGET_TOKEN_RE) || [];
+  const nums = tokens.map(budgetTokenToNumber).filter((n): n is number => n != null && n > 0);
+  if (!nums.length) return { min: null, max: null };
+  const rangeLike = /(between|from|range|\bto\b|[-–—])/i.test(text) && nums.length >= 2;
+  if (rangeLike) {
+    const sorted = [...nums].sort((a, b) => a - b);
+    return { min: sorted[0], max: sorted[sorted.length - 1] };
+  }
+  // Single figure: treat as a ceiling ("under $600k", "around $500k").
+  return { min: null, max: Math.max(...nums) };
+}
+
 function extractBudget(text: string): string | null {
   const match = text.match(/\$ ?\d[\d,.]*(?:\s?[kKmM])?|\b\d[\d,.]*\s?(?:k|m)\b/);
   return match ? match[0].replace(/\s+/g, "") : null;
+}
+
+// The DB lead-context block (see messageWithLeadContext) injects prior known fields
+// as labeled lines: "Known area: Round Rock", "Known bedrooms: 4", "Known budget: ...",
+// "Previous property interest: ...". Free-text extractors miss these, so parse the
+// labels directly. This is the carry-forward source for follow-up emails that only
+// answer one new question.
+function labeledContextValue(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const re = new RegExp(`${label}\\s*[:\\-]\\s*(.+)`, "i");
+    const m = text.match(re);
+    if (m && m[1].trim()) return m[1].trim().split(/\n/)[0].trim();
+  }
+  return null;
+}
+
+function contextArea(contextClean: string): string | null {
+  return extractArea(contextClean) || labeledContextValue(contextClean, ["Known area"]);
+}
+
+function contextBeds(contextClean: string): string | null {
+  return extractBeds(contextClean) || (() => {
+    const v = labeledContextValue(contextClean, ["Known bedrooms", "Known beds"]);
+    const n = v?.match(/\d+/);
+    return n ? n[0] : null;
+  })();
+}
+
+function contextBudget(contextClean: string): string | null {
+  return extractBudget(contextClean) || (() => {
+    const v = labeledContextValue(contextClean, ["Known budget"]);
+    return v ? extractBudget(v) || v : null;
+  })();
+}
+
+function contextTimeline(contextClean: string): string | null {
+  return extractTimeline(contextClean) || labeledContextValue(contextClean, ["Known timeline"]);
 }
 
 function extractBeds(text: string): string | null {
@@ -342,10 +408,14 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const noSignal = noOrStopSignal(latestClean);
   const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
   const fields: IrisLeadFields = {
-    timeline: extractTimeline(latestClean),
-    budget: extractBudget(latestClean),
-    area: extractArea(latestClean),
-    beds: extractBeds(latestClean),
+    // Fields carry forward across the thread: a follow-up email that answers only
+    // budget must not wipe the area/beds the lead already gave earlier. Latest
+    // message wins; thread context fills the gaps. This is what stops Iris
+    // re-asking "which area?" for criteria it was already told.
+    timeline: extractTimeline(latestClean) || contextTimeline(contextClean),
+    budget: extractBudget(latestClean) || contextBudget(contextClean),
+    area: extractArea(latestClean) || contextArea(contextClean),
+    beds: extractBeds(latestClean) || contextBeds(contextClean),
     current_property_status: /\b(i own|my house|my home)\b/i.test(latestClean) ? "owns" : /\b(i rent|renting)\b/i.test(latestClean) ? "rents" : "unknown",
     preferred_channel: preferredChannel(latestClean),
   };
@@ -842,6 +912,9 @@ async function generateIrisEmailReplyRich(
   const contextAddresses = extractAddresses(threadContextBody(message.body));
   const excludeAddresses = classification.opportunity_tags.includes("property_pivot") ? contextAddresses.slice(0, 1) : [];
   const shouldAttachProperties = ["property_search", "property_details", "showing_request"].includes(classification.intent);
+  const budgetRange = extractBudgetRange(
+    [classification.lead_fields.budget || "", latestBody].filter(Boolean).join(" "),
+  );
   const properties = !shouldAttachProperties
     ? []
     : classification.addresses.length && classification.intent !== "property_search"
@@ -850,7 +923,8 @@ async function generateIrisEmailReplyRich(
         query: latestBody,
         area: classification.lead_fields.area || latestBody,
         beds: classification.lead_fields.beds || undefined,
-        maxPrice: classification.lead_fields.budget || undefined,
+        minPrice: budgetRange.min || undefined,
+        maxPrice: budgetRange.max || undefined,
         excludeAddresses,
         mode: "general",
       }, 4, { channel: "email" });

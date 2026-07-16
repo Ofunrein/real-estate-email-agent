@@ -1,4 +1,4 @@
-"""!!! DEPRECATED — DO NOT READ, EDIT, OR USE THIS FILE FOR DIAGNOSIS !!!
+"""!!! DEPRECATED - DO NOT READ, EDIT, OR USE THIS FILE FOR DIAGNOSIS !!!
 
 This is the LEGACY Iris email daemon. It is NO LONGER the product runtime.
 The live Iris runs entirely in TypeScript on Vercel + Inngest:
