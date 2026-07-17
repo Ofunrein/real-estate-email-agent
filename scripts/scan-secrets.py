@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail when tracked source contains likely live credentials."""
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -25,8 +26,24 @@ SAFE_WORDS = (b"placeholder", b"your_", b"example", b"process.env", b"os.getenv"
 
 
 def tracked_files() -> list[str]:
-    output = subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"])
-    return [item.decode("utf-8", "replace") for item in output.split(b"\0") if item]
+    if not os.getenv("SECRET_SCAN_FORCE_WALK"):
+        try:
+            output = subprocess.check_output(
+                ["git", "-C", str(ROOT), "ls-files", "-z"], stderr=subprocess.DEVNULL
+            )
+            return [item.decode("utf-8", "replace") for item in output.split(b"\0") if item]
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
+
+    skipped = {".git", ".next", ".vercel", "node_modules", "venv", ".venv"}
+    return [
+        path.relative_to(ROOT).as_posix()
+        for path in ROOT.rglob("*")
+        if path.is_file()
+        and not path.name.startswith(".env")
+        and path.name not in {"credentials.json", "token.json"}
+        and not any(part in skipped for part in path.relative_to(ROOT).parts)
+    ]
 
 
 def main() -> int:
