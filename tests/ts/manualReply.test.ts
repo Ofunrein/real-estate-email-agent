@@ -14,7 +14,7 @@ test("manual Instagram direct send requires a stored Meta page token", async () 
   delete process.env.DATABASE_URL;
   process.env.ENABLE_META_SOCIAL_WEBHOOKS = "true";
   process.env.ENABLE_INSTAGRAM_DIRECT_WEBHOOK = "true";
-  process.env.FACEBOOK_PAGE_ACCESS_TOKEN = "[REDACTED]";
+  process.env.FACEBOOK_PAGE_ACCESS_TOKEN = "test-token";
 
   try {
     const result = await sendManualReply({
