@@ -11,6 +11,7 @@
     "postinstall": "node -e \"const fs=require('fs');const f='package-lock.json';if(!fs.existsSync(f))process.exit(0);const t=fs.readFileSync(f,'utf8');const c=t.replace(/https:\\/\\/artifacts\\.apple\\.com\\/artifactory\\/api\\/npm\\/npm-apple\\//g,'https://registry.npmjs.org/').replace(/https:\\/\\/npm\\.apple\\.com\\//g,'https://registry.npmjs.org/');if(c!==t){fs.writeFileSync(f,c);console.log('postinstall: scrubbed Apple registry URLs from package-lock.json');}\"",
     "lint": "tsc --project tsconfig.lint.json --pretty false",
     "theo:test": "node scripts/test-theo-sms.mjs",
+    "tiktok:test": "node scripts/tiktok-sandbox-test.mjs",
     "theo:twilio:configure": "node scripts/configure-theo-twilio.mjs",
     "aria:provision": "node --import tsx scripts/aria-provision.mjs",
     "aria:provision:dry": "node --import tsx scripts/aria-provision.mjs --dry-run",
