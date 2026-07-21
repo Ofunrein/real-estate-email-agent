@@ -2,9 +2,12 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
+import { configuredWorkspaceEmails, workspaceForConfiguredEmail } from "@/lib/workspace";
+
 const DEFAULT_ALLOWED_EMAILS = ["ofunrein123@gmail.com"];
 
 export function getAllowedAuthEmails() {
+  if (process.env.WORKSPACE_EMAIL_MAP) return new Set(configuredWorkspaceEmails());
   const configured = process.env.AUTH_ALLOWED_EMAILS ?? process.env.NEXT_PUBLIC_AUTH_ALLOWED_EMAILS;
   const source = configured
     ? configured
@@ -74,7 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       if (account?.provider === "google") {
         const email = profile?.email?.toLowerCase();
-        return Boolean(email && profile?.email_verified === true && isAllowedAuthEmail(email));
+        return Boolean(email && profile?.email_verified === true && isAllowedAuthEmail(email) && workspaceForConfiguredEmail(email));
       }
 
       return false;
