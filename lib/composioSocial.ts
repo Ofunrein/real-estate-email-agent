@@ -27,7 +27,7 @@ function envFlag(value?: string): boolean {
 }
 
 export function composioSocialSendsEnabled(): boolean {
-  return envFlag(process.env.IRIS_ENABLE_COMPOSIO_SOCIAL_SENDS);
+  return false;
 }
 
 function parseJsonObject(value: string | undefined): Record<string, unknown> {
