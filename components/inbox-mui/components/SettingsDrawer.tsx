@@ -21,6 +21,7 @@ import { signOut } from 'next-auth/react';
 import { type LeadCategoryId } from '../data/inboxData';
 import { useInboxModel } from '../InboxDataContext';
 import { useCategoryColors } from '../theme/CategoryColorContext';
+import { emailConnectPath } from '@/lib/emailConnect';
 import type { InboxSettings } from '@/lib/inboxSettings';
 import {
   type ConnectionStatus,
@@ -543,7 +544,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
           Email accounts
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
-          Event-driven inbox Iris replies from. Gmail and Outlook connect through Google OAuth.
+          Event-driven inboxes Iris replies from. Gmail uses Google OAuth; Outlook uses real-time Composio triggers.
         </Typography>
         <Stack spacing={1.25}>
           {(['gmail', 'outlook'] as const).map((kind) => {
@@ -584,7 +585,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                       sx={{ height: 20, '& .MuiChip-label': { px: 0.75, fontSize: 11 } }} />
                   </Stack>
                   <Typography variant="caption" color={connected ? 'text.primary' : 'text.secondary'} sx={{ display: 'block', lineHeight: 1.25, mt: 0.25 }} noWrap>
-                    {connected ? (acct?.email || 'Connected account') : 'Connect via Google OAuth'}
+                    {connected ? (acct?.email || 'Connected account') : kind === 'outlook' ? 'Connect Outlook OAuth' : 'Connect via Google OAuth'}
                   </Typography>
                   {acct?.last_error ? (
                     <Typography variant="caption" color="error" sx={{ display: 'block', lineHeight: 1.2, mt: 0.25 }} noWrap>
@@ -593,7 +594,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                   ) : null}
                 </Box>
                 <Button
-                  href="/api/settings/email-account/connect"
+                  href={emailConnectPath(kind)}
                   variant={connected ? 'outlined' : 'contained'}
                   size="small"
                   sx={{ flexShrink: 0, fontSize: 12, whiteSpace: 'nowrap' }}>
