@@ -24,6 +24,7 @@ import {
   CENTRAL_TEXAS_CITIES,
 } from "@/lib/serviceAreas";
 import type { ChannelConnectionInput, ChannelConnectionRecord } from "@/lib/channelConnections";
+import { requestWorkspaceId } from "@/lib/workspaceContext";
 
 let pool: Pool | null = null;
 const tableColumnCache = new Map<string, Set<string>>();
@@ -48,7 +49,7 @@ export function databaseEnabled(): boolean {
 }
 
 export function clientId(): string {
-  return process.env.CLIENT_ID || "default";
+  return requestWorkspaceId() || process.env.CLIENT_ID || "default";
 }
 
 function getPool(): Pool {
