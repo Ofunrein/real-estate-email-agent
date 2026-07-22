@@ -6,6 +6,7 @@ import {
   listChannelConnectionsFromDatabase,
   upsertChannelConnectionInDatabase,
 } from "@/lib/database";
+import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
 export type ChannelConnectionRecord = {
   id: string;
@@ -155,6 +156,7 @@ export function envFallbackChannelConnections(
   env: Record<string, string | undefined> = process.env,
   clientId = defaultClientId(),
 ): ChannelConnectionRecord[] {
+  if (!mayUseSharedEnvironmentConnections(clientId)) return [];
   const publicBaseUrl = cleanText(env.PUBLIC_BASE_URL || env.AUTH_URL);
   const gmailOAuthConfigured = configured(env.GMAIL_OAUTH_CLIENT_ID || env.AUTH_GOOGLE_ID || env.GOOGLE_CLIENT_ID)
     && configured(env.GMAIL_OAUTH_CLIENT_SECRET || env.AUTH_GOOGLE_SECRET || env.GOOGLE_CLIENT_SECRET);

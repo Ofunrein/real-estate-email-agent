@@ -1,6 +1,8 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import { removeEmDashes } from "@/lib/noEmDash";
+import { requestWorkspaceId } from "@/lib/workspaceContext";
+import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
 export type TwilioSendResult = {
   sent: boolean;
@@ -71,6 +73,9 @@ export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): 
 
 export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
   const cleanUrls = cleanMediaUrls(mediaUrls);
+  if (!mayUseSharedEnvironmentConnections(requestWorkspaceId())) {
+    return { sent: false, skipped: true, sid: "", error: "Connect a workspace-specific Twilio account before sending SMS", mediaCount: cleanUrls.length };
+  }
   if (!smsAgentEnabled()) {
     return { sent: false, skipped: true, sid: "", error: "ENABLE_SMS_AGENT is not true", mediaCount: cleanUrls.length };
   }
