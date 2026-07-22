@@ -38,6 +38,10 @@ export function workspaceForConfiguredEmail(email: string | null | undefined): W
   return workspaceForEmail(email, configuredWorkspaces());
 }
 
+export function mayUseSharedEnvironmentConnections(workspaceId: string | undefined): boolean {
+  return workspaceId !== "realty-atx";
+}
+
 export function configuredWorkspaceEmails(): string[] {
   return Object.keys(configuredWorkspaces());
 }

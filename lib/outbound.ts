@@ -13,6 +13,8 @@ import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import type { CadenceConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { sendTheoSms } from "@/lib/twilioSms";
+import { requestWorkspaceId } from "@/lib/workspaceContext";
+import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
 const VAPI_BASE = "https://api.vapi.ai";
 
@@ -137,6 +139,9 @@ export async function placeOutboundCall(
   input: OutboundCallInput,
   request?: OutboundRequest,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!mayUseSharedEnvironmentConnections(requestWorkspaceId())) {
+    return { ok: false, error: "Connect a workspace-specific Vapi account before placing calls" };
+  }
   if (!config.apiKey || !config.assistantId || !config.phoneNumberId) {
     return { ok: false, error: "Missing VAPI_API_KEY, VAPI_ASSISTANT_ID, or VAPI_PHONE_NUMBER_ID" };
   }
