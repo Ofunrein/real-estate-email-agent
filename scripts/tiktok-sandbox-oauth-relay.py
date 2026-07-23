@@ -50,5 +50,5 @@ class Relay(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"TikTok Sandbox OAuth relay listening on http://localhost:{PORT}/")
+    print(f"TikTok Sandbox OAuth relay listening on http://127.0.0.1:{PORT}/")
     ThreadingHTTPServer((HOST, PORT), Relay).serve_forever()
