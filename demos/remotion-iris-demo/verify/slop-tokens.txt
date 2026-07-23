@@ -1,9 +1,0 @@
-{
-  "score": 0,
-  "status": "PASS",
-  "threshold": {
-    "fail": 50,
-    "warn": 20
-  },
-  "findings": []
-}
