@@ -38,3 +38,4 @@ claude-md/
 .DS_Store
 public/uploads/
 .vercel
+graphify-out/
