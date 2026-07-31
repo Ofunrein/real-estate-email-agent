@@ -196,6 +196,17 @@ test("buildAriaAssistant: qualifyLead captures channel and bed-bath preferences"
   assert.match(messages[0].content, /sell before buying/);
 });
 
+test("buildAriaAssistant: extracts advanced buyer and seller qualification", () => {
+  const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
+  const analysis = assistant.analysisPlan as Record<string, unknown>;
+  const schema = analysis.structuredDataSchema as { properties: Record<string, unknown> };
+  for (const field of [
+    "propertyType", "mustHaves", "dealbreakers", "financingStatus", "comfortableMonthlyPayment",
+    "availableCash", "sellerMotivation", "propertyCondition", "occupancy", "representationStatus",
+    "sellBeforeBuy", "preferredContactMethod",
+  ]) assert.ok(schema.properties[field], `missing ${field}`);
+});
+
 test("buildAriaAssistant: no voice block when voiceId unset", () => {
   const bare = resolveClientConfig({ HUMAN_TRANSFER_NUMBER: "+15128152032" });
   const assistant = buildAriaAssistant(bare, { publicUrl: "https://app.example.com" });
