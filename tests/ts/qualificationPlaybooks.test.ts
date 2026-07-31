@@ -40,6 +40,11 @@ test("advancedQualificationPlaybook covers seller, buyer, appointment, complianc
   assert.match(playbook, /Realtor guard/i);
   assert.match(playbook, /Do not claim an appointment is scheduled until the booking tool\/calendar confirms/i);
   assert.match(playbook, /Sensitive boundary/i);
+  assert.match(playbook, /comfortable monthly payment/i);
+  assert.match(playbook, /Seller motivations to recognize/i);
+  assert.match(playbook, /Renter\/landlord qualification/i);
+  assert.match(playbook, /Investor qualification/i);
+  assert.match(playbook, /hard requirement, preference, flexible preference, and concern/i);
 });
 
 test("sharedBrainInstruction injects advanced qualification into every channel", () => {

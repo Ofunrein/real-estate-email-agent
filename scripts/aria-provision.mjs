@@ -18,8 +18,11 @@ function loadEnv(path = ".env") {
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
     const index = trimmed.indexOf("=");
     const key = trimmed.slice(0, index).trim();
-    const value = trimmed.slice(index + 1).trim().replace(/^['"]|['"]$/g, "");
-    process.env[key] = value;
+    const rawValue = trimmed.slice(index + 1).trim();
+    const value = /^['"]/.test(rawValue)
+      ? rawValue.replace(/^['"]|['"]$/g, "")
+      : rawValue.replace(/(?:^|\s+)#.*$/, "").trim();
+    if (!process.env[key] && value) process.env[key] = value;
   }
 }
 
