@@ -7,6 +7,7 @@ import {
   classifyIrisEmailText,
   coalesceIrisEmailThreadFollowUps,
   decideIrisEmailExecution,
+  generateIrisEmailReply,
   irisEmailPollQuery,
   isIrisEligibleEmail,
   parseEmailContact,
@@ -464,4 +465,40 @@ test("classifyIrisEmailText: blocks non-real-estate founder outreach from auto-r
   })), false);
   assert.equal(classification.intent, "spam");
   assert.equal(execution.canReply, false);
+});
+
+test("classifyIrisEmailText: handles an interested agency reply from the personalized demo funnel", () => {
+  const message = email({
+    from: "James Wyatt <james@bartonwyatt.co.uk>",
+    subject: "Re: quick video for Barton Wyatt",
+    body: [
+      "This looks interesting. How does pricing work, and can we see a walkthrough this week?",
+      "",
+      "On Monday Martin wrote:",
+      "I made a custom Loom video showing how our AI email agent can respond to property inquiries and book more valuations.",
+    ].join("\n"),
+  });
+  const classification = classifyIrisEmailText(message);
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(isIrisEligibleEmail(message), true);
+  assert.equal(classification.intent, "agency_demo_reply");
+  assert.equal(classification.primary_lead_role, "agency_prospect");
+  assert.equal(classification.recommended_next_action, "send_booking_link");
+  assert.ok(classification.opportunity_tags.includes("outbound_demo_reply"));
+  assert.equal(execution.canReply, true);
+});
+
+test("generateIrisEmailReply: agency demo reply does not qualify prospect as a home buyer", () => {
+  const message = email({
+    subject: "Re: AI email agent demo",
+    body: "Interested. Can you send details? The demo showed how the AI email agent handles inbound property leads.",
+  });
+  const classification = classifyIrisEmailText(message);
+  const reply = generateIrisEmailReply(message, classification) || "";
+
+  assert.equal(classification.intent, "agency_demo_reply");
+  assert.match(reply, /property inquiries/i);
+  assert.match(reply, /walkthrough|setup and pricing/i);
+  assert.doesNotMatch(reply, /price range should I use|Which area/i);
 });
