@@ -407,11 +407,13 @@ function noOrStopSignal(text: string): "stop" | "no" | "" {
   return "";
 }
 
-function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields): string | null {
+function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: IrisLeadRole, tags: string[]): string | null {
   if (intent === "showing_request") return "What day and time works best for a quick showing?";
+  if (role === "second_time_buyer" && !tags.includes("valuation_consented")) return "Would you like a free valuation of your current property while we help with your next purchase?";
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
   if (!fields.budget && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "What price range should I stay under?";
+  if (["property_details", "buyer_lead"].includes(intent) && fields.current_property_status === "unknown") return "Is this your first purchase, or do you also own a property that may need a valuation?";
   return null;
 }
 
@@ -429,6 +431,9 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const flags = detectIrisComplianceFlags(latestClean);
   const noSignal = noOrStopSignal(latestClean);
   const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
+  const secondTimeBuyer = /\b(second[ -]?time buyer|bought before|already own|currently own|own (?:a|my|our) (?:home|house|property)|have (?:a|our) (?:home|house|property) to sell|need to sell (?:my|our) (?:home|house|property))\b/i.test(latestClean);
+  const contextSecondTimeBuyer = /\b(second_time_buyer|second[ -]?time buyer|currently own|already own|current property status:\s*owns)\b/i.test(contextClean);
+  const valuationConsent = /\b(?:yes|sure|please|interested|sounds good|let'?s do it|book|schedule)\b.{0,80}\b(?:valuation|home value|property value|appraisal|cma)\b|\b(?:valuation|home value|property value|appraisal|cma)\b.{0,80}\b(?:yes|sure|please|interested|book|schedule)\b/i.test(latestClean);
   const fields: IrisLeadFields = {
     // Fields carry forward across the thread: a follow-up email that answers only
     // budget must not wipe the area/beds the lead already gave earlier. Latest
@@ -438,7 +443,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     budget: extractBudget(latestClean) || contextBudget(contextClean),
     area: extractArea(latestClean) || contextArea(contextClean),
     beds: extractBeds(latestClean) || contextBeds(contextClean),
-    current_property_status: /\b(i own|my house|my home)\b/i.test(latestClean) ? "owns" : /\b(i rent|renting)\b/i.test(latestClean) ? "rents" : "unknown",
+    current_property_status: secondTimeBuyer || contextSecondTimeBuyer ? "owns" : /\b(i rent|renting)\b/i.test(latestClean) ? "rents" : "unknown",
     preferred_channel: preferredChannel(latestClean),
   };
 
@@ -492,6 +497,11 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) opportunityTags.push("mortgage_interest");
   if (/(sell before (?:i )?buy|need to sell first|contingent)/i.test(latestClean)) opportunityTags.push("sell_before_buy");
   if (noSignal) opportunityTags.push(noSignal === "stop" ? "opt_out" : "clear_no");
+  if (secondTimeBuyer || contextSecondTimeBuyer) {
+    role = "second_time_buyer";
+    opportunityTags.push("sell_before_buy", "valuation_interest");
+  }
+  if (valuationConsent && (secondTimeBuyer || contextSecondTimeBuyer)) opportunityTags.push("valuation_consented");
 
   if (role === "mortgage_adjacent_lead" && flags.includes("mortgage_license")) intent = "human_required";
   if (intent === "human_required" && role === "unknown" && /(complaint|angry|upset|report|legal|attorney|lawyer)/i.test(latestClean)) {
@@ -499,14 +509,14 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   }
 
   const routeHuman = intent === "human_required" || intent === "spam" || flags.some((flag) => SENSITIVE_FLAGS.has(flag));
-  const recommended = intent === "spam" ? "review" : routeHuman ? "route_human" : intent === "showing_request" ? "send_booking_link" : "reply_and_qualify";
+  const recommended = intent === "spam" ? "review" : routeHuman ? "route_human" : intent === "showing_request" || opportunityTags.includes("valuation_consented") ? "send_booking_link" : "reply_and_qualify";
   const confidence = intent === "human_required" && !flags.length && !noSignal ? 0.35 : spamLike ? 0.8 : 0.72;
 
   return {
     intent,
     message_intent: intent,
     primary_lead_role: role,
-    secondary_roles: [],
+    secondary_roles: role === "second_time_buyer" ? ["seller"] : [],
     opportunity_tags: uniq(opportunityTags),
     tone_state: flags.includes("angry_or_complaint") ? "annoyed" : /asap|urgent|today|tomorrow/i.test(latestClean) ? "urgent" : "neutral",
     urgency: /asap|urgent|today|tomorrow/i.test(latestClean) ? "high" : "unknown",
@@ -515,7 +525,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     address: addresses[0] || null,
     addresses,
     lead_fields: fields,
-    next_best_question: routeHuman ? null : nextQuestion(intent, fields),
+    next_best_question: routeHuman ? null : nextQuestion(intent, fields, role, opportunityTags),
     recommended_next_action: recommended,
     human_handoff_reason: routeHuman ? humanHandoffReason(intent, flags, noSignal) : null,
   };
@@ -568,6 +578,24 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
   const execution = decideIrisEmailExecution(classification);
   if (!execution.canReply) return null;
   const question = classification.next_best_question;
+  if (classification.primary_lead_role === "second_time_buyer") {
+    const valuationAccepted = classification.opportunity_tags.includes("valuation_consented");
+    const valuationUrl = (process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL || "").trim();
+    return [
+      "Hello,",
+      "",
+      valuationAccepted
+        ? "Thanks for confirming. We can help with your next purchase and arrange a free valuation of your current property."
+        : "Thanks for confirming. Since you already own a property, we can help with your next purchase and coordinate a free valuation of your current property too.",
+      "",
+      valuationAccepted
+        ? valuationUrl || "What is the address of the property you would like valued?"
+        : question || "Would you like me to arrange the valuation?",
+      "",
+      "Best,",
+      IRIS_AGENT_NAME,
+    ].join("\n");
+  }
   if (classification.intent === "showing_request") {
     return [
       "Hello,",

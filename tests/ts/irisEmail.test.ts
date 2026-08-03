@@ -7,6 +7,7 @@ import {
   classifyIrisEmailText,
   coalesceIrisEmailThreadFollowUps,
   decideIrisEmailExecution,
+  generateIrisEmailReply,
   irisEmailPollQuery,
   isIrisEligibleEmail,
   parseEmailContact,
@@ -59,6 +60,51 @@ test("classifyIrisEmailText: detects showing request and lead fields", () => {
   assert.equal(classification.lead_fields.beds, "3");
   assert.equal(classification.lead_fields.budget, "$650k");
   assert.equal(classification.recommended_next_action, "send_booking_link");
+});
+
+test("classifyIrisEmailText: detects a second-time buyer and opens the valuation path", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property inquiry",
+    body: "Yes, we are second-time buyers and currently own our home.",
+  }));
+
+  assert.equal(classification.primary_lead_role, "second_time_buyer");
+  assert.deepEqual(classification.secondary_roles, ["seller"]);
+  assert.equal(classification.lead_fields.current_property_status, "owns");
+  assert.ok(classification.opportunity_tags.includes("valuation_interest"));
+  assert.match(classification.next_best_question || "", /free valuation/i);
+});
+
+test("classifyIrisEmailText: valuation acceptance sends booking path", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Your next purchase",
+    body: [
+      "Yes, please book the property valuation.",
+      "",
+      "Thread context for classification only:",
+      "Prior summary: Lead role: second_time_buyer. Current property status: owns.",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.primary_lead_role, "second_time_buyer");
+  assert.ok(classification.opportunity_tags.includes("valuation_consented"));
+  assert.equal(classification.recommended_next_action, "send_booking_link");
+});
+
+test("generateIrisEmailReply: second-time buyer gets valuation booking link", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    const message = email({ body: "Yes, I am a second-time buyer and would like to book a valuation." });
+    const reply = generateIrisEmailReply(message, classifyIrisEmailText(message)) || "";
+    assert.match(reply, /next purchase/i);
+    assert.match(reply, /free valuation/i);
+    assert.match(reply, /https:\/\/example\.com\/free-valuation/);
+    assert.doesNotMatch(reply, /price range should I use/i);
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
 });
 
 test("coalesceIrisEmailThreadFollowUps: keeps one latest message and combines quick follow-up context", () => {
