@@ -34,7 +34,6 @@ import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelE
 import type { SheetRow } from "@/lib/sheetSchema";
 
 export type IrisEmailIntent =
-  | "agency_demo_reply"
   | "property_search"
   | "property_details"
   | "showing_request"
@@ -45,7 +44,6 @@ export type IrisEmailIntent =
   | "spam";
 
 export type IrisLeadRole =
-  | "agency_prospect"
   | "buyer"
   | "seller"
   | "first_time_buyer"
@@ -409,15 +407,7 @@ function noOrStopSignal(text: string): "stop" | "no" | "" {
   return "";
 }
 
-function isAgencyDemoFunnelReply(latestText: string, contextText = ""): boolean {
-  const combined = `${latestText}\n${contextText}`;
-  const funnelContext = /\b(?:custom|quick|loom|demo) video\b|\bai (?:email )?agent\b|\brespond(?:s|ing)? (?:to )?(?:new |property |inbound )?(?:inquiries|leads)\b|\bbook (?:more )?(?:property )?(?:valuations|showings)\b/i.test(combined);
-  const replySignal = /\b(?:interested|looks good|sounds good|tell me more|how does (?:it|this) work|what(?:'s| is) (?:the )?(?:price|pricing|cost)|send (?:me )?(?:the )?(?:details|pricing|setup)|available|walkthrough|call|meeting|demo|let(?:'s| us) (?:talk|chat|do it)|yes|sure)\b/i.test(latestText);
-  return funnelContext && replySignal;
-}
-
 function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields): string | null {
-  if (intent === "agency_demo_reply") return "Would a quick 15-minute walkthrough work better this week, or should I send the setup and pricing first?";
   if (intent === "showing_request") return "What day and time works best for a quick showing?";
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
@@ -459,16 +449,11 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const systemEmailLike = /(confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|verification link|welcome to .{0,40}(?:checker|platform|portal)|bulk email checker)/i.test(latestClean);
   const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
   const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
-  const agencyDemoReply = isAgencyDemoFunnelReply(latestClean, contextClean);
-  const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike && !agencyDemoReply);
+  const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
   if (spamLike) {
     intent = "spam";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
-  } else if (agencyDemoReply) {
-    intent = "agency_demo_reply";
-    role = "agency_prospect";
-    opportunityTags.push("outbound_demo_reply", "agency_sales_opportunity");
   } else if (pivotingToOtherOptions && /(options?|alternatives?|another|other|what else|looking for|better fit|three bed|3 bed|bedroom|homes?|houses?|properties|listings?)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
@@ -514,7 +499,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   }
 
   const routeHuman = intent === "human_required" || intent === "spam" || flags.some((flag) => SENSITIVE_FLAGS.has(flag));
-  const recommended = intent === "spam" ? "review" : routeHuman ? "route_human" : ["showing_request", "agency_demo_reply"].includes(intent) ? "send_booking_link" : "reply_and_qualify";
+  const recommended = intent === "spam" ? "review" : routeHuman ? "route_human" : intent === "showing_request" ? "send_booking_link" : "reply_and_qualify";
   const confidence = intent === "human_required" && !flags.length && !noSignal ? 0.35 : spamLike ? 0.8 : 0.72;
 
   return {
@@ -583,18 +568,6 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
   const execution = decideIrisEmailExecution(classification);
   if (!execution.canReply) return null;
   const question = classification.next_best_question;
-  if (classification.intent === "agency_demo_reply") {
-    return [
-      "Hello,",
-      "",
-      "Thanks for taking a look. Iris responds to new property inquiries in seconds, answers routine questions, qualifies the lead, and moves ready prospects toward a showing or valuation booking.",
-      "",
-      question || "Would a quick 15-minute walkthrough work better this week, or should I send the setup and pricing first?",
-      "",
-      "Best,",
-      IRIS_AGENT_NAME,
-    ].join("\n");
-  }
   if (classification.intent === "showing_request") {
     return [
       "Hello,",
@@ -863,7 +836,7 @@ async function generateClaudeIrisEmailReplyText(
     features: property.features,
     listing_url: property.listing_url,
   }));
-  const system = `You are ${IRIS_AGENT_NAME}, the real estate email assistant. Claude is the reasoning brain for this email agent. You also handle replies from real-estate agency owners who received a Lumenosis product demo.
+  const system = `You are ${IRIS_AGENT_NAME}, the real estate email assistant. Claude is the reasoning brain for this email agent.
 Write only the email body, no markdown and no subject line.
 Rules:
 - Keep it concise and useful.
@@ -874,7 +847,6 @@ ${advancedQualificationPlaybook()}
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
 - If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.
 - Ask at most one next-step question.
-- For agency_demo_reply, answer the prospect's question directly, explain only supported Iris capabilities, and move toward a 15-minute walkthrough or requested setup/pricing details. Do not treat the agency owner as a home buyer or seller.
 - Never use em dashes. Use commas, periods, or simple hyphens instead.
 - End exactly with:
 Best,
@@ -1438,11 +1410,9 @@ export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "su
   if (/^(sales|marketing|partnerships?|outreach|hello|team|founder|growth)@/i.test(sender)) return false;
   if (/@(?:.*\.)?(?:accounts\.google\.com|google\.com|gohighlevel\.com|github\.com|vercel\.com|calendly\.com|luckyfours\.com)$/i.test(sender)) return false;
   const text = `${message.subject || ""}\n${message.body || ""}`;
-  const agencyDemoReply = isAgencyDemoFunnelReply(text);
   if (/(security alert|verification code|password reset|new sign-in|login attempt|oauth application|deployment failed|workflow run|confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|bulk email checker)/i.test(text)) return false;
-  if (!agencyDemoReply && /(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update|zero slide decks?|technical founders?|prospects sell themselves|want the method|selling all day|deals moving|actual deals)/i.test(text)) return false;
+  if (/(unsubscribe|manage preferences|view in browser|privacy policy|trial discount|end of trial|webinar|newsletter|limited time|book a demo|schedule a demo|product update|sales automation|marketing automation|google for startups|cloud program update|zero slide decks?|technical founders?|prospects sell themselves|want the method|selling all day|deals moving|actual deals)/i.test(text)) return false;
   if (/\b(api|saas|software|platform|automation|cold email|lead gen|partnership|partners?|integrat(?:e|ion)|demo|quick re|quick question|checking in|outreach|prospects?)\b/i.test(text)
-    && !agencyDemoReply
     && !/\b(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|real estate|bed(?:room)?|bath|mortgage|valuation|zillow|mls)\b/i.test(text)) {
     return false;
   }
