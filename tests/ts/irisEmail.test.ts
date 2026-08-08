@@ -62,6 +62,20 @@ test("classifyIrisEmailText: detects showing request and lead fields", () => {
   assert.equal(classification.recommended_next_action, "send_booking_link");
 });
 
+test("classifyIrisEmailText: treats explicit looking-to-buy requests as buyer leads", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Austin home search",
+    body: "Hi Iris, I am looking to buy a 3 bedroom home in Austin under $600,000. Please send me options.",
+  }));
+
+  assert.equal(classification.intent, "property_search");
+  assert.equal(classification.primary_lead_role, "buyer");
+  assert.equal(classification.lead_fields.area, "Austin");
+  assert.equal(classification.lead_fields.beds, "3");
+  assert.equal(classification.lead_fields.budget, "$600,000");
+  assert.equal(classification.recommended_next_action, "reply_and_qualify");
+});
+
 test("classifyIrisEmailText: detects a second-time buyer and opens the valuation path", () => {
   const classification = classifyIrisEmailText(email({
     subject: "Re: Property inquiry",

@@ -322,7 +322,7 @@ function extractBudgetRange(text: string): { min: number | null; max: number | n
 }
 
 function extractBudget(text: string): string | null {
-  const match = text.match(/\$ ?\d[\d,.]*(?:\s?[kKmM])?|\b\d[\d,.]*\s?(?:k|m)\b/);
+  const match = text.match(/\$ ?\d[\d,]*(?:\.\d+)?(?:\s?[kKmM])?|\b\d[\d,]*(?:\.\d+)?\s?(?:k|m)\b/);
   return match ? match[0].replace(/\s+/g, "") : null;
 }
 
@@ -453,7 +453,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
 
   const systemEmailLike = /(confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|verification link|welcome to .{0,40}(?:checker|platform|portal)|bulk email checker)/i.test(latestClean);
   const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
-  const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|rent|lease|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
+  const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|\brent\b|\blease\b|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
   const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
   if (spamLike) {
     intent = "spam";
@@ -482,10 +482,10 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   } else if (/(showing|tour|open house|see it|see that one|view it|schedule|appointment|take a look|look at it|check it out|after work|tomorrow|today|noon|afternoon|evening|this friday)/i.test(latestClean) && canResolveFromPriorProperty(latestClean)) {
     intent = "showing_request";
     role = "buyer";
-  } else if (/(rent|lease|rental|tenant)/i.test(latestClean)) {
+  } else if (/\b(rent|lease|rental|tenant)\b/i.test(latestClean)) {
     intent = "renter_lead";
     role = "renter";
-  } else if (/(looking for|homes?|houses?|condos?|properties|property|available|inventory|options|under \$|\$[\d,]+ ?(?:to|-|–|and) ?\$?[\d,]+|price range|budget|move in|relocat|bedroom|bd)/i.test(latestClean)) {
+  } else if (/(looking (?:for|to buy)|homes?|houses?|condos?|properties|property|available|inventory|options|under \$|\$[\d,]+ ?(?:to|-|–|and) ?\$?[\d,]+|price range|budget|move in|relocat|bedroom|bd)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
   } else if (/(buy|purchase|preapproved|pre-approved|mortgage|loan)/i.test(latestClean)) {
