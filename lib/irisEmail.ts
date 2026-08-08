@@ -1487,7 +1487,18 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
   const uniqueIds = [...new Set(messageIds.map((id) => id.trim()).filter(Boolean))].slice(0, 25);
   const messages: IrisEmailMessage[] = [];
   for (const id of uniqueIds) {
-    const detail = await gmail.users.messages.get({ userId: "me", id, format: "full" });
+    let detail;
+    try {
+      detail = await gmail.users.messages.get({ userId: "me", id, format: "full" });
+    } catch (error) {
+      const candidate = error as { code?: unknown; response?: { status?: unknown } };
+      const status = Number(candidate?.code || candidate?.response?.status || 0);
+      // Gmail history is eventually consistent: a message can be deleted between
+      // history.list and messages.get. One vanished message must not poison the
+      // entire push batch and prevent newer mail from being processed.
+      if (status === 404) continue;
+      throw error;
+    }
     const labelIds = detail.data.labelIds || [];
     // Explicit-id fetch is used for recovery of parked needs_human messages, which
     // Iris already marked read (UNREAD removed) during first processing. Only require
