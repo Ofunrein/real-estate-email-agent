@@ -1,5 +1,6 @@
 import { upsertReplyJobInDatabase } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
+import { requestWorkspaceId } from "@/lib/workspaceContext";
 
 export type IrisReplyQueueInput = {
   dedupeKey: string;
@@ -14,6 +15,11 @@ export type IrisReplyQueueInput = {
   nextAction?: string;
   metadata?: Record<string, unknown>;
 };
+
+export function irisReplySendEventData(dedupeKey: string, workspaceId = requestWorkspaceId()) {
+  const clientId = String(workspaceId || "").trim();
+  return clientId ? { dedupeKey, clientId } : { dedupeKey };
+}
 
 export async function queueIrisReplySend(input: IrisReplyQueueInput): Promise<void> {
   const dedupeKey = input.dedupeKey.trim();
@@ -33,5 +39,5 @@ export async function queueIrisReplySend(input: IrisReplyQueueInput): Promise<vo
     metadata: { ...(input.metadata || {}), generatedAt: new Date().toISOString() },
   });
   if (!job) throw new Error("Reply job could not be persisted");
-  await inngest.send({ name: "message.reply.send", data: { dedupeKey } });
+  await inngest.send({ name: "message.reply.send", data: irisReplySendEventData(dedupeKey) });
 }

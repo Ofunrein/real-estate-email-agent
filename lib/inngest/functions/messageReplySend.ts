@@ -13,6 +13,7 @@ import { planAgentAction } from "@/lib/agentActions";
 import { agentActionForReplyJob, IRIS_REPLY_SEND_RETRIES, requireSuccessfulReplySend } from "@/lib/irisReplyDelivery";
 import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
 import { DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
+import { setRequestWorkspace } from "@/lib/workspaceContext";
 
 export const messageReplySend = inngest.createFunction(
   {
@@ -22,6 +23,8 @@ export const messageReplySend = inngest.createFunction(
     triggers: [{ event: "message.reply.send" }],
   },
   async ({ event, step }) => {
+    const eventClientId = String(event.data?.clientId || "").trim();
+    if (eventClientId) setRequestWorkspace(eventClientId);
     const dedupeKey = String(event.data?.dedupeKey || "").trim();
     if (!dedupeKey) return { ok: false, error: "missing_dedupe_key" };
 
