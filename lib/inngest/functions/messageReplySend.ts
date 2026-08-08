@@ -13,7 +13,7 @@ import { planAgentAction } from "@/lib/agentActions";
 import { agentActionForReplyJob, IRIS_REPLY_SEND_RETRIES, requireSuccessfulReplySend } from "@/lib/irisReplyDelivery";
 import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
 import { DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
-import { runInRequestWorkspace } from "@/lib/workspaceContext";
+import { runInRequestWorkspace, setRequestWorkspace } from "@/lib/workspaceContext";
 
 export const messageReplySend = inngest.createFunction(
   {
@@ -29,12 +29,14 @@ export const messageReplySend = inngest.createFunction(
     if (!dedupeKey) return { ok: false, error: "missing_dedupe_key" };
 
     const job = await step.run("load reply job", async () => {
+      if (eventClientId) setRequestWorkspace(eventClientId);
       return readReplyJobByDedupeKeyFromDatabase(dedupeKey);
     });
     if (!job) return { ok: false, error: "reply_job_not_found" };
     if (job.status === "sent") return { ok: true, skipped: "already_sent" };
     if (!String(job.replyText || "").trim() && !job.mediaJson?.length) {
       await step.run("mark send blocked", async () => {
+        if (eventClientId) setRequestWorkspace(eventClientId);
         await upsertReplyJobInDatabase({
           dedupeKey,
           channel: job.channel,
@@ -77,6 +79,7 @@ export const messageReplySend = inngest.createFunction(
     }
 
     const sent = await step.run("send through channel adapter", async () => {
+      if (eventClientId) setRequestWorkspace(eventClientId);
       await incrementReplyJobAttemptInDatabase(dedupeKey);
       const safety = await claimProviderAction({
         requestId: `reply-job:${job.id}`,
@@ -116,6 +119,7 @@ export const messageReplySend = inngest.createFunction(
     });
 
     await step.run("persist outbound reply", async () => {
+      if (eventClientId) setRequestWorkspace(eventClientId);
       await recordChannelInteraction({
         channel: job.channel as ManualReplyInput["channel"], direction: "outbound", agentName: IRIS_AGENT_NAME,
         phone: job.channel === "email" ? "" : job.contactRef, email: job.channel === "email" ? job.contactRef : "",
