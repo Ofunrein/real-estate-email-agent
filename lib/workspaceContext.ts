@@ -9,3 +9,8 @@ export function setRequestWorkspace(workspaceId: string): void {
 export function requestWorkspaceId(): string | undefined {
   return workspaceStorage.getStore();
 }
+
+export function runInRequestWorkspace<T>(workspaceId: string, work: () => T): T {
+  const normalized = workspaceId.trim();
+  return normalized ? workspaceStorage.run(normalized, work) : work();
+}
