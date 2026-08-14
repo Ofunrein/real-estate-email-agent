@@ -601,10 +601,13 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
     ].join("\n");
   }
   if (classification.intent === "showing_request") {
+    const showingCopy = question
+      ? `I can help arrange a showing${classification.address ? ` for ${classification.address}` : ""}. ${question}`
+      : `Thanks, I have your requested time${classification.address ? ` for ${classification.address}` : ""} and will have the team confirm availability.`;
     return [
       "Hello,",
       "",
-      `I can help with that${classification.address ? ` for ${classification.address}` : ""}. ${question || "I have your requested time and will have the team confirm availability."}`,
+      showingCopy,
       "",
       "Best,",
       IRIS_AGENT_NAME,
@@ -785,8 +788,8 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
   );
   const subjectLine = classification?.intent === "property_search"
     ? "I found the best matching options from our inventory."
-    : classification?.intent === "showing_request" && featured
-      ? `I can help with ${featured.address || "that property"}.`
+    : classification?.intent === "showing_request"
+      ? ""
     : featured
       ? "Here are the property details from our inventory."
       : "";

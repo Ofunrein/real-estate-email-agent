@@ -391,6 +391,8 @@ test("buildHtmlEmailReply: showing requests focus on the selected property inste
   assert.doesNotMatch(reply.html || "", /Similar options/i);
   assert.doesNotMatch(reply.html || "", /12725 Bloomington/i);
   assert.match(reply.html || "", /What day and time works best/i);
+  assert.equal((reply.html || "").match(/happy to set up a showing/gi)?.length, 1);
+  assert.doesNotMatch(reply.html || "", /I can help with 9605 Corbe Dr/i);
   assert.equal((reply.text.match(/Property details:/g) || []).length, 1);
   assert.match(reply.text, /9605 Corbe Dr/);
   assert.doesNotMatch(reply.text, /12725 Bloomington/i);
@@ -479,6 +481,7 @@ test("classifyIrisEmailText: does not re-ask for showing time when day and time 
   assert.equal(classification.intent, "showing_request");
   assert.equal(classification.next_best_question, null);
   assert.match(generateIrisEmailReply(email(), classification) || "", /confirm availability/i);
+  assert.doesNotMatch(generateIrisEmailReply(email(), classification) || "", /I can help/i);
 });
 
 test("classifyIrisEmailText: resolves first property in prior email cards", () => {
