@@ -788,10 +788,10 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
       : "";
   const plainProperties = showAlternatives ? cleanProperties.slice(0, 4) : cleanProperties.slice(0, featured ? 1 : 0);
   const html = `<div style="font-family:Arial,sans-serif;max-width:620px;color:#111827;line-height:1.45">
-${subjectLine ? `<p style="margin:0 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
+${plainToHtml(bodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
+${subjectLine ? `<p style="margin:20px 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
 ${featured ? propertyCardHtml(featured, true) : ""}
 ${showAlternatives ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
-${plainToHtml(bodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
 <p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
 </div>`;
   const propertyText = plainProperties.length
@@ -870,7 +870,7 @@ Rules:
 - Keep it concise and useful.
 ${advancedQualificationPlaybook()}
 - Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
-- The app will render property facts in an HTML property card above your body, so do not repeat the full price/beds/baths/sqft block in prose.
+- The app will render property facts in an HTML property card below your body, so do not repeat the full price/beds/baths/sqft block in prose.
 - Mention the primary address at most once.
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
 - If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.

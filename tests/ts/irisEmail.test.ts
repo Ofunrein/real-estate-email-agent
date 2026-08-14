@@ -352,6 +352,7 @@ test("buildHtmlEmailReply: proxies usable photos and avoids duplicate property c
     assert.equal((reply.html || "").match(/<h3[^>]*>100 E 51st St #7<\/h3>/g)?.length, 1);
     assert.equal((reply.html || "").match(/3 beds, 3 baths, 1902 sqft Townhouse/g)?.length || 0, 0);
     assert.equal((reply.html || "").match(/View listing/g)?.length, 1);
+    assert.ok((reply.html || "").indexOf("I can help with details") < (reply.html || "").indexOf("<img"));
   } finally {
     if (previousBase === undefined) delete process.env.PUBLIC_BASE_URL;
     else process.env.PUBLIC_BASE_URL = previousBase;
