@@ -1016,11 +1016,9 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
     return `${when} ${event.channel || "unknown"} ${event.direction || "unknown"} ${event.status || ""}: ${text}`;
   });
   const context = [
-    !threadEvents.length && lead?.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
     !threadEvents.length && lead?.budget ? `Known budget: ${lead.budget}` : "",
     !threadEvents.length && lead?.area ? `Known area: ${lead.area}` : "",
     !threadEvents.length && lead?.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
-    !threadEvents.length && lead?.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
     recentEvents.length ? `Recent thread timeline:\n${recentEvents.join("\n")}` : "",
   ].filter(Boolean).join("\n");
   return {
