@@ -407,8 +407,12 @@ function noOrStopSignal(text: string): "stop" | "no" | "" {
   return "";
 }
 
-function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: IrisLeadRole, tags: string[]): string | null {
-  if (intent === "showing_request") return "What day and time works best for a quick showing?";
+function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: IrisLeadRole, tags: string[], latestText = ""): string | null {
+  if (intent === "showing_request") {
+    const hasDayAndTime = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(latestText)
+      && /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(latestText);
+    return hasDayAndTime ? null : "What day and time works best for a quick showing?";
+  }
   if (role === "second_time_buyer" && !tags.includes("valuation_consented")) return "Would you like a free valuation of your current property while we help with your next purchase?";
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
@@ -525,7 +529,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     address: addresses[0] || null,
     addresses,
     lead_fields: fields,
-    next_best_question: routeHuman ? null : nextQuestion(intent, fields, role, opportunityTags),
+    next_best_question: routeHuman ? null : nextQuestion(intent, fields, role, opportunityTags, latestClean),
     recommended_next_action: recommended,
     human_handoff_reason: routeHuman ? humanHandoffReason(intent, flags, noSignal) : null,
   };
@@ -600,7 +604,7 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
     return [
       "Hello,",
       "",
-      `I can help with that${classification.address ? ` for ${classification.address}` : ""}. ${question || "What day and time works best for a quick showing?"}`,
+      `I can help with that${classification.address ? ` for ${classification.address}` : ""}. ${question || "I have your requested time and will have the team confirm availability."}`,
       "",
       "Best,",
       IRIS_AGENT_NAME,
@@ -996,27 +1000,28 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
   const contact = parseEmailContact(message.from);
   if (!contact.email) return message;
   const lead = await findLeadInDatabase({ email: contact.email });
-  const events = await readEventsForLeadFromDatabase({ email: contact.email, phone: lead?.phone }, 8);
+  const events = await readEventsForLeadFromDatabase({ email: contact.email, phone: lead?.phone }, 20);
+  const threadEvents = events.filter((event) => (event.thread_ref || event.gmail_thread_id) === message.threadId);
   if (
     !lead?.property_interest
     && !lead?.budget
     && !lead?.area
     && !lead?.bedrooms
     && !lead?.summary
-    && !events.length
+    && !threadEvents.length
   ) return message;
-  const recentEvents = events.slice(-6).map((event) => {
+  const recentEvents = threadEvents.slice(-6).map((event) => {
     const when = event.event_at || event.created_at || "";
     const text = cleanBody(stripHtml(event.message_text || event.summary || "")).slice(0, 220);
     return `${when} ${event.channel || "unknown"} ${event.direction || "unknown"} ${event.status || ""}: ${text}`;
   });
   const context = [
-    lead?.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
-    lead?.budget ? `Known budget: ${lead.budget}` : "",
-    lead?.area ? `Known area: ${lead.area}` : "",
-    lead?.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
-    lead?.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
-    recentEvents.length ? `Recent omnichannel timeline:\n${recentEvents.join("\n")}` : "",
+    !threadEvents.length && lead?.property_interest ? `Previous property interest: ${lead.property_interest}` : "",
+    !threadEvents.length && lead?.budget ? `Known budget: ${lead.budget}` : "",
+    !threadEvents.length && lead?.area ? `Known area: ${lead.area}` : "",
+    !threadEvents.length && lead?.bedrooms ? `Known bedrooms: ${lead.bedrooms}` : "",
+    !threadEvents.length && lead?.summary ? `Prior summary: ${lead.summary.slice(0, 500)}` : "",
+    recentEvents.length ? `Recent thread timeline:\n${recentEvents.join("\n")}` : "",
   ].filter(Boolean).join("\n");
   return {
     ...message,

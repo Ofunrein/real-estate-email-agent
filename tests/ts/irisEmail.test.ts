@@ -465,6 +465,22 @@ test("classifyIrisEmailText: uses prior selected property for scheduling follow-
   assert.deepEqual(classification.addresses, ["9605 Corbe Dr"]);
 });
 
+test("classifyIrisEmailText: does not re-ask for showing time when day and time are supplied", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Re: Property",
+    body: [
+      "Tomorrow at 2:00 PM works. Please schedule the tour.",
+      "",
+      "Thread context for classification only:",
+      "Previous property interest: 9605 Corbe Dr",
+    ].join("\n"),
+  }));
+
+  assert.equal(classification.intent, "showing_request");
+  assert.equal(classification.next_best_question, null);
+  assert.match(generateIrisEmailReply(email(), classification) || "", /confirm availability/i);
+});
+
 test("classifyIrisEmailText: resolves first property in prior email cards", () => {
   const classification = classifyIrisEmailText(email({
     subject: "Re: Property inquiry",
