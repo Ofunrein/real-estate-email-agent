@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
-test("only Austin Realty may use shared provider credentials", () => {
-  assert.equal(mayUseSharedEnvironmentConnections("default"), true);
-  assert.equal(mayUseSharedEnvironmentConnections("realty-atx"), false);
+test("shared provider credentials require an explicit tenant allowlist", () => {
+  assert.equal(mayUseSharedEnvironmentConnections("default", "default"), true);
+  assert.equal(mayUseSharedEnvironmentConnections("realty-atx", "default"), false);
 });

@@ -31,6 +31,16 @@ Open `clients/new-client-id.env` and fill every required field:
 
 Leave `VAPI_ASSISTANT_ID` empty — provision creates it.
 
+### Tenant isolation gate
+
+Before provisioning, add the client's login email to `WORKSPACE_EMAIL_MAP`. Use a unique lowercase slug for every `id`; startup now rejects malformed entries and duplicate tenant ids instead of silently sharing a tenant.
+
+```json
+{"agent@client.example":{"id":"new-client-id","name":"Client Name"}}
+```
+
+When more than one workspace is configured, shared provider credentials are denied by default. Give each client separate provider/database credentials. If a temporary shared connection is intentional, list only the approved tenant ids in `SHARED_ENV_WORKSPACE_IDS` and record why. Tenant-scoped background or concurrent work must run inside `runInRequestWorkspace`; never use a process-global `CLIENT_ID` to route mixed-client requests.
+
 ---
 
 ## Step 2 — Set up Google Calendar (if CALENDAR_PROVIDER=google)
@@ -100,6 +110,8 @@ vercel env add GOOGLE_REFRESH_TOKEN
 
 vercel --prod
 ```
+
+For the shared rate limiter, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Each API request uses a two-command pipeline (`INCR` plus first-hit `EXPIRE`) and keys expire at the end of their fixed window. Upstash Free currently includes 500,000 commands/month, so this design supports at most 250,000 rate-limited requests/month before other Redis usage. Monitor command usage in Upstash and keep projected traffic below that hard budget; do not enable automatic paid upgrades.
 
 Point Vapi's assistant server URL to the deployed webhook:
 ```

@@ -55,7 +55,7 @@ test("in-memory store upserts by client/channel/provider/selected asset and scop
   assert.equal(second.selected_asset_name, "New name");
   assert.equal(second.metadata.webhook_subscription_id, "sub_1");
 
-  const listed = await listChannelConnections({ clientId: "client-a", store });
+  const listed = await listChannelConnections({ clientId: "client-a", store, env: { SHARED_ENV_WORKSPACE_IDS: "client-a" } });
   assert.equal(listed.fallback, false);
   const instagram = listed.connections.find((connection) => connection.channel === "instagram");
   assert.equal(instagram?.selected_asset_name, "New name");
@@ -64,6 +64,7 @@ test("in-memory store upserts by client/channel/provider/selected asset and scop
 
 test("env fallback reports configured direct channels without exposing secrets", () => {
   const fallback = envFallbackChannelConnections({
+    SHARED_ENV_WORKSPACE_IDS: "env-client",
     CLIENT_ID: "env-client",
     GMAIL_OAUTH_CLIENT_ID: "client-id",
     GMAIL_OAUTH_CLIENT_SECRET: "secret",
@@ -101,6 +102,7 @@ test("dashboard status falls back when database is unavailable", async () => {
     const status = await dashboardChannelConnectionStatus({
       clientId: "local",
       env: {
+        SHARED_ENV_WORKSPACE_IDS: "local",
         TWILIO_ACCOUNT_SID: "AC123",
         TWILIO_AUTH_TOKEN: "secret",
         TWILIO_FROM: "+15125550123",
@@ -128,6 +130,7 @@ test("saved connection status still includes env auth-ready channels", async () 
     clientId: "client-a",
     store,
     env: {
+      SHARED_ENV_WORKSPACE_IDS: "client-a",
       COMPOSIO_API_KEY: "project-key",
       COMPOSIO_FACEBOOK_AUTH_CONFIG_ID: "ac_facebook",
       COMPOSIO_WHATSAPP_AUTH_CONFIG_ID: "ac_whatsapp",
