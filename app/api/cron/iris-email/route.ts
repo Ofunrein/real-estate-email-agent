@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { constantTimeSecretEqual } from "@/lib/webhookRequest";
+
 import { databaseEnabled, readInboxSettingsFromDatabase } from "@/lib/database";
 import { processIrisEmailPoll } from "@/lib/irisEmail";
 import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
@@ -13,7 +15,7 @@ function authorized(request: NextRequest): boolean {
   if (!secret) return false;
   const header = request.headers.get("authorization") || "";
   const querySecret = request.nextUrl.searchParams.get("secret") || "";
-  return header === `Bearer ${secret}` || querySecret === secret;
+  return constantTimeSecretEqual(header, `Bearer ${secret}`) || constantTimeSecretEqual(querySecret, secret);
 }
 
 function intParam(value: string | null, fallback: number): number {

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 
 export const dynamic = "force-dynamic";
 
 const VAPI_BASE = "https://api.vapi.ai";
 
-// End an in-progress Vapi call from the dashboard. Session-protected.
+// End an in-progress Vapi call from the dashboard. Requires a dashboard session.
 // POST { callId }
 export async function POST(request: NextRequest) {
+  if (!(await requireDashboardAuth())) return unauthorizedResponse();
   const loadTestBlock = blockLoadTestMutation(request);
   if (loadTestBlock) return loadTestBlock;
   try {

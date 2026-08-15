@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+
 export const dynamic = "force-dynamic";
 
 const VAPI_BASE = "https://api.vapi.ai";
@@ -19,6 +21,7 @@ type LiveStatus = {
 // operator sees the conversation stream + voicemail detection in real time.
 // GET /api/voice/live?callId=xxx
 export async function GET(request: NextRequest) {
+  if (!(await requireDashboardAuth())) return unauthorizedResponse();
   const callId = request.nextUrl.searchParams.get("callId");
   if (!callId) {
     return NextResponse.json({ ok: false, error: "Missing callId" }, { status: 400 });

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { constantTimeSecretEqual } from "@/lib/webhookRequest";
+
 import { syncSheetsToNeon } from "@/lib/sheetsSync";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +12,7 @@ function authorized(request: NextRequest): boolean {
   if (!secret) return false;
   const header = request.headers.get("authorization") || "";
   const querySecret = request.nextUrl.searchParams.get("secret") || "";
-  return header === `Bearer ${secret}` || querySecret === secret;
+  return constantTimeSecretEqual(header, `Bearer ${secret}`) || constantTimeSecretEqual(querySecret, secret);
 }
 
 function syncEnabled(): boolean {

@@ -4,6 +4,7 @@ import { clientConfig } from "@/lib/clientConfig";
 import { placeOutboundCall, type OutboundConfig } from "@/lib/outbound";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
 import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,12 @@ function outboundConfig(): OutboundConfig {
   };
 }
 
-// Dashboard-facing manual outbound dial. Session-protected by middleware (auth.ts),
-// so no webhook secret needed. The agent calls the lead with full cross-channel
+// Dashboard-facing manual outbound dial. Requires an authenticated dashboard
+// session (checked in-handler; middleware does not authenticate). The agent calls the lead with full cross-channel
 // memory via getCallerContext at call start. Body: { phone, leadName?, leadEmail?,
 // callReason?, leadContext? }.
 export async function POST(request: NextRequest) {
+  if (!(await requireDashboardAuth())) return unauthorizedResponse();
   const loadTestBlock = blockLoadTestMutation(request);
   if (loadTestBlock) return loadTestBlock;
   try {

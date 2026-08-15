@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   API_RATE_LIMIT,
   AUTH_RATE_LIMIT,
+  bodySizeVerdict,
   checkRateLimit,
   clientKey,
-  payloadLimitForPath,
+  crossOriginExemptPath,
+  crossOriginMutation,
+  type RateLimitPolicy,
 } from "@/lib/requestSecurity";
+import { sharedRateLimit } from "@/lib/sharedRateLimit";
 
 function securityHeaders(response: NextResponse) {
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -16,7 +20,9 @@ function securityHeaders(response: NextResponse) {
   return response;
 }
 
-function rateLimitResponse(result: ReturnType<typeof checkRateLimit>) {
+type LimitResult = { limit: number; remaining: number; resetAt: number; retryAfterSeconds: number };
+
+function rateLimitResponse(result: LimitResult) {
   return securityHeaders(NextResponse.json(
     { ok: false, error: "Too many requests. Try again later." },
     {
@@ -32,7 +38,15 @@ function rateLimitResponse(result: ReturnType<typeof checkRateLimit>) {
   ));
 }
 
-export function middleware(request: NextRequest) {
+// Shared store first — the only limit that holds across serverless instances.
+// The per-instance map is a fallback for when the store is unconfigured or down.
+async function enforceLimit(key: string, policy: RateLimitPolicy) {
+  const shared = await sharedRateLimit(key, policy);
+  if (shared) return shared;
+  return checkRateLimit(key, policy);
+}
+
+export async function middleware(request: NextRequest) {
   const method = request.method.toUpperCase();
   const pathname = request.nextUrl.pathname;
   const isMutation = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
@@ -45,19 +59,31 @@ export function middleware(request: NextRequest) {
   const client = clientKey(request.headers);
 
   if (isApi) {
-    const apiLimit = checkRateLimit(`api:${client}:${pathname}`, API_RATE_LIMIT);
+    const apiLimit = await enforceLimit(`api:${client}:${pathname}`, API_RATE_LIMIT);
     if (!apiLimit.allowed) return rateLimitResponse(apiLimit);
   }
 
   if (isAuthAttempt) {
-    const authLimit = checkRateLimit(`auth:${client}`, AUTH_RATE_LIMIT);
+    const authLimit = await enforceLimit(`auth:${client}`, AUTH_RATE_LIMIT);
     if (!authLimit.allowed) return rateLimitResponse(authLimit);
   }
 
+  if (isMutation && !crossOriginExemptPath(pathname) && crossOriginMutation(request.headers, request.url)) {
+    return securityHeaders(NextResponse.json(
+      { ok: false, error: "Cross-origin request rejected." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    ));
+  }
+
   if (isMutation) {
-    const declaredSize = Number(request.headers.get("content-length") || 0);
-    const maxBytes = payloadLimitForPath(pathname, request.headers.get("content-type"));
-    if (!Number.isFinite(declaredSize) || declaredSize < 0 || declaredSize > maxBytes) {
+    const verdict = bodySizeVerdict(request.headers, pathname);
+    if (verdict === "length-required") {
+      return securityHeaders(NextResponse.json(
+        { ok: false, error: "A valid Content-Length is required; chunked bodies are not accepted." },
+        { status: 411, headers: { "Cache-Control": "no-store" } },
+      ));
+    }
+    if (verdict === "too-large") {
       return securityHeaders(NextResponse.json(
         { ok: false, error: "Request payload is too large." },
         { status: 413, headers: { "Cache-Control": "no-store" } },

@@ -388,7 +388,7 @@ export function SmsBubble({
             FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
           });
         })()
-      : message.html;
+      : '';
   const inlineSocialPreviewBody = Boolean(imageMedia.length === 1 && imageMedia[0]?.linkUrl && displayBody && !cleanHtml);
   return (
     <Box

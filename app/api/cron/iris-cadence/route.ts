@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { constantTimeSecretEqual } from "@/lib/webhookRequest";
+
 import { planCadenceQueue, leadIdentity, type LeadWithEvents } from "@/lib/cadenceQueue";
 import { clientConfig } from "@/lib/clientConfig";
 import { readEventsFromDatabase, readLeadsFromDatabase } from "@/lib/database";
@@ -14,7 +16,7 @@ function authorized(request: NextRequest): boolean {
   if (!secret) return false;
   const header = request.headers.get("authorization") || "";
   const querySecret = request.nextUrl.searchParams.get("secret") || "";
-  return header === `Bearer ${secret}` || querySecret === secret;
+  return constantTimeSecretEqual(header, `Bearer ${secret}`) || constantTimeSecretEqual(querySecret, secret);
 }
 
 function cronEnabled(): boolean {

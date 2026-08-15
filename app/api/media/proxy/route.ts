@@ -31,13 +31,22 @@ export async function GET(request: NextRequest) {
   const response = await fetch(source, {
     headers: {
       "User-Agent": "LumenosisTheoMediaProxy/1.0",
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
     },
     signal: AbortSignal.timeout(10_000),
   });
+  // Redirects can leave the allowlist, so the final URL is re-checked.
+  if (response.url && !allowedImageUrl(response.url)) {
+    return NextResponse.json({ ok: false, error: "Unsupported image URL" }, { status: 400 });
+  }
   const contentType = response.headers.get("content-type") || "";
-  if (!response.ok || !contentType.toLowerCase().startsWith("image/")) {
+  const lowerContentType = contentType.toLowerCase();
+  if (!response.ok || !lowerContentType.startsWith("image/")) {
     return NextResponse.json({ ok: false, error: "Image is not fetchable" }, { status: 502 });
+  }
+  // SVG is a script-capable document; never serve it from our own origin.
+  if (lowerContentType.includes("svg")) {
+    return NextResponse.json({ ok: false, error: "Unsupported image type" }, { status: 415 });
   }
 
   const body = await response.arrayBuffer();

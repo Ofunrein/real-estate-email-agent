@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+
 export const dynamic = "force-dynamic";
 
 const ALLOWED_AUDIO_HOSTS = new Set([
@@ -20,6 +22,7 @@ function allowedAudioUrl(value: string): URL | null {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await requireDashboardAuth())) return unauthorizedResponse();
   const source = allowedAudioUrl(request.nextUrl.searchParams.get("url") || "");
   if (!source) {
     return NextResponse.json({ ok: false, error: "Unsupported audio URL" }, { status: 400 });

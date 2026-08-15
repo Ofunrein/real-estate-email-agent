@@ -447,7 +447,7 @@ function EmailBubble({
                         FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
                       });
                     })()
-                  : raw;
+                  : '';
               return (
                 <Box
                   sx={{
