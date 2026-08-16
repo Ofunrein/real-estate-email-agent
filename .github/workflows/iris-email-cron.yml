@@ -18,5 +18,6 @@ jobs:
           curl --fail --show-error --silent \
             --request POST \
             --header "Authorization: Bearer $CRON_SECRET" \
-            --data '' \
+            --header "Content-Type: application/json" \
+            --data '{}' \
             "https://app.lumenosis.com/api/cron/iris-email"
