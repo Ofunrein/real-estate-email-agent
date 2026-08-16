@@ -20,7 +20,9 @@ Vercel + Inngest.
 3. Classification -> `lib/irisEmail.ts` (`classifyIrisEmailText`, reply composition in `generateIrisEmailReplyRich`)
 4. Property matching -> `lib/propertyRetrieval.ts` (`retrievePropertiesForAgent`: Neon structured/RAG, then Apify import fallback when empty)
 
-Trigger is the Gmail push webhook, NOT a Vercel cron (`vercel.json` crons = []).
+Trigger is the Gmail push webhook, NOT a Vercel cron (`vercel.json` crons = [])
+and not a GitHub Actions schedule. `/api/cron/iris-email` is a gated legacy
+fallback (`ENABLE_LEGACY_IRIS_EMAIL_POLLING=1`); it must not be polled on a timer.
 
 ## Actions
 - [x] Moved `agent.py` -> `deprecated/agent.py`.
