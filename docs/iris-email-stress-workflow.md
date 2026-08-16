@@ -8,6 +8,7 @@ Goal: keep Gmail replies under 60 seconds without Vercel polling or long-running
 - The webhook only validates and emits `gmail.push.received` to Inngest.
 - Inngest function `gmail-push-received` does the Gmail read/classify/label/send work.
 - Vercel cron remains disabled. `vercel.json` should keep `"crons": []`.
+- Do not add a GitHub Actions schedule that POSTs `/api/cron/iris-email`. That wakes the app every few minutes even when `ENABLE_LEGACY_IRIS_EMAIL_POLLING` is off. Inbound mail is Gmail Pub/Sub only.
 - Gmail watches expire by design; `gmail-watch-renewal` renews connected default Gmail accounts.
 
 ## Resource Rules
