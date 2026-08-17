@@ -12,48 +12,6 @@ Customer replies use Claude. Property RAG uses OpenAI only for embeddings, store
 
 ---
 
-## Documentation
-
-Start here rather than reading this README end to end.
-
-| Doc | What it covers |
-|---|---|
-| **[docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md)** | Clean-clone setup with no third-party credentials: prerequisites, safe env template rules, local Postgres + pgvector, expected command output, verification curls, and a troubleshooting index |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | How the live system works: the Gmail push → Inngest runtime, data flow, channel boundaries, storage and schema, property retrieval/RAG, reliability, security, multi-tenancy, deployment, and the design decisions behind each |
-| **[docs/CRM_INTEGRATION.md](docs/CRM_INTEGRATION.md)** | The `CrmAdapter` contract, per-provider support (GHL live; FUB/kvCORE partially stubbed), all 31 catalogued CRMs, event mirroring via `npm run sync:ghl`, and how to add an adapter |
-| [docs/iris-email-stress-workflow.md](docs/iris-email-stress-workflow.md) | Adding email scenarios and verifying a live Gmail round trip |
-| [docs/proof/iris-email-scenarios.md](docs/proof/iris-email-scenarios.md) | Recorded output of `npm run proof` |
-| [docs/decisions/](docs/decisions) | Dated design decisions, including why `agent.py` is deprecated |
-
-New here? [docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md) gets you to a running dashboard, then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains what you are looking at.
-
----
-
-## Tests, CI, and proof of execution
-
-Every push and pull request to `main` runs lint, both test suites, a deterministic agent proof run, and a production build via [`.github/workflows/build-check.yml`](.github/workflows/build-check.yml).
-
-| Check | Command | Scope |
-|---|---|---|
-| TypeScript tests | `npm test` | 510 tests across 76 files in [`tests/ts/`](tests/ts) — classification, reply rendering, webhook security, rate limits, tenant isolation, provider adapters |
-| Python tests | `npm run test:py` | 93 tests across 17 files in [`tests/`](tests) — sheet schema, channel webhook contracts, lead memory, property hygiene |
-| Type check / lint | `npm run lint` | `tsc` over the whole project |
-| Secret scan | `npm run security:scan` | Runs automatically in `prebuild` |
-| Agent proof run | `npm run proof` | Replays 8 real email scenarios end-to-end through the live classifier and reply renderer |
-| Production build | `npm run build` | Next.js build |
-
-**Direct proof of execution:** [`docs/proof/iris-email-scenarios.md`](docs/proof/iris-email-scenarios.md) is the recorded output of `npm run proof`, committed to the repo. It replays the scenarios in [`tests/fixtures/iris-email-stress-scenarios.json`](tests/fixtures/iris-email-stress-scenarios.json) through `isIrisEligibleEmail` -> `classifyIrisEmailText` -> `decideIrisEmailExecution` -> `generateIrisEmailReply`, and shows the intent, next action, auto-reply decision, and Gmail label the agent picks for each one — including the fair-housing and unsubscribe cases that must route to a human instead of auto-replying.
-
-The run is offline and deterministic: no network calls, no API keys, no customer data. CI regenerates the artifact and fails on `git diff --exit-code` if it no longer matches committed behavior, so the file cannot silently rot.
-
-```bash
-npm run proof
-```
-
-See [`docs/iris-email-stress-workflow.md`](docs/iris-email-stress-workflow.md) for how scenarios are added and how a live Gmail round-trip is verified after deploy.
-
----
-
 ## What this project became
 
 This repo is no longer just a local Gmail script. It is now a hosted omnichannel real estate agent platform.
@@ -73,19 +31,22 @@ The product direction is: **Gmail inbox agent first, omnichannel real estate fro
 
 ---
 
-## Screenshots
+## Product evolution
 
-**Live Zillow search results** - "show me 3-bed homes under $500k in Round Rock":
+The project has three generations in one repo:
 
-![Search results with Zillow photos](docs/screenshot-search-results.png)
+| Generation | What existed | Status now |
+|---|---|---|
+| 1. Local Gmail agent | `agent.py` polled Gmail, classified emails, searched property data, and replied | Still present as legacy compatibility |
+| 2. Hosted Iris inbox | Next.js/Vercel app, Gmail OAuth, Gmail push webhooks, Inngest background processing, Agent Inbox UI | Main production path |
+| 3. Omnichannel handling | SMS, WhatsApp, Instagram/Messenger, website chat, and voice routes that share Iris memory and property logic | Active channel layer around the email-first product |
 
-**Property detail reply** - photo, price, beds/baths/sqft, mortgage rates, Calendly button:
+This matters when reading the code:
 
-![Property detail reply](docs/screenshot-property-detail.png)
-
-**Seller lead qualification** - asks one question + free home valuation CTA:
-
-![Seller lead reply](docs/screenshot-seller-lead.png)
+- Older files may say `Theo`, `Aria`, or `Olivia` because those were channel-specific names while the product was expanding.
+- Iris is the real product identity and shared assistant personality.
+- Route names are kept stable because Twilio, Meta, Vapi, Gmail, and other external systems already point to those URLs.
+- The business logic should keep moving into shared modules so each channel is just a transport, not a separate agent.
 
 ---
 
@@ -107,22 +68,62 @@ All channels write to the same Neon tables, so email, SMS, Instagram, Messenger,
 
 ---
 
-## Product evolution
+## Channels
 
-The project has three generations in one repo:
+The channel layer is deliberately thin. Its job is to translate each provider into the same internal shape: who sent it, which thread it belongs to, what the message says, what media came with it, and whether the app is allowed to respond.
 
-| Generation | What existed | Status now |
+| Channel | Current route | Notes |
 |---|---|---|
-| 1. Local Gmail agent | `agent.py` polled Gmail, classified emails, searched property data, and replied | Still present as legacy compatibility |
-| 2. Hosted Iris inbox | Next.js/Vercel app, Gmail OAuth, Gmail push webhooks, Inngest background processing, Agent Inbox UI | Main production path |
-| 3. Omnichannel handling | SMS, WhatsApp, Instagram/Messenger, website chat, and voice routes that share Iris memory and property logic | Active channel layer around the email-first product |
+| Gmail / email | `/api/webhooks/iris-gmail-push` | Hosted Gmail push enters a durable Inngest flow |
+| SMS | `/api/webhooks/theo-sms` | Twilio inbound SMS/RCS route |
+| WhatsApp | `/api/webhooks/theo-whatsapp` | Meta WhatsApp Cloud API route |
+| Instagram / Messenger | `/api/webhooks/theo-meta-social` | Direct Meta social webhook route |
+| Website chat | `/api/webhooks/olivia-website` | Logs website/chat intake and can trigger SMS when consent is present |
+| Voice | `/api/webhooks/aria-voice` | Vapi/voice events and call summaries |
 
-This matters when reading the code:
+Every successful inbound/outbound turn should create rows in `conversation_events` and update `lead_memory` when the contact identity is known.
 
-- Older files may say `Theo`, `Aria`, or `Olivia` because those were channel-specific names while the product was expanding.
-- Iris is the real product identity and shared assistant personality.
-- Route names are kept stable because Twilio, Meta, Vapi, Gmail, and other external systems already point to those URLs.
-- The business logic should keep moving into shared modules so each channel is just a transport, not a separate agent.
+The intended behavior is not "six separate bots." It is one Iris system with multiple doors:
+
+- Gmail is the primary workflow for business-critical replies and human review.
+- SMS is for fast lead response, showing coordination, and short follow-ups.
+- Instagram and Messenger catch social DMs and route them into the same memory.
+- WhatsApp mirrors the same Theo/Iris SMS-style logic through Meta Cloud API.
+- Voice handles phone calls and call summaries while reading the same lead context.
+- Website chat captures web leads and can start SMS follow-up when consent exists.
+
+---
+
+## Screenshots
+
+**Live Zillow search results** - "show me 3-bed homes under $500k in Round Rock":
+
+![Search results with Zillow photos](docs/screenshot-search-results.png)
+
+**Property detail reply** - photo, price, beds/baths/sqft, mortgage rates, Calendly button:
+
+![Property detail reply](docs/screenshot-property-detail.png)
+
+**Seller lead qualification** - asks one question + free home valuation CTA:
+
+![Seller lead reply](docs/screenshot-seller-lead.png)
+
+---
+
+## Documentation
+
+Start here rather than reading this README end to end.
+
+| Doc | What it covers |
+|---|---|
+| **[docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md)** | Clean-clone setup with no third-party credentials: prerequisites, safe env template rules, local Postgres + pgvector, expected command output, verification curls, and a troubleshooting index |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | How the live system works: the Gmail push → Inngest runtime, data flow, channel boundaries, storage and schema, property retrieval/RAG, reliability, security, multi-tenancy, deployment, and the design decisions behind each |
+| **[docs/CRM_INTEGRATION.md](docs/CRM_INTEGRATION.md)** | The `CrmAdapter` contract, per-provider support (GHL live; FUB/kvCORE partially stubbed), all 31 catalogued CRMs, event mirroring via `npm run sync:ghl`, and how to add an adapter |
+| [docs/iris-email-stress-workflow.md](docs/iris-email-stress-workflow.md) | Adding email scenarios and verifying a live Gmail round trip |
+| [docs/proof/iris-email-scenarios.md](docs/proof/iris-email-scenarios.md) | Recorded output of `npm run proof` |
+| [docs/decisions/](docs/decisions) | Dated design decisions, including why `agent.py` is deprecated |
+
+New here? [docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md) gets you to a running dashboard, then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains what you are looking at.
 
 ---
 
@@ -183,32 +184,6 @@ Important pieces:
 | Tests | `tests/ts/*` | TypeScript unit and integration-style checks |
 
 Some route names still say Theo, Aria, or Olivia because vendors already point to those URLs. The runtime personality should be Iris/Austin Realty unless a specific compatibility path says otherwise.
-
----
-
-## Channels
-
-The channel layer is deliberately thin. Its job is to translate each provider into the same internal shape: who sent it, which thread it belongs to, what the message says, what media came with it, and whether the app is allowed to respond.
-
-| Channel | Current route | Notes |
-|---|---|---|
-| Gmail / email | `/api/webhooks/iris-gmail-push` | Hosted Gmail push enters a durable Inngest flow |
-| SMS | `/api/webhooks/theo-sms` | Twilio inbound SMS/RCS route |
-| WhatsApp | `/api/webhooks/theo-whatsapp` | Meta WhatsApp Cloud API route |
-| Instagram / Messenger | `/api/webhooks/theo-meta-social` | Direct Meta social webhook route |
-| Website chat | `/api/webhooks/olivia-website` | Logs website/chat intake and can trigger SMS when consent is present |
-| Voice | `/api/webhooks/aria-voice` | Vapi/voice events and call summaries |
-
-Every successful inbound/outbound turn should create rows in `conversation_events` and update `lead_memory` when the contact identity is known.
-
-The intended behavior is not "six separate bots." It is one Iris system with multiple doors:
-
-- Gmail is the primary workflow for business-critical replies and human review.
-- SMS is for fast lead response, showing coordination, and short follow-ups.
-- Instagram and Messenger catch social DMs and route them into the same memory.
-- WhatsApp mirrors the same Theo/Iris SMS-style logic through Meta Cloud API.
-- Voice handles phone calls and call summaries while reading the same lead context.
-- Website chat captures web leads and can start SMS follow-up when consent exists.
 
 ---
 
@@ -345,65 +320,6 @@ Do not commit real secrets. Plain client flags like `CLIENT_ID=austin-realty` ar
 
 ---
 
-## Instagram and Messenger
-
-Direct Meta social mode is controlled by:
-
-```bash
-ENABLE_META_SOCIAL_WEBHOOKS=true
-ENABLE_INSTAGRAM_DIRECT_WEBHOOK=true
-ENABLE_MESSENGER_DIRECT_WEBHOOK=true
-META_SOCIAL_WEBHOOK_VERIFY_TOKEN=
-META_SOCIAL_APP_SECRET=
-META_SOCIAL_PAGE_ACCESS_TOKEN=
-ENABLE_SOCIAL_DM_AGENT=true
-```
-
-Meta webhook URL:
-
-```text
-https://app.lumenosis.com/api/webhooks/theo-meta-social
-```
-
-Expected checks:
-
-- `GET` verification returns the Meta challenge when the verify token matches.
-- `POST` requests pass `x-hub-signature-256` when the app secret is set.
-- Inbound messages write `conversation_events` under `client_id='austin-realty'`.
-- The channel connection is present in `channel_connections`.
-
----
-
-## SMS testing
-
-Local Theo SMS test:
-
-```bash
-npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
-```
-
-Live Twilio setup helper:
-
-```bash
-npm run theo:twilio:configure
-```
-
-Important flags:
-
-```bash
-ENABLE_SMS_AGENT=false          # keep false for dry runs
-ENABLE_SMS_IMAGES=false         # optional MMS/RCS property photos
-SMS_IMAGE_MODE=on_request       # off | on_request | property_reply
-SMS_MAX_IMAGES=3
-THEO_REPLY_DEBOUNCE_MS=2500
-THEO_ENRICHMENT_TIMEOUT_MS=14000
-THEO_APIFY_TIMEOUT_SECONDS=12
-```
-
-Do not use reserved `+1555...` numbers for live Twilio smoke tests. The app blocks test-like NANP numbers to avoid bad sends and noisy dashboard rows.
-
----
-
 ## Gmail setup
 
 Hosted Gmail uses an OAuth mailbox connection that can be different from the dashboard login account.
@@ -436,6 +352,35 @@ gmail.push.received
 ```
 
 
+
+---
+
+## Instagram and Messenger
+
+Direct Meta social mode is controlled by:
+
+```bash
+ENABLE_META_SOCIAL_WEBHOOKS=true
+ENABLE_INSTAGRAM_DIRECT_WEBHOOK=true
+ENABLE_MESSENGER_DIRECT_WEBHOOK=true
+META_SOCIAL_WEBHOOK_VERIFY_TOKEN=
+META_SOCIAL_APP_SECRET=
+META_SOCIAL_PAGE_ACCESS_TOKEN=
+ENABLE_SOCIAL_DM_AGENT=true
+```
+
+Meta webhook URL:
+
+```text
+https://app.lumenosis.com/api/webhooks/theo-meta-social
+```
+
+Expected checks:
+
+- `GET` verification returns the Meta challenge when the verify token matches.
+- `POST` requests pass `x-hub-signature-256` when the app secret is set.
+- Inbound messages write `conversation_events` under `client_id='austin-realty'`.
+- The channel connection is present in `channel_connections`.
 
 ---
 
@@ -619,6 +564,36 @@ GHL trigger or lead form
 ```
 ---
 
+## SMS testing
+
+Local Theo SMS test:
+
+```bash
+npm run theo:test -- "I want to tour 12400 Cedar St" "+15128152032"
+```
+
+Live Twilio setup helper:
+
+```bash
+npm run theo:twilio:configure
+```
+
+Important flags:
+
+```bash
+ENABLE_SMS_AGENT=false          # keep false for dry runs
+ENABLE_SMS_IMAGES=false         # optional MMS/RCS property photos
+SMS_IMAGE_MODE=on_request       # off | on_request | property_reply
+SMS_MAX_IMAGES=3
+THEO_REPLY_DEBOUNCE_MS=2500
+THEO_ENRICHMENT_TIMEOUT_MS=14000
+THEO_APIFY_TIMEOUT_SECONDS=12
+```
+
+Do not use reserved `+1555...` numbers for live Twilio smoke tests. The app blocks test-like NANP numbers to avoid bad sends and noisy dashboard rows.
+
+---
+
 ## Sync and imports
 
 Google Sheets can still be used as an editable property source.
@@ -645,47 +620,60 @@ Current sync contract:
 
 ---
 
-## Tests and checks
+## Testing and proof of execution
 
-See [Tests, CI, and proof of execution](#tests-ci-and-proof-of-execution) for what each suite covers and where the recorded proof output lives.
+| Check | Command | Scope |
+|---|---|---|
+| TypeScript tests | `npm test` | 510 tests across 76 files in [`tests/ts/`](tests/ts) — classification, reply rendering, webhook security, rate limits, tenant isolation, provider adapters |
+| Python tests | `npm run test:py` | 93 tests across 17 files in [`tests/`](tests) — sheet schema, channel webhook contracts, lead memory, property hygiene |
+| Type check / lint | `npm run lint` | `tsc` over the whole project |
+| Secret scan | `npm run security:scan` | Runs automatically in `prebuild` |
+| Agent proof run | `npm run proof` | Replays 8 real email scenarios end-to-end through the live classifier and reply renderer |
+| Production build | `npm run build` | Next.js build |
 
-Run TypeScript tests:
-
-```bash
-npm test
-```
-
-Run a single TypeScript test file:
-
-```bash
-node --import tsx --test tests/ts/irisEmail.test.ts
-```
-
-Run lint/type check:
+Run everything the way CI does:
 
 ```bash
 npm run lint
-```
-
-Run the agent proof run and refresh the committed output:
-
-```bash
+npm test
+npm run test:py
 npm run proof
-```
-
-Run production build:
-
-```bash
 npm run build
 ```
 
-Run Python tests:
+Run a single test file:
 
 ```bash
-npm run test:py
+node --import tsx --test tests/ts/irisEmail.test.ts
+python3 -m pytest tests/test_sheet_schema.py -v
 ```
 
 Python tests cover the legacy Python paths and the cross-runtime contracts (sheet schema and webhook route shapes) that the TypeScript runtime must keep honoring, so run them when you touch either side.
+
+**Direct proof of execution:** [`docs/proof/iris-email-scenarios.md`](docs/proof/iris-email-scenarios.md) is the recorded output of `npm run proof`, committed to the repo. It replays the scenarios in [`tests/fixtures/iris-email-stress-scenarios.json`](tests/fixtures/iris-email-stress-scenarios.json) through `isIrisEligibleEmail` -> `classifyIrisEmailText` -> `decideIrisEmailExecution` -> `generateIrisEmailReply`, and shows the intent, next action, auto-reply decision, and Gmail label the agent picks for each one — including the fair-housing and unsubscribe cases that must route to a human instead of auto-replying.
+
+The run is offline and deterministic: no network calls, no API keys, no customer data. CI regenerates the artifact and fails on `git diff --exit-code` if it no longer matches committed behavior, so the file cannot silently rot.
+
+See [`docs/iris-email-stress-workflow.md`](docs/iris-email-stress-workflow.md) for how scenarios are added and how a live Gmail round-trip is verified after deploy.
+
+---
+
+## CI and build status
+
+[![Build, Test & Lint Check](https://github.com/Ofunrein/real-estate-email-agent/actions/workflows/build-check.yml/badge.svg?branch=main)](https://github.com/Ofunrein/real-estate-email-agent/actions/workflows/build-check.yml)
+
+Every push and pull request to `main` runs [`.github/workflows/build-check.yml`](.github/workflows/build-check.yml) on Node 22 and Python 3.12, in this order:
+
+1. Reject internal registry URLs in `package-lock.json` (they break Vercel installs).
+2. `npm ci` and `pip install -r requirements.txt pytest`.
+3. `npm run lint`.
+4. `npm test` — TypeScript suite.
+5. `npm run test:py` — Python suite.
+6. `npm run proof` — deterministic agent proof run.
+7. `git diff --exit-code docs/proof/iris-email-scenarios.md` — fails if the recorded proof output is stale.
+8. `npm run build`.
+
+`prebuild` runs the secret scan and type check before every build, locally and in CI, so a build cannot ship a committed credential.
 
 ---
 
@@ -712,18 +700,6 @@ After changing Vercel env vars, deploy again so serverless functions receive the
 ```bash
 vercel deploy --prod
 ```
-
----
-
-## Legacy Python agent
-
-The older Python email poller still exists for compatibility:
-
-```bash
-python agent.py
-```
-
-Modern hosted work should prefer the TypeScript/Vercel path. Keep Python changes scoped unless you are explicitly working on the legacy poller.
 
 ---
 
@@ -765,6 +741,18 @@ where client_id = 'austin-realty'
 order by created_at desc
 limit 25;
 ```
+
+---
+
+## Legacy Python agent
+
+The older Python email poller still exists for compatibility:
+
+```bash
+python agent.py
+```
+
+Modern hosted work should prefer the TypeScript/Vercel path. Keep Python changes scoped unless you are explicitly working on the legacy poller.
 
 ---
 
