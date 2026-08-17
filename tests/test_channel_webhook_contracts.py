@@ -413,7 +413,10 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("lh3.googleusercontent.com", route)
         self.assertIn("maps.googleapis.com", route)
         self.assertIn("Unsupported image URL", route)
-        self.assertIn('contentType.toLowerCase().startsWith("image/")', route)
+        # Asserts the content-type guard exists without pinning how the lowercased
+        # value is bound, so hoisting it into a local does not fail the contract.
+        self.assertIn("contentType.toLowerCase()", route)
+        self.assertIn('startsWith("image/")', route)
         self.assertIn("Cache-Control", route)
 
     def test_email_html_rewrites_external_images_through_media_proxy(self):

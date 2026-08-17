@@ -1,5 +1,7 @@
 # Real Estate Email Agent
 
+[![Build, Test & Lint Check](https://github.com/Ofunrein/real-estate-email-agent/actions/workflows/build-check.yml/badge.svg?branch=main)](https://github.com/Ofunrein/real-estate-email-agent/actions/workflows/build-check.yml)
+
 Real Estate Email Agent is the Lumenosis real estate automation app. It started as **Iris**, a Gmail agent for real estate teams, and grew into an omnichannel lead-handling system around that same email-first brain.
 
 The main product is still the Gmail/Agent Inbox workflow: Iris reads real estate emails, understands the lead, searches property context, drafts or sends a useful reply, and keeps the team in control. The newer SMS, Instagram, Messenger, WhatsApp, voice, and website-chat paths are channel adapters around that same core memory, property search, and handoff system.
@@ -7,6 +9,31 @@ The main product is still the Gmail/Agent Inbox workflow: Iris reads real estate
 The current demo client is **Austin Realty**. Runtime config, seeded database rows, channel connections, and RAG embeddings should use `CLIENT_ID=austin-realty`.
 
 Customer replies use Claude. Property RAG uses OpenAI only for embeddings, stored in Neon Postgres with `pgvector`.
+
+---
+
+## Tests, CI, and proof of execution
+
+Every push and pull request to `main` runs lint, both test suites, a deterministic agent proof run, and a production build via [`.github/workflows/build-check.yml`](.github/workflows/build-check.yml).
+
+| Check | Command | Scope |
+|---|---|---|
+| TypeScript tests | `npm test` | 510 tests across 76 files in [`tests/ts/`](tests/ts) — classification, reply rendering, webhook security, rate limits, tenant isolation, provider adapters |
+| Python tests | `npm run test:py` | 93 tests across 17 files in [`tests/`](tests) — sheet schema, channel webhook contracts, lead memory, property hygiene |
+| Type check / lint | `npm run lint` | `tsc` over the whole project |
+| Secret scan | `npm run security:scan` | Runs automatically in `prebuild` |
+| Agent proof run | `npm run proof` | Replays 8 real email scenarios end-to-end through the live classifier and reply renderer |
+| Production build | `npm run build` | Next.js build |
+
+**Direct proof of execution:** [`docs/proof/iris-email-scenarios.md`](docs/proof/iris-email-scenarios.md) is the recorded output of `npm run proof`, committed to the repo. It replays the scenarios in [`tests/fixtures/iris-email-stress-scenarios.json`](tests/fixtures/iris-email-stress-scenarios.json) through `isIrisEligibleEmail` -> `classifyIrisEmailText` -> `decideIrisEmailExecution` -> `generateIrisEmailReply`, and shows the intent, next action, auto-reply decision, and Gmail label the agent picks for each one — including the fair-housing and unsubscribe cases that must route to a human instead of auto-replying.
+
+The run is offline and deterministic: no network calls, no API keys, no customer data. CI regenerates the artifact and fails on `git diff --exit-code` if it no longer matches committed behavior, so the file cannot silently rot.
+
+```bash
+npm run proof
+```
+
+See [`docs/iris-email-stress-workflow.md`](docs/iris-email-stress-workflow.md) for how scenarios are added and how a live Gmail round-trip is verified after deploy.
 
 ---
 
@@ -597,10 +624,18 @@ Current sync contract:
 
 ## Tests and checks
 
+See [Tests, CI, and proof of execution](#tests-ci-and-proof-of-execution) for what each suite covers and where the recorded proof output lives.
+
 Run TypeScript tests:
 
 ```bash
 npm test
+```
+
+Run a single TypeScript test file:
+
+```bash
+node --import tsx --test tests/ts/irisEmail.test.ts
 ```
 
 Run lint/type check:
@@ -609,17 +644,25 @@ Run lint/type check:
 npm run lint
 ```
 
+Run the agent proof run and refresh the committed output:
+
+```bash
+npm run proof
+```
+
 Run production build:
 
 ```bash
 npm run build
 ```
 
-Run Python tests if you are touching legacy Python code:
+Run Python tests:
 
 ```bash
 npm run test:py
 ```
+
+Python tests cover the legacy Python paths and the cross-runtime contracts (sheet schema and webhook route shapes) that the TypeScript runtime must keep honoring, so run them when you touch either side.
 
 ---
 

@@ -25,8 +25,9 @@ Goal: keep Gmail replies under 60 seconds without Vercel polling or long-running
 1. Add or update scenarios in `tests/fixtures/iris-email-stress-scenarios.json`.
 2. Run `npm run stress:email`.
 3. Failures should become either classifier/rendering fixes or explicit product decisions.
-4. Run targeted tests, full build, deploy, and `npm run inngest:sync`.
-5. Send one live Gmail test and confirm:
+4. Run `npm run proof` to refresh the recorded output at `docs/proof/iris-email-scenarios.md` and commit it. CI fails if that file drifts from current behavior.
+5. Run targeted tests, full build, deploy, and `npm run inngest:sync`.
+6. Send one live Gmail test and confirm:
    - Vercel log shows `iris_gmail_push_queued`.
    - Inngest shows a `gmail-push-received` run.
    - DB has one inbound and one outbound row.
