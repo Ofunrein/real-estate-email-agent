@@ -10,7 +10,7 @@ Multi-channel real estate AI agent platform. Four named agents share one cross-c
 - **Aria** — voice (`app/api/webhooks/aria-voice/`, Vapi + GPT-4o-mini)
 - **Olivia** — website chat (`app/api/webhooks/olivia-website/`)
 
-Dashboard is a **Next.js 16 + React 19 + TypeScript** read-only inbox at `http://localhost:3000`. Python handles zero UI — it is a background daemon only.
+Dashboard is a **Next.js 15 App Router + React 19 + TypeScript** read-only inbox at `http://localhost:3000`. Python handles zero UI — it is a background daemon only.
 
 ## Commands
 
@@ -77,7 +77,7 @@ Key behavior: `getCallerContext()` returns silently (never triggers "welcome bac
 
 ### DB migrations
 
-`db/migrations/001_agent_os.sql`, `002_ghl_sync.sql`, `003_voice.sql` — run in order. `CLIENT_ID=austin-realty` is required env for multi-tenant DB queries.
+`db/migrations/001_agent_os.sql` through `026_property_context_fields.sql` — 26 files, run in filename order. `CLIENT_ID=austin-realty` is required env for multi-tenant DB queries. See `docs/DEVELOPER_SETUP.md` for the local apply loop.
 
 ## Vapi config
 

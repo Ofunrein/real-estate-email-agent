@@ -2,7 +2,7 @@
 
 ## Project
 Real estate AI agent inbox. Multi-channel: email (Iris), SMS/WhatsApp (Theo), voice (Aria), website (Olivia).
-Stack: Next.js 16, React 19, TypeScript 5.7, custom CSS, no Tailwind.
+Stack: Next.js 15 App Router, React 19, TypeScript 5.9, custom CSS, no Tailwind.
 
 ## Backend contract (NEVER BREAK)
 - `SheetRow` field names — any rename in `sheet_schema.py` must match `lib/sheetSchema.ts`

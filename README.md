@@ -12,6 +12,23 @@ Customer replies use Claude. Property RAG uses OpenAI only for embeddings, store
 
 ---
 
+## Documentation
+
+Start here rather than reading this README end to end.
+
+| Doc | What it covers |
+|---|---|
+| **[docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md)** | Clean-clone setup with no third-party credentials: prerequisites, safe env template rules, local Postgres + pgvector, expected command output, verification curls, and a troubleshooting index |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | How the live system works: the Gmail push → Inngest runtime, data flow, channel boundaries, storage and schema, property retrieval/RAG, reliability, security, multi-tenancy, deployment, and the design decisions behind each |
+| **[docs/CRM_INTEGRATION.md](docs/CRM_INTEGRATION.md)** | The `CrmAdapter` contract, per-provider support (GHL live; FUB/kvCORE partially stubbed), all 31 catalogued CRMs, event mirroring via `npm run sync:ghl`, and how to add an adapter |
+| [docs/iris-email-stress-workflow.md](docs/iris-email-stress-workflow.md) | Adding email scenarios and verifying a live Gmail round trip |
+| [docs/proof/iris-email-scenarios.md](docs/proof/iris-email-scenarios.md) | Recorded output of `npm run proof` |
+| [docs/decisions/](docs/decisions) | Dated design decisions, including why `agent.py` is deprecated |
+
+New here? [docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md) gets you to a running dashboard, then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains what you are looking at.
+
+---
+
 ## Tests, CI, and proof of execution
 
 Every push and pull request to `main` runs lint, both test suites, a deterministic agent proof run, and a production build via [`.github/workflows/build-check.yml`](.github/workflows/build-check.yml).
@@ -110,6 +127,8 @@ This matters when reading the code:
 ---
 
 ## Architecture
+
+Full detail, including failure behavior and design rationale, is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. The summary below is the mental model.
 
 The simplest mental model:
 
@@ -262,6 +281,8 @@ At runtime:
 ---
 
 ## Local setup
+
+For a step-by-step clean-clone walkthrough with expected output, database setup, verification, and troubleshooting, use **[docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md)**. The short version:
 
 Install dependencies:
 
@@ -548,6 +569,8 @@ Agent: Got it. I can help with the Akron search too. I have openings tomorrow be
 ---
 
 ## GoHighLevel / CloseBot-style actions
+
+Adapter contract, per-provider support, and the event-mirroring script are documented in **[docs/CRM_INTEGRATION.md](docs/CRM_INTEGRATION.md)**.
 
 The app can sit beside GoHighLevel the same way a CloseBot-style agent does: GHL can trigger Lumenosis, Lumenosis reads the real omnichannel timeline, then writes useful state back to the contact.
 
