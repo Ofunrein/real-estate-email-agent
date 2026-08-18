@@ -89,6 +89,40 @@ test("classifyIrisEmailText: detects a second-time buyer and opens the valuation
   assert.match(classification.next_best_question || "", /free valuation/i);
 });
 
+test("classifyIrisEmailText: keeps realistic sell-before-buy context and CTA", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    const message = email({
+      subject: "Tarrytown sale and Northwest Austin purchase",
+      body: [
+        "Hi Iris,",
+        "My family owns a four-bedroom home in Tarrytown, and we are planning to sell before buying our next place in Northwest Austin.",
+        "For the new home, our budget is around $1.9M. We would like at least four bedrooms, a dedicated office, and ideally a pool.",
+        "We hope to move before November.",
+        "Can you help us understand what our current home may be worth and what the right first step would be?",
+        "One quick detail I forgot: we would prefer to sell the Tarrytown home before buying, but we can move quickly for the right Northwest Austin property.",
+      ].join("\n"),
+    });
+    const classification = classifyIrisEmailText(message);
+    const reply = generateIrisEmailReply(message, classification) || "";
+    const rendered = buildHtmlEmailReply(reply, [], classification);
+    const html = rendered.html || "";
+
+    assert.equal(classification.primary_lead_role, "second_time_buyer");
+    assert.equal(classification.lead_fields.current_property_status, "owns");
+    assert.equal(classification.lead_fields.area, "Northwest Austin");
+    assert.equal(classification.lead_fields.timeline, "before November");
+    assert.ok(classification.opportunity_tags.includes("sell_before_buy"));
+    assert.match(reply, /free valuation/i);
+    assert.match(html, /href="https:\/\/example\.com\/free-valuation"/);
+    assert.match(html, />Get Free Home Valuation<\/a>/);
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
 test("classifyIrisEmailText: valuation acceptance sends booking path", () => {
   const classification = classifyIrisEmailText(email({
     subject: "Re: Your next purchase",

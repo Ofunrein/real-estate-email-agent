@@ -381,12 +381,13 @@ function extractBeds(text: string): string | null {
 }
 
 function extractTimeline(text: string): string | null {
-  const match = text.match(/\b(asap|today|tomorrow|this week|next week|this weekend|next month|in \d+\s+(?:days|weeks|months)|within \d+\s+(?:days|weeks|months)|\d+\s+(?:days|weeks|months))\b/i);
+  const match = text.match(/\b(asap|today|tomorrow|this week|next week|this weekend|next month|(?:by|before)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|in \d+\s+(?:days|weeks|months)|within \d+\s+(?:days|weeks|months)|\d+\s+(?:days|weeks|months))\b/i);
   return match ? match[0] : null;
 }
 
 function extractArea(text: string): string | null {
-  const match = text.match(/\b(?:in|near|around)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,3})\b/);
+  const buyingArea = text.match(/\b(?:buy(?:ing)?|purchas(?:e|ing)|next (?:home|place))\b[^.!?\n]{0,80}\b(?:in|near|around)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,3})\b/);
+  const match = buyingArea || text.match(/\b(?:in|near|around)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,3})\b/);
   if (!match) return null;
   return match[1].replace(/\b(?:for|with|under|below|about)\b.*$/i, "").trim() || null;
 }
@@ -435,7 +436,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const flags = detectIrisComplianceFlags(latestClean);
   const noSignal = noOrStopSignal(latestClean);
   const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
-  const secondTimeBuyer = /\b(second[ -]?time buyer|bought before|already own|currently own|own (?:a|my|our) (?:home|house|property)|have (?:a|our) (?:home|house|property) to sell|need to sell (?:my|our) (?:home|house|property))\b/i.test(latestClean);
+  const secondTimeBuyer = /\b(second[ -]?time buyer|bought before|already own|currently own|own(?:s)? (?:a|my|our) (?:[\w-]+\s+){0,3}(?:home|house|property)|have (?:a|our) (?:home|house|property) to sell|need to sell (?:my|our) (?:home|house|property))\b/i.test(latestClean);
   const contextSecondTimeBuyer = /\b(second_time_buyer|second[ -]?time buyer|currently own|already own|current property status:\s*owns)\b/i.test(contextClean);
   const valuationConsent = /\b(?:yes|sure|please|interested|sounds good|let'?s do it|book|schedule)\b.{0,80}\b(?:valuation|home value|property value|appraisal|cma)\b|\b(?:valuation|home value|property value|appraisal|cma)\b.{0,80}\b(?:yes|sure|please|interested|book|schedule)\b/i.test(latestClean);
   const fields: IrisLeadFields = {
@@ -499,7 +500,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
 
   if (/(asap|today|tomorrow|urgent|this week)/i.test(latestClean)) opportunityTags.push("high_urgency");
   if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) opportunityTags.push("mortgage_interest");
-  if (/(sell before (?:i )?buy|need to sell first|contingent)/i.test(latestClean)) opportunityTags.push("sell_before_buy");
+  if (/\bsell(?:ing)?\b.{0,80}\bbefore\s+(?:(?:i|we)\s+)?buy(?:ing)?\b|need to sell first|contingent/i.test(latestClean)) opportunityTags.push("sell_before_buy");
   if (noSignal) opportunityTags.push(noSignal === "stop" ? "opt_out" : "clear_no");
   if (secondTimeBuyer || contextSecondTimeBuyer) {
     role = "second_time_buyer";
