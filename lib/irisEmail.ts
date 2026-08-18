@@ -582,6 +582,19 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
   const execution = decideIrisEmailExecution(classification);
   if (!execution.canReply) return null;
   const question = classification.next_best_question;
+  if (classification.intent === "showing_request") {
+    const showingCopy = question
+      ? `I can help arrange a showing${classification.address ? ` for ${classification.address}` : ""}. ${question}`
+      : `Thanks, I have your requested time${classification.address ? ` for ${classification.address}` : ""} and will have the team confirm availability.`;
+    return [
+      "Hello,",
+      "",
+      showingCopy,
+      "",
+      "Best,",
+      IRIS_AGENT_NAME,
+    ].join("\n");
+  }
   if (classification.primary_lead_role === "second_time_buyer") {
     const valuationAccepted = classification.opportunity_tags.includes("valuation_consented");
     const valuationUrl = (process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL || "").trim();
@@ -595,19 +608,6 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
       valuationAccepted
         ? valuationUrl || "What is the address of the property you would like valued?"
         : question || "Would you like me to arrange the valuation?",
-      "",
-      "Best,",
-      IRIS_AGENT_NAME,
-    ].join("\n");
-  }
-  if (classification.intent === "showing_request") {
-    const showingCopy = question
-      ? `I can help arrange a showing${classification.address ? ` for ${classification.address}` : ""}. ${question}`
-      : `Thanks, I have your requested time${classification.address ? ` for ${classification.address}` : ""} and will have the team confirm availability.`;
-    return [
-      "Hello,",
-      "",
-      showingCopy,
       "",
       "Best,",
       IRIS_AGENT_NAME,
@@ -775,11 +775,39 @@ function dedupeProperties(properties: SheetRow[]): SheetRow[] {
   return out;
 }
 
+function irisEmailCta(classification?: IrisEmailClassification): { label: string; url: string; color: string } | null {
+  if (!classification) return null;
+  const scheduling = classification.intent === "showing_request" || classification.intent === "property_details";
+  const valuation = classification.intent === "seller_lead" || classification.primary_lead_role === "second_time_buyer";
+  const rawUrl = scheduling
+    ? process.env.CALENDLY_URL || ""
+    : valuation
+      ? process.env.FILLOUT_VALUATION_URL || ""
+      : "";
+  try {
+    const url = new URL(rawUrl.trim());
+    if (!/^https?:$/.test(url.protocol)) return null;
+    return scheduling
+      ? { label: "Schedule Showing", url: url.toString(), color: "#2563eb" }
+      : { label: "Get Free Home Valuation", url: url.toString(), color: "#16803c" };
+  } catch {
+    return null;
+  }
+}
+
+function irisEmailCtaHtml(cta: { label: string; url: string; color: string }): string {
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin:20px 0 0"><tr><td bgcolor="${cta.color}" style="border-radius:5px;background-color: ${cta.color}"><a href="${htmlEscape(cta.url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 18px;border:1px solid ${cta.color};border-radius:5px;background-color: ${cta.color};color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:1.2;text-decoration:none">${htmlEscape(cta.label)}</a></td></tr></table>`;
+}
+
 export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], classification?: IrisEmailClassification): IrisEmailReplyDraft {
   const cleanProperties = dedupeProperties(properties);
   const featured = cleanProperties[0];
   const rest = cleanProperties.slice(1, 4);
   const bodyText = refineShowingReplyForSelectedProperty(text, featured, classification);
+  const cta = irisEmailCta(classification);
+  const htmlBodyText = cta
+    ? bodyText.split("\n").filter((line) => line.trim() !== cta.url).join("\n").trim()
+    : bodyText;
   const wantsAlternatives = /\b(similar|options?|alternatives?|compare|another|other)\b/i.test(text);
   const showAlternatives = Boolean(
     rest.length
@@ -795,17 +823,19 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
       : "";
   const plainProperties = showAlternatives ? cleanProperties.slice(0, 4) : cleanProperties.slice(0, featured ? 1 : 0);
   const html = `<div style="font-family:Arial,sans-serif;max-width:620px;color:#111827;line-height:1.45">
-${plainToHtml(bodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
+${plainToHtml(htmlBodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
 ${subjectLine ? `<p style="margin:20px 0 14px;line-height:1.55">${htmlEscape(subjectLine)}</p>` : ""}
 ${featured ? propertyCardHtml(featured, true) : ""}
 ${showAlternatives ? `<h3 style="margin:20px 0 10px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#475569">Similar options</h3>${rest.map((property) => propertyCardHtml(property)).join("")}` : ""}
 <p style="margin:20px 0 0;color:#555;line-height:1.45">Best,<br><strong>Iris</strong></p>
+${cta ? irisEmailCtaHtml(cta) : ""}
 </div>`;
   const propertyText = plainProperties.length
     ? `\n\nProperty details:\n${plainProperties.map(propertyPlain).join("\n\n")}`
     : "";
+  const ctaText = cta && !bodyText.includes(cta.url) ? `\n\n${cta.label}: ${cta.url}` : "";
   return {
-    text: `${bodyText}${propertyText}`,
+    text: `${bodyText}${propertyText}${ctaText}`,
     html,
   };
 }

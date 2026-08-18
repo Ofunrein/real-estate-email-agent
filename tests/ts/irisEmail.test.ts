@@ -121,6 +121,20 @@ test("generateIrisEmailReply: second-time buyer gets valuation booking link", ()
   }
 });
 
+test("generateIrisEmailReply: a second-time buyer can advance to a showing", () => {
+  const message = email({
+    subject: "Re: About your property inquiry",
+    body: "I am a second-time buyer and would like to tour 808 Bent Wood Pl Saturday at 11 AM.",
+  });
+  const classification = classifyIrisEmailText(message);
+  const reply = generateIrisEmailReply(message, classification) || "";
+
+  assert.equal(classification.primary_lead_role, "second_time_buyer");
+  assert.equal(classification.intent, "showing_request");
+  assert.match(reply, /requested time|showing/i);
+  assert.doesNotMatch(reply, /free valuation/i);
+});
+
 test("coalesceIrisEmailThreadFollowUps: keeps one latest message and combines quick follow-up context", () => {
   const first = email({ id: "first", threadId: "thread_a", body: "Looking in Round Rock.", receivedAt: "Wed, 15 Jul 2026 10:00:00 -0500" });
   const followUp = email({ id: "follow_up", threadId: "thread_a", body: "Also need a backyard.", receivedAt: "Wed, 15 Jul 2026 10:01:00 -0500" });
@@ -396,6 +410,57 @@ test("buildHtmlEmailReply: showing requests focus on the selected property inste
   assert.equal((reply.text.match(/Property details:/g) || []).length, 1);
   assert.match(reply.text, /9605 Corbe Dr/);
   assert.doesNotMatch(reply.text, /12725 Bloomington/i);
+});
+
+test("buildHtmlEmailReply: showing flow includes a Gmail-compatible schedule button", () => {
+  const previous = process.env.CALENDLY_URL;
+  process.env.CALENDLY_URL = "https://calendly.com/martin-lumenosis/30min";
+  try {
+    const classification = classifyIrisEmailText(email({
+      subject: "Re: About your property inquiry",
+      body: "Can I tour 808 Bent Wood Pl on Saturday?",
+    }));
+    const reply = buildHtmlEmailReply(
+      "Hello,\n\nI can help schedule a showing.\n\nBest,\nIris",
+      [],
+      classification,
+    );
+
+    assert.match(reply.html || "", /href="https:\/\/calendly\.com\/martin-lumenosis\/30min"/);
+    assert.match(reply.html || "", />Schedule Showing<\/a>/);
+    assert.match(reply.html || "", /role="presentation"/);
+    assert.match(reply.html || "", /background-color:\s*#2563eb/i);
+    assert.match(reply.text, /Schedule Showing: https:\/\/calendly\.com\/martin-lumenosis\/30min/);
+  } finally {
+    if (previous === undefined) delete process.env.CALENDLY_URL;
+    else process.env.CALENDLY_URL = previous;
+  }
+});
+
+test("buildHtmlEmailReply: seller flow includes a Gmail-compatible free valuation button", () => {
+  const previous = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://lumenosis.fillout.com/t/uVsRftdUNFus";
+  try {
+    const classification = classifyIrisEmailText(email({
+      subject: "Selling my Austin home",
+      body: "I own a home and want to sell it this fall.",
+    }));
+    const reply = buildHtmlEmailReply(
+      "Hello,\n\nWhat timeline are you working with?\n\nBest,\nIris",
+      [],
+      classification,
+    );
+
+    assert.equal(classification.intent, "seller_lead");
+    assert.match(reply.html || "", /href="https:\/\/lumenosis\.fillout\.com\/t\/uVsRftdUNFus"/);
+    assert.match(reply.html || "", />Get Free Home Valuation<\/a>/);
+    assert.match(reply.html || "", /role="presentation"/);
+    assert.match(reply.html || "", /background-color:\s*#16803c/i);
+    assert.match(reply.text, /Get Free Home Valuation: https:\/\/lumenosis\.fillout\.com\/t\/uVsRftdUNFus/);
+  } finally {
+    if (previous === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = previous;
+  }
 });
 
 test("buildHtmlEmailReply: selected showing reply does not re-ask which property", () => {
