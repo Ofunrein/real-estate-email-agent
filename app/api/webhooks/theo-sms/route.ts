@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
 import { normalizeTwilioContactAddress, recordChannelInteraction, smsControlAction, twilioSmsIngestInput, type ChannelIngestInput } from "@/lib/channelIngest";
 import { findLeadInDatabase, findPropertiesByAddressesFromDatabase, hasNewerInboundForThreadInDatabase, readEventsForThreadFromDatabase, readInboxSettingsFromDatabase, upsertAiDraftInDatabase, upsertLeadMemoryToDatabase, upsertPropertyToDatabase } from "@/lib/database";
@@ -420,6 +420,9 @@ export async function POST(request: NextRequest) {
         reply_sent: false,
       });
     }
+
+    after(async () => {
+      try {
       const transcriptStarted = nowMs();
       payload = await payloadWithVoiceTranscripts(payload);
       const mediaStarted = nowMs();
@@ -881,14 +884,29 @@ export async function POST(request: NextRequest) {
       sessionCost: formatUsd(theoSessionCost()),
     });
 
-    return respond( {
+        return respond( {
+          ok: true,
+          channel: result.event.channel,
+          status: "queued",
+          action: "reply_queued",
+          reply_sent: false,
+          handoff_alert_sent: handoffAlertSent,
+          handoff_alert_error: handoffAlertError || undefined,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to process Iris SMS webhook.";
+        logTheo("webhook error", { error: message, totalMs: elapsedMs(requestStarted), sessionCost: formatUsd(theoSessionCost()) });
+        const status = message.includes("DATABASE_URL") ? 503 : 500;
+        await respond( { ok: false, error: message }, { status });
+      }
+    });
+
+    return webhookResponse(request, {
       ok: true,
-      channel: result.event.channel,
-      status: "queued",
-      action: "reply_queued",
+      channel: "sms",
+      status: "accepted",
+      action: "processing",
       reply_sent: false,
-      handoff_alert_sent: handoffAlertSent,
-      handoff_alert_error: handoffAlertError || undefined,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Iris SMS webhook.";
