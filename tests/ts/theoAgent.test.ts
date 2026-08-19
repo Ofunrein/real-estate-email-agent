@@ -301,3 +301,33 @@ test("generateTheoReply: greeting does not hand off when LLM is unavailable", as
   assert.equal(result.handoffReason, "");
   assert.match(result.reply, /area, budget, and bedroom count/i);
 });
+
+test("generateTheoReply: conversational greeting skips the model", async () => {
+  const priorFetch = globalThis.fetch;
+  const priorTheoKey = process.env.OPENAI_API_KEY_THEO;
+  let fetchCalls = 0;
+  process.env.OPENAI_API_KEY_THEO = "test-key";
+  globalThis.fetch = (async () => {
+    fetchCalls += 1;
+    throw new Error("model should not be called for a greeting");
+  }) as typeof fetch;
+
+  try {
+    const result = await generateTheoReply({
+      message: "Hi there, how are you doing?",
+      source: "sms",
+      lead: { phone: "+151****2595" },
+      properties: [],
+    });
+
+    assert.equal(fetchCalls, 0);
+    assert.equal(result.status, "ready_to_reply");
+    assert.equal(result.aiAction, "general_lead_reply_ready");
+    assert.equal(result.handoffReason, "");
+    assert.match(result.reply, /area, budget, and bedroom count/i);
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorTheoKey == null) delete process.env.OPENAI_API_KEY_THEO;
+    else process.env.OPENAI_API_KEY_THEO = priorTheoKey;
+  }
+});

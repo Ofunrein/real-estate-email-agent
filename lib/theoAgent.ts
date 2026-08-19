@@ -271,7 +271,7 @@ function asksForPropertySafeInquiry(message: string): boolean {
 }
 
 function asksForLightGreeting(message: string): boolean {
-  return /^(hi|hello|hey|yo|good morning|good afternoon|good evening|thanks|thank you|ok|okay|cool|great|sounds good)[!. ]*$/i.test(cleanText(message));
+  return /^(?:(?:hi|hello|hey|yo)(?: there)?(?:,?\s+(?:how are you(?: doing)?|how'?s it going))?|how are you(?: doing)?|how'?s it going|good morning|good afternoon|good evening|thanks|thank you|ok|okay|cool|great|sounds good)[!?., ]*$/i.test(cleanText(message));
 }
 
 function latestMessageHasSensitiveTopic(message: string): boolean {
@@ -662,6 +662,31 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     };
   }
 
+  if (asksForLightGreeting(context.message)) {
+    if (!shouldTheoAutoReply(localSafetyClassification, context.lead || {})) {
+      return {
+        classification: localSafetyClassification,
+        reply: "",
+        mediaUrls: [],
+        shouldSend: false,
+        aiAction: "auto_reply_blocked",
+        handoffReason: localSafetyClassification.handoffReason || "Iris should not auto-reply to this SMS",
+        status: localSafetyClassification.status,
+        metrics: [],
+      };
+    }
+    return {
+      classification: localSafetyClassification,
+      reply: formatTheoGeneralReply(context.message, localSafetyClassification),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "general_lead_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics: [],
+    };
+  }
+
   if (context.lead?.phone) {
     const appointmentResult = await handleTheoAppointmentMessage(
       context.lead.phone,
@@ -953,19 +978,6 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         metrics,
       };
     }
-  }
-
-  if (asksForLightGreeting(context.message)) {
-    return {
-      classification,
-      reply: formatTheoGeneralReply(context.message, classification),
-      mediaUrls: [],
-      shouldSend: true,
-      aiAction: "general_lead_reply_ready",
-      handoffReason: "",
-      status: "ready_to_reply",
-      metrics,
-    };
   }
 
   let reply: string;
