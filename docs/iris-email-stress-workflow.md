@@ -33,6 +33,41 @@ Goal: keep Gmail replies under 60 seconds without Vercel polling or long-running
    - DB has one inbound and one outbound row.
    - Gmail thread receives the reply in under 60 seconds.
 
+## Vapi / Aria Live Verification
+
+Three commands, all read-only except the last:
+
+- `npm run vapi:audit` compares the LIVE assistant against `lib/ariaAssistant.ts`: required
+  safety rules in the prompt, tool inventory, transfer destination, server URL, recent call
+  outcomes. Exits non-zero on any high or critical finding.
+- `npm run vapi:evals:proof` runs the real Vapi Chat API against the real system prompt and
+  refreshes `docs/proof/vapi-adversarial-evals.md`.
+- `npm run aria:provision` PATCHes config-as-code onto the existing assistant.
+
+Four things that will waste an hour if you do not know them:
+
+1. **Egress is proxied and the proxy blocks `api.vapi.ai`.** A blocked request surfaces as
+   `CONNECT tunnel failed, response 403`, and through the Go CLI it prints as a bare
+   `Forbidden`, which reads exactly like a permissions or wrong-org error. Use
+   `curl --noproxy '*'`, or in Node set an explicit undici dispatcher as these scripts do.
+2. **`vapi auth status` reads local config only.** It happily reports "Authenticated" while
+   every network call is failing. It is not evidence of working auth.
+3. **`GET /org` returns 401 to a private API key** by design. Private keys authorize resource
+   CRUD (`/assistant`, `/tool`, `/phone-number`, `/call`) within their org; org-level reads
+   need a dashboard session. Prove ownership through `/assistant` and `/phone-number` instead.
+4. **Tools attach two ways.** `model.tools` holds the inline call-control tools; the property
+   and calendar tools are reusable org-level tools referenced by `model.toolIds`. An audit
+   that reads only `model.tools` will report every property tool as missing.
+
+Eval safety design: evals never touch the production assistant. They create a temporary
+clone with no tools and no server URL, so no tool webhook fires and nothing reaches the
+production database, then delete the clone. No phone call is ever placed. Each case is
+sampled 5 times and passes only if every sample passes, because the model is
+nondeterministic and a compliance rule that holds 4 times out of 5 does not hold.
+
+Voice is deliberately absent from `buildAriaAssistant`, so a PATCH cannot stomp a voice
+chosen in the dashboard. The audit reports the live voice so that drift stays visible.
+
 ## Cross-Channel Adversarial Suite
 
 `npm run adversarial` scores every channel against the same fixtures that

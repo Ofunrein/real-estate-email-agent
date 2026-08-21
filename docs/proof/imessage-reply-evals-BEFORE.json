@@ -1,0 +1,510 @@
+{
+  "ok": false,
+  "mode": "ai-judge",
+  "judgeModel": "claude-sonnet-4-6",
+  "threshold": {
+    "mean": 4,
+    "floor": 3
+  },
+  "corpusId": "imessage-reply-evals-2026-08-21",
+  "totalCases": 15,
+  "passed": 1,
+  "failed": 14,
+  "overallMean": 2.33,
+  "perCriterion": {
+    "formatting": 2.67,
+    "readability": 2.73,
+    "spacing": 2.53,
+    "messageLength": 2.27,
+    "naturalness": 2.13,
+    "contextRetention": 1.93,
+    "specificity": 2.27,
+    "usefulNextStep": 2.4,
+    "brokerageVoice": 2.53,
+    "seamlessExtension": 1.8
+  },
+  "cases": [
+    {
+      "id": "ack_thanks",
+      "family": "short_ack",
+      "pass": false,
+      "mean": 1.7,
+      "min": 1,
+      "chars": 165,
+      "blocks": 1,
+      "aiAction": "general_lead_reply_ready",
+      "deterministic": [
+        "over_budget: 165 chars (max 160 for short_ack)"
+      ],
+      "scores": {
+        "formatting": 3,
+        "readability": 2,
+        "spacing": 4,
+        "messageLength": 1,
+        "naturalness": 1,
+        "contextRetention": 1,
+        "specificity": 1,
+        "usefulNextStep": 1,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "recites a capability menu (find listings / send photos / compare options / book a showing)",
+        "re-asks for area, budget, and bedroom count that lead memory already has",
+        "runs well past one short warm line — violates short_ack response type",
+        "does not acknowledge the lead's 'Thanks' in any warm or human way",
+        "contextRetention failure: ignores all available lead memory",
+        "not one short line as required for short_ack"
+      ],
+      "reasoning": "This reply ignores every piece of lead memory available — Chad's name, Downtown Austin area, $1M budget, and 2-bedroom preference — and re-asks for all of it as if the conversation is starting cold. The response type called for a single warm acknowledgment of 'Thanks,' but instead the agent fired a full capability menu and a data-collection prompt, which is the exact pattern the must-not rules prohibit. It reads like a canned bot introduction, not a human agent responding to a simple courtesy message. Nothing about this reply would pass as a skilled human agent on any team.",
+      "reply": "Hi, this is Iris with Austin Realty. I can help find listings, send photos, compare options, or book a showing. What area, budget, and bedroom count should I search?"
+    },
+    {
+      "id": "ack_sounds_good_midthread",
+      "family": "short_ack",
+      "pass": false,
+      "mean": 1.8,
+      "min": 1,
+      "chars": 107,
+      "blocks": 1,
+      "aiAction": "general_lead_reply_ready",
+      "deterministic": [],
+      "scores": {
+        "formatting": 3,
+        "readability": 3,
+        "spacing": 3,
+        "messageLength": 1,
+        "naturalness": 1,
+        "contextRetention": 1,
+        "specificity": 1,
+        "usefulNextStep": 2,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "Exceeds one block — this is a multi-element demand list, not a short acknowledgment",
+        "Re-asks for area and budget that are already in lead memory",
+        "Starts a new pitch / intake sequence instead of closing the exchange naturally",
+        "Does not read as a natural close to the exchange",
+        "Reads like a template or system printout, not a human agent"
+      ],
+      "reasoning": "This reply completely ignores the context of the exchange — it re-asks for information the agent already has (area: Round Rock, budget: $650,000) and treats 'Ok cool' as if it were a cold opener rather than a mid-thread acknowledgment. The response is a robotic intake form dump that would make any real lead feel like they're talking to a bot that wasn't listening. A skilled agent responding to 'Ok cool' would say something like 'Want me to pull a few more in Round Rock?' — one line, natural, forward-moving.",
+      "reply": "I can help narrow the search. Send me the area, budget, bedroom count, and whether you want to buy or rent."
+    },
+    {
+      "id": "single_property_details",
+      "family": "single_property",
+      "pass": false,
+      "mean": 1.8,
+      "min": 1,
+      "chars": 301,
+      "blocks": 1,
+      "aiAction": "property_safe_inquiry_reply_ready",
+      "deterministic": [
+        "line_wall: single line of 301 chars with no break (max 180)"
+      ],
+      "scores": {
+        "formatting": 1,
+        "readability": 2,
+        "spacing": 1,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 3,
+        "specificity": 2,
+        "usefulNextStep": 2,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "address not on its own line",
+        "price/beds/baths/sqft not on a separate facts line",
+        "uses label-colon prefix '70 Rainey St #1509:'",
+        "uses label-colon prefix 'Listing:'",
+        "all facts on one long line",
+        "invents facts not in the property row: 'built 2018' and 'Condo'",
+        "uses the canned tail 'Want me to send photos, book a showing, or find similar options?'",
+        "no blank lines between logical blocks — everything is one run-on line",
+        "does not end on exactly one concrete next step"
+      ],
+      "reasoning": "The reply is a single wall of text with no line breaks between the address, facts, URL, or call to action, violating the requirement to put the address on its own line and facts on a separate line. It uses two explicit label-colon prefixes ('70 Rainey St #1509:' and 'Listing:'), both of which are explicitly prohibited. It invents a fact not in the property data ('built 2018, Condo') and uses the exact canned tail phrase that is explicitly forbidden. The result reads like a system-generated data dump, not a skilled human agent.",
+      "reply": "70 Rainey St #1509: $750,000, 2bd/2ba, Downtown Austin, 1,128 sqft, built 2018, Condo. Central Air, Balcony, Elevator Building, Urban Location Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/ Want me to send photos, book a showing, or find similar options?"
+    },
+    {
+      "id": "multi_listing_roundup",
+      "family": "multi_listing",
+      "pass": false,
+      "mean": 1.9,
+      "min": 1,
+      "chars": 536,
+      "blocks": 1,
+      "aiAction": "property_options_reply_ready",
+      "deterministic": [
+        "line_wall: single line of 536 chars with no break (max 180)"
+      ],
+      "scores": {
+        "formatting": 1,
+        "readability": 1,
+        "spacing": 1,
+        "messageLength": 3,
+        "naturalness": 2,
+        "contextRetention": 2,
+        "specificity": 3,
+        "usefulNextStep": 3,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "crams all three listings onto one line — no newlines between listings",
+        "no blank lines between logical blocks",
+        "does not acknowledge that no 3-bed listings exist when lead explicitly asked for 3-bed",
+        "does not give each listing its own scannable block separated by a blank line",
+        "does not keep address, facts, and link on separate lines inside each block",
+        "fails to open with one short intro line on its own line",
+        "includes a listing ($499,900, 1bd) that is irrelevant to a $1.5M budget lead seeking 3-bed"
+      ],
+      "reasoning": "The entire reply is crammed onto a single line with no newlines or blank lines between listings, making it a wall of text that is completely unscannable on an iPhone. The agent had clear memory that Chad wants a 3-bedroom and has a $1.5M budget, yet the reply sends all three listings without acknowledging the mismatch or filtering appropriately — none of the listings are 3-bed, and the cheapest at $499,900 is far below budget and irrelevant. The closing question 'Which one should I focus on?' is weak and agent-centric rather than lead-centric, and the reply never addresses the fact that no 3-bed units are available.",
+      "reply": "I found 3 matches: 1. 70 Rainey St #1509 $750,000, 2bd/2ba, 1,128 sqft, Downtown Austin Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/ 2. 70 Rainey St #2208 $1,450,000, 2bd/2ba, 1,434 sqft, Downtown Austin Listing: https://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/ 3. 70 Rainey St #2203 $499,900, 1bd/1ba, 663 sqft, Downtown Austin Listing: https://www.zillow.com/homedetails/70-Rainey-St-2203-Austin-TX-78701/306644488_zpid/ Which one should I focus on?"
+    },
+    {
+      "id": "missing_details_no_inventory",
+      "family": "missing_details",
+      "pass": false,
+      "mean": 2.8,
+      "min": 2,
+      "chars": 107,
+      "blocks": 1,
+      "aiAction": "general_lead_reply_ready",
+      "deterministic": [],
+      "scores": {
+        "formatting": 3,
+        "readability": 3,
+        "spacing": 4,
+        "messageLength": 3,
+        "naturalness": 2,
+        "contextRetention": 3,
+        "specificity": 3,
+        "usefulNextStep": 2,
+        "brokerageVoice": 3,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "run long or stack multiple questions — four criteria listed in one message",
+        "say plainly that nothing clean matches yet — omitted entirely"
+      ],
+      "reasoning": "The reply is functional but reads like a form prompt rather than a human agent — 'Send me the area, budget, bedroom count, and whether you want to buy or rent' is a four-part checklist dump that violates the must-not rule about stacking multiple questions. It also skips any acknowledgment that nothing matches yet, which the response type explicitly requires. A skilled agent would pick the single most unblocking question (likely area or buy vs. rent) and ask just that, in a warmer, more conversational tone.",
+      "reply": "I can help narrow the search. Send me the area, budget, bedroom count, and whether you want to buy or rent."
+    },
+    {
+      "id": "followup_availability",
+      "family": "followup_question",
+      "pass": false,
+      "mean": 1.8,
+      "min": 1,
+      "chars": 132,
+      "blocks": 1,
+      "aiAction": "property_safe_inquiry_reply_ready",
+      "deterministic": [
+        "robotic_label: robotic label: \"Status for <address>:\""
+      ],
+      "scores": {
+        "formatting": 1,
+        "readability": 2,
+        "spacing": 3,
+        "messageLength": 2,
+        "naturalness": 1,
+        "contextRetention": 2,
+        "specificity": 3,
+        "usefulNextStep": 1,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "uses a 'Status for <address>:' label-colon prefix",
+        "resends the listing URL the lead already has (effectively resending the listing block)",
+        "no usefulNextStep — conversation is not moved forward"
+      ],
+      "reasoning": "The reply opens with a robotic 'Status for 70 Rainey St #1509:' label-colon dump, which is explicitly prohibited and reads like a system printout rather than a human agent. It then resends the full Zillow URL the lead already received in the prior message, violating the must-not rule against resending the listing block. There is no conversational warmth, no forward momentum, and no next step offered — the reply simply regurgitates data in the most mechanical way possible. A skilled agent would have written something like 'Still showing Active — good news. Want to schedule a showing?' in a single natural line.",
+      "reply": "Status for 70 Rainey St #1509: Active. Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/"
+    },
+    {
+      "id": "sensitive_fair_housing",
+      "family": "sensitive_handoff",
+      "pass": false,
+      "mean": 2.3,
+      "min": 1,
+      "chars": 76,
+      "blocks": 1,
+      "aiAction": "handoff_reply_ready",
+      "deterministic": [],
+      "scores": {
+        "formatting": 4,
+        "readability": 4,
+        "spacing": 3,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 1,
+        "specificity": 1,
+        "usefulNextStep": 2,
+        "brokerageVoice": 2,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "Does not make clear the follow-up happens in this thread",
+        "Reads as a cold system rejection rather than a warm handoff"
+      ],
+      "reasoning": "The message correctly avoids answering the Fair Housing-sensitive question and routes to a human, which is the critical compliance win. However, it reads as a cold system rejection rather than a warm handoff — 'so we handle it correctly' sounds like a legal disclaimer, not a human agent, and there is no warmth, no use of Chad's name, no reference to the property, and no indication of when or how the follow-up will arrive in this thread. A skilled agent would acknowledge Chad by name, signal that a real person will reply here shortly, and keep the tone conversational rather than procedural.",
+      "reply": "I'm going to have a real person follow up on that so we handle it correctly."
+    },
+    {
+      "id": "sensitive_mortgage",
+      "family": "sensitive_handoff",
+      "pass": false,
+      "mean": 2.5,
+      "min": 1,
+      "chars": 76,
+      "blocks": 1,
+      "aiAction": "handoff_reply_ready",
+      "deterministic": [],
+      "scores": {
+        "formatting": 4,
+        "readability": 4,
+        "spacing": 3,
+        "messageLength": 2,
+        "naturalness": 3,
+        "contextRetention": 1,
+        "specificity": 1,
+        "usefulNextStep": 2,
+        "brokerageVoice": 3,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "usefulNextStep: no indication of who will follow up, by what channel, or when — lead is left with nothing actionable",
+        "contextRetention: no reference to the property the lead is presumably asking about",
+        "specificity: entirely generic, could apply to any inquiry on any property"
+      ],
+      "reasoning": "The reply correctly avoids quoting rates or down payment figures and routes to a human, satisfying the compliance guardrail. However, it is so stripped down that it fails on nearly every other dimension: it ignores the property entirely, provides no context about who will follow up or when, and reads more like a system deflection than a message from a real agent. A skilled agent would at minimum acknowledge the question warmly, reference the Rainey St unit, and tell the lead what to expect next (e.g., a lender partner will reach out shortly).",
+      "reply": "I'm going to have a real person follow up on that so we handle it correctly."
+    },
+    {
+      "id": "scheduling_request",
+      "family": "scheduling",
+      "pass": false,
+      "mean": 3.5,
+      "min": 2,
+      "chars": 76,
+      "blocks": 1,
+      "aiAction": "appointment_handled",
+      "deterministic": [],
+      "scores": {
+        "formatting": 5,
+        "readability": 5,
+        "spacing": 4,
+        "messageLength": 3,
+        "naturalness": 4,
+        "contextRetention": 2,
+        "specificity": 2,
+        "usefulNextStep": 3,
+        "brokerageVoice": 4,
+        "seamlessExtension": 3
+      },
+      "violations": [
+        "Must confirm which property in one short line — the reply never names or references 70 Rainey St #1509",
+        "Must not ask several scheduling questions at once — reply asks for both day and time preference simultaneously"
+      ],
+      "reasoning": "The message is clean, renders perfectly in iMessage, and asks a scheduling question without Markdown artifacts or robotic structure. However, it critically fails to confirm which property is being toured — the lead said 'the first one' and the agent never names 70 Rainey St #1509, leaving ambiguity unresolved. Asking both 'what day' and 'morning or afternoon' in the same breath is two scheduling questions at once, which the rubric flags as a must-not. A skilled agent would pin the property in one short line, then ask a single concrete question like 'Does this week work for you?'",
+      "reply": "Chad, what day and time works for the showing? Morning or afternoon is fine."
+    },
+    {
+      "id": "shared_property_context_amenities",
+      "family": "shared_property_context",
+      "pass": false,
+      "mean": 2.2,
+      "min": 2,
+      "chars": 321,
+      "blocks": 1,
+      "aiAction": "property_safe_inquiry_reply_ready",
+      "deterministic": [
+        "robotic_label: robotic label: \"the saved listing notes mention\"",
+        "line_wall: single line of 321 chars with no break (max 180)"
+      ],
+      "scores": {
+        "formatting": 2,
+        "readability": 2,
+        "spacing": 2,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 2,
+        "specificity": 3,
+        "usefulNextStep": 3,
+        "brokerageVoice": 2,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "Uses 'The saved listing notes mention:' — explicitly prohibited phrasing",
+        "Re-sends address, price, bed/bath, and neighborhood already delivered in the prior turn — resets context",
+        "Triple-barreled next-step question instead of one clear, answerable prompt",
+        "No line breaks between the amenity list and the link/CTA — wall of text on mobile",
+        "Robotic label-colon structure: '70 Rainey St #1509 - $750,000, 2bd/2ba, Downtown Austin.' as an opener"
+      ],
+      "reasoning": "The reply opens by restating the address, price, beds, and neighborhood that were already sent in the prior turn — a clear context reset that wastes the lead's time and reads like a template firing from scratch. The phrase 'The saved listing notes mention:' is explicitly called out as a must-not and is present verbatim, making the message sound like an internal system printout rather than a human agent. The whole thing is one dense run-on block with no deliberate line breaks, making it hard to scan on a phone. The next-step question is triple-barreled ('photos, book a showing, or find options with specific amenities?'), which dilutes focus and is harder to answer than a single clear prompt.",
+      "reply": "70 Rainey St #1509 - $750,000, 2bd/2ba, Downtown Austin. The saved listing notes mention: Central Air, Balcony, Elevator Building, Urban Location. Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/ Want me to send photos, book a showing, or find options with specific amenities?"
+    },
+    {
+      "id": "multiturn_pivot_after_rejection",
+      "family": "multi_listing",
+      "pass": false,
+      "mean": 1.6,
+      "min": 1,
+      "chars": 421,
+      "blocks": 1,
+      "aiAction": "property_options_reply_ready",
+      "deterministic": [
+        "line_wall: single line of 421 chars with no break (max 180)"
+      ],
+      "scores": {
+        "formatting": 1,
+        "readability": 1,
+        "spacing": 1,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 1,
+        "specificity": 2,
+        "usefulNextStep": 3,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "re-pitches the property the lead just rejected (6828 Walkup Ln) as option 1",
+        "collapses the options onto one line with no blank-line separation between listing blocks",
+        "formatting is not native to Apple Messages — no real newlines between blocks render as a wall of text"
+      ],
+      "reasoning": "The most critical failure is that the reply re-sends the exact property the lead just rejected (6828 Walkup Ln) as option 1, which directly violates the must-not rule and would likely kill the relationship. The entire message is collapsed onto a single line with no real line breaks, making it a wall of text that is completely unscannable on an iPhone. The numbered list format with inline URLs runs together without any blank-line separation between blocks, so Apple Messages renders it as one dense paragraph. The phrase 'better matches from the saved listings' is robotic and template-sounding, and re-pitching the rejected property while calling it a 'better match' is tone-deaf.",
+      "reply": "No problem, I'll skip that one. Here are better matches from the saved listings: 1. 6828 Walkup Ln $307,000, 4bd/3ba, 2,068 sqft, Southeast Austin Listing: https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/ 2. 7405 Wallach St $375,100, 4bd/3ba, 2,013 sqft, South Austin Listing: https://www.zillow.com/homedetails/7405-Wallach-St-Austin-TX-78745/2097978022_zpid/ Which one should I focus on?"
+    },
+    {
+      "id": "multiturn_no_duplicate_details",
+      "family": "scheduling",
+      "pass": false,
+      "mean": 1.6,
+      "min": 1,
+      "chars": 301,
+      "blocks": 1,
+      "aiAction": "property_details_reply_ready",
+      "deterministic": [
+        "line_wall: single line of 301 chars with no break (max 180)"
+      ],
+      "scores": {
+        "formatting": 2,
+        "readability": 2,
+        "spacing": 1,
+        "messageLength": 2,
+        "naturalness": 1,
+        "contextRetention": 1,
+        "specificity": 2,
+        "usefulNextStep": 2,
+        "brokerageVoice": 2,
+        "seamlessExtension": 1
+      },
+      "violations": [
+        "resends the same details block that was just sent",
+        "near-identical to the previous outbound message",
+        "ignores that the details were already provided",
+        "does not recognise this as a request to see the property",
+        "does not move to arranging a viewing",
+        "does not end on a concrete time question"
+      ],
+      "reasoning": "The reply completely ignores the actual request — Chad said Ollie wants to see the property, which is a clear signal to book a showing — and instead resends the full property details block that was already sent in the previous turn, nearly verbatim. This is the exact behavior the must-not list prohibits. There is no acknowledgment of Ollie, no scheduling question, no concrete time ask, and the closing line offers three vague options ('send photos, book a showing, or find similar options') when the lead has already narrowed to one property and one action. The entire message is a wall of text with no line breaks, making it unreadable on a phone screen.",
+      "reply": "70 Rainey St #1509: $750,000, 2bd/2ba, Downtown Austin, 1,128 sqft, built 2018, Condo. Central Air, Balcony, Elevator Building, Urban Location Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/ Want me to send photos, book a showing, or find similar options?"
+    },
+    {
+      "id": "multiturn_channel_preference",
+      "family": "followup_question",
+      "pass": false,
+      "mean": 2,
+      "min": 1,
+      "chars": 301,
+      "blocks": 1,
+      "aiAction": "property_safe_inquiry_reply_ready",
+      "deterministic": [
+        "line_wall: single line of 301 chars with no break (max 180)",
+        "over_budget: 301 chars (max 260 for followup_question)"
+      ],
+      "scores": {
+        "formatting": 2,
+        "readability": 2,
+        "spacing": 1,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 1,
+        "specificity": 3,
+        "usefulNextStep": 2,
+        "brokerageVoice": 3,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "Ignores the email request and sends another SMS listing block instead",
+        "Re-sends property details already established in the prior thread",
+        "Invents facts not present in the property data (built 2018, Condo label)",
+        "No blank lines between logical blocks — wall of text",
+        "messageLength is padded with redundant info rather than matching a short acknowledgement"
+      ],
+      "reasoning": "The reply completely ignores the lead's explicit request to send details to their email, instead dumping another SMS listing block with the same information already shared in the prior turn — this is the primary failure. The message is a wall of text with no blank lines, making it hard to scan on a phone, and it re-sends data the lead already received. The invented 'built 2018, Condo' facts are not in the provided property data, which is a specificity violation. A skilled agent would have simply confirmed the email was sent (or would send it) and offered one next step.",
+      "reply": "70 Rainey St #1509: $750,000, 2bd/2ba, Downtown Austin, 1,128 sqft, built 2018, Condo. Central Air, Balcony, Elevator Building, Urban Location Listing: https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/ Want me to send photos, book a showing, or find similar options?"
+    },
+    {
+      "id": "seller_valuation_context",
+      "family": "single_property",
+      "pass": false,
+      "mean": 2.4,
+      "min": 2,
+      "chars": 159,
+      "blocks": 1,
+      "aiAction": "seller_valuation_link_reply_ready",
+      "deterministic": [],
+      "scores": {
+        "formatting": 3,
+        "readability": 3,
+        "spacing": 2,
+        "messageLength": 2,
+        "naturalness": 2,
+        "contextRetention": 3,
+        "specificity": 2,
+        "usefulNextStep": 3,
+        "brokerageVoice": 2,
+        "seamlessExtension": 2
+      },
+      "violations": [
+        "Placeholder URL 'https://calendly.com/your-name/30min' was never replaced with a real link — this is a production defect that makes the message unsendable as written",
+        "'a person can help' phrasing is an implicit AI self-reference, violating seamlessExtension and brokerageVoice expectations"
+      ],
+      "reasoning": "The reply technically delivers a next step and avoids pricing judgment, but it reads like a template printout rather than a human agent — 'a person can help line up the sell-first timing' is robotic and oddly distanced, as if the AI is acknowledging its own limitations awkwardly. The Calendly link with a placeholder 'your-name' is a critical production error that would destroy credibility instantly. The message is also too terse and cold for the emotional weight of a sell-before-buy situation, and the single block with no deliberate spacing structure feels rushed rather than clean.",
+      "reply": "For the home you need to sell, start the free valuation here: https://calendly.com/your-name/30min After that, a person can help line up the sell-first timing."
+    },
+    {
+      "id": "opt_out_request",
+      "family": "short_ack",
+      "pass": true,
+      "mean": 5,
+      "min": 5,
+      "chars": 0,
+      "blocks": 0,
+      "aiAction": "auto_reply_blocked",
+      "deterministic": [],
+      "scores": {
+        "formatting": 5,
+        "readability": 5,
+        "spacing": 5,
+        "messageLength": 5,
+        "naturalness": 5,
+        "contextRetention": 5,
+        "specificity": 5,
+        "usefulNextStep": 5,
+        "brokerageVoice": 5,
+        "seamlessExtension": 5
+      },
+      "violations": [],
+      "reasoning": "No outbound message was produced, which is the required behaviour for an opt-out.",
+      "reply": ""
+    }
+  ]
+}

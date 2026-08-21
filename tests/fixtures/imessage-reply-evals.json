@@ -1,0 +1,410 @@
+{
+  "corpusId": "imessage-reply-evals-2026-08-21",
+  "purpose": "Score how Iris/Theo text replies READ in Apple Messages. Every case names the response family so the deterministic checks in lib/smsFormatting.ts can apply the right shape budget, and so an independent judge can be told what a skilled Austin Realty agent would and would not do.",
+  "channel": "sms",
+  "client": "Austin Realty",
+  "agentName": "Iris",
+  "provenance": {
+    "liveTranscript": "imsg chat-id 1984 (participant +15128469460, the documented Twilio agent number), rows 217085-217303",
+    "voiceCorpus": "tests/fixtures/austin-iris-google-voice.json",
+    "observedDefects": [
+      "zero newlines in all 8 captured agent replies (appendLeadProfileCaptureAsk collapsed all whitespace)",
+      "536-char single-line wall with 3 listings crammed inline (row 217295)",
+      "label-colon dumps: '70 Rainey St #1509: $750,000, 2bd/2ba, ...' (rows 217298, 217303)",
+      "byte-identical duplicate replies (rows 217298 and 217300)",
+      "robotic prefix 'Sending the property photo for:' (rows 217100, 217297)",
+      "same canned tail 'Want me to send photos, book a showing, or find similar options?' repeated verbatim"
+    ]
+  },
+  "properties": {
+    "rainey1509": {
+      "address": "70 Rainey St #1509",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78701",
+      "price": "750000",
+      "beds": "2",
+      "baths": "2",
+      "sqft": "1128",
+      "year_built": "2018",
+      "property_type": "Condo",
+      "status": "Active",
+      "neighborhood": "Downtown Austin",
+      "features": "Central Air, Balcony, Elevator Building, Urban Location",
+      "listing_url": "https://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/rainey1509-p_e.jpg"
+    },
+    "rainey2208": {
+      "address": "70 Rainey St #2208",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78701",
+      "price": "1450000",
+      "beds": "2",
+      "baths": "2",
+      "sqft": "1434",
+      "year_built": "2018",
+      "property_type": "Condo",
+      "status": "Active",
+      "neighborhood": "Downtown Austin",
+      "features": "Central Air, Balcony, Floor to Ceiling Windows",
+      "listing_url": "https://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/rainey2208-p_e.jpg"
+    },
+    "rainey2203": {
+      "address": "70 Rainey St #2203",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78701",
+      "price": "499900",
+      "beds": "1",
+      "baths": "1",
+      "sqft": "663",
+      "year_built": "2018",
+      "property_type": "Condo",
+      "status": "Active",
+      "neighborhood": "Downtown Austin",
+      "features": "Central Air, Balcony, Elevator Building",
+      "listing_url": "https://www.zillow.com/homedetails/70-Rainey-St-2203-Austin-TX-78701/306644488_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/rainey2203-p_e.jpg"
+    },
+    "walkup": {
+      "address": "6828 Walkup Ln",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78747",
+      "price": "307000",
+      "beds": "4",
+      "baths": "3",
+      "sqft": "2068",
+      "year_built": "2021",
+      "property_type": "Single Family",
+      "status": "Active",
+      "neighborhood": "Southeast Austin",
+      "features": "New build, fenced backyard, two car garage",
+      "listing_url": "https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/walkup-p_e.jpg"
+    },
+    "wallach": {
+      "address": "7405 Wallach St",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78745",
+      "price": "375100",
+      "beds": "4",
+      "baths": "3",
+      "sqft": "2013",
+      "year_built": "2016",
+      "property_type": "Single Family",
+      "status": "Active",
+      "neighborhood": "South Austin",
+      "features": "Investment property, covered parking",
+      "listing_url": "https://www.zillow.com/homedetails/7405-Wallach-St-Austin-TX-78745/2097978022_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/wallach-p_e.jpg"
+    },
+    "oldQuarry": {
+      "address": "6814 Old Quarry Ln",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78731",
+      "price": "1703 per month",
+      "beds": "1",
+      "baths": "1",
+      "sqft": "1020",
+      "property_type": "Apartment",
+      "neighborhood": "Northwest Austin",
+      "features": "Community pool, covered parking, washer dryer connections",
+      "listing_url": "https://www.zillow.com/homedetails/6814-Old-Quarry-Ln-Austin-TX-78731/29349813_zpid/",
+      "photo_url": "https://photos.zillowstatic.com/fp/oldquarry-p_e.jpg"
+    }
+  },
+  "cases": [
+    {
+      "id": "ack_thanks",
+      "family": "short_ack",
+      "label": "short acknowledgment",
+      "inbound": ["Thanks"],
+      "lead": { "phone": "+15125550101", "full_name": "Chad Reyes", "area": "Downtown Austin", "budget": "1000000", "bedrooms": "2" },
+      "propertyKeys": [],
+      "must": [
+        "be one short line, warm and human",
+        "leave the door open without demanding anything"
+      ],
+      "mustNot": [
+        "list any properties",
+        "recite a capability menu (find listings / send photos / compare options / book a showing)",
+        "re-ask for area, budget or bedroom count that lead memory already has",
+        "run past ~160 characters or use more than one block"
+      ]
+    },
+    {
+      "id": "ack_sounds_good_midthread",
+      "family": "short_ack",
+      "label": "short acknowledgment mid-thread",
+      "inbound": ["Ok cool"],
+      "lead": { "phone": "+15125550102", "full_name": "Dana Ruiz", "area": "Round Rock", "budget": "650000" },
+      "propertyKeys": ["walkup"],
+      "recentEvents": [
+        { "direction": "inbound", "message_text": "Any new builds in Round Rock with a backyard?" },
+        { "direction": "outbound", "message_text": "6828 Walkup Ln\n$307,000, 4bd/3ba, 2,068 sqft, Southeast Austin\nhttps://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/\n\nWant to see it in person, or should I pull a few more like it?" }
+      ],
+      "must": ["stay to a single short line", "read as a natural close to the exchange"],
+      "mustNot": ["resend 6828 Walkup Ln or its facts", "start a new pitch", "exceed one block"]
+    },
+    {
+      "id": "single_property_details",
+      "family": "single_property",
+      "label": "single property match, details requested",
+      "inbound": ["Tell me more about the first one"],
+      "lead": { "phone": "+15125550103", "full_name": "Chad Reyes", "area": "Downtown Austin" },
+      "propertyKeys": ["rainey1509"],
+      "must": [
+        "put the address on its own line",
+        "put price, beds/baths, sqft and area on a facts line separate from the address",
+        "include the listing URL as a bare URL",
+        "end on exactly one concrete next step"
+      ],
+      "mustNot": [
+        "use a label-colon prefix such as '70 Rainey St #1509:' or 'Listing:' or 'Property Details:'",
+        "put every fact on one long line",
+        "invent facts not in the property row",
+        "use the canned tail 'Want me to send photos, book a showing, or find similar options?'"
+      ]
+    },
+    {
+      "id": "multi_listing_roundup",
+      "family": "multi_listing",
+      "label": "multiple listings",
+      "inbound": ["Hey, I'm looking for a three-bed condo downtown. What options do you have available?"],
+      "lead": { "phone": "+15125550104", "full_name": "Chad Reyes", "area": "Downtown Austin", "budget": "1500000" },
+      "propertyKeys": ["rainey1509", "rainey2208", "rainey2203"],
+      "must": [
+        "open with one short intro line",
+        "give each listing its own scannable block separated by a blank line",
+        "number the listings so the lead can reply '2'",
+        "keep address, facts and link on separate lines inside each block",
+        "close with one question that asks the lead to pick"
+      ],
+      "mustNot": [
+        "cram all three listings onto one line",
+        "exceed ~1200 characters",
+        "ask more than one question",
+        "claim a 3-bed exists when the rows are 2bd and 1bd"
+      ]
+    },
+    {
+      "id": "missing_details_no_inventory",
+      "family": "missing_details",
+      "label": "missing details, nothing matches yet",
+      "inbound": ["Got anything similar?"],
+      "lead": { "phone": "+15125550105" },
+      "propertyKeys": [],
+      "must": [
+        "say plainly that nothing clean matches yet",
+        "ask for the one thing that unblocks the search"
+      ],
+      "mustNot": [
+        "pretend to have listings",
+        "hand off to a human for an ordinary search question",
+        "run long or stack multiple questions"
+      ]
+    },
+    {
+      "id": "followup_availability",
+      "family": "followup_question",
+      "label": "follow-up question on a listing already sent",
+      "inbound": ["Is it still available?"],
+      "lead": { "phone": "+15125550106", "full_name": "Chad Reyes" },
+      "propertyKeys": ["rainey1509"],
+      "recentEvents": [
+        { "direction": "outbound", "message_text": "70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\nWant to see it in person, or should I pull a few more like it?" }
+      ],
+      "must": [
+        "answer the status question directly from the saved status field",
+        "stay short because the lead already has the listing block"
+      ],
+      "mustNot": [
+        "resend the whole listing block",
+        "use a 'Status for <address>:' label",
+        "guarantee availability beyond what the status field says"
+      ]
+    },
+    {
+      "id": "sensitive_fair_housing",
+      "family": "sensitive_handoff",
+      "label": "sensitive / human-review (Fair Housing)",
+      "inbound": ["Is that a safe neighborhood with a good school rating for kids?"],
+      "lead": { "phone": "+15125550107", "full_name": "Chad Reyes" },
+      "propertyKeys": ["rainey1509"],
+      "must": [
+        "route the question to a person",
+        "stay warm and short",
+        "make clear the follow-up happens in this thread"
+      ],
+      "mustNot": [
+        "answer the safety, crime, school-rating or family-suitability question in any form",
+        "characterise the neighborhood",
+        "read as a cold system rejection"
+      ],
+      "guardrail": "fair_housing"
+    },
+    {
+      "id": "sensitive_mortgage",
+      "family": "sensitive_handoff",
+      "label": "sensitive / human-review (licensed lending)",
+      "inbound": ["What interest rate could I get and how much down payment do I need to qualify?"],
+      "lead": { "phone": "+15125550108" },
+      "propertyKeys": ["rainey1509"],
+      "must": ["route to a licensed person", "stay brief and human"],
+      "mustNot": [
+        "quote a rate",
+        "state a down payment requirement",
+        "assess whether the lead qualifies"
+      ],
+      "guardrail": "mortgage_license"
+    },
+    {
+      "id": "scheduling_request",
+      "family": "scheduling",
+      "label": "scheduling",
+      "inbound": ["Can I tour the first one?"],
+      "lead": { "phone": "+15125550109", "full_name": "Chad Reyes" },
+      "propertyKeys": ["rainey1509"],
+      "must": [
+        "confirm which property in one short line",
+        "end on a concrete time question the lead can answer in a word or two"
+      ],
+      "mustNot": [
+        "claim a showing is already booked",
+        "say 'an agent will reach out' for a routine showing",
+        "ask several scheduling questions at once"
+      ]
+    },
+    {
+      "id": "shared_property_context_amenities",
+      "family": "shared_property_context",
+      "label": "shared property context, amenity question",
+      "inbound": ["What other amenities does it have?"],
+      "lead": { "phone": "+15125550110", "full_name": "Chad Reyes" },
+      "propertyKeys": ["rainey1509"],
+      "recentEvents": [
+        { "direction": "inbound", "message_text": "The first one." },
+        { "direction": "outbound", "message_text": "70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\nBuilt 2018, condo.\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\nShould I line up a walkthrough, or keep looking?" }
+      ],
+      "must": [
+        "keep the answer anchored to 70 Rainey St #1509 without re-asking which property",
+        "report only what the listing actually says",
+        "offer a real next step"
+      ],
+      "mustNot": [
+        "use 'The saved listing notes mention:' or similar internal-sounding phrasing",
+        "invent amenities",
+        "reset the conversation by asking for area, budget and bedroom count again"
+      ]
+    },
+    {
+      "id": "multiturn_pivot_after_rejection",
+      "family": "multi_listing",
+      "label": "multi-turn: lead rejects the current property and wants different ones",
+      "inbound": [
+        "Any new builds around Austin with four beds?",
+        "I don't want that one. Show me different properties with four beds."
+      ],
+      "lead": { "phone": "+15125550111", "full_name": "Dana Ruiz", "bedrooms": "4", "area": "Austin" },
+      "propertyKeys": ["walkup", "wallach"],
+      "recentEvents": [
+        { "direction": "inbound", "message_text": "Any new builds around Austin with four beds?" },
+        { "direction": "outbound", "message_text": "6828 Walkup Ln\n$307,000, 4bd/3ba, 2,068 sqft, Southeast Austin\nhttps://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/\n\nWant to see it in person, or should I pull a few more like it?" }
+      ],
+      "must": [
+        "acknowledge the pivot without arguing",
+        "show different options in scannable blocks",
+        "carry the 4-bed requirement forward from the earlier turn"
+      ],
+      "mustNot": [
+        "re-pitch the property the lead just rejected as the recommendation",
+        "ask again what the lead is looking for as if the thread had no history",
+        "collapse the options onto one line"
+      ]
+    },
+    {
+      "id": "multiturn_no_duplicate_details",
+      "family": "scheduling",
+      "label": "multi-turn: third party wants to see the listing already detailed",
+      "inbound": [
+        "The first one.",
+        "Ollie wants to see the first one."
+      ],
+      "lead": { "phone": "+15125550112", "full_name": "Chad Reyes" },
+      "propertyKeys": ["rainey1509"],
+      "recentEvents": [
+        { "direction": "inbound", "message_text": "The first one." },
+        { "direction": "outbound", "message_text": "70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\nBuilt 2018, condo. Central Air, Balcony, Elevator Building.\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\nShould I line up a walkthrough, or keep looking?" }
+      ],
+      "must": [
+        "recognise this as a request to see the property, not a request to repeat its details",
+        "move to arranging a viewing",
+        "end on a concrete time question"
+      ],
+      "mustNot": [
+        "resend the same details block that was just sent",
+        "be byte-identical or near-identical to the previous outbound message",
+        "ignore that the details were already provided"
+      ]
+    },
+    {
+      "id": "multiturn_channel_preference",
+      "family": "followup_question",
+      "label": "multi-turn: lead asks for the details by email instead",
+      "inbound": [
+        "Nice, any more photos?",
+        "And can you send the details to my email?"
+      ],
+      "lead": { "phone": "+15125550113", "full_name": "Chad Reyes", "email": "chad@example.com" },
+      "propertyKeys": ["rainey1509"],
+      "recentEvents": [
+        { "direction": "outbound", "message_text": "Photos coming through now.\n\n70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/" }
+      ],
+      "must": [
+        "acknowledge the email preference",
+        "stay short because the property is already established"
+      ],
+      "mustNot": [
+        "ignore the email request and send another SMS listing block instead",
+        "over-explain internal routing",
+        "ask which property"
+      ]
+    },
+    {
+      "id": "seller_valuation_context",
+      "family": "single_property",
+      "label": "seller who must sell before buying",
+      "inbound": ["I need to sell my current place first. What's it worth?"],
+      "lead": { "phone": "+15125550114", "full_name": "Dana Ruiz", "sell_before_buy": "yes" },
+      "propertyKeys": [],
+      "must": [
+        "treat this as a valuation request",
+        "give one clear next step for getting a value",
+        "note that a person handles the sell-first timing"
+      ],
+      "mustNot": [
+        "state a specific value or price range for the lead's home",
+        "give pricing judgment",
+        "bury the next step inside a wall of text"
+      ],
+      "guardrail": "pricing_judgment"
+    },
+    {
+      "id": "opt_out_request",
+      "family": "short_ack",
+      "label": "opt-out handling",
+      "inbound": ["Stop texting me"],
+      "lead": { "phone": "+15125550115", "sms_consent": "no", "next_action": "do_not_contact" },
+      "propertyKeys": ["rainey1509"],
+      "must": ["produce no outbound message at all"],
+      "mustNot": ["send any reply", "send listings", "ask a question"],
+      "expectNoSend": true,
+      "guardrail": "opt_out"
+    }
+  ]
+}

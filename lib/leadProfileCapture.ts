@@ -1,6 +1,7 @@
 import type { Channel } from "@/lib/inboxData";
 import { normalizeEmail, normalizePhone } from "@/lib/leadIdentity";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { normalizeMessagesReply } from "@/lib/smsFormatting";
 import type { TheoClassification } from "@/lib/theoAgent";
 
 export type LeadProfileDetails = {
@@ -198,8 +199,11 @@ export function decideLeadProfileCapture(input: {
   return { extracted, shouldAsk: false, askFor: "", question: "", reason: "profile_sufficient" };
 }
 
+// Runs on EVERY outbound text reply, so it must not reshape the reply it is handed.
+// It used to call clean(), which is replace(/\s+/g, " ") - that silently collapsed every
+// intentional blank line and shipped every SMS as one unreadable wall of text.
 export function appendLeadProfileCaptureAsk(reply: string, decision: LeadCaptureDecision, limit = 320): string {
-  const base = clean(reply);
+  const base = normalizeMessagesReply(reply);
   if (!decision.shouldAsk || !decision.question || !base) return base;
   const alreadyAsked = new RegExp(decision.question.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(base);
   if (alreadyAsked) return base;

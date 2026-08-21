@@ -22,10 +22,22 @@ export type TheoAppointmentResult = {
   nextAction?: string;
 };
 
+// Reschedule/cancel/check only make sense about a booking that exists. Without this gate,
+// "I need to move in TOMORROW" matched \bmove\b and an urgent housing message came back as
+// "No upcoming appointment found" - caught live on the SMS channel.
+const APPOINTMENT_REFERENT_RE = /\b(appointment|appt|showing|shewing|tour|walk.?through|viewing|visit|meeting|slot|booking|reservation|it|that|this)\b/;
+// "move in", "move to Austin", "moving here" are housing words, not scheduling words.
+const MOVE_IN_RE = /\bmov(?:e|ing)\s+(?:in|into|to|out|here|there|up|down)\b/;
+
 export function detectAppointmentIntent(message: string): AppointmentIntent {
   const text = message.toLowerCase();
-  if (/\b(reschedule|change|move|push back|different time|different day|can we do)\b/.test(text)) return "reschedule";
-  if (/\b(cancel|cancellation|won't be able|can't make|not going to make|nevermind)\b/.test(text)) return "cancel";
+  const aboutAnAppointment = APPOINTMENT_REFERENT_RE.test(text);
+  if (
+    aboutAnAppointment
+    && !MOVE_IN_RE.test(text)
+    && /\b(reschedule|change|move|push back|different time|different day|can we do)\b/.test(text)
+  ) return "reschedule";
+  if (aboutAnAppointment && /\b(cancel|cancellation|won't be able|can't make|not going to make|nevermind)\b/.test(text)) return "cancel";
   if (/\b(when is|what time|do i have|my appointment|my showing|confirm my|still on)\b/.test(text)) return "check";
   if (/\b(schedule|book|set up|arrange|tour|showing|want to see|visit|walk.?through|can i come|can we meet)\b/.test(text)) return "book";
   return "none";
@@ -96,6 +108,8 @@ export async function handleTheoAppointmentMessage(
   phone: string,
   message: string,
   lead: TheoAppointmentLead | null,
+  /** Address of the listing already on the lead's screen, so "the first one" can be named back. */
+  contextAddress = "",
 ): Promise<TheoAppointmentResult> {
   const intent = detectAppointmentIntent(message);
   if (intent === "none") return { handled: false, reply: "" };
@@ -164,9 +178,14 @@ export async function handleTheoAppointmentMessage(
 
   const timePreference = extractTimeFromSms(message);
   if (!timePreference) {
+    // Name the listing so "the first one" is not left ambiguous, and ask ONE question.
+    // "What day and time works? Morning or afternoon?" is two asks and reads like a form.
+    const target = (lead?.property_interest || contextAddress || "").trim();
     return {
       handled: true,
-      reply: `${namePrefix}what day and time works for the showing? Morning or afternoon is fine.`,
+      reply: target
+        ? `${namePrefix}happy to get you into ${target}. What day works best?`
+        : `${namePrefix}happy to set that up. What day works best?`,
       nextAction: "needs_time",
     };
   }

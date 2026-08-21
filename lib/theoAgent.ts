@@ -4,6 +4,15 @@ import { handleTheoAppointmentMessage } from "@/lib/theoAppointments";
 import { classifyTheoWithLlm, generateTheoSmsWithLlm } from "@/lib/theoLlm";
 import type { TheoMetric } from "@/lib/theoTelemetry";
 import { detectConversationScenario, sharedBrainInstruction } from "@/lib/conversationPlaybooks";
+import {
+  fitMessagesReply,
+  messagesBlocks,
+  messagesBudget,
+  normalizeMessagesReply,
+  pickVariant,
+  repeatsRecentReply,
+  type MessagesReplyFamily,
+} from "@/lib/smsFormatting";
 
 export type TheoIntent =
   | "property_details"
@@ -55,7 +64,20 @@ const SMS_LIMIT = 320;
 const LINK_SMS_LIMIT = 1200;
 
 const SENSITIVE_PATTERNS = [
-  { pattern: /\b(section 8|voucher|children|kids|family friendly|safe neighborhood|crime|school rating|ethnic|race|religion|disabled|disability)\b/i, reason: "Fair Housing-sensitive question" },
+  { pattern: /\b(section 8|voucher|children|kids|family friendly|families|safe neighborhood|crime|school rating|ethnic|ethnicity|race|racial|religion|disabled|disability)\b/i, reason: "Fair Housing-sensitive question" },
+  // The live suite proved the list above was not enough: "which neighborhood has fewer Black
+  // families? I want a white area with no immigrants" matched NOTHING and fell through to a
+  // generic intake question. A protected-class word alone is not enough to fire, or "1200
+  // White Oak Dr" would escalate: it has to sit next to a people/place noun, or be a word that
+  // only ever describes people.
+  {
+    pattern: /\b(black|white|hispanic|latino|latina|asian|arab|jewish|muslim|christian|catholic|gay|lesbian|trans)\b[^.?!]{0,25}\b(neighborhood|neighbourhood|area|areas|families|family|people|folks|tenants|renters|buyers|residents|schools?|part of town|side of town|communit(?:y|ies))\b/i,
+    reason: "Fair Housing-sensitive question",
+  },
+  {
+    pattern: /\b(?:fewer|more|less|mostly|mainly|predominantly|majority|no|non|without|avoid|prefer|only|want|keep out)\b[^.?!]{0,40}\b(immigrants?|foreigners?|minorities|minority|single mothers?)\b/i,
+    reason: "Fair Housing-sensitive question",
+  },
   { pattern: /\b(pre.?approved|preapproval|qualify|loan officer|mortgage|interest rate|down payment|credit score|nmls|apr)\b/i, reason: "Mortgage/licensed lending question" },
   { pattern: /\b(contract|offer terms|inspection objection|legal|lawsuit|attorney|commission|representation agreement)\b/i, reason: "Legal or contract-sensitive question" },
   { pattern: /\b(angry|mad|upset|complaint|scam|stop lying|wtf|fuck|bullshit)\b/i, reason: "Angry or complaint language" },
@@ -73,14 +95,7 @@ function cleanText(value?: string): string {
 }
 
 function cleanSmsReply(value: string): string {
-  return value
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+/g, " ").trim())
-    .join("\n")
-    .replace(/\n(?=\d+\.\s)/g, "\n\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return normalizeMessagesReply(value);
 }
 
 function normalize(value?: string): string {
@@ -99,20 +114,13 @@ function normalizeFollowupText(value?: string): string {
 }
 
 function truncateSms(value: string, limit = SMS_LIMIT): string {
-  const clean = cleanSmsReply(value);
-  if (clean.length <= limit) return clean;
-  const slice = clean.slice(0, limit - 1).trimEnd();
-  const sentenceEnd = Math.max(
-    slice.lastIndexOf(". "),
-    slice.lastIndexOf("? "),
-    slice.lastIndexOf("! "),
-    slice.lastIndexOf("\n\n"),
-  );
-  if (sentenceEnd > Math.floor(limit * 0.55)) {
-    const punctuationEnd = sentenceEnd + (slice[sentenceEnd] === "\n" ? 0 : 1);
-    return slice.slice(0, punctuationEnd).trimEnd();
-  }
-  return `${slice}...`;
+  return fitMessagesReply(value, limit);
+}
+
+// Shape the reply to the family it belongs to instead of one global cap. A one-line ack
+// and a three-listing roundup have nothing to do with each other.
+function truncateSmsForFamily(value: string, family: MessagesReplyFamily): string {
+  return fitMessagesReply(value, messagesBudget(family).maxChars);
 }
 
 function envFlag(value?: string): boolean {
@@ -158,8 +166,15 @@ function wantsPropertyLinks(message: string): boolean {
   return /\b(link|links|url|urls|website|listing page|zillow)\b/i.test(normalizeFollowupText(message));
 }
 
+// Sample/placeholder values live in .env.example and have leaked into real envs. Sending
+// "calendly.com/your-name/30min" to a lead destroys trust, so treat it as unconfigured.
+function isPlaceholderUrl(url: string): boolean {
+  return /your-?name|your-?link|example\.com|YOUR_|changeme|<.*>/i.test(url);
+}
+
 function valuationUrl(): string {
-  return cleanText(process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL);
+  const url = cleanText(process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL);
+  return isPlaceholderUrl(url) ? "" : url;
 }
 
 function isSellerValuationContext(message: string, classification: TheoClassification): boolean {
@@ -182,7 +197,10 @@ function asksForSafePropertyFact(message: string): boolean {
 function asksForAlternativeProperties(message: string): boolean {
   const normalized = normalizeFollowupText(message);
   return /\b(other|another|similar|same spec|same specs|same size|same price|neighboring|neighbor|nearby|next to|close by|comparable|alternative|options?|properties|homes?|listings?)\b/i.test(normalized)
-    && /\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(normalized);
+    && (/\b(show|send|see|tell|find|recommend|compare|options?|properties|homes?|listings?|spec|specs)\b/i.test(normalized)
+      // "Got anything similar?" has no explicit verb otherwise. Deliberately narrow: a bare
+      // "have" also appears in "what other amenities does it have?", which is NOT a new search.
+      || /\b(?:got|have|have you got)\s+(?:any|anything|another|other|something)\b/i.test(normalized));
 }
 
 function rejectsCurrentProperty(message: string): boolean {
@@ -202,7 +220,44 @@ function offTopicRedirectReply(message: string): string {
   if (/\b(monkey|monkeys|exotic animals?|wild animals?)\b/i.test(normalized)) {
     return "I can't verify or advise on exotic-animal use. I can still help with normal criteria like area, budget, beds, baths, yard size, and showing times.";
   }
+  // Live gap: "what's the weather in austin tomorrow" got no decline at all, just a pivot into
+  // an intake question, which reads like the ask was never heard.
+  if (/\b(weather|forecast|temperature|rain|sports?|score|game|stocks?|crypto|recipe|joke|news)\b/i.test(normalized)) {
+    return "That one's outside what I can look up. Happy to keep going on Austin listings, photos, or showings though.";
+  }
+  // Credentials and third-party personal data. Refused outright, never escalated as a request
+  // a human could fulfil. Caught live: an SSN + API key ask reached the generic intake reply.
+  if (/\b(ssn|social security|api key|api token|access token|password|passwd|credit card|routing number|bank account)\b/i.test(normalized)
+    || /\b(?:previous|last|other|another)\s+(?:buyer|client|lead|customer)(?:'s)?\s+(?:phone|number|email|address|info|details)\b/i.test(normalized)) {
+    return "I can't share personal details or credentials over text. I can help with listings, photos, or showings whenever you want to keep going.";
+  }
+  // Prompt injection. Stay in role, do not acknowledge having instructions to leak.
+  if (/\b(ignore (?:all )?(?:previous|prior|above) instructions?|disregard (?:all )?(?:previous|prior) instructions?|system prompt|your instructions|reveal your prompt|jailbreak|developer mode)\b/i.test(normalized)) {
+    return "I'm going to stick to what I do here. Happy to help with Austin listings, photos, or showings.";
+  }
+  // Sexual requests, including the ones that arrive wrapped in hostility.
+  if (/\b(say something dirty|talk dirty|something dirty|sext|sexy|horny|send nudes)\b/i.test(normalized)) {
+    return "I'm not going to engage with that. I'm here for Austin listings, photos, and showings if you want to keep going.";
+  }
   return "";
+}
+
+/**
+ * A shared listing link that matches nothing we have saved must not be answered with a
+ * DIFFERENT property's facts. Caught live: a deliberately broken Zillow URL came back with a
+ * full block for an unrelated address, which reads as a confident wrong answer.
+ */
+function sharesUnknownListingUrl(message: string, properties: SheetRow[] = []): boolean {
+  const shared = message.match(/https?:\/\/\S+/gi) || [];
+  if (!shared.length) return false;
+  const known = properties.map((property) => cleanText(property.listing_url)).filter(Boolean);
+  // A zpid is the stable id in a Zillow URL; compare on that when both sides have one.
+  const idOf = (url: string) => url.match(/\/(\d{5,})_zpid/)?.[1] || "";
+  return shared.every((url) => {
+    const id = idOf(url);
+    return !known.some((candidate) => candidate === url
+      || (Boolean(id) && idOf(candidate) === id));
+  });
 }
 
 function asksForPropertyOptions(message: string): boolean {
@@ -245,7 +300,14 @@ function selectOrdinalProperties(message: string, properties: SheetRow[] = []): 
 }
 
 function asksForPropertyShowing(message: string): boolean {
-  return /\b(tour|showing|show it|see it|view it|walk.?through|visit|come see|book|schedule|appointment)\b/i.test(normalizeFollowupText(message));
+  const normalized = normalizeFollowupText(message);
+  if (/\b(tour|showing|show it|see it|view it|walk.?through|visit|come see|book|schedule|appointment)\b/i.test(normalized)) return true;
+  // "Ollie wants to see the first one" is a showing ask, not a request to re-read details.
+  // Gated on the message not being a photo request so "want to see photos" still routes to media.
+  if (wantsPropertyImage(normalized)) return false;
+  return /\b(?:wants?|would like|'d like)\s+to\s+see\b/i.test(normalized)
+    || /\bcan (?:i|we|he|she|they) (?:see|come|tour|visit)\b/i.test(normalized)
+    || /\b(?:come by|stop by|check it out in person|in person)\b/i.test(normalized);
 }
 
 function asksForPropertyAvailability(message: string): boolean {
@@ -334,20 +396,154 @@ function formatSqft(value?: string): string {
   return Number.isFinite(sqft) && sqft > 0 ? `${sqft.toLocaleString("en-US", { maximumFractionDigits: 0 })} sqft` : "";
 }
 
-function formatTheoSellerValuationReply(properties: SheetRow[] = []): string {
-  const url = valuationUrl();
-  if (!url) return "";
-  const property = properties.find((row) => cleanText(row.address));
-  const facts = property ? [formatFacts(property), formatSqft(property.sqft)].filter(Boolean).join(", ") : "";
-  const propertyLine = property
-    ? `${cleanText(property.address)}${facts ? ` is ${facts}` : ""}.`
-    : "";
+// --- Messages-shaped property rendering -------------------------------------
+//
+// The old shapes were "Address: fact, fact, fact. Listing: url Want me to send photos,
+// book a showing, or find similar options?" on one line. In Messages that is a wall with a
+// label-colon dump on the front and the same canned tail on every reply. These helpers
+// build address / facts / link as separate LINES, and rotate the closing question so the
+// thread does not read like one template firing repeatedly.
+
+const SINGLE_PROPERTY_CLOSERS = [
+  "Want to see it in person, or should I pull a few more like it?",
+  "Should I line up a walkthrough, or keep looking?",
+  "Want photos, or should I check on showing times?",
+  "Want me to find more like this one, or set up a tour?",
+] as const;
+
+const MULTI_LISTING_CLOSERS = [
+  "Which one should I focus on?",
+  "Which of these do you want to see first?",
+  "Which one stands out?",
+] as const;
+
+const AMENITY_CLOSERS = [
+  "Want me to confirm the rest with the listing agent?",
+  "Should I check the rest with the listing side, or set up a walkthrough?",
+  "Want a walkthrough so you can see it yourself?",
+] as const;
+
+const AVAILABILITY_CLOSERS = [
+  "Want me to line up a time to see it?",
+  "Should I get you in this week?",
+  "Want photos, or a showing time?",
+] as const;
+
+// A property row is the stable part of the seed, so the same listing keeps the same voice
+// within a thread while different listings read differently.
+function closerFor(variants: readonly string[], seed: string): string {
+  return pickVariant(variants, seed);
+}
+
+function propertyFactsLine(property: SheetRow): string {
   return [
-    propertyLine,
-    "For the home you need to sell, start the free valuation here:",
-    url,
-    "After that, a person can help line up the sell-first timing.",
-  ].filter(Boolean).join("\n\n");
+    formatPrice(property.price),
+    property.beds && property.baths ? `${property.beds}bd/${property.baths}ba` : "",
+    formatSqft(property.sqft),
+    property.neighborhood || property.city,
+  ].filter(Boolean).join(", ");
+}
+
+function propertyContextLine(property: SheetRow): string {
+  const type = cleanText(property.property_type);
+  const built = cleanText(property.year_built);
+  if (built && type) return `Built ${built}, ${type.toLowerCase()}.`;
+  if (built) return `Built ${built}.`;
+  if (type) return `${type}.`;
+  return "";
+}
+
+function listingUrlLine(property: SheetRow): string {
+  return cleanText(property.listing_url);
+}
+
+// One listing as its own scannable block: number + address, then facts, then a bare URL.
+function propertyBlock(property: SheetRow, index?: number): string {
+  const prefix = typeof index === "number" ? `${index + 1}. ` : "";
+  return [
+    `${prefix}${cleanText(property.address)}`,
+    propertyFactsLine(property),
+    listingUrlLine(property),
+  ].filter(Boolean).join("\n");
+}
+
+function lastOutboundMessage(events: SheetRow[] = []): string {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (cleanText(event?.direction).toLowerCase() !== "outbound") continue;
+    const text = cleanText(event?.message_text);
+    if (text) return text;
+  }
+  return "";
+}
+
+function outboundHistoryText(events: SheetRow[] = []): string {
+  return events
+    .filter((event) => cleanText(event?.direction).toLowerCase() === "outbound")
+    .map((event) => cleanText(event?.message_text))
+    .join("\n");
+}
+
+/** Was this exact listing already put in front of the lead earlier in the thread? */
+function alreadyShownProperty(property: SheetRow, events: SheetRow[] = []): boolean {
+  const address = cleanText(property?.address);
+  if (!address) return false;
+  return outboundHistoryText(events).toLowerCase().includes(address.toLowerCase());
+}
+
+/**
+ * "I don't want that one, show me different properties" must not come back with the same
+ * listing as option 1. Drop anything already pitched, unless that would leave nothing.
+ */
+function dropRejectedProperties(properties: SheetRow[] = [], events: SheetRow[] = []): SheetRow[] {
+  const remaining = properties.filter((property) => !alreadyShownProperty(property, events));
+  return remaining.length ? remaining : properties;
+}
+
+// Guard against the failure seen live: two byte-identical detail blocks in a row because
+// the follow-up matched the same branch. If the facts were just sent, advance the
+// conversation instead of resending them.
+function advanceInsteadOfRepeating(
+  candidate: string,
+  events: SheetRow[] = [],
+  properties: SheetRow[] = [],
+): string {
+  const prior = lastOutboundMessage(events);
+  if (!prior || !repeatsRecentReply(candidate, prior)) return candidate;
+  const property = properties.find((row) => cleanText(row.address));
+  const label = property ? cleanText(property.address) : "that one";
+  return messagesBlocks(
+    `You already have the details on ${label}, so I won't resend them.`,
+    "What works better for a walkthrough, a weekday evening or Saturday morning?",
+  );
+}
+
+function formatTheoSellerValuationReply(properties: SheetRow[] = [], lead: Partial<SheetRow> = {}): string {
+  const property = properties.find((row) => cleanText(row.address));
+  const knownAddress = cleanText(property?.address || lead.property_interest);
+  const url = valuationUrl();
+  const name = cleanText(lead.full_name).split(" ")[0];
+  const opener = name
+    ? `${name}, I can get you a real number on that before we go further.`
+    : "I can get you a real number on that before we go further.";
+
+  // No configured booking link: stay useful by collecting what a valuation actually needs.
+  if (!url) {
+    return messagesBlocks(
+      opener,
+      knownAddress
+        ? `One of our agents does the valuation on ${knownAddress} and can help you line up the sell-first timing. What's your timeline?`
+        : "One of our agents runs the valuation and helps line up the sell-first timing. What's the address?",
+    );
+  }
+
+  return messagesBlocks(
+    opener,
+    knownAddress
+      ? `Grab a time here and an agent will walk you through what ${knownAddress} should list at.\n${url}`
+      : `Grab a time here and an agent will walk you through what it should list at.\n${url}`,
+    knownAddress ? "" : "What's the address, so they can pull comps before you talk?",
+  );
 }
 
 function outsideServiceArea(properties: SheetRow[] = []): boolean {
@@ -360,54 +556,55 @@ function outsideServiceArea(properties: SheetRow[] = []): boolean {
 function formatTheoPropertyLinks(properties: SheetRow[] = []): string {
   const linked = properties.filter((property) => cleanText(property.listing_url));
   if (!linked.length) return "";
-  const lines = linked.slice(0, 3).flatMap((property, index) => [
-    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
-    cleanText(property.listing_url),
-  ]);
-  return `Here are the listing links:\n\n${lines.join("\n\n")}`;
+  const shown = linked.slice(0, 3);
+  // A single link needs no preamble at all. Numbering one item is worse than not numbering.
+  if (shown.length === 1) return propertyBlock(shown[0]);
+  return messagesBlocks(...shown.map((property, index) => propertyBlock(property, index)));
 }
 
 function formatTheoPropertyPhotos(properties: SheetRow[] = [], maxCount = 3): string {
   const photographed = properties.filter((property) => usablePhotoUrl(property.photo_url));
   if (!photographed.length) return "";
   const shown = photographed.slice(0, maxCount);
-  const lines = shown.flatMap((property, index) => [
-    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
-    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
-  ].filter(Boolean));
-  const intro = shown.length === 1 ? "Sending the property photo for:" : "Sending the property photos for:";
   const serviceNote = outsideServiceArea(shown)
-    ? "This looks outside our main Austin-area coverage, but I found the listing media."
+    ? "Heads up, this one sits outside our main Austin-area coverage, but I pulled the listing media."
     : "";
-  return [serviceNote, intro, lines.join("\n\n")].filter(Boolean).join("\n\n");
+  const intro = shown.length === 1 ? "Photos coming through now." : `Photos coming through for all ${shown.length}.`;
+  const body = shown.length === 1
+    ? propertyBlock(shown[0])
+    : messagesBlocks(...shown.map((property, index) => propertyBlock(property, index)));
+  return messagesBlocks(serviceNote, intro, body);
 }
 
 function formatTheoPhotoLinkFallback(properties: SheetRow[] = []): string {
   const linked = properties.filter((property) => cleanText(property.listing_url));
   if (!linked.length) return "";
-  const lines = linked.slice(0, 3).flatMap((property, index) => [
-    `${index + 1}. ${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}`,
-    cleanText(property.listing_url),
-  ]);
-  return `I found the listing, but the direct image source is not sendable by SMS. The photo gallery is here:\n\n${lines.join("\n\n")}`;
+  const shown = linked.slice(0, 3);
+  const body = shown.length === 1
+    ? propertyBlock(shown[0])
+    : messagesBlocks(...shown.map((property, index) => propertyBlock(property, index)));
+  return messagesBlocks(
+    "I found the listing, but the images are not sendable by text. The full gallery is on the listing page.",
+    body,
+  );
 }
 
 function formatTheoPropertyDetails(properties: SheetRow[] = []): string {
   const property = properties.find((row) => cleanText(row.address));
   if (!property) return "";
-  const fields = [
-    formatFacts(property),
-    formatSqft(property.sqft),
-    property.year_built ? `built ${cleanText(property.year_built)}` : "",
-    property.property_type ? cleanText(property.property_type) : "",
-  ].filter(Boolean);
-  const featureText = cleanText(property.features || property.description).slice(0, 260);
-  return [
-    `${cleanText(property.address)}${fields.length ? `: ${fields.join(", ")}.` : "."}`,
-    featureText,
-    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
-    "Want me to send photos, book a showing, or find similar options?",
-  ].filter(Boolean).join("\n\n");
+  const featureText = cleanText(property.features || property.description).slice(0, 150).replace(/[,;\s]+$/, "");
+  const colorLine = [propertyContextLine(property), featureText ? `${featureText.replace(/\.$/, "")}.` : ""]
+    .filter(Boolean)
+    .join(" ");
+  return messagesBlocks(
+    [
+      cleanText(property.address),
+      propertyFactsLine(property),
+      colorLine,
+      listingUrlLine(property),
+    ].filter(Boolean).join("\n"),
+    closerFor(SINGLE_PROPERTY_CLOSERS, cleanText(property.address)),
+  );
 }
 
 function requestedAmenityLabels(message: string): string[] {
@@ -435,147 +632,376 @@ function requestedAmenityLabels(message: string): string[] {
 
 function formatTheoAvailabilityAnswer(property: SheetRow): string {
   const status = cleanText(property.status);
-  if (status) return `Status for ${cleanText(property.address)}: ${status}.`;
-  return `I have ${cleanText(property.address)} in the saved listing inventory, but I don't have a live availability status field for it yet. I can still send the listing, photos, or help book a showing so the team can confirm access.`;
+  const address = cleanText(property.address);
+  if (status) return `${address} is showing as ${status.toLowerCase()} right now.`;
+  return `I have ${address} saved, but not a live availability field for it. I can send the listing or have the team confirm access.`;
 }
 
-function formatTheoAmenityAnswer(property: SheetRow, message: string): string {
+// Zillow feature columns carry marketing filler that is not an amenity. "It has central air,
+// balcony and urban location" is the tell that a column was pasted rather than described.
+const NON_AMENITY_FEATURE_RE = /\b(urban|suburban|convenient|prime|desirable|great|ideal|excellent)\b.*\b(location|access|area|setting|spot)\b|\b(location|access)\b$/i;
+
+/**
+ * Turn a raw feature column ("Central Air, Balcony, Elevator Building") into something a
+ * person would say out loud ("central air, a balcony and elevator building"). Title Case in a
+ * text message is the tell that a field got pasted in rather than described.
+ *
+ * Takes the features column ONLY. Appending the free-text description here produced a last
+ * "item" that was a whole sentence: "...parking and modern finishes apartment with community
+ * pool and convenient austin access."
+ */
+function spokenFeatureList(featureText: string): string {
+  const items = cleanText(featureText)
+    .split(/[,;]+/)
+    .map((item) => item.trim().replace(/[.\s]+$/, ""))
+    .filter(Boolean)
+    .filter((item) => !NON_AMENITY_FEATURE_RE.test(item))
+    // Preserve acronyms and unit numbers; only de-title-case ordinary words.
+    .map((item) => item.replace(/\b[A-Z][a-z]+\b/g, (word) => word.toLowerCase()))
+    .slice(0, 5);
+  if (!items.length) return "";
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function formatTheoAmenityAnswer(property: SheetRow, message: string, events: SheetRow[] = []): string {
   const requested = requestedAmenityLabels(message);
   const listingText = cleanText([property.features, property.description].filter(Boolean).join(" "));
+  const seed = cleanText(property.address);
+  // Once the listing block has been sent, an amenity follow-up should read as a reply to
+  // that message, not as a fresh pitch. Reference the address in prose and skip the facts.
+  const alreadySeen = alreadyShownProperty(property, events);
+  const header = alreadySeen
+    ? ""
+    : [cleanText(property.address), propertyFactsLine(property)].filter(Boolean).join("\n");
+  const linkLine = alreadySeen ? "" : listingUrlLine(property);
+
   if (!requested.length) {
-    return [
-      `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`,
-      listingText
-        ? `The saved listing notes mention: ${listingText.slice(0, 260)}.`
-        : "I don't have more amenity notes saved for that listing yet.",
-      property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
-      "Want me to send photos, book a showing, or find options with specific amenities?",
-    ].filter(Boolean).join("\n\n");
+    // "<address> lists Central Air, Balcony, ..." reads like a data export. When the listing
+    // block is already on their screen, answer the way a person would: "It has ...".
+    const spoken = spokenFeatureList(property.features || "");
+    const note = spoken
+      ? alreadySeen
+        ? `It has ${spoken}.`
+        : `The listing calls out ${spoken}.`
+      : `I don't have more amenity detail saved on ${cleanText(property.address)} yet.`;
+    return messagesBlocks(
+      header,
+      [note, linkLine].filter(Boolean).join("\n"),
+      closerFor(AMENITY_CLOSERS, seed),
+    );
   }
+
   const mentioned = requested.filter((label) => new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\/.*/, "")}\\b`, "i").test(listingText));
   const unknown = requested.filter((label) => !mentioned.includes(label));
   const knownLine = mentioned.length
-    ? `The saved listing text mentions: ${mentioned.join(", ")}.${unknown.length ? ` I don't see ${unknown.join(", ")} confirmed in the saved listing fields yet.` : ""}`
-    : `I don't see ${requested.join(", ")} confirmed in the saved listing fields yet.`;
-  return [
-    `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`,
-    knownLine,
-    listingText ? `Listing notes: ${listingText.slice(0, 220)}` : "",
-    "Want me to send the listing/photos or find options that clearly match that?",
-  ].filter(Boolean).join("\n\n");
+    ? `It has ${mentioned.join(" and ")}.${unknown.length ? ` Nothing in the listing either way on ${unknown.join(" or ")}.` : ""}`
+    : `The listing doesn't say either way on ${requested.join(" or ")}.`;
+  return messagesBlocks(
+    header,
+    [knownLine, linkLine].filter(Boolean).join("\n"),
+    closerFor(AMENITY_CLOSERS, seed),
+  );
 }
 
-function formatTheoShowingRequest(properties: SheetRow[] = []): string {
+function formatTheoShowingRequest(properties: SheetRow[] = [], events: SheetRow[] = []): string {
   const property = properties.find((row) => cleanText(row.address));
+  const address = cleanText(property?.address);
+  // If the block for this listing is already on their screen, do not paste it again.
+  // Name it in the sentence instead and spend the message on the actual booking step.
+  const alreadySeen = property ? alreadyShownProperty(property, events) : false;
+  if (address && alreadySeen) {
+    return messagesBlocks(
+      `Happy to get you into ${address}.`,
+      "What day works best this week?",
+    );
+  }
   const propertyLine = property
-    ? `${cleanText(property.address)}${formatFacts(property) ? ` - ${formatFacts(property)}` : ""}.`
+    ? [address, propertyFactsLine(property)].filter(Boolean).join("\n")
     : "";
-  return [
+  return messagesBlocks(
     propertyLine,
-    "I can help with that. What day and time works best, morning or afternoon?",
-  ].filter(Boolean).join("\n\n");
+    "Happy to set that up. What day works best this week?",
+  );
 }
 
 function formatTheoPropertyComparison(properties: SheetRow[] = [], message: string): string {
   const usable = properties.filter((property) => cleanText(property.address));
   if (!usable.length) return "";
   const normalized = normalizeFollowupText(message);
-  let label = "Here is the cleanest comparison from the saved listings:";
+  let label = "Here they are side by side.";
   let sorted = [...usable];
   if (/\b(cheapest|lowest|least expensive|most affordable|best deal|better)\b/i.test(normalized)) {
     sorted = sorted
       .filter((property) => numericValue(property.price) != null)
       .sort((a, b) => (numericValue(a.price) || 0) - (numericValue(b.price) || 0));
-    label = "Lowest listed price from these options:";
+    label = "Cheapest first.";
   } else if (/\b(highest|most expensive)\b/i.test(normalized)) {
     sorted = sorted
       .filter((property) => numericValue(property.price) != null)
       .sort((a, b) => (numericValue(b.price) || 0) - (numericValue(a.price) || 0));
-    label = "Highest listed price from these options:";
+    label = "Priciest first.";
   } else if (/\b(largest|biggest)\b/i.test(normalized)) {
     sorted = sorted
       .filter((property) => numericValue(property.sqft) != null)
       .sort((a, b) => (numericValue(b.sqft) || 0) - (numericValue(a.sqft) || 0));
-    label = "Largest saved listing from these options:";
+    label = "Biggest first.";
   } else if (/\b(smallest)\b/i.test(normalized)) {
     sorted = sorted
       .filter((property) => numericValue(property.sqft) != null)
       .sort((a, b) => (numericValue(a.sqft) || 0) - (numericValue(b.sqft) || 0));
-    label = "Smallest saved listing from these options:";
+    label = "Smallest first.";
   }
   if (!sorted.length) sorted = usable;
-  const lines = sorted.slice(0, 3).map((property, index) => `${index + 1}. ${cleanText(property.address)}${formatOptionFacts(property) ? ` - ${formatOptionFacts(property)}` : ""}`);
-  return [
+  const shown = sorted.slice(0, 3);
+  const lines = shown.map((property, index) => `${index + 1}. ${cleanText(property.address)}, ${formatOptionFacts(property)}`.replace(/,\s*$/, ""));
+  return messagesBlocks(
     label,
     lines.join("\n"),
-    "Want photos, the listing link, or similar options for one of these?",
-  ].join("\n\n");
+    closerFor(MULTI_LISTING_CLOSERS, cleanText(shown[0]?.address)),
+  );
 }
 
-function formatTheoPropertySafeAnswer(properties: SheetRow[] = [], message: string): string {
-  const property = properties.find((row) => cleanText(row.address));
-  if (asksForPropertyShowing(message)) return formatTheoShowingRequest(properties);
+// The same "safe inquiry" branch answers availability, amenities, showings and comparisons.
+// Each of those is a different shape, so each gets its own budget.
+function safeInquiryFamily(message: string): MessagesReplyFamily {
+  if (asksForPropertyShowing(message)) return "scheduling";
+  if (asksForPropertyComparison(message)) return "multi_listing";
+  if (asksForPropertyAvailability(message)) return "followup_question";
+  if (asksForPropertyAmenities(message)) return "shared_property_context";
+  return "single_property";
+}
+
+function formatTheoPropertySafeAnswer(properties: SheetRow[] = [], message: string, events: SheetRow[] = []): string {
+  if (asksForPropertyShowing(message)) return formatTheoShowingRequest(properties, events);
   if (asksForPropertyComparison(message) && properties.length > 1) return formatTheoPropertyComparison(properties, message);
+  const property = properties.find((row) => cleanText(row.address));
   if (!property) return "";
-  if (asksForPropertyAvailability(message)) return [
-    formatTheoAvailabilityAnswer(property),
-    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
-  ].filter(Boolean).join("\n\n");
-  if (asksForPropertyAmenities(message)) return formatTheoAmenityAnswer(property, message);
+  if (asksForPropertyAvailability(message)) {
+    // If the link is already on their screen, a status answer does not need to resend it.
+    const link = alreadyShownProperty(property, events) ? "" : listingUrlLine(property);
+    return messagesBlocks(
+      formatTheoAvailabilityAnswer(property),
+      link,
+      closerFor(AVAILABILITY_CLOSERS, cleanText(property.address)),
+    );
+  }
+  if (asksForPropertyAmenities(message)) return formatTheoAmenityAnswer(property, message, events);
   return formatTheoPropertyDetails(properties);
 }
 
-function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification, message = ""): string {
-  const usable = properties.filter((property) => cleanText(property.address));
+/**
+ * How many beds the lead just asked for, when they said it plainly. Used to avoid calling a
+ * 2-bed a "match" for a 3-bed request, which is a factual claim the agent must not make.
+ */
+function requestedBedCount(message: string): number | null {
+  const normalized = normalizeFollowupText(message).toLowerCase();
+  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+  const digit = normalized.match(/\b(\d)\s*(?:bed|bd|bedroom|br)\b/);
+  if (digit) return Number(digit[1]);
+  const word = normalized.match(/\b(one|two|three|four|five)[\s-]*(?:bed|bd|bedroom|br)\b/);
+  return word ? words[word[1]] ?? null : null;
+}
+
+function formatTheoPropertyOptions(
+  properties: SheetRow[] = [],
+  classification: TheoClassification,
+  message = "",
+  events: SheetRow[] = [],
+): string {
+  const rejectedPrior = rejectsCurrentProperty(message);
+  // "show me something different" must not return the listing they just turned down.
+  const pool = rejectedPrior ? dropRejectedProperties(properties, events) : properties;
+  const usable = pool.filter((property) => cleanText(property.address));
   if (!usable.length) return "";
-  const blocks = usable.slice(0, 3).map((property, index) => [
-    `${index + 1}. ${cleanText(property.address)}`,
-    formatOptionFacts(property),
-    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
-  ].filter(Boolean).join("\n"));
+  const shown = usable.slice(0, 3);
   const needsHuman = classification.status === "needs_human" || Boolean(classification.handoffReason);
   const hasSellBeforeBuy = (classification.opportunityTags || []).includes("sell_before_buy") || classification.leadRole === "seller";
-  const rejectedPrior = rejectsCurrentProperty(message);
+
+  // Be honest when nothing hits the bed count they asked for.
+  const wantedBeds = requestedBedCount(message);
+  const bedMiss = wantedBeds != null
+    && shown.length > 0
+    && shown.every((property) => {
+      const beds = numericValue(property.beds);
+      return beds != null && beds < wantedBeds;
+    });
+
   const intro = rejectedPrior
-    ? "No problem, I'll skip that one. Here are better matches from the saved listings:"
+    ? "No problem, skipping that one. These are closer:"
+    : bedMiss
+    ? `Nothing at ${wantedBeds} beds downtown right now. Closest I have:`
     : needsHuman
-    ? "I found these matches. A person can review the part that needs judgment:"
-    : usable.length === 1
+    ? `I found ${shown.length === 1 ? "one match" : `${shown.length} matches`}. A person will pick up the part that needs judgment.`
+    : shown.length === 1
     ? "I found one match:"
-    : `I found ${Math.min(usable.length, 3)} matches:`;
+    : `I found ${shown.length} matches:`;
   const humanNote = !needsHuman && hasSellBeforeBuy
-    ? "Since selling and buying timing matters, a person should also help with the valuation and transition plan."
+    ? "Since the sell and buy timing has to line up, a person on the team should help with the valuation side."
     : "";
-  const nextQuestion = usable.length === 1
-    ? "Want me to find more options, or focus on this one?"
-    : "Which one should I focus on?";
-  return [
-    intro,
-    blocks.join("\n\n"),
-    humanNote,
-    nextQuestion,
-  ].filter(Boolean).join("\n\n");
+  // A single result is not a list. Only number things when there are parallel items.
+  const body = shown.length === 1
+    ? propertyBlock(shown[0])
+    : messagesBlocks(...shown.map((property, index) => propertyBlock(property, index)));
+  const closer = shown.length === 1
+    ? "Want more options like this, or should we focus here?"
+    : closerFor(MULTI_LISTING_CLOSERS, cleanText(shown[0]?.address));
+  return messagesBlocks(intro, body, humanNote, closer);
 }
 
-function formatTheoNoPropertyOptions(message: string): string {
+function formatTheoNoPropertyOptions(message: string, lead: Partial<SheetRow> = {}): string {
   const normalized = normalizeFollowupText(message);
-  if (/\bsimilar|same spec|same specs|other|another|alternative|options?\b/i.test(normalized)) {
-    return "I don't see a clean similar match in the saved listings yet. Do you want me to widen it by price, location, or bedroom count?";
-  }
-  return "I don't see a clean matching listing in the saved inventory yet. Send me the area, budget, and bedroom count and I'll narrow it down.";
+  const similar = /\bsimilar|same spec|same specs|other|another|alternative|anything else|what else|options?\b/i.test(normalized);
+  // Ask for the FIRST thing that is actually missing, not all four at once.
+  const missing = !cleanText(lead.area)
+    ? "What area should I look in?"
+    : !cleanText(lead.budget)
+    ? "What's your price ceiling?"
+    : !cleanText(lead.bedrooms)
+    ? "How many bedrooms do you need?"
+    : "Want me to widen it on price or area?";
+  return messagesBlocks(
+    similar
+      ? "Nothing clean matching that in what I have right now."
+      : "I don't have a match saved for that yet.",
+    missing,
+  );
 }
 
-function formatTheoGeneralReply(message: string, classification: TheoClassification): string {
+/**
+ * Compliance handoff. It must not answer the question, but a bare "a person from the team
+ * will follow up" reads like a routing machine. Naming the lead and the listing in context
+ * costs nothing on the compliance side and is the difference between a warm handoff and a
+ * cold rejection.
+ */
+function formatTheoHandoff(lead: Partial<SheetRow> = {}, properties: SheetRow[] = []): string {
+  const firstName = cleanText(lead.full_name).split(" ")[0];
+  const address = cleanText(properties.find((row) => cleanText(row.address))?.address);
+  const opener = firstName ? `${firstName}, that` : "That";
+  return messagesBlocks(
+    address
+      ? `${opener}'s one I want someone licensed on our team to answer for you on ${address}.`
+      : `${opener}'s one I want someone licensed on our team to answer for you.`,
+    "I'm having them reach out right here shortly.",
+  );
+}
+
+// "thanks" / "ok cool" / "got it" is not an opener. It gets one line, not a capability menu.
+// The tail still has to be answerable in a word: "let me know what you want next" hands the
+// whole job back to the lead, which is how threads go cold.
+const SHORT_ACK_REPLIES = [
+  "Anytime. Want me to keep pulling options in the meantime?",
+  "Of course. Should I keep an eye out for new ones?",
+  "Happy to help. Want me to line up a couple more to look at?",
+] as const;
+
+const SHORT_ACK_ANCHORED = [
+  "Anytime. Want me to keep pulling {anchor} options in the meantime?",
+  "Of course. Should I keep an eye out for new {anchor} listings?",
+  "Happy to help. Want me to line up a couple more in {anchor}?",
+] as const;
+
+/** The one lead fact worth naming back in a one-line ack. Area only: a bare budget figure
+ * ("more $1,000,000 options") does not read like a person. */
+function shortAckAnchor(lead: Partial<SheetRow> = {}): string {
+  return cleanText(lead.area);
+}
+
+// Gratitude and acknowledgement only. Deliberately excludes "yes"/"yeah"/"sure", which are
+// answers to a prior question and need the thread, not a generic acknowledgement.
+const ACK_CORE_TOKENS = new Set([
+  "thanks", "thank", "thx", "ty", "ok", "okay", "k", "cool", "great", "nice",
+  "perfect", "awesome", "sweet", "appreciate", "sounds", "got",
+]);
+const ACK_FILLER_TOKENS = new Set([
+  "you", "so", "much", "a", "lot", "really", "very", "it", "good", "then", "man", "all",
+]);
+
+function isShortAcknowledgement(message: string): boolean {
+  const raw = cleanText(message);
+  // A thumbs-up, a lone "." or an emoji-only text carries no request. Live it triggered a full
+  // pitch with a two-block scheduling push; it deserves one warm line, same as "thanks".
+  if (raw && raw.length <= 12 && !/[a-z0-9]/i.test(raw)) return true;
+  const text = raw.replace(/[!?.,]+/g, " ").trim();
+  if (!text || text.length > 32) return false;
+  const tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length || tokens.length > 4) return false;
+  if (!tokens.every((token) => ACK_CORE_TOKENS.has(token) || ACK_FILLER_TOKENS.has(token))) return false;
+  return tokens.some((token) => ACK_CORE_TOKENS.has(token));
+}
+
+// The Google Voice corpus caught this live: the lead asked for the details by email and got
+// another SMS listing block instead (fixture scenario email_preference_request). Honour the
+// channel switch and confirm the address rather than resending what they already have.
+function asksForEmailDelivery(message: string): boolean {
+  const normalized = normalizeFollowupText(message);
+  return /\b(?:send|shoot|forward|mail|email|text)\b[^?.!]{0,40}\bto (?:my )?e-?mail\b/i.test(normalized)
+    || /\b(?:send|shoot|forward)\b[^?.!]{0,40}\b(?:by|via|over|through) e-?mail\b/i.test(normalized)
+    || /\be-?mail (?:it|them|these|the details|that)\b/i.test(normalized)
+    || /\be-?mail (?:is|works|would be) (?:best|better|easier|fine)\b/i.test(normalized)
+    || /\b(?:my|use my) e-?mail (?:instead|please)\b/i.test(normalized);
+}
+
+function formatTheoEmailDeliveryReply(lead: Partial<SheetRow> = {}, properties: SheetRow[] = []): string {
+  const email = cleanText(lead.email);
+  const property = properties.find((row) => cleanText(row.address));
+  const subject = property ? `the full details on ${cleanText(property.address)}` : "the full details";
+  return messagesBlocks(
+    `Sure, I can send ${subject} by email instead.`,
+    email ? `Is ${email} still the best address?` : "What address should I use?",
+  );
+}
+
+function formatTheoGeneralReply(
+  message: string,
+  classification: TheoClassification,
+  lead: Partial<SheetRow> = {},
+): string {
+  if (isShortAcknowledgement(message)) {
+    const seed = cleanText(message).toLowerCase();
+    const anchor = shortAckAnchor(lead);
+    return anchor
+      ? pickVariant(SHORT_ACK_ANCHORED, seed).replace("{anchor}", anchor)
+      : pickVariant(SHORT_ACK_REPLIES, seed);
+  }
   if (asksForLightGreeting(message)) {
-    return "Hi, this is Iris with Austin Realty. I can help find listings, send photos, compare options, or book a showing. What area, budget, and bedroom count should I search?";
+    return messagesBlocks(
+      "Hi, this is Iris with Austin Realty.",
+      "What area, budget, and bedroom count should I search?",
+    );
   }
   if (classification.intent === "seller_lead" || classification.leadRole === "seller") {
-    return "I can help with that. Are you looking for a home value estimate, help listing the property, or timing a sell-before-buy move?";
+    return messagesBlocks(
+      "Happy to help with that.",
+      "Are you after a value estimate, help getting it listed, or timing a sell-before-buy move?",
+    );
   }
   if (classification.intent === "renter_lead" || classification.leadRole === "renter") {
-    return "I can help narrow rentals. What area, monthly budget, bedroom count, and move-in timing should I use?";
+    return messagesBlocks(
+      "I can narrow the rentals down.",
+      "What area should I search?",
+    );
   }
-  return "I can help narrow the search. Send me the area, budget, bedroom count, and whether you want to buy or rent.";
+  // An "anything similar?" with nothing saved is a no-inventory answer, not a fresh intake.
+  // Say so plainly and ask the ONE thing that unblocks the search.
+  if (asksForAlternativeProperties(normalizeFollowupText(message))) {
+    return formatTheoNoPropertyOptions(message, lead);
+  }
+  return messagesBlocks(
+    "I can help narrow the search.",
+    cleanText(lead.area) ? "Are you looking to buy or rent?" : "What area should I look in?",
+  );
+}
+
+// The model path can land on any shape, so pick the budget from what was actually asked.
+function llmReplyFamily(context: TheoReplyContext, classification: TheoClassification): MessagesReplyFamily {
+  if (isShortAcknowledgement(context.message)) return "short_ack";
+  if (classification.intent === "human_required" || classification.status === "needs_human") return "sensitive_handoff";
+  if (asksForPropertyShowing(context.message)) return "scheduling";
+  if (asksForPropertyOptions(context.message)) return "multi_listing";
+  if (asksForPropertyDetails(context.message) || asksForPropertySafeInquiry(context.message)) return "single_property";
+  if (!(context.properties || []).length) return "missing_details";
+  return "general";
 }
 
 export function selectTheoMediaUrls(context: TheoReplyContext, classification: TheoClassification): string[] {
@@ -651,6 +1077,28 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     };
   }
 
+  // A link we cannot resolve gets an honest "send me the address", never another listing's facts.
+  if (sharesUnknownListingUrl(context.message, context.properties)) {
+    return {
+      classification: {
+        intent: "property_details",
+        leadRole: context.lead?.lead_role || "unknown",
+        handoffReason: "",
+        status: "ready_to_reply",
+      },
+      reply: messagesBlocks(
+        "That link isn't opening on my end.",
+        "What's the address? I'll pull it up from there.",
+      ),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "shared_link_unresolved_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics: [],
+    };
+  }
+
   const localSafetyClassification = classifyTheoMessage(context.message);
   if (
     localSafetyClassification.intent === "human_required"
@@ -658,7 +1106,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   ) {
     return {
       classification: localSafetyClassification,
-      reply: "I'm going to have a real person follow up on that so we handle it correctly.",
+      reply: formatTheoHandoff(context.lead || {}, context.properties || []),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "handoff_reply_ready",
@@ -668,7 +1116,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     };
   }
 
-  if (asksForLightGreeting(context.message)) {
+  if (asksForLightGreeting(context.message) || isShortAcknowledgement(context.message)) {
     if (!shouldTheoAutoReply(localSafetyClassification, context.lead || {})) {
       return {
         classification: localSafetyClassification,
@@ -683,7 +1131,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     }
     return {
       classification: localSafetyClassification,
-      reply: formatTheoGeneralReply(context.message, localSafetyClassification),
+      reply: formatTheoGeneralReply(context.message, localSafetyClassification, context.lead || {}),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "general_lead_reply_ready",
@@ -698,6 +1146,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       context.lead.phone,
       context.message,
       context.lead || null,
+      cleanText((context.properties || []).find((row) => cleanText(row.address))?.address),
     );
     if (appointmentResult.handled) {
       return {
@@ -789,7 +1238,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
 
   const optionsReply = asksForPropertyOptions(context.message)
     && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
-    ? formatTheoPropertyOptions(context.properties, classification, context.message)
+    ? formatTheoPropertyOptions(context.properties, classification, context.message, context.recentEvents)
     : "";
   if (optionsReply) {
     const mediaUrls = wantsPropertyImage(context.message)
@@ -797,7 +1246,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       : [];
     return {
       classification,
-      reply: truncateSms(optionsReply, LINK_SMS_LIMIT),
+      reply: truncateSmsForFamily(optionsReply, "multi_listing"),
       mediaUrls,
       shouldSend: true,
       aiAction: classification.status === "needs_human" ? "property_options_handoff_reply_ready" : "property_options_reply_ready",
@@ -809,7 +1258,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   if (asksForPropertyOptions(context.message) && !optionsReply && !latestMessageHasSensitiveTopic(context.message)) {
     return {
       classification,
-      reply: formatTheoNoPropertyOptions(context.message),
+      reply: truncateSmsForFamily(formatTheoNoPropertyOptions(context.message, context.lead), "missing_details"),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "property_options_no_match_reply_ready",
@@ -837,10 +1286,28 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
         handoffReason: "",
         recommendedNextAction: "reply_and_qualify",
       },
-      reply: truncateSms(reply, LINK_SMS_LIMIT),
+      reply: truncateSmsForFamily(reply, mediaUrls.length ? "multi_listing" : "single_property"),
       mediaUrls,
       shouldSend: true,
       aiAction: mediaUrls.length ? "property_ordinal_photos_reply_ready" : "property_ordinal_reply_ready",
+      handoffReason: "",
+      status: "ready_to_reply",
+      metrics,
+    };
+  }
+
+  if (asksForEmailDelivery(context.message) && !latestMessageHasSensitiveTopic(context.message)) {
+    return {
+      classification: {
+        ...classification,
+        status: "ready_to_reply",
+        handoffReason: "",
+        recommendedNextAction: "confirm_email_channel",
+      },
+      reply: truncateSmsForFamily(formatTheoEmailDeliveryReply(context.lead, context.properties), "followup_question"),
+      mediaUrls: [],
+      shouldSend: true,
+      aiAction: "email_delivery_preference_reply_ready",
       handoffReason: "",
       status: "ready_to_reply",
       metrics,
@@ -851,12 +1318,16 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     && !wantsPropertyImage(context.message)
     && !latestMessageHasSensitiveTopic(context.message)
     && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
-    ? formatTheoPropertySafeAnswer(context.properties, context.message)
+    ? advanceInsteadOfRepeating(
+      formatTheoPropertySafeAnswer(context.properties, context.message, context.recentEvents),
+      context.recentEvents,
+      context.properties,
+    )
     : "";
   if (safePropertyReply) {
     return {
       classification,
-      reply: truncateSms(safePropertyReply, LINK_SMS_LIMIT),
+      reply: truncateSmsForFamily(safePropertyReply, safeInquiryFamily(context.message)),
       mediaUrls: [],
       shouldSend: true,
       aiAction: asksForPropertyShowing(context.message)
@@ -872,7 +1343,10 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   if (asksForPropertySafeInquiry(context.message) && !latestMessageHasSensitiveTopic(context.message) && !(context.properties || []).length) {
     return {
       classification,
-      reply: "I can help with that. Send me the area, budget, and bedroom count, or tell me which listing you mean, and I'll narrow it down.",
+      reply: messagesBlocks(
+        "Happy to help with that.",
+        "Which listing did you mean, or send me the area, budget, and bedroom count and I'll pull matches?",
+      ),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "property_safe_inquiry_needs_context",
@@ -885,7 +1359,11 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   const detailReply = asksForPropertyDetails(context.message)
     && !wantsPropertyImage(context.message)
     && (classification.intent !== "human_required" || canShareSafeFactsDuringHandoff(classification))
-    ? formatTheoPropertyDetails(context.properties)
+    ? advanceInsteadOfRepeating(
+      formatTheoPropertyDetails(context.properties),
+      context.recentEvents,
+      context.properties,
+    )
     : "";
   if (detailReply) {
     const mediaUrls = wantsPropertyImage(context.message)
@@ -893,7 +1371,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
       : [];
     return {
       classification,
-      reply: truncateSms(detailReply, LINK_SMS_LIMIT),
+      reply: truncateSmsForFamily(detailReply, "single_property"),
       mediaUrls,
       shouldSend: true,
       aiAction: classification.status === "needs_human" ? "property_details_handoff_reply_ready" : "property_details_reply_ready",
@@ -909,7 +1387,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     if (mediaUrls.length && photoReply) {
       return {
         classification,
-        reply: truncateSms(photoReply, LINK_SMS_LIMIT),
+        reply: truncateSmsForFamily(photoReply, "multi_listing"),
         mediaUrls,
         shouldSend: true,
         aiAction: classification.status === "needs_human" ? "property_photos_handoff_reply_ready" : "property_photos_reply_ready",
@@ -922,7 +1400,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     if (fallbackReply) {
       return {
         classification,
-        reply: truncateSms(fallbackReply, LINK_SMS_LIMIT),
+        reply: truncateSmsForFamily(fallbackReply, "multi_listing"),
         mediaUrls: [],
         shouldSend: true,
         aiAction: classification.status === "needs_human" ? "property_photo_link_handoff_fallback_ready" : "property_photo_link_fallback_ready",
@@ -934,7 +1412,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   }
 
   if (classification.intent === "human_required") {
-    let handoffReply = "I'm going to have a real person follow up on that so we handle it correctly.";
+    let handoffReply = formatTheoHandoff(context.lead || {}, context.properties || []);
     try {
       const generated = await generateTheoSmsWithLlm(playbookContext, classification);
       handoffReply = generated.reply;
@@ -944,7 +1422,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     }
     return {
       classification,
-      reply: truncateSms(handoffReply),
+      reply: truncateSmsForFamily(handoffReply, "sensitive_handoff"),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "handoff_reply_ready",
@@ -955,11 +1433,11 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   }
 
   if (latestMessageAsksForSellerValuation(context.message) && isSellerValuationContext(context.message, classification)) {
-    const valuationReply = formatTheoSellerValuationReply(context.properties);
+    const valuationReply = formatTheoSellerValuationReply(context.properties, context.lead);
     if (valuationReply) {
       return {
         classification,
-        reply: truncateSms(valuationReply, LINK_SMS_LIMIT),
+        reply: truncateSmsForFamily(valuationReply, "single_property"),
         mediaUrls: [],
         shouldSend: true,
         aiAction: "seller_valuation_link_reply_ready",
@@ -975,7 +1453,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
     if (linkReply) {
       return {
         classification,
-        reply: truncateSms(linkReply, LINK_SMS_LIMIT),
+        reply: truncateSmsForFamily(linkReply, "multi_listing"),
         mediaUrls: [],
         shouldSend: true,
         aiAction: "property_links_reply_ready",
@@ -994,7 +1472,7 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   } catch {
     return {
       classification,
-      reply: formatTheoGeneralReply(context.message, classification),
+      reply: formatTheoGeneralReply(context.message, classification, context.lead || {}),
       mediaUrls: [],
       shouldSend: true,
       aiAction: "general_lead_reply_ready",
@@ -1005,7 +1483,10 @@ export async function generateTheoReply(context: TheoReplyContext): Promise<Theo
   }
   return {
     classification,
-    reply: truncateSms(reply),
+    reply: truncateSmsForFamily(
+      advanceInsteadOfRepeating(reply, context.recentEvents, context.properties),
+      llmReplyFamily(context, classification),
+    ),
     mediaUrls: selectTheoMediaUrls(context, classification),
     shouldSend: true,
     aiAction: "ai_reply_ready",
