@@ -10,10 +10,57 @@ import {
   GOOGLE_DRIVE_METADATA_SCOPE,
   GOOGLE_SHEETS_SCOPE,
   gmailScopesForMode,
+  replaceGmailThreadLabels,
   sendGmailReply,
   signedGmailOAuthState,
   verifyGmailOAuthState,
 } from "@/lib/gmailConnection";
+
+test("replaceGmailThreadLabels atomically swaps managed workflow labels on the thread", async () => {
+  let modifyInput: unknown;
+  const gmail = {
+    users: {
+      labels: {
+        list: async () => ({
+          data: {
+            labels: [
+              { id: "auto", name: "AUTO_REPLIED" },
+              { id: "human", name: "NEEDS_HUMAN" },
+              { id: "needs-human", name: "Iris/Needs Human" },
+              { id: "waiting", name: "Iris/Waiting on Lead" },
+              { id: "UNREAD", name: "UNREAD" },
+            ],
+          },
+        }),
+        create: async () => {
+          throw new Error("all requested labels already exist");
+        },
+      },
+      threads: {
+        modify: async (input: unknown) => {
+          modifyInput = input;
+        },
+      },
+      messages: { modify: async () => undefined },
+    },
+  };
+
+  await replaceGmailThreadLabels(gmail as never, {
+    threadId: "18abcdef12345678",
+    messageId: "message-1",
+    addLabelNames: ["AUTO_REPLIED", "Iris/Waiting on Lead"],
+    managedLabelNames: ["AUTO_REPLIED", "NEEDS_HUMAN", "Iris/Needs Human", "Iris/Waiting on Lead", "UNREAD"],
+  });
+
+  assert.deepEqual(modifyInput, {
+    userId: "me",
+    id: "18abcdef12345678",
+    requestBody: {
+      addLabelIds: ["auto", "waiting"],
+      removeLabelIds: ["human", "needs-human", "UNREAD"],
+    },
+  });
+});
 
 test("needs-human Gmail label uses a supported Gmail palette color", async () => {
   let requestBody: unknown;
@@ -95,6 +142,11 @@ test("sendGmailReply sends threaded raw message", async () => {
     to: "lead@example.com",
     subject: "Property question",
     body: "Here are the details.",
+    htmlBody: [
+      '<div style="border:1px solid #ddd"><img src="https://app.example.com/api/media/image-proxy?url=photo">',
+      '<strong>100 E 51st St #7</strong><br><span>$843,900 · 4 beds · 3 baths</span>',
+      '<br><a href="https://www.zillow.com/homedetails/example">View Property</a></div>',
+    ].join(""),
     threadId: "18abcdef12345678",
     messageId: "<original@example.com>",
     references: "<root@example.com>",
@@ -111,6 +163,11 @@ test("sendGmailReply sends threaded raw message", async () => {
   assert.match(decoded, /Subject: Re: Property question/);
   assert.match(decoded, /In-Reply-To: <original@example.com>/);
   assert.match(decoded, /Here are the details\./);
+  assert.match(decoded, /Content-Type: multipart\/alternative/);
+  assert.match(decoded, /100 E 51st St #7/);
+  assert.match(decoded, /\$843,900 · 4 beds · 3 baths/);
+  assert.match(decoded, /api\/media\/image-proxy/);
+  assert.match(decoded, /View Property/);
 });
 
 test("sendGmailReply retries fresh when thread is missing in active mailbox", async () => {

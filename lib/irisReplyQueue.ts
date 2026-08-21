@@ -1,4 +1,4 @@
-import { upsertReplyJobInDatabase } from "@/lib/database";
+import { clientId, upsertReplyJobInDatabase } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { requestWorkspaceId } from "@/lib/workspaceContext";
 
@@ -39,5 +39,8 @@ export async function queueIrisReplySend(input: IrisReplyQueueInput): Promise<vo
     metadata: { ...(input.metadata || {}), generatedAt: new Date().toISOString() },
   });
   if (!job) throw new Error("Reply job could not be persisted");
-  await inngest.send({ name: "message.reply.send", data: irisReplySendEventData(dedupeKey) });
+  await inngest.send({
+    name: "message.reply.send",
+    data: irisReplySendEventData(dedupeKey, requestWorkspaceId() || clientId()),
+  });
 }

@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { recordChannelInteraction } from "@/lib/channelIngest";
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
-import { databaseEnabled, readAiDraftFromDatabase, updateAiDraftStatusInDatabase, upsertAiDraftInDatabase, upsertThreadLinkInDatabase } from "@/lib/database";
+import {
+  databaseEnabled,
+  insertApprovedEmailStyleExampleInDatabase,
+  readAiDraftFromDatabase,
+  readInboxCategoriesFromDatabase,
+  updateAiDraftStatusInDatabase,
+  upsertAiDraftInDatabase,
+  upsertThreadLinkInDatabase,
+} from "@/lib/database";
 import { loadAgentInboxData } from "@/lib/dataSource";
 import {
   createGmailReplyDraftWithOptions,
   createIrisGmailSession,
+  replaceGmailThreadLabels,
   sendGmailDraftWithOptions,
   updateGmailReplyDraftWithOptions,
   type GmailDraftResult,
@@ -16,6 +25,8 @@ import { sendManualReply } from "@/lib/manualReply";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
+import { releaseTakeover } from "@/lib/humanTakeover";
+import { redactEmailStyleExample } from "@/lib/styleTraining";
 
 export const dynamic = "force-dynamic";
 
@@ -219,6 +230,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     direction: "outbound",
     agentName: "Owner",
     source: "human_review",
+    eventType: `${channel}_review_resolved`,
+    aiAction: "resume_ai",
+    handoffReason: "",
+    nextAction: "ai_active",
     phone: channel !== "email" ? to : undefined,
     email: channel === "email" ? to : undefined,
     threadRef,
@@ -241,8 +256,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       gmailMessageId: result.gmailMessageId,
       threadStatus: result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox",
     });
+    const categories = await readInboxCategoriesFromDatabase();
+    const waitingLabel = categories.find((category) => category.slug === "waiting_lead")?.gmail_label_name || "Iris/Waiting on Lead";
+    const managedStatusLabels = categories
+      .filter((category) => String(category.auto_rules?.tier || "status") === "status")
+      .map((category) => category.gmail_label_name)
+      .filter(Boolean);
+    const gmailSession = await createIrisGmailSession();
+    await replaceGmailThreadLabels(gmailSession.gmail, {
+      threadId: result.gmailThreadId || "",
+      messageId: result.gmailMessageId || "",
+      addLabelNames: ["AUTO_REPLIED", waitingLabel],
+      managedLabelNames: ["AUTO_REPLIED", "NEEDS_HUMAN", ...managedStatusLabels],
+    }).catch(() => undefined);
+    const redactedExcerpt = redactEmailStyleExample(draftBody);
+    if (redactedExcerpt) {
+      await insertApprovedEmailStyleExampleInDatabase({
+        sourceMessageId: result.gmailMessageId || "",
+        mailboxEmail: result.mailboxEmail || "",
+        category: "",
+        toneTags: ["human_approved"],
+        redactedExcerpt,
+      }).catch(() => undefined);
+    }
   }
   await updateAiDraftStatusInDatabase({ threadRef, channel, status: "sent" });
+  await releaseTakeover(threadRef, channel);
 
   return NextResponse.json(result);
 }

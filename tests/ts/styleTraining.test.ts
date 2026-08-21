@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildStyleFewShot, fetchStyleContext, type StyleTrainingDeps } from "@/lib/styleTraining";
+import { buildStyleFewShot, fetchStyleContext, redactEmailStyleExample, type StyleTrainingDeps } from "@/lib/styleTraining";
 import type { StyleExample } from "@/lib/database";
 
 function example(excerpt: string): StyleExample {
@@ -36,12 +36,17 @@ test("fetchStyleContext: empty string when disabled", async () => {
 });
 
 test("fetchStyleContext: builds block when enabled", async () => {
+  const reads: Array<{ category: string; limit: number; mailboxEmail: string }> = [];
   const deps: StyleTrainingDeps = {
     enabled: () => true,
-    read: async () => [example("Warm and brief, that's our style.")],
+    read: async (category, limit, mailboxEmail) => {
+      reads.push({ category, limit, mailboxEmail: mailboxEmail || "" });
+      return [example("Warm and brief, that's our style.")];
+    },
   };
-  const block = await fetchStyleContext("", deps);
+  const block = await fetchStyleContext("property_reply", deps, "iris@tenant-a.example");
   assert.match(block, /Warm and brief/);
+  assert.deepEqual(reads, [{ category: "property_reply", limit: 3, mailboxEmail: "iris@tenant-a.example" }]);
 });
 
 test("fetchStyleContext: read failure degrades to empty", async () => {
@@ -52,4 +57,20 @@ test("fetchStyleContext: read failure degrades to empty", async () => {
     },
   };
   assert.equal(await fetchStyleContext("", deps), "");
+});
+
+test("redactEmailStyleExample: preserves voice while removing lead-specific facts", () => {
+  const redacted = redactEmailStyleExample([
+    "Hi Sam, happy to help with 4309 Fairway Path for $650,000.",
+    "Call me at (512) 555-0199 or use https://example.com/tour.",
+    "Email agent@example.com.",
+  ].join(" "));
+
+  assert.match(redacted, /Hi Sam, happy to help/);
+  assert.match(redacted, /\[property\]/);
+  assert.match(redacted, /\[price\]/);
+  assert.match(redacted, /\[phone\]/);
+  assert.match(redacted, /\[link\]/);
+  assert.match(redacted, /\[email\]/);
+  assert.doesNotMatch(redacted, /4309 Fairway|650,000|555-0199|example\.com/);
 });

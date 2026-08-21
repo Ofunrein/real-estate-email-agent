@@ -35,7 +35,12 @@ export function threadNeedsHuman(events: SheetRow[]): boolean {
   const latestResolvedAt = Math.max(
     0,
     ...events
-      .filter((event) => event.status === "review_resolved" || event.ai_action === "resume_ai" || /\breview_resolved\b/i.test(event.event_type || ""))
+      .filter((event) => (
+        event.status === "review_resolved"
+        || event.ai_action === "resume_ai"
+        || /\breview_resolved\b/i.test(event.event_type || "")
+        || (event.direction === "outbound" && event.status === "sent")
+      ))
       .map((event) => eventTimeValue(event)),
   );
   return events.some((event) => {

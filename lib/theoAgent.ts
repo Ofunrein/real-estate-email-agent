@@ -528,26 +528,32 @@ function formatTheoPropertySafeAnswer(properties: SheetRow[] = [], message: stri
 function formatTheoPropertyOptions(properties: SheetRow[] = [], classification: TheoClassification, message = ""): string {
   const usable = properties.filter((property) => cleanText(property.address));
   if (!usable.length) return "";
-  const lines = usable.slice(0, 3).flatMap((property, index) => [
-    `${index + 1}. ${cleanText(property.address)}${formatOptionFacts(property) ? ` - ${formatOptionFacts(property)}` : ""}`,
-    property.listing_url ? cleanText(property.listing_url) : "",
-  ].filter(Boolean));
+  const blocks = usable.slice(0, 3).map((property, index) => [
+    `${index + 1}. ${cleanText(property.address)}`,
+    formatOptionFacts(property),
+    property.listing_url ? `Listing: ${cleanText(property.listing_url)}` : "",
+  ].filter(Boolean).join("\n"));
   const needsHuman = classification.status === "needs_human" || Boolean(classification.handoffReason);
   const hasSellBeforeBuy = (classification.opportunityTags || []).includes("sell_before_buy") || classification.leadRole === "seller";
   const rejectedPrior = rejectsCurrentProperty(message);
   const intro = rejectedPrior
-    ? "No problem — I'll skip that one. Here are better matches from the saved listings:"
+    ? "No problem, I'll skip that one. Here are better matches from the saved listings:"
     : needsHuman
-    ? "I can do both — here are matches I found, and a person can review the part that needs judgment:"
-    : "Got it — here are matches I found:";
+    ? "I found these matches. A person can review the part that needs judgment:"
+    : usable.length === 1
+    ? "I found one match:"
+    : `I found ${Math.min(usable.length, 3)} matches:`;
   const humanNote = !needsHuman && hasSellBeforeBuy
-    ? "Also, since selling/buying timing matters, a person should help with the valuation and transition plan."
+    ? "Since selling and buying timing matters, a person should also help with the valuation and transition plan."
     : "";
+  const nextQuestion = usable.length === 1
+    ? "Want me to find more options, or focus on this one?"
+    : "Which one should I focus on?";
   return [
     intro,
-    lines.join("\n\n"),
+    blocks.join("\n\n"),
     humanNote,
-    "Which one should I focus on first?",
+    nextQuestion,
   ].filter(Boolean).join("\n\n");
 }
 
@@ -610,7 +616,7 @@ export function classifyTheoMessage(message: string): TheoClassification {
   if (/\b(sell|selling|listing|list my|valuation|home value|expired)\b/i.test(text)) {
     return { intent: "seller_lead", leadRole: "seller", handoffReason: "", status: "ready_to_reply" };
   }
-  if (/\b(rent|rental|lease|tenant)\b/i.test(text)) {
+  if (/\b(rent|rents|renting|rental|rentals|lease|leases|leasing|tenant|tenants)\b/i.test(text)) {
     return { intent: "renter_lead", leadRole: "renter", handoffReason: "", status: "ready_to_reply" };
   }
   if (/\b(buy|buyer|looking for|interested|available|details|price|bed|bath|sqft|address|similar|neighboring|nearby|same spec|options?|layout|something close)\b/i.test(text)) {

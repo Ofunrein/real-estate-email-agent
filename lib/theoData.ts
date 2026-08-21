@@ -171,8 +171,7 @@ export function extractTheoPropertySearchQuery(...values: string[]): string {
   const text = values.map(clean).filter(Boolean).join(" ");
   const address = extractTheoAddress(text);
   if (address) return address;
-  const area = findPropertySearchArea(...values);
-  return area || clean(values.find((value) => truthy(value)) || "");
+  return findPropertySearchArea(...values);
 }
 
 function findPropertySearchArea(...values: string[]): string {
@@ -200,11 +199,25 @@ function parsePriceTerm(text: string, direction: "min" | "max"): number | undefi
 }
 
 function parseCountTerm(text: string, kind: "bed" | "bath"): number | undefined {
-  const pattern = kind === "bed"
-    ? /\b(\d+(?:\.\d+)?)\s*(?:bed|beds|bd|br|bedroom|bedrooms)\b/i
-    : /\b(\d+(?:\.\d+)?)\s*(?:bath|baths|ba|bathroom|bathrooms)\b/i;
-  const match = text.match(pattern);
-  const amount = match ? Number(match[1]) : NaN;
+  const count = "(?:\\d+(?:\\.\\d+)?|one|two|three|four|five|six|seven|eight|nine|ten)";
+  const unit = kind === "bed"
+    ? "(?:bed|beds|bd|br|bedroom|bedrooms)"
+    : "(?:bath|baths|ba|bathroom|bathrooms)";
+  const match = text.match(new RegExp(`\\b(${count})\\s*${unit}\\b`, "i"));
+  if (!match) return undefined;
+  const words: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  const amount = words[match[1].toLowerCase()] ?? Number(match[1]);
   return Number.isFinite(amount) ? amount : undefined;
 }
 

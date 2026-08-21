@@ -176,6 +176,7 @@ function socialPayloadFromMessage(input: {
   senderName: string;
   senderUsername: string;
   messageText: string;
+  media?: OmnichannelMedia[];
 }): SocialDmPayload {
   return {
     channel: input.channel,
@@ -189,6 +190,7 @@ function socialPayloadFromMessage(input: {
     campaign: "",
     listingAddress: "",
     sourceUrl: "",
+    media: input.media,
   };
 }
 
@@ -349,6 +351,7 @@ async function processInbound(input: {
     senderName: identity.senderName,
     senderUsername: identity.senderUsername,
     messageText,
+    media: input.media,
   });
   const guard = shouldTheoHandleDirectMetaDm(payload);
   const existingJob = await readReplyJobByDedupeKeyFromDatabase(messageKey);
@@ -391,11 +394,11 @@ async function processInbound(input: {
       summary: `Inbound ${input.channel} DM: ${messageText}`,
       preferredChannel: input.channel,
       intent: guard.intent,
-      aiAction: guard.allowed ? "social_dm_routed" : "social_dm_handoff",
+      aiAction: guard.allowed ? "social_dm_routed" : guard.needsHuman ? "social_dm_handoff" : "social_dm_abstained",
       handoffStatus: guard.needsHuman ? "needs_human" : "",
       handoffReason: guard.reason,
-      nextAction: guard.allowed ? "reply_with_iris" : "human_follow_up",
-      status: guard.allowed ? "received" : "needs_human",
+      nextAction: guard.allowed ? "reply_with_iris" : guard.needsHuman ? "human_follow_up" : "none",
+      status: guard.allowed ? "received" : guard.needsHuman ? "needs_human" : "abstained",
       gmailMessageId: messageKey,
       providerMessageId: input.messageId,
       providerThreadId: threadRef,
@@ -426,15 +429,17 @@ async function processInbound(input: {
 
   const settings = await readInboxSettingsFromDatabase();
   if (!guard.allowed || !channelEnabled(settings, input.channel) || await isTakeoverActive(threadRef, input.channel)) {
+    // Gate abstain is terminal: no LLM call, no reply. Only route to a human when the
+    // gate explicitly asked for one (injection attempt, sensitive topic).
     await upsertReplyJobInDatabase({
       dedupeKey: messageKey,
       channel: input.channel,
       provider: "meta_social",
       threadRef,
       contactRef: input.senderId,
-      status: guard.allowed ? "blocked" : "needs_human",
-      error: guard.allowed ? "Channel disabled or active human takeover." : guard.reason,
-      nextAction: "human_review",
+      status: guard.allowed ? "blocked" : guard.needsHuman ? "needs_human" : "abstained",
+      error: guard.allowed ? "Channel disabled or active human takeover." : guard.reason || `Relevance gate abstained (${guard.intent})`,
+      nextAction: guard.allowed || guard.needsHuman ? "human_review" : "none",
     });
     return duplicate ? "skipped" as const : "imported" as const;
   }

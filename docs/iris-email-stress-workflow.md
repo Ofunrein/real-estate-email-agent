@@ -33,6 +33,36 @@ Goal: keep Gmail replies under 60 seconds without Vercel polling or long-running
    - DB has one inbound and one outbound row.
    - Gmail thread receives the reply in under 60 seconds.
 
+## Cross-Channel Adversarial Suite
+
+`npm run adversarial` scores every channel against the same fixtures that
+`tests/ts/adversarialSuite.test.ts` asserts case by case, so `npm test` fails on drift.
+`npm run adversarial:proof` refreshes `docs/proof/adversarial-regression.md`.
+
+- Iris email: `tests/fixtures/iris-email-stress-scenarios.json`
+- Instagram/Messenger: `tests/fixtures/adversarial-social-scenarios.json`
+- Theo SMS: `tests/fixtures/adversarial-theo-scenarios.json`
+- Aria voice: structural cases in `tests/ts/adversarialSuite.test.ts` (stubbed deps, no Vapi
+  call, no phone call, no DB write). Live `vapi chat` is deliberately not wired in: it would
+  invoke the assistant's real tool webhooks against the production database.
+
+`scripts/imessage-e2e-selftest.mjs` runs a bounded live round trip over iMessage. It refuses
+to send unless the target chat is provably a self chat (one participant, plus an existing
+from-me message from that same handle), caps total sends, and is dry-run unless `--live`.
+
+## Two Rules That Are Easy To Break
+
+- **Human review still writes a real email.** A `needs_human` draft answers everything it can
+  answer safely and marks exactly one line with `[Review before sending: ...]`. The handoff is
+  internal metadata (labels, `ai_drafts.needs_human`), never the whole visible message. A draft
+  whose only content is "the team will review this" fails the suite.
+- **Social DMs fail closed.** `lib/socialRelevanceGate.ts` engages on three surfaces only:
+  typed text with a real estate inquiry, media the lead uploaded themselves, and reshared posts
+  that carry concrete property details in the caption or in cheap media evidence. Low confidence
+  is not a reason to reply; an abstain is terminal and never reaches the reply model. Media is
+  inspected through a thumbnail or first frame only, and a heuristic envelope summary
+  ("Lead shared social content: <url>") never counts as evidence.
+
 ## Scenario Families
 
 - Buyer showing requests: direct address, pronoun-only, ordinal references, "tomorrow afternoon".

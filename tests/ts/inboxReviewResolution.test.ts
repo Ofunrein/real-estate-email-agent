@@ -41,7 +41,7 @@ test("review resolution clears stale needs-human state until a newer inbound arr
   ];
 
   assert.equal(threadNeedsHuman(events), false);
-  assert.notEqual(inferCategorySlug(events), "needs_human");
+  assert.equal(inferCategorySlug(events), "waiting_lead");
 });
 
 test("new inbound after review resolution can flag needs-human again", () => {
@@ -100,5 +100,5 @@ test("outbound AI reply after latest inbound clears stale needs-human category t
     }),
   ];
 
-  assert.notEqual(inferCategorySlug(events), "needs_human");
+  assert.equal(inferCategorySlug(events), "waiting_lead");
 });

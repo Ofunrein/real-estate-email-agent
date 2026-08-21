@@ -2695,21 +2695,34 @@ export type StyleExample = {
   redacted_excerpt: string;
 };
 
-// Approved few-shot style examples for the client, newest first. Optional
-// category filter (e.g. "property_reply"). Empty when none approved.
-export async function readStyleExamplesFromDatabase(category = "", limit = 3): Promise<StyleExample[]> {
+// Approved few-shot style examples for the client, newest first. Mailbox-specific
+// examples win, with tenant-wide examples as fallback.
+export async function readStyleExamplesFromDatabase(category = "", limit = 3, mailboxEmail = ""): Promise<StyleExample[]> {
   const params: unknown[] = [clientId()];
   let where = "client_id = $1 and approved = true";
+  let categoryParam = 0;
   if (category) {
     params.push(category);
-    where += ` and category = $${params.length}`;
+    categoryParam = params.length;
+    where += ` and (category = '' or category = $${categoryParam})`;
+  }
+  let mailboxParam = 0;
+  if (mailboxEmail) {
+    params.push(mailboxEmail);
+    mailboxParam = params.length;
+    where += ` and (mailbox_email = '' or lower(mailbox_email) = lower($${mailboxParam}))`;
   }
   params.push(Math.max(1, limit));
+  const order = [
+    mailboxParam ? `case when lower(mailbox_email) = lower($${mailboxParam}) then 0 else 1 end` : "",
+    categoryParam ? `case when category = $${categoryParam} then 0 else 1 end` : "",
+    "created_at desc",
+  ].filter(Boolean).join(", ");
   const result = await getPool().query(
     `select category, tone_tags, redacted_excerpt
        from email_style_examples
       where ${where}
-      order by created_at desc
+      order by ${order}
       limit $${params.length}`,
     params,
   );
@@ -2718,6 +2731,31 @@ export async function readStyleExamplesFromDatabase(category = "", limit = 3): P
     tone_tags: Array.isArray(row.tone_tags) ? row.tone_tags.map(String) : [],
     redacted_excerpt: String(row.redacted_excerpt || ""),
   }));
+}
+
+export async function insertApprovedEmailStyleExampleInDatabase(input: {
+  sourceMessageId: string;
+  mailboxEmail: string;
+  category: string;
+  redactedExcerpt: string;
+  toneTags?: string[];
+}): Promise<void> {
+  if (!input.redactedExcerpt.trim() || !await tableReady("email_style_examples")) return;
+  await ensureClientInDatabase();
+  await getPool().query(
+    `insert into email_style_examples (
+       client_id, source_message_id, mailbox_email, category, tone_tags, redacted_excerpt, approved
+     ) values ($1, nullif($2, ''), lower($3), $4, $5, $6, true)
+     on conflict do nothing`,
+    [
+      clientId(),
+      input.sourceMessageId,
+      input.mailboxEmail,
+      input.category,
+      input.toneTags || [],
+      input.redactedExcerpt,
+    ],
+  );
 }
 
 export async function loadAgentInboxDataFromDatabase() {  const [leads, events, properties, voiceCalls] = await Promise.all([

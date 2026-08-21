@@ -29,22 +29,39 @@ export function buildStyleFewShot(examples: StyleExample[], limit = 3): string {
 
 export type StyleTrainingDeps = {
   enabled: () => boolean;
-  read: (category: string, limit: number) => Promise<StyleExample[]>;
+  read: (category: string, limit: number, mailboxEmail?: string) => Promise<StyleExample[]>;
 };
 
 const defaultDeps: StyleTrainingDeps = {
   enabled: () => styleTrainingEnabled() && databaseEnabled(),
-  read: readStyleExamplesFromDatabase,
+  read: (category, limit, mailboxEmail) => readStyleExamplesFromDatabase(category, limit, mailboxEmail),
 };
 
 // Fetch + format the few-shot block for a category. "" when disabled or empty.
-export async function fetchStyleContext(category = "", deps: StyleTrainingDeps = defaultDeps): Promise<string> {
+export async function fetchStyleContext(
+  category = "",
+  deps: StyleTrainingDeps = defaultDeps,
+  mailboxEmail = "",
+): Promise<string> {
   if (!deps.enabled()) return "";
   const limit = clientConfig().styleTraining.limit;
   try {
-    const examples = await deps.read(category, limit);
+    const examples = await deps.read(category, limit, mailboxEmail);
     return buildStyleFewShot(examples, limit);
   } catch {
     return "";
   }
+}
+
+export function redactEmailStyleExample(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/https?:\/\/\S+/gi, "[link]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email]")
+    .replace(/(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]\d{4}\b/g, "[phone]")
+    .replace(/\$\s?\d[\d,.]*(?:\s?(?:k|m|million|thousand))?\b/gi, "[price]")
+    .replace(/\b\d{1,6}\s+(?:[A-Za-z0-9.'-]+\s+){0,5}(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Way|Path|Trail|Trl|Circle|Cir|Place|Pl)\b(?:\s*(?:#|Unit|Apt)\s*[A-Za-z0-9-]+)?/gi, "[property]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 1200);
 }

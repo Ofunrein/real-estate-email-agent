@@ -9,6 +9,7 @@ import {
   decideIrisEmailExecution,
   generateIrisEmailReply,
   irisEmailPollQuery,
+  irisGmailMessageDirection,
   isIrisEligibleEmail,
   parseEmailContact,
   processIrisEmailPoll,
@@ -16,6 +17,7 @@ import {
   type IrisEmailMessage,
 } from "@/lib/irisEmail";
 import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
+import { DEFAULT_INBOX_CATEGORIES } from "@/lib/inboxSettings";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
@@ -29,14 +31,42 @@ function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
   };
 }
 
-function fakeClient(messages: IrisEmailMessage[], calls: { labels: string[][]; sent: string[] }): IrisEmailClient {
+type FakeEmailCalls = {
+  labels: string[][];
+  sent: string[];
+  managedLabels?: string[][];
+  drafts?: Array<{ body: string; existingDraftId: string }>;
+  deletedDrafts?: string[];
+};
+
+function fakeClient(messages: IrisEmailMessage[], calls: FakeEmailCalls): IrisEmailClient {
   return {
     listUnreadMessages: async () => messages,
-    applyLabels: async (_messageId, labels) => {
+    applyLabels: async (_message, labels, managedLabels = []) => {
       calls.labels.push(labels);
+      calls.managedLabels?.push(managedLabels);
     },
     sendReply: async (_message, body) => {
       calls.sent.push(body);
+      return {
+        threaded: true,
+        messageId: "sent_1",
+        threadId: _message.threadId,
+        mailboxEmail: _message.mailboxEmail || "iris@example.com",
+      };
+    },
+    saveDraft: async (_message, body, _htmlBody, existingDraftId = "") => {
+      calls.drafts?.push({ body, existingDraftId });
+      return {
+        threaded: true,
+        draftId: existingDraftId || "draft_1",
+        messageId: "draft_message_1",
+        threadId: _message.threadId,
+        mailboxEmail: _message.mailboxEmail || "iris@example.com",
+      };
+    },
+    deleteDraft: async (draftId) => {
+      calls.deletedDrafts?.push(draftId);
     },
   };
 }
@@ -46,6 +76,12 @@ test("parseEmailContact: extracts name and lowercase email", () => {
     name: "Sam Buyer",
     email: "sam@example.com",
   });
+});
+
+test("irisGmailMessageDirection: recognizes sent mailbox messages separately from inbound mail", () => {
+  assert.equal(irisGmailMessageDirection(["SENT"], "Iris <iris@example.com>", "iris@example.com"), "outbound");
+  assert.equal(irisGmailMessageDirection(["INBOX"], "Sam <sam@example.com>", "iris@example.com"), "inbound");
+  assert.equal(irisGmailMessageDirection(["INBOX"], "Iris <iris@example.com>", "iris@example.com"), null);
 });
 
 test("classifyIrisEmailText: detects showing request and lead fields", () => {
@@ -251,7 +287,7 @@ test("processIrisEmailPoll: dry run avoids labels, sends, and database writes", 
   assert.match(result.results[0].replyDraft || "", /time windows|What day and time|time of day|what time works best/i);
 });
 
-test("processIrisEmailPoll: live injected path records and applies conservative labels", async () => {
+test("processIrisEmailPoll: opt-out closes without sending or drafting", async () => {
   const calls = { labels: [] as string[][], sent: [] as string[] };
   const recorded: string[] = [];
   const result = await processIrisEmailPoll(
@@ -268,8 +304,145 @@ test("processIrisEmailPoll: live injected path records and applies conservative 
   assert.equal(result.recorded, 1);
   assert.equal(result.labeled, 1);
   assert.equal(result.sent, 0);
-  assert.deepEqual(calls.labels, [["NEEDS_HUMAN"]]);
-  assert.deepEqual(recorded, ["human_required:needs_human"]);
+  assert.deepEqual(calls.labels, [[]]);
+  assert.deepEqual(recorded, ["human_required:spam"]);
+});
+
+test("processIrisEmailPoll: human-only turn creates a proactive review draft", async () => {
+  const calls: FakeEmailCalls = {
+    labels: [],
+    sent: [],
+    managedLabels: [],
+    drafts: [],
+  };
+  const stored: Array<Record<string, unknown>> = [];
+  const result = await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({
+        mailboxEmail: "iris@tenant-a.example",
+        body: "Is this a safe neighborhood for families, and should I waive inspection?",
+      })], calls),
+      categories: DEFAULT_INBOX_CATEGORIES,
+      recordInteraction: async () => {},
+      readActiveDraft: async () => null,
+      storeReviewDraft: async (draft) => {
+        stored.push(draft);
+      },
+    },
+  );
+
+  assert.equal(result.sent, 0);
+  assert.equal(calls.sent.length, 0);
+  assert.equal(calls.drafts?.length, 1);
+  assert.match(calls.drafts?.[0].body || "", /team|review|follow up/i);
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].needs_human, true);
+  assert.ok(calls.labels[0].includes("NEEDS_HUMAN"));
+  assert.ok(calls.labels[0].includes("Iris/Needs Human"));
+  assert.ok(calls.managedLabels?.[0].includes("Iris/Waiting on Lead"));
+});
+
+test("processIrisEmailPoll: a later safe turn auto-sends and clears the old review draft", async () => {
+  const calls: FakeEmailCalls = {
+    labels: [],
+    sent: [],
+    managedLabels: [],
+    deletedDrafts: [],
+  };
+  const archived: string[] = [];
+  const result = await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({
+        mailboxEmail: "iris@tenant-a.example",
+        body: "Can I tour 4309 Fairway Path tomorrow at 2 PM?",
+      })], calls),
+      categories: DEFAULT_INBOX_CATEGORIES,
+      recordInteraction: async () => {},
+      readActiveDraft: async () => ({ gmail_draft_id: "draft_old" }),
+      archiveActiveDraft: async (threadRef) => {
+        archived.push(threadRef);
+      },
+    },
+  );
+
+  assert.equal(result.sent, 1);
+  assert.equal(calls.sent.length, 1);
+  assert.deepEqual(calls.deletedDrafts, ["draft_old"]);
+  assert.deepEqual(archived, ["thread_1"]);
+  assert.ok(calls.labels[0].includes("AUTO_REPLIED"));
+  assert.ok(calls.labels[0].includes("Iris/Waiting on Lead"));
+  assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
+  assert.ok(!calls.labels[0].includes("Iris/Needs Human"));
+});
+
+test("processIrisEmailPoll: a human-sent Gmail review draft resolves without another Iris reply", async () => {
+  const calls: FakeEmailCalls = { labels: [], sent: [] };
+  const resolved: string[] = [];
+  const result = await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({
+        direction: "outbound",
+        from: "Iris <iris@tenant-a.example>",
+        to: "Sam Buyer <sam@example.com>",
+        mailboxEmail: "iris@tenant-a.example",
+        body: "I checked with the team. Tuesday at 2 PM works.",
+      })], calls),
+      categories: DEFAULT_INBOX_CATEGORIES,
+      readActiveDraft: async () => ({ gmail_draft_id: "draft_review" }),
+      duplicateExists: async () => false,
+      recordInteraction: async () => assert.fail("outbound review send must not be recorded as inbound"),
+      resolveSentReview: async (message) => {
+        resolved.push(message.id);
+      },
+    },
+  );
+
+  assert.equal(result.processed, 0);
+  assert.deepEqual(resolved, ["msg_1"]);
+  assert.equal(calls.sent.length, 0);
+});
+
+test("processIrisEmailPoll: repeated human-only turns update one Gmail draft", async () => {
+  const calls: FakeEmailCalls = { labels: [], sent: [], drafts: [] };
+  await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({ body: "Should I waive inspection on this property?" })], calls),
+      categories: DEFAULT_INBOX_CATEGORIES,
+      recordInteraction: async () => {},
+      readActiveDraft: async () => ({ gmail_draft_id: "draft_existing" }),
+      storeReviewDraft: async () => {},
+    },
+  );
+
+  assert.equal(calls.drafts?.length, 1);
+  assert.equal(calls.drafts?.[0].existingDraftId, "draft_existing");
+});
+
+test("processIrisEmailPoll: spam closes without a review draft", async () => {
+  const calls: FakeEmailCalls = { labels: [], sent: [], drafts: [] };
+  await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({
+        subject: "Grow your SaaS pipeline",
+        body: "We partner with technical founders on outbound sales. Want a demo?",
+      })], calls),
+      categories: DEFAULT_INBOX_CATEGORIES,
+      recordInteraction: async () => {},
+      storeReviewDraft: async () => {
+        assert.fail("spam must not create a human-review draft");
+      },
+    },
+  );
+
+  assert.equal(calls.sent.length, 0);
+  assert.equal(calls.drafts?.length, 0);
+  assert.ok(calls.labels[0].includes("Iris/Closed No Reply"));
+  assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
 });
 
 test("iris email cron: live env sends by default unless explicitly overridden", () => {

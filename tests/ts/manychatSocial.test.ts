@@ -39,19 +39,19 @@ test("shouldTheoHandleSocialDm: allows routed real estate messages", () => {
   assert.equal(guard.needsHuman, false);
 });
 
-test("shouldTheoHandleSocialDm: flags personal social messages but still lets the agent reply", () => {
+test("shouldTheoHandleSocialDm: abstains on personal social chatter instead of replying", () => {
   const input = normalizeManyChatPayload({
     channel: "instagram",
     message_text: "Happy birthday lol how are you?",
     contact_id: "contact_3",
   });
   const guard = shouldTheoHandleSocialDm(input);
-  assert.equal(guard.allowed, true);
-  assert.equal(guard.needsHuman, true);
-  assert.equal(guard.intent, "personal_social");
+  assert.equal(guard.allowed, false);
+  assert.equal(guard.needsHuman, false);
+  assert.equal(guard.intent, "not_real_estate");
 });
 
-test("shouldTheoHandleSocialDm: defaults low-confidence social DMs to reply plus human flag", () => {
+test("shouldTheoHandleSocialDm: engages a typed inventory question", () => {
   const guard = shouldTheoHandleSocialDm({
     channel: "instagram",
     messageText: "Hmm what else do you have in inventory",
@@ -67,11 +67,12 @@ test("shouldTheoHandleSocialDm: defaults low-confidence social DMs to reply plus
   });
 
   assert.equal(guard.allowed, true);
-assert.equal(guard.needsHuman, false);
-assert.equal(guard.intent, "real_estate_intent");
+  assert.equal(guard.needsHuman, false);
+  assert.equal(guard.surface, "direct_text");
+  assert.equal(guard.intent, "real_estate_inquiry");
 });
 
-test("shouldTheoHandleDirectMetaDm: defaults direct channel DMs to the agent without human flag", () => {
+test("shouldTheoHandleDirectMetaDm: engages the same typed question on the direct channel", () => {
   const guard = shouldTheoHandleDirectMetaDm({
     channel: "instagram",
     messageText: "Hmm what else do you have in inventory",
@@ -88,7 +89,7 @@ test("shouldTheoHandleDirectMetaDm: defaults direct channel DMs to the agent wit
 
   assert.equal(guard.allowed, true);
   assert.equal(guard.needsHuman, false);
-  assert.equal(guard.intent, "real_estate_intent");
+  assert.equal(guard.intent, "real_estate_inquiry");
 });
 
 test("shouldTheoHandleDirectMetaDm: still blocks clearly human-required messages", () => {
@@ -201,10 +202,10 @@ test("socialMediaUrls: caps image URLs and returns direct URLs", () => {
   else process.env.SOCIAL_DM_MAX_IMAGES = prior;
 });
 
-test("shouldTheoHandleDirectMetaDm: low-confidence shared posts are review-only", () => {
+test("shouldTheoHandleDirectMetaDm: a shared non-property reel abstains and sends nothing", () => {
   const guard = shouldTheoHandleDirectMetaDm({
     channel: "instagram",
-    messageText: "Attachment context: motivational entrepreneurship reel instagram.com/reel/example",
+    messageText: "",
     contactId: "contact_7",
     threadId: "contact_7",
     senderName: "Lead Seven",
@@ -214,6 +215,19 @@ test("shouldTheoHandleDirectMetaDm: low-confidence shared posts are review-only"
     campaign: "",
     listingAddress: "",
     sourceUrl: "",
+    media: [{
+      type: "video",
+      url: "https://scontent.example/thumb.jpg",
+      providerMetadata: {
+        attachment_type: "ig_reel",
+        linkUrl: "https://www.instagram.com/reel/example/",
+        thumbnailUrl: "https://scontent.example/thumb.jpg",
+        mediaContext: {
+          model: "claude-sonnet-4-6",
+          summary: "Motivational entrepreneurship reel with a man talking to camera. No property details visible.",
+        },
+      },
+    }],
   });
   const result = buildSocialRouterResult({
     channel: "instagram",
@@ -227,10 +241,11 @@ test("shouldTheoHandleDirectMetaDm: low-confidence shared posts are review-only"
     },
   });
 
-  assert.equal(guard.allowed, true);
-  assert.equal(guard.needsHuman, true);
-  assert.equal(guard.intent, "low_confidence_media_or_dm");
+  assert.equal(guard.surface, "shared_post");
+  assert.equal(guard.allowed, false);
+  assert.equal(guard.needsHuman, false);
+  assert.equal(guard.intent, "shared_post_no_property_details");
   assert.equal(result.should_send, false);
-  assert.equal(result.status, "needs_human");
+  assert.equal(result.status, "abstained");
   assert.equal(result.reply, "");
 });

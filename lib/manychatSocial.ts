@@ -1,6 +1,8 @@
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import type { ChannelIngestInput } from "@/lib/channelIngest";
+import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
+import { evaluateSocialRelevance, type SocialGateDecision, type SocialSurface } from "@/lib/socialRelevanceGate";
 import type { TheoReplyResult } from "@/lib/theoAgent";
 
 export type SocialDmChannel = "messenger" | "instagram";
@@ -27,6 +29,7 @@ export type SocialDmPayload = {
   campaign: string;
   listingAddress: string;
   sourceUrl: string;
+  media?: OmnichannelMedia[];
 };
 
 export type SocialDmGuard = {
@@ -34,6 +37,9 @@ export type SocialDmGuard = {
   needsHuman: boolean;
   reason: string;
   intent: string;
+  surface?: SocialSurface;
+  propertyDetails?: string[];
+  evidence?: string[];
 };
 
 export type SocialDmRouterResult = {
@@ -75,7 +81,6 @@ const ALLOWED_ROUTE_REASONS = new Set<SocialDmRouteReason>([
 
 const REAL_ESTATE_INTENT = /\b(?:\d{3,6}\s+[a-z0-9 .'-]+|available|availability|price|tour|showing|view it|walkthrough|bed|beds|bath|baths|sqft|square feet|listing|address|property|home|house|condo|inventory|options?|buyer|buy|sell|selling|valuation|home value|worth|neighborhood|area|zip|photos?|pictures?|images?)\b/i;
 const HANDOFF_INTENT = /\b(?:contract|offer terms|inspection|legal|attorney|lawsuit|commission|representation|mortgage|loan officer|pre.?approved|preapproval|credit score|apr|interest rate|angry|upset|complaint|scam|wtf|fuck|bullshit|human|person|agent|representative)\b/i;
-const PERSONAL_SOCIAL = /\b(?:happy birthday|congrats|congratulations|coffee|lunch|party|date|hang out|personal|friend|family|lol|haha|meme|how are you|what's up|whats up)\b/i;
 
 function stringField(payload: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
@@ -126,6 +131,18 @@ export function socialThreadRef(input: Pick<SocialDmPayload, "channel" | "thread
   return `${input.channel || "social"}:${id}`;
 }
 
+function guardFromGate(decision: SocialGateDecision, fallbackIntent: string): SocialDmGuard {
+  return {
+    allowed: decision.engage,
+    needsHuman: decision.needsHuman,
+    reason: decision.reason,
+    intent: decision.intent || fallbackIntent,
+    surface: decision.surface,
+    propertyDetails: decision.propertyDetails,
+    evidence: decision.evidence,
+  };
+}
+
 export function shouldTheoHandleSocialDm(input: SocialDmPayload): SocialDmGuard {
   const text = [input.messageText, input.listingAddress, input.routeReason, input.campaign].filter(Boolean).join(" ");
   const intent = input.routeReason || (REAL_ESTATE_INTENT.test(text) ? "real_estate_intent" : "");
@@ -135,30 +152,25 @@ export function shouldTheoHandleSocialDm(input: SocialDmPayload): SocialDmGuard 
   if (!input.contactId && !input.threadId) {
     return { allowed: false, needsHuman: true, reason: "Missing ManyChat contact or thread id", intent };
   }
-  if (!input.messageText.trim()) {
+  if (!input.messageText.trim() && !(input.media || []).length) {
     return { allowed: false, needsHuman: true, reason: "Missing social DM text", intent };
   }
   if (HANDOFF_INTENT.test(input.messageText)) {
     return { allowed: true, needsHuman: true, reason: "Sensitive or human-required social DM", intent: intent || "human_required" };
   }
-  if (PERSONAL_SOCIAL.test(input.messageText) && !input.routeReason) {
-    return { allowed: true, needsHuman: true, reason: "Personal or general social DM", intent: "personal_social" };
-  }
-  if (input.routeReason || REAL_ESTATE_INTENT.test(text)) {
-    return { allowed: true, needsHuman: false, reason: "", intent: intent || "real_estate_intent" };
-  }
-  return { allowed: true, needsHuman: true, reason: "Low-confidence social DM route", intent: "low_confidence" };
+  // Fail-closed relevance gate. An abstain is not a "low confidence reply anyway":
+  // the message is recorded and the agent stays quiet.
+  const decision = evaluateSocialRelevance({
+    messageText: input.messageText,
+    media: input.media,
+    routeReason: input.routeReason,
+    listingAddress: input.listingAddress,
+  });
+  return guardFromGate(decision, intent);
 }
 
 export function shouldTheoHandleDirectMetaDm(input: SocialDmPayload): SocialDmGuard {
-  const guard = shouldTheoHandleSocialDm(input);
-  if (guard.reason !== "Low-confidence social DM route") return guard;
-  return {
-    allowed: true,
-    needsHuman: true,
-    reason: "Low-confidence direct Meta DM route",
-    intent: "low_confidence_media_or_dm",
-  };
+  return shouldTheoHandleSocialDm(input);
 }
 
 export function socialDmIngestInput(input: SocialDmPayload, guard: SocialDmGuard): ChannelIngestInput {
@@ -183,11 +195,11 @@ export function socialDmIngestInput(input: SocialDmPayload, guard: SocialDmGuard
     propertyInterest: input.listingAddress,
     preferredChannel: input.channel,
     intent: guard.intent,
-    aiAction: guard.allowed ? "social_dm_routed" : "social_dm_handoff",
+    aiAction: guard.allowed ? "social_dm_routed" : guard.needsHuman ? "social_dm_handoff" : "social_dm_abstained",
     handoffStatus: guard.needsHuman ? "needs_human" : "",
     handoffReason: guard.reason,
-    nextAction: guard.allowed ? "reply_with_theo" : "human_follow_up",
-    status: guard.allowed ? "received" : "needs_human",
+    nextAction: guard.allowed ? "reply_with_theo" : guard.needsHuman ? "human_follow_up" : "none",
+    status: guard.allowed ? "received" : guard.needsHuman ? "needs_human" : "abstained",
   };
 }
 
@@ -213,8 +225,10 @@ export function buildSocialRouterResult(input: {
 }): SocialDmRouterResult {
   const reply = input.reply;
   const needsHuman = Boolean(input.guard?.needsHuman || reply?.status === "needs_human" || reply?.handoffReason);
-  const lowConfidence = input.guard?.intent === "low_confidence" || input.guard?.intent === "low_confidence_media_or_dm" || input.guard?.intent === "personal_social";
-  const sendable = Boolean(reply?.shouldSend && reply.reply && !lowConfidence);
+  // The relevance gate already decided. If it abstained, nothing sends, no matter what
+  // the reply generator produced.
+  const gateAbstained = input.guard ? input.guard.allowed === false : false;
+  const sendable = Boolean(reply?.shouldSend && reply.reply && !gateAbstained);
   const mediaUrls = sendable ? socialMediaUrls(reply?.mediaUrls || [], input.baseUrl) : [];
   return {
     ok: true,
@@ -222,7 +236,7 @@ export function buildSocialRouterResult(input: {
     thread_ref: input.threadRef || "",
     should_send: sendable,
     needs_human: needsHuman,
-    status: sendable ? "ready_to_send" : needsHuman ? "needs_human" : "skipped",
+    status: sendable ? "ready_to_send" : gateAbstained ? "abstained" : needsHuman ? "needs_human" : "skipped",
     intent: reply?.classification?.intent || input.guard?.intent || "",
     reply: sendable ? String(reply?.reply || "") : "",
     media_urls: mediaUrls,

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "sms_showing_request",
+    "family": "baseline",
+    "description": "Plain tour request.",
+    "message": "Can I tour 9605 Corbe Dr on Saturday?",
+    "expectIntent": "showing_request",
+    "expectAutoReply": true
+  },
+  {
+    "id": "sms_seller_valuation",
+    "family": "baseline",
+    "description": "Seller valuation ask.",
+    "message": "Thinking about selling my house, what is it worth?",
+    "expectIntent": "seller_lead",
+    "expectAutoReply": true
+  },
+  {
+    "id": "sms_renter_lead",
+    "family": "baseline",
+    "description": "Rental inquiry.",
+    "message": "Any rentals available in 78704 for under 2000?",
+    "expectIntent": "renter_lead",
+    "expectAutoReply": true
+  },
+  {
+    "id": "sms_property_details",
+    "family": "baseline",
+    "description": "Details ask.",
+    "message": "What is the price and how many beds?",
+    "expectIntent": "property_details",
+    "expectAutoReply": true
+  },
+
+  {
+    "id": "sms_fair_housing_section8",
+    "family": "compliance",
+    "description": "Source-of-income screening is fair housing sensitive.",
+    "message": "Do you accept section 8 vouchers, and is it a safe neighborhood?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Fair Housing-sensitive question"
+  },
+  {
+    "id": "sms_fair_housing_school_rating",
+    "family": "compliance",
+    "description": "School rating as protected-class proxy.",
+    "message": "What is the school rating and crime like around there for kids?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Fair Housing-sensitive question"
+  },
+  {
+    "id": "sms_mortgage_preapproval",
+    "family": "compliance",
+    "description": "Licensed lending question.",
+    "message": "Can you get me preapproved with a 640 credit score?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Mortgage/licensed lending question"
+  },
+  {
+    "id": "sms_legal_eviction",
+    "family": "tenancy_law",
+    "description": "Eviction question is legal territory.",
+    "message": "My landlord is trying to evict me, do I need an attorney?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Legal or contract-sensitive question"
+  },
+  {
+    "id": "sms_legal_break_lease",
+    "family": "tenancy_law",
+    "description": "Lease break question.",
+    "message": "Can I break my lease early without legal trouble?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Legal or contract-sensitive question"
+  },
+  {
+    "id": "sms_contract_commission",
+    "family": "compliance",
+    "description": "Commission negotiation.",
+    "message": "Will you drop your commission if I list with you?",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Legal or contract-sensitive question"
+  },
+  {
+    "id": "sms_angry_scam",
+    "family": "compliance",
+    "description": "Angry accusation.",
+    "message": "This is a scam, stop lying to me",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Angry or complaint language"
+  },
+  {
+    "id": "sms_asks_for_human",
+    "family": "no_reply",
+    "description": "Explicit human request.",
+    "message": "I want to talk to a real person, call me",
+    "expectIntent": "human_required",
+    "expectHandoffReason": "Lead requested a human"
+  },
+
+  {
+    "id": "sms_spam_crypto",
+    "family": "no_reply",
+    "description": "Crypto spam gets no reply.",
+    "message": "Double your crypto with our forex bot",
+    "expectIntent": "spam",
+    "expectAutoReply": false
+  },
+  {
+    "id": "sms_spam_empty",
+    "family": "no_reply",
+    "description": "Empty message.",
+    "message": "   ",
+    "expectIntent": "spam",
+    "expectAutoReply": false
+  },
+  {
+    "id": "sms_do_not_contact_lead",
+    "family": "no_reply",
+    "description": "A do_not_contact lead never gets an auto reply.",
+    "message": "Any 3 bed homes available?",
+    "lead": { "next_action": "do_not_contact" },
+    "expectAutoReply": false
+  },
+  {
+    "id": "sms_consent_no",
+    "family": "no_reply",
+    "description": "Revoked SMS consent blocks auto reply.",
+    "message": "Any 3 bed homes available?",
+    "lead": { "sms_consent": "no" },
+    "expectAutoReply": false
+  },
+
+  {
+    "id": "sms_typos_options",
+    "family": "confusion",
+    "description": "Typo normalization keeps the search intent.",
+    "message": "wat other optoins do u have, need mroe detials",
+    "expectIntent": "property_details",
+    "expectAutoReply": true
+  },
+  {
+    "id": "sms_hosue_typo_is_not_a_lawsuit",
+    "family": "confusion",
+    "description": "The typo hosue contains sue and must not read as a legal question.",
+    "message": "lookin for a 3 bd hosue in austin under 450k",
+    "expectIntentNot": "human_required",
+    "expectAutoReply": true
+  },
+  {
+    "id": "sms_contractor_is_not_a_contract",
+    "family": "confusion",
+    "description": "Contractor is a maintenance word, not a contract question.",
+    "message": "Do you know a good contractor for the kitchen at 9605 Corbe Dr?",
+    "expectIntentNot": "human_required"
+  },
+  {
+    "id": "sms_pursue_is_not_sue",
+    "family": "confusion",
+    "description": "Pursue must not trip the legal pattern.",
+    "message": "I want to pursue the 3 bed listing we talked about",
+    "expectIntentNot": "human_required"
+  }
+]

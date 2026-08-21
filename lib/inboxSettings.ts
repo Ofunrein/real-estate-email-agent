@@ -152,7 +152,8 @@ export function inferCategorySlug(events: SheetRow[], categories: InboxCategory[
   const latestInboundText = `${latestInbound.status || ""} ${latestInbound.summary || ""} ${latestInbound.message_text || ""}`.toLowerCase();
   const latestInboundIsSocial = ["instagram", "messenger"].includes(String(latestInbound.channel || "").toLowerCase());
   let slug = "needs_reply";
-  if (
+  if (latestOutboundAfterInbound) slug = "waiting_lead";
+  else if (
     latestInboundIsSocial &&
     inboundAfterReviewResolved &&
     !latestOutboundAfterInbound &&

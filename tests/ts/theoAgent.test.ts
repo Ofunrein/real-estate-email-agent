@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { generateTheoReply } from "@/lib/theoAgent";
+import { extractTheoPropertySearchIntent, extractTheoPropertySearchQuery } from "@/lib/theoData";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 function property(overrides: Partial<SheetRow> = {}): SheetRow {
@@ -35,6 +36,25 @@ async function withoutOpenAi<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+test("property query ignores conversational requests for more options", () => {
+  assert.equal(
+    extractTheoPropertySearchQuery("Do you have any other thing you want to show me, like two other options?"),
+    "",
+  );
+});
+
+test("property query still extracts a real address", () => {
+  assert.equal(extractTheoPropertySearchQuery("Show me 6828 Walkup Ln"), "6828 Walkup Ln");
+});
+
+test("property criteria parse number words as hard bed and bath minimums", () => {
+  const intent = extractTheoPropertySearchIntent(
+    "Show me a different property that has four beds and four baths.",
+  );
+  assert.equal(intent.beds, 4);
+  assert.equal(intent.baths, 4);
+});
+
 test("generateTheoReply: ordinal property detail follow-up does not hand off", async () => {
   const result = await withoutOpenAi(() => generateTheoReply({
     message: "The first one tell me more about it",
@@ -62,7 +82,7 @@ test("generateTheoReply: typo similar options stays deterministic", async () => 
   assert.equal(result.status, "ready_to_reply");
   assert.equal(result.aiAction, "property_options_reply_ready");
   assert.equal(result.handoffReason, "");
-  assert.match(result.reply, /matches I found/i);
+  assert.match(result.reply, /found 2 matches/i);
   assert.match(result.reply, /6814 Old Quarry Ln/);
 });
 

@@ -14,6 +14,9 @@ type AnthropicVisionResponse = {
 };
 
 const MAX_VISION_BYTES = 4_500_000;
+// Cheap-evidence budget for shared posts: a thumbnail / first frame, never the
+// full-resolution asset and never a video download.
+const MAX_THUMBNAIL_BYTES = 600_000;
 
 function timeoutSignal(ms: number): AbortSignal {
   const controller = new AbortController();
@@ -141,6 +144,17 @@ function heuristicMediaContext(item: OmnichannelMedia): MediaContext {
   };
 }
 
+function thumbnailUrl(item: OmnichannelMedia): string {
+  const metadata = providerMetadata(item);
+  return clean(metadata.thumbnailUrl || metadata.thumbnail_url);
+}
+
+/**
+ * Cheapest inspectable bytes for an item. Shared social posts and videos are only ever
+ * inspected through their thumbnail/first frame; the lead's own uploaded image may be
+ * read directly. Returns null when no cheap path exists so callers abstain instead of
+ * downloading a full asset.
+ */
 async function imageBytesForVision(item: OmnichannelMedia): Promise<{ buffer: Buffer; contentType: string } | null> {
   const metadata = providerMetadata(item);
   const inlineBase64 = clean(metadata.visionBytesBase64 || metadata.vision_bytes_base64);
@@ -149,20 +163,30 @@ async function imageBytesForVision(item: OmnichannelMedia): Promise<{ buffer: Bu
     const buffer = Buffer.from(inlineBase64, "base64");
     return buffer.length ? { buffer, contentType: inlineType } : null;
   }
-  if (!item.url) return null;
-  const response = await fetch(item.url, { signal: timeoutSignal(6000) });
+  const thumbnail = thumbnailUrl(item);
+  const shared = isSharedSocialUrl(mediaLinkUrl(item)) || isSharedSocialUrl(mediaUrl(item));
+  const cheapOnly = shared || inferMediaType(item) !== "image";
+  const target = thumbnail || (cheapOnly ? "" : mediaUrl(item));
+  if (!target) return null;
+  const response = await fetch(target, { signal: timeoutSignal(6000) });
   if (!response.ok) return null;
   const contentType = mimeFromContentType(response.headers.get("content-type") || item.contentType || "");
   const buffer = Buffer.from(await response.arrayBuffer());
-  return buffer.length ? { buffer, contentType } : null;
+  if (!buffer.length) return null;
+  const budget = thumbnail || cheapOnly ? MAX_THUMBNAIL_BYTES : MAX_VISION_BYTES;
+  if (buffer.byteLength > budget) return null;
+  return { buffer, contentType };
 }
 
 async function anthropicVisionContext(item: OmnichannelMedia): Promise<MediaContext | null> {
-  if (!mediaVisionEnabled() || inferMediaType(item) !== "image") return null;
+  if (!mediaVisionEnabled()) return null;
+  // Images are inspectable directly. Video/shared content is inspectable only when the
+  // provider handed us a thumbnail or first frame.
+  if (inferMediaType(item) !== "image" && !thumbnailUrl(item)) return null;
   try {
     const image = await imageBytesForVision(item);
-    if (!image || !image.contentType.startsWith("image/") || image.buffer.byteLength > MAX_VISION_BYTES) return null;
-    const prompt = "Summarize this real estate lead image for an omnichannel agent. Return compact JSON only with keys summary, extractedText, needsHuman, confidence. Focus on listing photos, rooms/features, screenshots, addresses, prices, appointment intent, lead preferences, and visible text. Do not infer protected-class traits.";
+    if (!image || !image.contentType.startsWith("image/")) return null;
+    const prompt = "Summarize this real estate lead image for an omnichannel agent. Return compact JSON only with keys summary, extractedText, needsHuman, confidence. Focus on listing photos, rooms/features, screenshots, addresses, prices, appointment intent, lead preferences, and visible text. Do not infer protected-class traits. If no property details are visible, say so plainly and do not guess.";
     const vision = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -200,7 +224,7 @@ async function anthropicVisionContext(item: OmnichannelMedia): Promise<MediaCont
     const summary = truncate(clean(parsed.summary), 700);
     if (!summary) return null;
     return {
-      mediaType: "image",
+      mediaType: inferMediaType(item) === "image" ? "image" : `${inferMediaType(item)}_thumbnail`,
       summary,
       extractedText: truncate(clean(parsed.extractedText || parsed.extracted_text), 700) || undefined,
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.78)),

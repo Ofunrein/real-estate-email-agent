@@ -7,10 +7,13 @@ import {
   findPropertiesByAddressesFromDatabase,
   findLeadInDatabase,
   hasOutboundEmailReplyAfterEventInDatabase,
+  insertApprovedEmailStyleExampleInDatabase,
+  readAiDraftFromDatabase,
   readConversationEventByGmailMessageId,
   readEventsForLeadFromDatabase,
   readInboxCategoriesFromDatabase,
   updateInboxCategoryGmailLabelInDatabase,
+  updateAiDraftStatusInDatabase,
   upsertAiDraftInDatabase,
   upsertThreadLinkInDatabase,
   upsertLeadMemoryToDatabase,
@@ -18,13 +21,17 @@ import {
 import {
   createGmailReplyDraftWithOptions,
   createIrisGmailSession,
+  deleteGmailDraft,
   ensureGmailLabel,
+  replaceGmailThreadLabels,
   sendGmailReplyWithOptions,
+  updateGmailReplyDraftWithOptions,
   type GmailClient,
   type GmailDraftResult,
   type GmailReplyResult,
 } from "@/lib/gmailConnection";
-import { inferCategorySlug, type InboxCategory } from "@/lib/inboxSettings";
+import { inferCategorySlug, type AiDraft, type InboxCategory } from "@/lib/inboxSettings";
+import { releaseTakeover } from "@/lib/humanTakeover";
 import { isProxiableImageUrl, mediaProxyUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
@@ -32,6 +39,7 @@ import { understandMediaItems } from "@/lib/mediaUnderstanding";
 import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { fetchStyleContext, redactEmailStyleExample } from "@/lib/styleTraining";
 
 export type IrisEmailIntent =
   | "property_search"
@@ -87,6 +95,7 @@ export type IrisEmailClassification = {
 export type IrisEmailMessage = {
   id: string;
   threadId: string;
+  direction?: "inbound" | "outbound";
   from: string;
   to?: string;
   subject: string;
@@ -157,10 +166,12 @@ export function coalesceIrisEmailThreadFollowUps(messages: IrisEmailMessage[]): 
 
 export type IrisEmailClient = {
   listUnreadMessages(limit: number): Promise<IrisEmailMessage[]>;
-  applyLabels(messageId: string, labels: string[]): Promise<void>;
+  applyLabels(message: IrisEmailMessage, labels: string[], managedLabels?: string[]): Promise<void>;
   syncCategoryLabels?(categories: InboxCategory[]): Promise<InboxCategory[]>;
   sendReply?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailReplyResult | void>;
   createDraft?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailDraftResult | void>;
+  saveDraft?(message: IrisEmailMessage, body: string, htmlBody?: string, existingDraftId?: string): Promise<GmailDraftResult | void>;
+  deleteDraft?(draftId: string): Promise<void>;
 };
 
 export type IrisEmailReplyDraft = {
@@ -187,6 +198,11 @@ export type IrisEmailPollDeps = {
   classify?: (message: IrisEmailMessage) => IrisEmailClassification;
   generateReply?: (message: IrisEmailMessage, classification: IrisEmailClassification) => string | IrisEmailReplyDraft | null | Promise<string | IrisEmailReplyDraft | null>;
   duplicateExists?: (gmailMessageId: string) => Promise<boolean>;
+  categories?: InboxCategory[];
+  readActiveDraft?: (threadRef: string) => Promise<Pick<AiDraft, "gmail_draft_id"> | null>;
+  storeReviewDraft?: (draft: Omit<AiDraft, "updated_at" | "status">) => Promise<void>;
+  archiveActiveDraft?: (threadRef: string) => Promise<void>;
+  resolveSentReview?: (message: IrisEmailMessage, state: { alreadyRecorded: boolean }) => Promise<void>;
 };
 
 const SENSITIVE_FLAGS = new Set([
@@ -197,6 +213,7 @@ const SENSITIVE_FLAGS = new Set([
   "angry_or_complaint",
   "privacy",
   "broker_approval",
+  "prompt_injection",
 ]);
 
 const STREET_ADDRESS_RE =
@@ -263,16 +280,25 @@ export function parseEmailContact(value = ""): { name: string; email: string } {
 export function detectIrisComplianceFlags(text: string): string[] {
   const text_l = text.replace(/\s+/g, " ").toLowerCase();
   const flags: string[] = [];
-  if (/(safe neighborhood|good neighborhood for families|families with kids|people like me|demographics|ethnicity|race|religion|mostly families|mostly young|crime rate)/.test(text_l)) {
+  // Fair housing: anything that asks the agent to characterize an area by who lives there,
+  // or to rank areas on the usual protected-class proxies (safety, "family friendly",
+  // school quality, crime), goes to a human. Factual asks like "which school district is
+  // this in" stay answerable.
+  if (
+    /(safe (?:\w+ ){0,2}(?:neighborhood|area|part of town|side of town)|family (?:friendly )?(?:neighborhood|area)|good neighborhood for families|families with kids|people like me|demographics|ethnicity|\brace\b|religion|mostly families|mostly young|crime rate|low crime|crime stats?|good schools|best schools|school rating|school ratings|section 8|housing voucher)/
+      .test(text_l)
+  ) {
     flags.push("fair_housing");
   }
   if (/(do i qualify|can i qualify|will i qualify|get approved|approved for a loan|what rate can i get|which loan should|should i choose fha|nmls)/.test(text_l)) {
     flags.push("mortgage_license");
   }
-  if (/(legal advice|attorney|lawyer|lawsuit|sue|break my lease|evict|eviction)/.test(text_l)) {
+  // Word boundaries matter here: an unanchored "sue" fires on "hosue", and an unanchored
+  // "contract" fires on "contractor".
+  if (/(legal advice|\battorney\b|\blawyer\b|\blawsuit\b|\bsue\b|\bsuing\b|break my lease|\bevict\b|\beviction\b)/.test(text_l)) {
     flags.push("legal");
   }
-  if (/(waive inspection|contract|counteroffer|commission|buyer agreement|listing agreement|agency agreement|representation agreement)/.test(text_l)) {
+  if (/(waive inspection|\bcontract\b|\bcounteroffer\b|\bcommission\b|buyer agreement|listing agreement|agency agreement|representation agreement)/.test(text_l)) {
     flags.push("contract_terms");
   }
   if (/(scam|fraud|bait and switch|report you|harassment|stop spamming|spam complaint)/.test(text_l)) {
@@ -280,6 +306,14 @@ export function detectIrisComplianceFlags(text: string): string[] {
   }
   if (/(social security|ssn|bank account|routing number)/.test(text_l)) {
     flags.push("privacy");
+  }
+  // Instruction-override attempts. A lead never legitimately asks for the system prompt,
+  // so the whole message goes to review rather than into the reply model unfiltered.
+  if (
+    /\b(?:ignore (?:all |any )?(?:previous|prior|above|earlier) (?:instructions?|prompts?|rules?)|disregard (?:your|all|the) (?:instructions?|rules?|prompt)|system prompt|you are now|new instructions?:|pretend (?:to be|you are)|reveal (?:your|the) (?:prompt|instructions?|system)|print your (?:prompt|instructions?)|developer mode|jailbreak|forget (?:your|all) (?:rules?|instructions?)|override (?:your|the) (?:safety|rules?|guardrails?))\b/
+      .test(text_l)
+  ) {
+    flags.push("prompt_injection");
   }
   return flags;
 }
@@ -408,6 +442,10 @@ function noOrStopSignal(text: string): "stop" | "no" | "" {
   return "";
 }
 
+function wrongRecipientSignal(text: string): boolean {
+  return /\b(?:wrong (?:person|number|email|address)|not the right person|you have the wrong|i am not (?:the )?\w+|never contacted you|who is this)\b/i.test(text);
+}
+
 function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: IrisLeadRole, tags: string[], latestText = ""): string | null {
   if (intent === "showing_request") {
     const hasDayAndTime = /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(latestText)
@@ -460,8 +498,19 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
   const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|\brent\b|\blease\b|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
   const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
+  const wrongRecipient = wrongRecipientSignal(latestClean);
+  // An email whose body is only an attachment placeholder gives Iris nothing to answer.
+  // A human glances at the image; Iris does not guess what it shows.
+  const bodyOnlyClean = cleanBody(latestEmailBody(message.body || ""));
+  const noUsableText = !bodyOnlyClean.replace(/\[[^\]]*\]/g, "").replace(/[^a-z0-9]/gi, "").trim()
+    && !addresses.length
+    && !propertyUrls.length;
   if (spamLike) {
     intent = "spam";
+  } else if (wrongRecipient) {
+    // Answering a stranger's "you have the wrong person" with more qualification questions
+    // is how an inbox earns a spam complaint.
+    intent = "human_required";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
     intent = "human_required";
   } else if (pivotingToOtherOptions && /(options?|alternatives?|another|other|what else|looking for|better fit|three bed|3 bed|bedroom|homes?|houses?|properties|listings?)/i.test(latestClean)) {
@@ -498,6 +547,26 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     role = /(mortgage|loan|preapproved|pre-approved)/i.test(latestClean) ? "mortgage_adjacent_lead" : "buyer";
   }
 
+  // Autonomy floor. The chain above starts at human_required, so anything it does not
+  // recognise gets parked for a human even when it is an ordinary lead email with no
+  // compliance flag, no opt-out and a real human sender (isIrisEligibleEmail already
+  // screened robots, vendors and system mail). Iris answers those, which is the difference
+  // between a realtor reading 15% of the inbox and reading all of it. Human review stays
+  // for real risk: sensitive flags, opt-outs, wrong recipients, spam.
+  if (
+    intent === "human_required"
+    && !flags.length
+    && !noSignal
+    && !wrongRecipient
+    && !noUsableText
+    && !businessOutreachLike
+    && !systemEmailLike
+  ) {
+    intent = addresses.length || propertyUrls.length ? "property_details" : "property_search";
+    if (role === "unknown") role = "buyer";
+    opportunityTags.push("autonomy_floor_reply");
+  }
+
   if (/(asap|today|tomorrow|urgent|this week)/i.test(latestClean)) opportunityTags.push("high_urgency");
   if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) opportunityTags.push("mortgage_interest");
   if (/\bsell(?:ing)?\b.{0,80}\bbefore\s+(?:(?:i|we)\s+)?buy(?:ing)?\b|need to sell first|contingent/i.test(latestClean)) opportunityTags.push("sell_before_buy");
@@ -532,26 +601,27 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     lead_fields: fields,
     next_best_question: routeHuman ? null : nextQuestion(intent, fields, role, opportunityTags, latestClean),
     recommended_next_action: recommended,
-    human_handoff_reason: routeHuman ? humanHandoffReason(intent, flags, noSignal) : null,
+    human_handoff_reason: routeHuman ? humanHandoffReason(intent, flags, noSignal, wrongRecipient) : null,
   };
 }
 
-function humanHandoffReason(intent: IrisEmailIntent, flags: string[], noSignal: string): string {
+function humanHandoffReason(intent: IrisEmailIntent, flags: string[], noSignal: string, wrongRecipient = false): string {
   if (intent === "spam") return "spam_or_promotional_email";
   if (noSignal === "stop") return "opt_out_or_stop_request";
   if (flags.length) return flags.join(",");
+  if (wrongRecipient) return "wrong_recipient";
   return "needs_human_review";
 }
-
 export function decideIrisEmailExecution(classification: IrisEmailClassification): IrisEmailExecution {
   // Only route to human for genuine blockers: compliance flags, spam, explicit human_required.
   // "review" recommended_next_action alone does NOT block auto-reply — Iris handles real estate
   // follow-ups autonomously. Human review is reserved for truly sensitive situations.
-  const needsHuman = classification.intent === "human_required" || classification.intent === "spam" ||
+  const closesWithoutReply = classification.intent === "spam" || classification.human_handoff_reason === "opt_out_or_stop_request";
+  const needsHuman = classification.intent === "human_required" ||
     classification.compliance_flags.some((flag) => SENSITIVE_FLAGS.has(flag));
-  if (classification.intent === "spam") {
+  if (closesWithoutReply) {
     return {
-      labels: ["NEEDS_HUMAN"],
+      labels: [],
       status: "spam",
       eventType: "spam",
       aiAction: "review",
@@ -579,9 +649,140 @@ export function decideIrisEmailExecution(classification: IrisEmailClassification
   };
 }
 
+// A human-review draft is still a real email. The agent answers everything it can
+// answer safely and marks only the genuinely uncertain part, so the realtor edits one
+// line instead of composing from scratch. The handoff itself is internal metadata
+// (labels, ai_drafts.needs_human) and never the entire visible message.
+export const IRIS_REVIEW_MARKER = "[Review before sending:";
+
+function irisReviewNextStep(classification: IrisEmailClassification): string {
+  const address = classification.address;
+  if (classification.intent === "showing_request") {
+    return `getting${address ? ` ${address}` : " the property"} on your calendar, so tell me a day and a rough time window and I will confirm access`;
+  }
+  if (address) {
+    return `pulling the current facts on ${address}, list price, taxes, HOA dues, days on market, and what has sold nearby`;
+  }
+  const area = classification.lead_fields.area;
+  return `putting a shortlist together${area ? ` in ${area}` : ""} against your price range and bedroom count`;
+}
+
+/**
+ * Safe substantive answer plus the single item a human must confirm.
+ * Every branch is a reply a licensed agent could send as written.
+ */
+function irisReviewDraftParts(classification: IrisEmailClassification): { answer: string[]; confirm: string } {
+  const address = classification.address;
+  const forProperty = address ? ` for ${address}` : "";
+  const flags = classification.compliance_flags;
+  const nextStep = irisReviewNextStep(classification);
+
+  if (classification.human_handoff_reason === "wrong_recipient") {
+    return {
+      answer: [
+        "Apologies for the mix up, it sounds like this thread reached the wrong person.",
+        "I have stopped the follow ups on this address. If you would rather we delete the record entirely, say the word and it is done, otherwise nothing further will come from us.",
+      ],
+      confirm: "the record is actually removed from the follow up list",
+    };
+  }
+  if (flags.includes("prompt_injection")) {
+    return {
+      answer: [
+        `Happy to help with the property side. I can start on ${nextStep}.`,
+        "Part of your message asked me to change how I operate or repeat my internal instructions, and I am not able to do that. If that was not you, someone may be testing the inbox and it is worth a look.",
+      ],
+      confirm: "that the property question is legitimate before replying",
+    };
+  }
+  if (flags.includes("privacy")) {
+    return {
+      answer: [
+        "Please do not send a social security number, bank account, or routing number by email, to us or to anyone else. Nothing at this stage needs it.",
+        `When that information is genuinely required it goes through the title company's secure portal, never a message thread. In the meantime I can keep moving on ${nextStep}.`,
+      ],
+      confirm: "nothing is outstanding, this is safe to send as written",
+    };
+  }
+  if (flags.includes("fair_housing")) {
+    return {
+      answer: [
+        "I am not able to characterize an area by the people who live there, so I will not answer it that way. What I can give you is objective and checkable.",
+        `${address ? `For ${address} I` : "I"} can send the school district and attendance boundary, the published crime statistics from the local police department, commute and walkability times, and the HOA documents if there are any. You draw your own conclusions from the source data.`,
+      ],
+      confirm: "which of those objective reports to attach",
+    };
+  }
+  if (flags.includes("mortgage_license")) {
+    return {
+      answer: [
+        "I am not licensed to quote a rate or tell you what you would be approved for, and I would rather not guess at a number that can move on you.",
+        `What I can do is introduce you to our lender for a same day pre-approval, and send the list price, tax assessment, and HOA dues${forProperty} so you can run your own math tonight.`,
+      ],
+      confirm: "which lender to introduce",
+    };
+  }
+  if (flags.includes("legal")) {
+    return {
+      answer: [
+        "This is a legal question and you deserve a real answer instead of my best guess, so I am not going to improvise one.",
+        `I can walk you through the practical timeline and the documents involved, and get you in front of our broker or a real estate attorney this week. Separately I can keep working on ${nextStep}.`,
+      ],
+      confirm: "who to route the legal question to",
+    };
+  }
+  if (flags.includes("contract_terms")) {
+    return {
+      answer: [
+        "Commission, representation, and inspection terms are set by the broker rather than by me, so I want them confirmed in writing before you rely on anything I say about them.",
+        `What is not blocked is the actual work: I can start ${nextStep}.`,
+      ],
+      confirm: "the exact commission and contract terms to quote",
+    };
+  }
+  if (flags.includes("angry_or_complaint")) {
+    return {
+      answer: [
+        "You are right to be frustrated, and I would rather fix this than explain it.",
+        `Here is what I am doing about it: ${nextStep}. If a call is easier, give me a window today or tomorrow and someone will phone you directly.`,
+      ],
+      confirm: "what happened on our side so the apology is accurate",
+    };
+  }
+  if (flags.includes("broker_approval")) {
+    return {
+      answer: [
+        "This one needs broker sign off before it goes out in writing, so I am not going to commit us to it.",
+        `In the meantime I can get on with ${nextStep}.`,
+      ],
+      confirm: "broker approval on the wording",
+    };
+  }
+  // No compliance flag, just an unclear ask. Answer the clear part, name the unclear part.
+  return {
+    answer: [
+      `Happy to help. Here is where I can start without waiting: ${nextStep}.`,
+      "I want to make sure I answer the rest of your question properly rather than approximately, so tell me a little more and I will come back with specifics.",
+    ],
+    confirm: "what the lead is actually asking before this goes out",
+  };
+}
+
 export function generateIrisEmailReply(message: IrisEmailMessage, classification: IrisEmailClassification): string | null {
   const execution = decideIrisEmailExecution(classification);
-  if (!execution.canReply) return null;
+  if (!execution.canReply) {
+    if (execution.status === "spam") return null;
+    const { answer, confirm } = irisReviewDraftParts(classification);
+    return [
+      "Hello,",
+      "",
+      ...answer.flatMap((paragraph) => [paragraph, ""]),
+      "Best,",
+      IRIS_AGENT_NAME,
+      "",
+      `${IRIS_REVIEW_MARKER} ${confirm}. Delete this line before you send.]`,
+    ].join("\n");
+  }
   const question = classification.next_best_question;
   if (classification.intent === "showing_request") {
     const showingCopy = question
@@ -815,13 +1016,17 @@ export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], c
     && classification?.intent !== "showing_request"
     && (classification?.intent === "property_search" || wantsAlternatives)
   );
-  const subjectLine = classification?.intent === "property_search"
-    ? "I found the best matching options from our inventory."
-    : classification?.intent === "showing_request"
-      ? ""
-    : featured
-      ? "Here are the property details from our inventory."
-      : "";
+  // Never announce matches when there is no card to back them up. An empty property list
+  // with "I found the best matching options" is a fabricated claim.
+  const subjectLine = !cleanProperties.length
+    ? ""
+    : classification?.intent === "property_search"
+      ? "I found the best matching options from our inventory."
+      : classification?.intent === "showing_request"
+        ? ""
+        : featured
+          ? "Here are the property details from our inventory."
+          : "";
   const plainProperties = showAlternatives ? cleanProperties.slice(0, 4) : cleanProperties.slice(0, featured ? 1 : 0);
   const html = `<div style="font-family:Arial,sans-serif;max-width:620px;color:#111827;line-height:1.45">
 ${plainToHtml(htmlBodyText.replace(/\n*Best,\nIris\s*$/i, "").trim())}
@@ -887,6 +1092,7 @@ async function generateClaudeIrisEmailReplyText(
   message: IrisEmailMessage,
   classification: IrisEmailClassification,
   properties: SheetRow[],
+  styleContext = "",
 ): Promise<string | null> {
   const key = anthropicApiKey();
   if (!key) return null;
@@ -902,6 +1108,7 @@ async function generateClaudeIrisEmailReplyText(
     features: property.features,
     listing_url: property.listing_url,
   }));
+  const reviewDraft = !decideIrisEmailExecution(classification).canReply;
   const system = `You are ${IRIS_AGENT_NAME}, the real estate email assistant. Claude is the reasoning brain for this email agent.
 Write only the email body, no markdown and no subject line.
 Rules:
@@ -913,10 +1120,14 @@ ${advancedQualificationPlaybook()}
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
 - If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.
 - Ask at most one next-step question.
+- ${reviewDraft
+    ? `This draft goes to a human for review before sending, so it must still be a real reply the agent could send as written. Answer everything you can answer safely and specifically. Do not decide the flagged sensitive point and do not invent facts. Never write a message whose only content is that the team will review it. After the signature, add exactly one line starting with "${IRIS_REVIEW_MARKER}" naming the single item the human must confirm, then "Delete this line before you send.]".`
+    : "This reply is approved for autonomous sending. Answer and advance the conversation without mentioning internal review."}
 - Never use em dashes. Use commas, periods, or simple hyphens instead.
-- End exactly with:
-Best,
-${IRIS_AGENT_NAME}`;
+- ${reviewDraft
+    ? `End with:\nBest,\n${IRIS_AGENT_NAME}\nthen the single "${IRIS_REVIEW_MARKER} ...]" review line and nothing after it.`
+    : `End exactly with:\nBest,\n${IRIS_AGENT_NAME}`}
+${styleContext ? `\nTenant and mailbox voice profile:\n${styleContext}` : ""}`;
   const latestBody = cleanBody(latestEmailBody(message.body));
   const contextBody = cleanBody(threadContextBody(message.body));
   const user = `Inbound email:
@@ -994,8 +1205,9 @@ async function generateIrisEmailReplyRich(
 ): Promise<IrisEmailReplyDraft | null> {
   const fallbackPlain = generateIrisEmailReply(message, classification);
   if (!fallbackPlain) return null;
+  const styleContext = await fetchStyleContext(classification.intent, undefined, message.mailboxEmail || "");
   if (!databaseEnabled()) {
-    const plain = await generateClaudeIrisEmailReplyText(message, classification, []).catch(() => null) || fallbackPlain;
+    const plain = await generateClaudeIrisEmailReplyText(message, classification, [], styleContext).catch(() => null) || fallbackPlain;
     return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
   }
   const latestBody = cleanBody(latestEmailBody(message.body));
@@ -1018,7 +1230,7 @@ async function generateIrisEmailReplyRich(
         excludeAddresses,
         mode: "general",
       }, 4, { channel: "email" });
-  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties).catch(() => null) || fallbackPlain;
+  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext).catch(() => null) || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
 
@@ -1191,6 +1403,121 @@ export async function recordIrisEmailInteraction(
   });
 }
 
+function irisEmailStatusCategorySlug(execution: IrisEmailExecution, sent: boolean, skippedDuplicate: boolean): string {
+  if (execution.status === "spam") return "closed_no_reply";
+  if (execution.status === "needs_human") return "needs_human";
+  if (sent || skippedDuplicate) return "waiting_lead";
+  return "needs_reply";
+}
+
+function irisEmailTopicCategorySlugs(classification: IrisEmailClassification): string[] {
+  const slugs: string[] = [];
+  if (classification.intent === "showing_request") slugs.push("showing");
+  if (
+    classification.intent === "seller_lead"
+    || classification.primary_lead_role === "seller"
+    || classification.primary_lead_role === "second_time_buyer"
+    || classification.opportunity_tags.some((tag) => /valuation|sell_before_buy/.test(tag))
+  ) slugs.push("seller_valuation");
+  if (classification.primary_lead_role === "mortgage_adjacent_lead") slugs.push("financing");
+  if (classification.urgency === "high" || classification.intent === "showing_request") slugs.push("hot_lead");
+  return [...new Set(slugs)];
+}
+
+function irisEmailLabels(
+  execution: IrisEmailExecution,
+  classification: IrisEmailClassification,
+  categories: InboxCategory[],
+  sent: boolean,
+  skippedDuplicate: boolean,
+): { labels: string[]; managedLabels: string[]; statusSlug: string } {
+  const statusSlug = irisEmailStatusCategorySlug(execution, sent, skippedDuplicate);
+  const slugs = new Set([statusSlug, ...irisEmailTopicCategorySlugs(classification)]);
+  const categoryLabels = categories
+    .filter((category) => category.enabled && slugs.has(category.slug))
+    .map((category) => category.gmail_label_name)
+    .filter(Boolean);
+  const workflowLabels = execution.status === "needs_human"
+    ? ["NEEDS_HUMAN"]
+    : sent || skippedDuplicate
+      ? ["AUTO_REPLIED"]
+      : [];
+  return {
+    labels: [...new Set([...workflowLabels, ...categoryLabels])],
+    managedLabels: [...new Set([
+      "AUTO_REPLIED",
+      "NEEDS_HUMAN",
+      ...categories.map((category) => category.gmail_label_name).filter(Boolean),
+    ])],
+    statusSlug,
+  };
+}
+
+async function recordIrisHumanReviewSend(
+  message: IrisEmailMessage,
+  categories: InboxCategory[],
+  emailClient: IrisEmailClient,
+  alreadyRecorded: boolean,
+): Promise<void> {
+  const threadRef = message.threadId || message.id;
+  const mailboxEmail = (message.mailboxEmail || parseEmailContact(message.from).email).toLowerCase();
+  const recipient = parseEmailContact(message.to || "");
+  const body = cleanBody(message.body);
+  const now = new Date().toISOString();
+
+  if (!alreadyRecorded) {
+    await appendConversationEventToDatabase({
+      event_at: now,
+      channel: "email",
+      direction: "outbound",
+      email: recipient.email,
+      full_name: recipient.name || recipient.email,
+      source: "gmail",
+      thread_ref: threadRef,
+      agent_name: "IRIS",
+      event_type: "email_human_reply",
+      message_text: body,
+      summary: "Human sent an Iris review draft",
+      ai_action: "human_approved_send",
+      status: "sent",
+      mailbox_email: mailboxEmail,
+      gmail_message_id: message.id,
+      gmail_thread_id: message.threadId,
+    });
+  }
+
+  const waitingLabel = categories.find((category) => category.slug === "waiting_lead")?.gmail_label_name || "Iris/Waiting on Lead";
+  const managedStatusLabels = categories
+    .filter((category) => String(category.auto_rules?.tier || "status") === "status")
+    .map((category) => category.gmail_label_name)
+    .filter(Boolean);
+  await emailClient.applyLabels(
+    message,
+    ["AUTO_REPLIED", waitingLabel],
+    ["AUTO_REPLIED", "NEEDS_HUMAN", ...managedStatusLabels],
+  );
+  await upsertThreadLinkInDatabase({
+    threadRef,
+    channel: "email",
+    mailboxEmail,
+    gmailThreadId: message.threadId,
+    gmailMessageId: message.id,
+    threadStatus: "current_mailbox_thread",
+  });
+  const redactedExcerpt = redactEmailStyleExample(body);
+  if (redactedExcerpt) {
+    await insertApprovedEmailStyleExampleInDatabase({
+      sourceMessageId: message.id,
+      mailboxEmail,
+      category: "",
+      toneTags: ["human_approved"],
+      redactedExcerpt,
+    });
+  }
+  await releaseTakeover(threadRef, "email");
+  await updateAiDraftStatusInDatabase({ threadRef, channel: "email", status: "sent" });
+}
+
 export async function processIrisEmailPoll(
   options: IrisEmailPollOptions = {},
   deps: IrisEmailPollDeps = {},
@@ -1201,19 +1528,45 @@ export async function processIrisEmailPoll(
   const recordInteraction = deps.recordInteraction || recordIrisEmailInteraction;
   const classify = deps.classify || classifyIrisEmailText;
   const generateReply = deps.generateReply || generateIrisEmailReplyRich;
-  const categories = databaseEnabled() ? await readInboxCategoriesFromDatabase() : [];
+  const categories = deps.categories ?? (databaseEnabled() ? await readInboxCategoriesFromDatabase() : []);
   const syncedCategories = !dryRun && emailClient.syncCategoryLabels
     ? await emailClient.syncCategoryLabels(categories)
     : categories;
   const listedMessages = await emailClient.listUnreadMessages(limit);
-  const { messages, superseded } = coalesceIrisEmailThreadFollowUps(listedMessages);
+  const outboundMessages = listedMessages.filter((message) => message.direction === "outbound");
+  const inboundMessages = listedMessages.filter((message) => message.direction !== "outbound");
+  const { messages, superseded } = coalesceIrisEmailThreadFollowUps(inboundMessages);
   const results: IrisEmailProcessResult[] = [];
+  const readActiveDraft = deps.readActiveDraft || (async (threadRef: string) => (
+    databaseEnabled() ? await readAiDraftFromDatabase({ threadRef, channel: "email" }) : null
+  ));
+  const storeReviewDraft = deps.storeReviewDraft || (async (draft: Omit<AiDraft, "updated_at" | "status">) => {
+    if (databaseEnabled()) await upsertAiDraftInDatabase(draft);
+  });
+  const archiveActiveDraft = deps.archiveActiveDraft || (async (threadRef: string) => {
+    if (databaseEnabled()) await updateAiDraftStatusInDatabase({ threadRef, channel: "email", status: "archived" });
+  });
+  const resolveSentReview = deps.resolveSentReview || (async (message, state) => {
+    await recordIrisHumanReviewSend(message, syncedCategories, emailClient, state.alreadyRecorded);
+  });
+
+  if (!dryRun) {
+    for (const message of outboundMessages) {
+      const existingEvent = deps.duplicateExists
+        ? await deps.duplicateExists(message.id)
+        : databaseEnabled()
+          ? Boolean(await readConversationEventByGmailMessageId(message.id))
+          : false;
+      const activeDraft = await readActiveDraft(message.threadId || message.id);
+      if (activeDraft) await resolveSentReview(message, { alreadyRecorded: existingEvent });
+    }
+  }
 
   // Same-thread follow-ups are folded into the newest message. Mark older copies
   // handled so a later inbox scan cannot send a second reply.
   if (!dryRun) {
     for (const message of superseded) {
-      await emailClient.applyLabels(message.id, ["AUTO_REPLIED"]);
+      await emailClient.applyLabels(message, ["AUTO_REPLIED"], ["AUTO_REPLIED", "NEEDS_HUMAN"]);
     }
   }
 
@@ -1221,12 +1574,10 @@ export async function processIrisEmailPoll(
     const classificationMessage = await messageWithLeadContext(message);
     const classification = classify(classificationMessage);
     const execution = decideIrisEmailExecution(classification);
-    const replyDraft = normalizeReplyDraft(await generateReply(message, classification));
-    const categorySlug = syncedCategories.length
-      ? inferCategorySlug([buildIrisEmailConversationEventRow(message, classification, execution) as SheetRow], syncedCategories)
-      : "";
-    const categoryLabel = syncedCategories.find((category) => category.slug === categorySlug)?.gmail_label_name || "";
-    const labels = categoryLabel ? [...execution.labels, categoryLabel] : execution.labels;
+    const generatedReply = await generateReply(message, classification);
+    const replyDraft = normalizeReplyDraft(
+      generatedReply || (execution.status === "needs_human" ? generateIrisEmailReply(message, classification) : null),
+    );
     let recorded = false;
     let labeled = false;
     let sent = false;
@@ -1250,8 +1601,8 @@ export async function processIrisEmailPoll(
         await recordInteraction(message, classification, execution, replyDraft?.text || null);
         recorded = true;
       }
-      await emailClient.applyLabels(message.id, labels);
-      labeled = true;
+      const threadRef = message.threadId || message.id;
+      const activeDraft = !skippedDuplicate ? await readActiveDraft(threadRef) : null;
       if (!skippedDuplicate && options.sendReplies && execution.canReply && replyDraft && emailClient.sendReply) {
         const replyResult = await emailClient.sendReply(message, replyDraft.text, replyDraft.html);
         if (!deps.recordInteraction && databaseEnabled()) {
@@ -1260,32 +1611,47 @@ export async function processIrisEmailPoll(
           );
         }
         sent = true;
-      } else if (!skippedDuplicate && !execution.canReply && replyDraft?.text && databaseEnabled()) {
-        // Fixer-style: store AI draft in review queue even when needsHuman=true.
-        // The draft appears in the dashboard and can be approved+sent or dismissed in one click.
-        const threadRef = message.threadId || message.id;
-        const gmailDraft = emailClient.createDraft
-          ? await emailClient.createDraft(message, replyDraft.text, replyDraft.html).catch(() => null)
-          : null;
-        await upsertAiDraftInDatabase({
+        if (activeDraft) {
+          if (activeDraft.gmail_draft_id && emailClient.deleteDraft) {
+            await emailClient.deleteDraft(activeDraft.gmail_draft_id).catch(() => undefined);
+          }
+          await archiveActiveDraft(threadRef);
+        }
+      } else if (!skippedDuplicate && execution.status === "needs_human" && replyDraft?.text) {
+        const saved = emailClient.saveDraft
+          ? await emailClient.saveDraft(
+            message,
+            replyDraft.text,
+            replyDraft.html,
+            activeDraft?.gmail_draft_id || "",
+          ).catch(() => null)
+          : emailClient.createDraft
+            ? await emailClient.createDraft(message, replyDraft.text, replyDraft.html).catch(() => null)
+            : null;
+        const gmailDraft = saved && typeof saved === "object" ? saved : null;
+        await storeReviewDraft({
           thread_ref: threadRef,
           channel: "email",
           body: replyDraft.text,
-          category_slug: categorySlug || "needs_human",
+          category_slug: "needs_human",
           confidence: classification.confidence ?? 0.75,
-          reason: execution.handoffReason || "Human review — draft ready to send",
+          reason: execution.handoffReason || "Human review, draft ready to send",
           next_action: "review_send",
           safe_to_auto_send: false,
           needs_human: true,
           model: "iris_email",
           fingerprint: `iris-draft:${message.id}`,
-          gmail_draft_id: gmailDraft?.draftId || "",
+          gmail_draft_id: gmailDraft?.draftId || activeDraft?.gmail_draft_id || "",
           gmail_message_id: gmailDraft?.messageId || "",
           gmail_thread_id: gmailDraft?.threadId || message.threadId || "",
           gmail_mailbox_email: gmailDraft?.mailboxEmail || message.mailboxEmail || "",
           gmail_draft_synced_at: gmailDraft?.draftId ? new Date().toISOString() : "",
-        }).catch(() => null);
+        });
       }
+
+      const labelState = irisEmailLabels(execution, classification, syncedCategories, sent, skippedDuplicate);
+      await emailClient.applyLabels(message, labelState.labels, labelState.managedLabels);
+      labeled = true;
     }
 
     results.push({
@@ -1466,6 +1832,18 @@ export function irisEmailPollQuery(): string {
   return parts.join(" ");
 }
 
+export function irisGmailMessageDirection(
+  labelIds: string[],
+  from: string,
+  mailboxEmail: string,
+): IrisEmailMessage["direction"] | null {
+  const sender = parseEmailContact(from).email;
+  const mailbox = mailboxEmail.trim().toLowerCase();
+  if (labelIds.includes("SENT") && mailbox && sender === mailbox) return "outbound";
+  if (labelIds.includes("INBOX") && (!mailbox || sender !== mailbox)) return "inbound";
+  return null;
+}
+
 export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "subject" | "body">): boolean {
   const contact = parseEmailContact(message.from);
   const sender = contact.email || message.from.toLowerCase();
@@ -1502,6 +1880,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
       const message = {
         id: ref.id,
         threadId: detail.data.threadId || ref.threadId || ref.id,
+        direction: "inbound" as const,
         from: header(headers, "From"),
         to: header(headers, "To"),
         subject: header(headers, "Subject"),
@@ -1537,11 +1916,8 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
       throw error;
     }
     const labelIds = detail.data.labelIds || [];
-    // Explicit-id fetch is used for recovery of parked needs_human messages, which
-    // Iris already marked read (UNREAD removed) during first processing. Only require
-    // the message still lives in the inbox; do not require UNREAD, or parked
-    // real-estate inquiries could never be recovered.
-    if (!labelIds.includes("INBOX")) continue;
+    // Explicit-id fetch handles both new inbound mail and sent review drafts.
+    // Parked needs_human messages can be read already, so UNREAD is not required.
     const payload = detail.data.payload as Record<string, unknown> | undefined;
     const headers = (payload?.headers || []) as Array<{ name?: string | null; value?: string | null }>;
     const body = bodyFromPayload(payload);
@@ -1549,6 +1925,7 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
     const message = {
       id,
       threadId: detail.data.threadId || id,
+      direction: irisGmailMessageDirection(labelIds, header(headers, "From"), mailboxEmail),
       from: header(headers, "From"),
       to: header(headers, "To"),
       subject: header(headers, "Subject"),
@@ -1560,19 +1937,25 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
       mailboxEmail,
       media,
     };
-    const sender = parseEmailContact(message.from).email;
-    if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;
-    if (isIrisEligibleEmail(message)) messages.push(message);
+    if (message.direction === "outbound") messages.push({ ...message, direction: "outbound" });
+    if (message.direction === "inbound" && isIrisEligibleEmail(message)) {
+      messages.push({ ...message, direction: "inbound" });
+    }
   }
   return messages;
 }
 
-async function applyGmailLabels(gmail: GmailClient, messageId: string, labels: string[]): Promise<void> {
-  const addLabelIds = await Promise.all(labels.map((name) => ensureGmailLabel(gmail, name)));
-  await gmail.users.messages.modify({
-    userId: "me",
-    id: messageId,
-    requestBody: { addLabelIds, removeLabelIds: ["UNREAD"] },
+async function applyGmailLabels(
+  gmail: GmailClient,
+  message: IrisEmailMessage,
+  labels: string[],
+  managedLabels: string[] = [],
+): Promise<void> {
+  await replaceGmailThreadLabels(gmail, {
+    threadId: message.threadId,
+    messageId: message.id,
+    addLabelNames: labels,
+    managedLabelNames: [...managedLabels, "UNREAD"],
   });
 }
 
@@ -1606,7 +1989,7 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
   const gmail = session.gmail;
   return {
     listUnreadMessages: (limit) => listUnreadMessages(gmail, limit, session.accountEmail),
-    applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
+    applyLabels: (message, labels, managedLabels) => applyGmailLabels(gmail, message, labels, managedLabels),
     syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
     sendReply: (message, body, htmlBody) => {
       return sendGmailReplyWithOptions(gmail, {
@@ -1630,6 +2013,21 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
         references: message.references,
       }, { mailboxEmail: session.accountEmail });
     },
+    saveDraft: (message, body, htmlBody, existingDraftId) => {
+      const input = {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        htmlBody,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      };
+      return existingDraftId
+        ? updateGmailReplyDraftWithOptions(gmail, existingDraftId, input, { mailboxEmail: session.accountEmail })
+        : createGmailReplyDraftWithOptions(gmail, input, { mailboxEmail: session.accountEmail });
+    },
+    deleteDraft: (draftId) => deleteGmailDraft(gmail, draftId),
   };
 }
 
@@ -1642,7 +2040,7 @@ export async function processIrisEmailMessageIds(
   const gmail = session.gmail;
   const emailClient: IrisEmailClient = {
     listUnreadMessages: () => listMessagesByIds(gmail, messageIds, session.accountEmail),
-    applyLabels: (messageId, labels) => applyGmailLabels(gmail, messageId, labels),
+    applyLabels: (message, labels, managedLabels) => applyGmailLabels(gmail, message, labels, managedLabels),
     syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
     sendReply: (message, body, htmlBody) => {
       return sendGmailReplyWithOptions(gmail, {
@@ -1666,6 +2064,21 @@ export async function processIrisEmailMessageIds(
         references: message.references,
       }, { mailboxEmail: session.accountEmail });
     },
+    saveDraft: (message, body, htmlBody, existingDraftId) => {
+      const input = {
+        to: parseEmailContact(message.from).email,
+        subject: message.subject,
+        body,
+        htmlBody,
+        threadId: message.threadId,
+        messageId: message.messageId,
+        references: message.references,
+      };
+      return existingDraftId
+        ? updateGmailReplyDraftWithOptions(gmail, existingDraftId, input, { mailboxEmail: session.accountEmail })
+        : createGmailReplyDraftWithOptions(gmail, input, { mailboxEmail: session.accountEmail });
+    },
+    deleteDraft: (draftId) => deleteGmailDraft(gmail, draftId),
   };
   return processIrisEmailPoll(
     { ...options, limit: Math.max(1, Math.min(messageIds.length || options.limit || 10, 25)) },

@@ -514,6 +514,44 @@ export async function sendGmailDraftWithOptions(
   };
 }
 
+export async function deleteGmailDraft(gmail: GmailClient, draftId: string): Promise<void> {
+  const cleanDraftId = draftId.trim();
+  if (!cleanDraftId) return;
+  await gmail.users.drafts.delete({ userId: "me", id: cleanDraftId });
+}
+
+export async function replaceGmailThreadLabels(
+  gmail: GmailClient,
+  input: {
+    messageId: string;
+    threadId?: string;
+    addLabelNames: string[];
+    managedLabelNames: string[];
+  },
+): Promise<void> {
+  const labels = [...new Set(input.addLabelNames.filter(Boolean))];
+  const managed = new Set(input.managedLabelNames.filter(Boolean));
+  const current = await gmail.users.labels.list({ userId: "me" });
+  const idsByName = new Map((current.data.labels || []).flatMap((label) => (
+    label.name && label.id ? [[label.name, label.id] as const] : []
+  )));
+  const addLabelIds: string[] = [];
+  for (const name of labels) {
+    const id = idsByName.get(name) || await ensureGmailLabel(gmail, name);
+    if (id) addLabelIds.push(id);
+  }
+  const addedNames = new Set(labels);
+  const removeLabelIds = [...idsByName.entries()]
+    .filter(([name]) => managed.has(name) && !addedNames.has(name))
+    .map(([, id]) => id);
+  const requestBody = { addLabelIds, removeLabelIds };
+  if (input.threadId && validGmailThreadId(input.threadId)) {
+    await gmail.users.threads.modify({ userId: "me", id: input.threadId, requestBody });
+    return;
+  }
+  await gmail.users.messages.modify({ userId: "me", id: input.messageId, requestBody });
+}
+
 // Gmail only accepts a fixed background palette for labels. Rather than hardcode a
 // per-category map (which forced any custom dashboard color to fall back to gray),
 // we snap ANY hex the user picks to the nearest legal Gmail background color.
