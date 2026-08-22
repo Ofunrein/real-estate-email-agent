@@ -228,6 +228,16 @@ test("classifyIrisEmailText: keeps realistic sell-before-buy context and CTA", (
   }
 });
 
+test("classifyIrisEmailText: the word evaluation does not create seller valuation intent", () => {
+  const classification = classifyIrisEmailText({
+    subject: "Duplicate request for 1701 South Lamar",
+    body: "Is 1701 South Lamar still available? Please send the showing steps. Evaluation nonce 20260822T162341Z.",
+  });
+  assert.equal(classification.primary_lead_role, "buyer");
+  assert.equal(classification.intent, "showing_request");
+  assert.ok(!classification.opportunity_tags.includes("valuation_interest"));
+});
+
 test("classifyIrisEmailText: valuation acceptance sends booking path", () => {
   const classification = classifyIrisEmailText(email({
     subject: "Re: Your next purchase",

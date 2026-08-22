@@ -573,7 +573,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     intent = "property_search";
     role = "buyer";
     opportunityTags.push("property_pivot");
-  } else if (/(sell|selling|listing appointment|list my|list (?:it|this|the property|my (?:home|house|property)) for sale|relist|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(latestClean)) {
+  } else if (/\b(?:sell|selling|listing (?:appointment|expired)|list my|list (?:it|this|the property|my (?:home|house|property)) for sale|relist(?:ing)?|home value|valuation|what is my house worth|what could it be worth|cma)\b/i.test(latestClean)) {
     intent = "seller_lead";
     role = "seller";
     opportunityTags.push("valuation_interest");
