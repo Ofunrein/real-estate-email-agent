@@ -256,6 +256,44 @@ test("classifyIrisEmailText: routes compliance-sensitive questions to human", ()
   assert.equal(execution.canReply, false);
 });
 
+test("classifyIrisEmailText: routes offer pricing and negotiation strategy to human", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Offer strategy for 9605 Corbe Dr",
+    body: "What exact price should I offer, and how much below asking should I start? Please negotiate the best terms for me.",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(classification.intent, "human_required");
+  assert.ok(classification.compliance_flags.includes("broker_approval"));
+  assert.deepEqual(execution.labels, ["NEEDS_HUMAN"]);
+  assert.equal(execution.canReply, false);
+});
+
+test("classifyIrisEmailText: routes conflicting scheduling changes to human", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Conflicting showing times",
+    body: "I already have two conflicting appointments tomorrow at 2 PM and 3 PM. Move one without asking and confirm which showing I should attend at 9605 Corbe Dr.",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(classification.intent, "human_required");
+  assert.ok(classification.compliance_flags.includes("broker_approval"));
+  assert.deepEqual(execution.labels, ["NEEDS_HUMAN"]);
+  assert.equal(execution.canReply, false);
+});
+
+test("classifyIrisEmailText: ignores unrelated marketing that explicitly disclaims real estate", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Grow your SaaS pipeline",
+    body: "We sell outbound marketing automation for SaaS founders. Book a demo to triple your pipeline. This is not about buying or selling real estate.",
+  }));
+  const execution = decideIrisEmailExecution(classification);
+
+  assert.equal(classification.intent, "spam");
+  assert.equal(execution.canReply, false);
+  assert.deepEqual(execution.labels, []);
+});
+
 test("buildIrisEmailLeadMemoryRow: carries structured email qualification fields", () => {
   const classification = classifyIrisEmailText(email({
     body: "Looking for 4 bed homes near Round Rock under $800k next month.",

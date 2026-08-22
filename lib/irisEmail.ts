@@ -331,6 +331,12 @@ export function detectIrisComplianceFlags(text: string): string[] {
   if (/(waive inspection|\bcontract\b|\bcounteroffer\b|\bcommission\b|buyer agreement|listing agreement|agency agreement|representation agreement)/.test(text_l)) {
     flags.push("contract_terms");
   }
+  if (
+    /(?:what (?:exact )?price should i offer|how much (?:below|above) asking|offer strategy|negotiate (?:the )?(?:price|best terms|terms)|write (?:an|the) offer|submit (?:an|the) offer)/.test(text_l)
+    || /(?:conflicting (?:appointments?|showings?|times?)|(?:move|cancel|reschedule) (?:one|an? appointment|an? showing) without asking|which showing should i attend)/.test(text_l)
+  ) {
+    flags.push("broker_approval");
+  }
   if (/(scam|fraud|bait and switch|report you|harassment|stop spamming|spam complaint)/.test(text_l)) {
     flags.push("angry_or_complaint");
   }
@@ -526,7 +532,8 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
 
   const systemEmailLike = /(confirm (?:your )?email|confirm email address|activate account|complete your registration|account (?:has been )?(?:created|activated)|verification link|welcome to .{0,40}(?:checker|platform|portal)|bulk email checker)/i.test(latestClean);
   const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
-  const realEstateLeadLike = /(home|house|condo|property|listing|showing|tour|buyer|seller|\brent\b|\blease\b|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0;
+  const explicitNonRealEstate = /\b(?:not about|not related to|unrelated to)\b.{0,50}\b(?:buying|selling|real estate|property|homes?)\b/i.test(latestClean);
+  const realEstateLeadLike = !explicitNonRealEstate && (/(home|house|condo|property|listing|showing|tour|buyer|seller|\brent\b|\blease\b|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0);
   const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
   const wrongRecipient = wrongRecipientSignal(latestClean);
   // An email whose body is only an attachment placeholder gives Iris nothing to answer.
