@@ -12,6 +12,7 @@ import {
   readConversationEventByGmailMessageId,
   readEventsForLeadFromDatabase,
   readInboxCategoriesFromDatabase,
+  readInboxSettingsFromDatabase,
   updateInboxCategoryGmailLabelInDatabase,
   updateAiDraftStatusInDatabase,
   upsertAiDraftInDatabase,
@@ -30,7 +31,19 @@ import {
   type GmailDraftResult,
   type GmailReplyResult,
 } from "@/lib/gmailConnection";
-import { inferCategorySlug, type AiDraft, type InboxCategory } from "@/lib/inboxSettings";
+import {
+  AUTO_REPLIED_LABEL,
+  planMailboxLabels,
+  type MailboxLabelPlan,
+} from "@/lib/inboxLabelPlan";
+import {
+  DEFAULT_INBOX_SETTINGS,
+  inferCategorySlug,
+  mailboxCategories,
+  type AiDraft,
+  type InboxCategory,
+  type InboxSettings,
+} from "@/lib/inboxSettings";
 import { releaseTakeover } from "@/lib/humanTakeover";
 import { isProxiableImageUrl, mediaProxyUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
@@ -106,9 +119,17 @@ export type IrisEmailMessage = {
   receivedAt?: string;
   mailboxEmail?: string;
   media?: OmnichannelMedia[];
+  /** Provider label/category names already on the thread. Read-only input to the label plan. */
+  labelIds?: string[];
+  /** The sender is an existing lead for this tenant. Never cold, at any marketing strictness. */
+  knownContact?: boolean;
 };
 
 export type IrisEmailExecution = {
+  /**
+   * INTERNAL machine state, not mailbox label names. `lib/inboxLabelPlan.ts` translates these into
+   * the user-facing `Auto Replied` / `Needs Human` labels; nothing writes these tokens to a mailbox.
+   */
   labels: ("AUTO_REPLIED" | "NEEDS_HUMAN")[];
   status: "processed" | "needs_human" | "spam";
   eventType: "email_inbound" | "human_handoff" | "spam";
@@ -130,6 +151,8 @@ export type IrisEmailProcessResult = {
   sent: boolean;
   skippedDuplicate: boolean;
   dryRun: boolean;
+  /** What was (or on a dry run, would have been) written to the mailbox, with its audit trail. */
+  labelPlan: MailboxLabelPlan & { statusSlug: string };
 };
 
 export type IrisEmailPollResult = {
@@ -166,7 +189,12 @@ export function coalesceIrisEmailThreadFollowUps(messages: IrisEmailMessage[]): 
 
 export type IrisEmailClient = {
   listUnreadMessages(limit: number): Promise<IrisEmailMessage[]>;
-  applyLabels(message: IrisEmailMessage, labels: string[], managedLabels?: string[]): Promise<void>;
+  applyLabels(
+    message: IrisEmailMessage,
+    labels: string[],
+    managedLabels?: string[],
+    options?: { removeFromInbox?: boolean },
+  ): Promise<void>;
   syncCategoryLabels?(categories: InboxCategory[]): Promise<InboxCategory[]>;
   sendReply?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailReplyResult | void>;
   createDraft?(message: IrisEmailMessage, body: string, htmlBody?: string): Promise<GmailDraftResult | void>;
@@ -199,6 +227,8 @@ export type IrisEmailPollDeps = {
   generateReply?: (message: IrisEmailMessage, classification: IrisEmailClassification) => string | IrisEmailReplyDraft | null | Promise<string | IrisEmailReplyDraft | null>;
   duplicateExists?: (gmailMessageId: string) => Promise<boolean>;
   categories?: InboxCategory[];
+  /** Tenant inbox settings. Defaults to the untouched-inbox defaults, never to categorization on. */
+  settings?: InboxSettings;
   readActiveDraft?: (threadRef: string) => Promise<Pick<AiDraft, "gmail_draft_id"> | null>;
   storeReviewDraft?: (draft: Omit<AiDraft, "updated_at" | "status">) => Promise<void>;
   archiveActiveDraft?: (threadRef: string) => Promise<void>;
@@ -1332,6 +1362,7 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
   const lead = await findLeadInDatabase({ email: contact.email });
   const events = await readEventsForLeadFromDatabase({ email: contact.email, phone: lead?.phone }, 20);
   const threadEvents = events.filter((event) => (event.thread_ref || event.gmail_thread_id) === message.threadId);
+  const knownContact = Boolean(lead);
   if (
     !lead?.property_interest
     && !lead?.budget
@@ -1339,7 +1370,7 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
     && !lead?.bedrooms
     && !lead?.summary
     && !threadEvents.length
-  ) return message;
+  ) return { ...message, knownContact };
   const recentEvents = threadEvents.slice(-6).map((event) => {
     const when = event.event_at || event.created_at || "";
     const text = cleanBody(stripHtml(event.message_text || event.summary || "")).slice(0, 220);
@@ -1353,6 +1384,7 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
   ].filter(Boolean).join("\n");
   return {
     ...message,
+    knownContact,
     body: `${message.body}\n\n${THREAD_CONTEXT_MARKER}\n${context}`,
   };
 }
@@ -1508,31 +1540,48 @@ function irisEmailTopicCategorySlugs(classification: IrisEmailClassification): s
   return [...new Set(slugs)];
 }
 
+/**
+ * Maps INTERNAL execution state onto the mailbox plan. The internal status slug stays in the
+ * database; only `planMailboxLabels` decides what a user ever sees.
+ *
+ * `skippedDuplicate` deliberately does NOT count as a confirmed send. A duplicate means "this
+ * message was already handled", which is not evidence that a reply went out on this pass, so it
+ * cannot mint an `Auto Replied` label. The re-assert below preserves a label the earlier pass
+ * legitimately wrote, so idempotency survives without lying about what happened.
+ */
 function irisEmailLabels(
   execution: IrisEmailExecution,
   classification: IrisEmailClassification,
   categories: InboxCategory[],
   sent: boolean,
   skippedDuplicate: boolean,
-): { labels: string[]; managedLabels: string[]; statusSlug: string } {
+  settings: InboxSettings = DEFAULT_INBOX_SETTINGS,
+  message?: IrisEmailMessage,
+): MailboxLabelPlan & { statusSlug: string } {
   const statusSlug = irisEmailStatusCategorySlug(execution, sent, skippedDuplicate);
-  const slugs = new Set([statusSlug, ...irisEmailTopicCategorySlugs(classification)]);
-  const categoryLabels = categories
-    .filter((category) => category.enabled && slugs.has(category.slug))
-    .map((category) => category.gmail_label_name)
-    .filter(Boolean);
-  const workflowLabels = execution.status === "needs_human"
-    ? ["NEEDS_HUMAN"]
-    : sent || skippedDuplicate
-      ? ["AUTO_REPLIED"]
-      : [];
+  const plan = planMailboxLabels({
+    settings,
+    categories,
+    sendConfirmed: sent,
+    stoppedForReview: execution.status === "needs_human",
+    signals: {
+      fromEmail: message?.from,
+      subject: message?.subject,
+      body: message?.body,
+      existingLabels: message?.labelIds || [],
+      knownContact: Boolean(message?.knownContact),
+    },
+  });
+  // Preserve, never mint: an already-handled duplicate keeps whatever managed label it carries.
+  const carriedOver = skippedDuplicate && !sent
+    ? plan.managedLabels.filter((name) => (message?.labelIds || []).includes(name))
+    : [];
+  const topicSlugs = irisEmailTopicCategorySlugs(classification);
   return {
-    labels: [...new Set([...workflowLabels, ...categoryLabels])],
-    managedLabels: [...new Set([
-      "AUTO_REPLIED",
-      "NEEDS_HUMAN",
-      ...categories.map((category) => category.gmail_label_name).filter(Boolean),
-    ])],
+    ...plan,
+    addLabels: [...new Set([...plan.addLabels, ...carriedOver])],
+    // Internal-only topic slugs stay internal; they are surfaced to callers for the DB row.
+    categorySlug: plan.categorySlug || topicSlugs[0] || "",
     statusSlug,
   };
 }
@@ -1542,6 +1591,7 @@ async function recordIrisHumanReviewSend(
   categories: InboxCategory[],
   emailClient: IrisEmailClient,
   alreadyRecorded: boolean,
+  settings: InboxSettings = DEFAULT_INBOX_SETTINGS,
 ): Promise<void> {
   const threadRef = message.threadId || message.id;
   const mailboxEmail = (message.mailboxEmail || parseEmailContact(message.from).email).toLowerCase();
@@ -1570,16 +1620,23 @@ async function recordIrisHumanReviewSend(
     });
   }
 
-  const waitingLabel = categories.find((category) => category.slug === "waiting_lead")?.gmail_label_name || "Iris/Waiting on Lead";
-  const managedStatusLabels = categories
-    .filter((category) => String(category.auto_rules?.tier || "status") === "status")
-    .map((category) => category.gmail_label_name)
-    .filter(Boolean);
-  await emailClient.applyLabels(
-    message,
-    ["AUTO_REPLIED", waitingLabel],
-    ["AUTO_REPLIED", "NEEDS_HUMAN", ...managedStatusLabels],
-  );
+  // A human pressing send in Gmail IS a confirmed authorized send, so `Auto Replied` is earned and
+  // `Needs Human` is cleared. Nothing else about the user's organization is touched.
+  const plan = planMailboxLabels({
+    settings,
+    categories,
+    sendConfirmed: true,
+    stoppedForReview: false,
+    signals: {
+      fromEmail: message.from,
+      subject: message.subject,
+      existingLabels: message.labelIds || [],
+      knownContact: message.knownContact,
+    },
+  });
+  await emailClient.applyLabels(message, plan.addLabels, plan.managedLabels, {
+    removeFromInbox: plan.removeFromInbox,
+  });
   await upsertThreadLinkInDatabase({
     threadRef,
     channel: "email",
@@ -1613,8 +1670,14 @@ export async function processIrisEmailPoll(
   const classify = deps.classify || classifyIrisEmailText;
   const generateReply = deps.generateReply || generateIrisEmailReplyRich;
   const categories = deps.categories ?? (databaseEnabled() ? await readInboxCategoriesFromDatabase() : []);
+  // Read the tenant's real settings, exactly like the categories line above. Without this the
+  // production poll always ran on DEFAULT_INBOX_SETTINGS, so a user who opted in and pressed start
+  // still got nothing organized. No database means the untouched-inbox defaults, never opt-in.
+  const settings = deps.settings ?? (databaseEnabled() ? await readInboxSettingsFromDatabase() : DEFAULT_INBOX_SETTINGS);
+  // Only ever create the labels the plan can actually write. With categorization off that is the
+  // two managed system labels and nothing else, so a poll never litters a user's label list.
   const syncedCategories = !dryRun && emailClient.syncCategoryLabels
-    ? await emailClient.syncCategoryLabels(categories)
+    ? await emailClient.syncCategoryLabels(mailboxCategories(settings, categories))
     : categories;
   const listedMessages = await emailClient.listUnreadMessages(limit);
   const outboundMessages = listedMessages.filter((message) => message.direction === "outbound");
@@ -1631,7 +1694,7 @@ export async function processIrisEmailPoll(
     if (databaseEnabled()) await updateAiDraftStatusInDatabase({ threadRef, channel: "email", status: "archived" });
   });
   const resolveSentReview = deps.resolveSentReview || (async (message, state) => {
-    await recordIrisHumanReviewSend(message, syncedCategories, emailClient, state.alreadyRecorded);
+    await recordIrisHumanReviewSend(message, syncedCategories, emailClient, state.alreadyRecorded, settings);
   });
 
   if (!dryRun) {
@@ -1646,11 +1709,16 @@ export async function processIrisEmailPoll(
     }
   }
 
-  // Same-thread follow-ups are folded into the newest message. Mark older copies
-  // handled so a later inbox scan cannot send a second reply.
+  // Same-thread follow-ups are folded into the newest message. Mark older copies handled so a
+  // later inbox scan cannot send a second reply.
+  //
+  // Marking read is ALL that happens here. The old code stamped `Auto Replied` on every superseded
+  // copy, which claimed a send that never happened for that message and — because the Gmail call is
+  // thread-scoped — raced the newest message's own plan a few lines below. Empty managed set means
+  // nothing is removed either, so a label the previous pass legitimately wrote survives.
   if (!dryRun) {
     for (const message of superseded) {
-      await emailClient.applyLabels(message, ["AUTO_REPLIED"], ["AUTO_REPLIED", "NEEDS_HUMAN"]);
+      await emailClient.applyLabels(message, [], []);
     }
   }
 
@@ -1666,6 +1734,7 @@ export async function processIrisEmailPoll(
     let labeled = false;
     let sent = false;
     let skippedDuplicate = false;
+    let labelPlan: (MailboxLabelPlan & { statusSlug: string }) | null = null;
 
     if (!dryRun) {
       const existingEvent = deps.duplicateExists
@@ -1733,9 +1802,42 @@ export async function processIrisEmailPoll(
         });
       }
 
-      const labelState = irisEmailLabels(execution, classification, syncedCategories, sent, skippedDuplicate);
-      await emailClient.applyLabels(message, labelState.labels, labelState.managedLabels);
+      // Label writes come AFTER the send resolves, always. `sent` is only true once sendReply has
+      // returned, so `Auto Replied` can never appear on a thread whose send failed or is in flight.
+      const labelState = irisEmailLabels(
+        execution,
+        classification,
+        syncedCategories,
+        sent,
+        skippedDuplicate,
+        settings,
+        { ...classificationMessage, labelIds: message.labelIds || [] },
+      );
+      await emailClient.applyLabels(message, labelState.addLabels, labelState.managedLabels, {
+        removeFromInbox: labelState.removeFromInbox,
+      });
       labeled = true;
+      labelPlan = labelState;
+      // Persist WHY the mailbox changed. Reorganizing someone's mail without a readable trail is
+      // the thing that makes an inbox agent impossible to trust after the fact. Never fatal.
+      await writeRequestAuditEvent({
+        route: "agent:iris-email",
+        method: "LABEL",
+        channel: "email",
+        provider: "gmail",
+        threadRef: message.threadId,
+        contactRef: parseEmailContact(message.from).email || message.from,
+        providerMessageId: message.id,
+        stage: "mailbox_label",
+        outcome: labelState.removeFromInbox ? "filed" : "labeled",
+        metadata: {
+          added: labelState.addLabels,
+          managed: labelState.managedLabels,
+          removed_from_inbox: labelState.removeFromInbox,
+          category_slug: labelState.categorySlug,
+          reasons: labelState.reasons,
+        },
+      }).catch(() => undefined);
     }
 
     results.push({
@@ -1751,6 +1853,17 @@ export async function processIrisEmailPoll(
       sent,
       skippedDuplicate,
       dryRun,
+      // On a dry run this is the plan that WOULD have been applied, so `--dry-run` doubles as the
+      // preview surface for a mailbox nobody has agreed to reorganize yet.
+      labelPlan: labelPlan || irisEmailLabels(
+        execution,
+        classification,
+        syncedCategories,
+        sent,
+        skippedDuplicate,
+        settings,
+        { ...classificationMessage, labelIds: message.labelIds || [] },
+      ),
     });
   }
 
@@ -1946,6 +2059,27 @@ export function isIrisEligibleEmail(message: Pick<IrisEmailMessage, "from" | "su
   return true;
 }
 
+/**
+ * Gmail returns opaque label IDs (`Label_12`) for user labels and bare tokens (`INBOX`) for system
+ * ones. The label plan reasons about NAMES, so resolve once per poll rather than per message.
+ * A failure here degrades to "no known labels", which makes `respect_existing_labels` conservative
+ * in the wrong direction, so it deliberately keeps the system tokens it can map without the API.
+ */
+async function gmailLabelNamesById(gmail: GmailClient): Promise<Map<string, string>> {
+  try {
+    const listed = await gmail.users.labels.list({ userId: "me" });
+    return new Map((listed.data.labels || []).flatMap((label) => (
+      label.id && label.name ? [[label.id, label.name] as const] : []
+    )));
+  } catch {
+    return new Map();
+  }
+}
+
+function resolveLabelNames(labelIds: string[], namesById: Map<string, string>): string[] {
+  return labelIds.map((id) => namesById.get(id) || id).filter(Boolean);
+}
+
 async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmail = ""): Promise<IrisEmailMessage[]> {
   const listed = await gmail.users.messages.list({
     userId: "me",
@@ -1954,6 +2088,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
   });
   const refs = listed.data.messages || [];
   const messages: IrisEmailMessage[] = [];
+  const labelNamesById = refs.length ? await gmailLabelNamesById(gmail) : new Map<string, string>();
   for (const ref of refs) {
     if (!ref.id) continue;
       const detail = await gmail.users.messages.get({ userId: "me", id: ref.id, format: "full" });
@@ -1975,6 +2110,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
         receivedAt: header(headers, "Date"),
         mailboxEmail,
         media,
+        labelIds: resolveLabelNames(detail.data.labelIds || [], labelNamesById),
       };
     const sender = parseEmailContact(message.from).email;
     if (mailboxEmail && sender && sender === mailboxEmail.toLowerCase()) continue;
@@ -1986,6 +2122,7 @@ async function listUnreadMessages(gmail: GmailClient, limit: number, mailboxEmai
 async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailboxEmail = ""): Promise<IrisEmailMessage[]> {
   const uniqueIds = [...new Set(messageIds.map((id) => id.trim()).filter(Boolean))].slice(0, 25);
   const messages: IrisEmailMessage[] = [];
+  const labelNamesById = uniqueIds.length ? await gmailLabelNamesById(gmail) : new Map<string, string>();
   for (const id of uniqueIds) {
     let detail;
     try {
@@ -2020,6 +2157,7 @@ async function listMessagesByIds(gmail: GmailClient, messageIds: string[], mailb
       receivedAt: header(headers, "Date"),
       mailboxEmail,
       media,
+      labelIds: resolveLabelNames(labelIds, labelNamesById),
     };
     if (message.direction === "outbound") messages.push({ ...message, direction: "outbound" });
     if (message.direction === "inbound" && isIrisEligibleEmail(message)) {
@@ -2034,12 +2172,15 @@ async function applyGmailLabels(
   message: IrisEmailMessage,
   labels: string[],
   managedLabels: string[] = [],
+  options: { removeFromInbox?: boolean } = {},
 ): Promise<void> {
   await replaceGmailThreadLabels(gmail, {
     threadId: message.threadId,
     messageId: message.id,
     addLabelNames: labels,
-    managedLabelNames: [...managedLabels, "UNREAD"],
+    // UNREAD is always managed (Iris has handled the message). INBOX only joins the managed set
+    // when the plan actually asked to file the thread, so a default run can never archive mail.
+    managedLabelNames: [...managedLabels, "UNREAD", ...(options.removeFromInbox ? ["INBOX"] : [])],
   });
 }
 
@@ -2047,7 +2188,13 @@ async function syncGmailCategoryLabels(gmail: GmailClient, categories: InboxCate
   if (!categories.length) return categories;
   const synced: InboxCategory[] = [];
   for (const category of categories) {
-    const labelName = category.gmail_label_name || `Iris/${category.name}`;
+    // No `Iris/` fallback. A category with no explicit label name is a configuration bug, not a
+    // licence to invent a namespaced label inside someone's mailbox, so it is skipped.
+    const labelName = category.gmail_label_name.trim();
+    if (!labelName || category.auto_rules?.mailbox !== true) {
+      synced.push(category);
+      continue;
+    }
     // Pass category color so Gmail labels are color-coded to match the dashboard
     const labelId = await ensureGmailLabel(gmail, labelName, category.color);
     const next = { ...category, gmail_label_id: labelId, gmail_label_name: labelName };
@@ -2063,9 +2210,21 @@ async function syncGmailCategoryLabels(gmail: GmailClient, categories: InboxCate
   return synced;
 }
 
-export async function syncInboxCategoriesWithGmail(categories: InboxCategory[]): Promise<InboxCategory[]> {
+export async function syncInboxCategoriesWithGmail(
+  categories: InboxCategory[],
+  settings: InboxSettings = DEFAULT_INBOX_SETTINGS,
+): Promise<InboxCategory[]> {
   const session = await createIrisGmailSession();
-  return syncGmailCategoryLabels(session.gmail, categories);
+  // Create only what the plan may write. Saving settings must not pre-create a taxonomy the user
+  // has not switched on.
+  const eligible = mailboxCategories(settings, categories);
+  const eligibleSlugs = new Set(eligible.map((category) => category.slug));
+  const synced = new Map(
+    (await syncGmailCategoryLabels(session.gmail, eligible)).map((category) => [category.slug, category] as const),
+  );
+  return categories.map((category) => (
+    eligibleSlugs.has(category.slug) ? synced.get(category.slug) || category : category
+  ));
 }
 
 export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
@@ -2073,7 +2232,7 @@ export async function createGmailIrisEmailClient(): Promise<IrisEmailClient> {
   const gmail = session.gmail;
   return {
     listUnreadMessages: (limit) => listUnreadMessages(gmail, limit, session.accountEmail),
-    applyLabels: (message, labels, managedLabels) => applyGmailLabels(gmail, message, labels, managedLabels),
+    applyLabels: (message, labels, managedLabels, options) => applyGmailLabels(gmail, message, labels, managedLabels, options),
     syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
     sendReply: (message, body, htmlBody) => {
       return sendGmailReplyWithOptions(gmail, {
@@ -2124,7 +2283,7 @@ export async function processIrisEmailMessageIds(
   const gmail = session.gmail;
   const emailClient: IrisEmailClient = {
     listUnreadMessages: () => listMessagesByIds(gmail, messageIds, session.accountEmail),
-    applyLabels: (message, labels, managedLabels) => applyGmailLabels(gmail, message, labels, managedLabels),
+    applyLabels: (message, labels, managedLabels, options) => applyGmailLabels(gmail, message, labels, managedLabels, options),
     syncCategoryLabels: (categories) => syncGmailCategoryLabels(gmail, categories),
     sendReply: (message, body, htmlBody) => {
       return sendGmailReplyWithOptions(gmail, {

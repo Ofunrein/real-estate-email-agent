@@ -344,9 +344,12 @@ test("processIrisEmailPoll: human-only turn creates a proactive review draft", a
   assert.match(calls.drafts?.[0].body || "", /team|review|follow up/i);
   assert.equal(stored.length, 1);
   assert.equal(stored[0].needs_human, true);
-  assert.ok(calls.labels[0].includes("NEEDS_HUMAN"));
-  assert.ok(calls.labels[0].includes("Needs Human"));
-  assert.ok(calls.managedLabels?.[0].includes("Waiting on Reply"));
+  // Internal machine tokens stay internal. The mailbox sees exactly one clean managed label, and
+  // the managed set is the two system labels only, so nothing of the user's can be removed.
+  assert.deepEqual(calls.labels[0], ["Needs Human"]);
+  assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
+  assert.deepEqual(calls.managedLabels?.[0].slice().sort(), ["Auto Replied", "Needs Human"]);
+  assert.ok(!calls.managedLabels?.[0].includes("Waiting on Reply"));
 });
 
 test("processIrisEmailPoll: a later safe turn auto-sends and clears the old review draft", async () => {
@@ -377,9 +380,11 @@ test("processIrisEmailPoll: a later safe turn auto-sends and clears the old revi
   assert.equal(calls.sent.length, 1);
   assert.deepEqual(calls.deletedDrafts, ["draft_old"]);
   assert.deepEqual(archived, ["thread_1"]);
-  assert.ok(calls.labels[0].includes("AUTO_REPLIED"));
-  assert.ok(calls.labels[0].includes("Waiting on Reply"));
-  assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
+  // A confirmed send earns exactly one label. The internal `waiting_lead` state is a database
+  // fact and is no longer written into the user's label list.
+  assert.deepEqual(calls.labels[0], ["Auto Replied"]);
+  assert.ok(!calls.labels[0].includes("AUTO_REPLIED"));
+  assert.ok(!calls.labels[0].includes("Waiting on Reply"));
   assert.ok(!calls.labels[0].includes("Needs Human"));
 });
 
@@ -447,7 +452,10 @@ test("processIrisEmailPoll: spam closes without a review draft", async () => {
 
   assert.equal(calls.sent.length, 0);
   assert.equal(calls.drafts?.length, 0);
-  assert.ok(calls.labels[0].includes("Closed No Reply"));
+  // No send and no human stop, so no label at all. `Closed No Reply` is internal state now: Iris
+  // does not file a stranger's cold pitch into the user's mailbox taxonomy.
+  assert.deepEqual(calls.labels[0], []);
+  assert.ok(!calls.labels[0].includes("Closed No Reply"));
   assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
 });
 
@@ -526,9 +534,28 @@ test("processIrisEmailPoll: duplicate unread messages are labeled but not record
   assert.equal(result.recorded, 0);
   assert.equal(result.sent, 0);
   assert.equal(result.results[0].skippedDuplicate, true);
-  assert.deepEqual(calls.labels, [["AUTO_REPLIED"]]);
+  // A duplicate is "already handled", which is NOT evidence a reply went out on this pass, so it
+  // cannot mint `Auto Replied`. Nothing is removed either, so an earlier legitimate label survives.
+  assert.deepEqual(calls.labels, [[]]);
   assert.deepEqual(calls.sent, []);
   assert.equal(recorded, 0);
+});
+
+test("a duplicate re-asserts an Auto Replied label it already carries instead of stripping it", async () => {
+  const calls: FakeEmailCalls = { labels: [], sent: [], managedLabels: [] };
+  await processIrisEmailPoll(
+    { dryRun: false, sendReplies: true },
+    {
+      emailClient: fakeClient([email({ labelIds: ["INBOX", "Auto Replied"] })], calls),
+      duplicateExists: async () => true,
+      recordInteraction: async () => {},
+    },
+  );
+
+  // Idempotency without lying: the label is preserved because the thread already had it, not
+  // because this pass sent anything.
+  assert.deepEqual(calls.labels[0], ["Auto Replied"]);
+  assert.deepEqual(calls.sent, []);
 });
 
 test("isIrisEligibleEmail: blocks system and no-reply senders before auto-send", () => {

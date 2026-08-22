@@ -48,7 +48,10 @@ export async function PATCH(request: NextRequest) {
   let gmail_label_sync_error = "";
   if (body.categories) {
     try {
-      categories = await syncInboxCategoriesWithGmail(savedCategories);
+      // Settings decide which categories may exist as labels at all, so the saved settings have to
+      // travel with them. Without this the sync ran on the untouched-inbox defaults and never
+      // created the piles a user had just opted into.
+      categories = await syncInboxCategoriesWithGmail(savedCategories, settings);
     } catch (error) {
       gmail_label_sync_error = error instanceof Error ? error.message : String(error);
     }

@@ -9,8 +9,11 @@ import {
 import {
   DEFAULT_INBOX_CATEGORIES,
   DEFAULT_INBOX_SETTINGS,
+  MANAGED_SYSTEM_CATEGORIES,
+  mergeInboxSettings,
   normalizeInboxCategory,
   normalizeInboxSettings,
+  OPTIONAL_CATEGORY_PRESETS,
   type AiDraft,
   type InboxCategory,
   type InboxSettings,
@@ -1114,17 +1117,30 @@ export async function markEmailAccountErrorForClientInDatabase(clientIdValue: st
   );
 }
 
+/**
+ * Match a stored row back to its shipped definition by SLUG, not by array position. Position-based
+ * fallback silently borrowed another category's color, description and mailbox eligibility as soon
+ * as a tenant reordered or partially saved their categories.
+ */
+function inboxCategoryTemplate(slug: string): InboxCategory | undefined {
+  const clean = String(slug || "").trim().toLowerCase();
+  return [...MANAGED_SYSTEM_CATEGORIES, ...OPTIONAL_CATEGORY_PRESETS, ...DEFAULT_INBOX_CATEGORIES]
+    .find((category) => category.slug === clean);
+}
+
 function inboxCategoryFromRow(row: Record<string, unknown>): InboxCategory {
+  const slug = String(row.slug || "");
   return normalizeInboxCategory({
-    slug: String(row.slug || ""),
+    slug,
     name: String(row.name || ""),
+    description: String(row.description || ""),
     color: String(row.color || ""),
     sort_order: Number(row.sort_order || 0),
     enabled: Boolean(row.enabled),
     gmail_label_id: String(row.gmail_label_id || ""),
     gmail_label_name: String(row.gmail_label_name || ""),
     auto_rules: row.auto_rules && typeof row.auto_rules === "object" ? row.auto_rules as Record<string, unknown> : {},
-  });
+  }, inboxCategoryTemplate(slug));
 }
 
 function aiDraftFromRow(row: Record<string, unknown>): AiDraft {
@@ -1194,10 +1210,17 @@ export async function ensureInboxDefaultsInDatabase(): Promise<void> {
 export async function readInboxSettingsFromDatabase(): Promise<InboxSettings> {
   if (!await tableReady("inbox_settings")) return DEFAULT_INBOX_SETTINGS;
   await ensureInboxDefaultsInDatabase();
+  // Migration 028 columns are selected only when present. On a database that has not run it yet the
+  // absent values fall back through normalizeInboxSettings to "inbox untouched", which is the safe
+  // direction: a missing column can never read as consent to reorganize someone's mail.
+  const columns = await tableColumns("inbox_settings");
+  const optIn = columns.has("categorization_enabled");
   const result = await getPool().query(
     `select draft_first, auto_send_email, auto_send_sms, auto_send_whatsapp,
             auto_send_messenger, auto_send_instagram, auto_send_website_chat,
-            channels_enabled, cache_status
+            channels_enabled, cache_status${optIn ? `,
+            categorization_enabled, respect_existing_labels, archive_after_send,
+            marketing_strictness, category_rules, onboarding_choice, labelling_started_at` : ""}
        from inbox_settings
       where client_id = $1
       limit 1`,
@@ -1217,19 +1240,33 @@ export async function readInboxSettingsFromDatabase(): Promise<InboxSettings> {
     },
     channels_enabled: row.channels_enabled || {},
     cache_status: row.cache_status || {},
+    ...(optIn ? {
+      categorization_enabled: Boolean(row.categorization_enabled),
+      respect_existing_labels: Boolean(row.respect_existing_labels),
+      archive_after_send: Boolean(row.archive_after_send),
+      marketing_strictness: row.marketing_strictness || "off",
+      category_rules: Array.isArray(row.category_rules) ? row.category_rules : [],
+      onboarding_choice: row.onboarding_choice || "",
+      labelling_started_at: row.labelling_started_at
+        ? new Date(row.labelling_started_at).toISOString()
+        : "",
+    } : {}),
   });
 }
 
 export async function upsertInboxSettingsInDatabase(settings: Partial<InboxSettings>): Promise<InboxSettings> {
   if (!await tableReady("inbox_settings")) return normalizeInboxSettings(settings);
   await ensureInboxDefaultsInDatabase();
-  const normalized = normalizeInboxSettings(settings);
+  const normalized = mergeInboxSettings(await readInboxSettingsFromDatabase(), settings);
+  const optIn = (await tableColumns("inbox_settings")).has("categorization_enabled");
   await getPool().query(
     `insert into inbox_settings (
         client_id, draft_first, auto_send_email, auto_send_sms, auto_send_whatsapp,
         auto_send_messenger, auto_send_instagram, auto_send_website_chat,
-        channels_enabled, cache_status
-      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb)
+        channels_enabled, cache_status${optIn ? `,
+        categorization_enabled, respect_existing_labels, archive_after_send,
+        marketing_strictness, category_rules, onboarding_choice, labelling_started_at` : ""}
+      ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb${optIn ? ", $11, $12, $13, $14, $15::jsonb, $16, $17" : ""})
       on conflict (client_id) do update set
         draft_first = excluded.draft_first,
         auto_send_email = excluded.auto_send_email,
@@ -1239,7 +1276,14 @@ export async function upsertInboxSettingsInDatabase(settings: Partial<InboxSetti
         auto_send_instagram = excluded.auto_send_instagram,
         auto_send_website_chat = excluded.auto_send_website_chat,
         channels_enabled = excluded.channels_enabled,
-        cache_status = excluded.cache_status,
+        cache_status = excluded.cache_status,${optIn ? `
+        categorization_enabled = excluded.categorization_enabled,
+        respect_existing_labels = excluded.respect_existing_labels,
+        archive_after_send = excluded.archive_after_send,
+        marketing_strictness = excluded.marketing_strictness,
+        category_rules = excluded.category_rules,
+        onboarding_choice = excluded.onboarding_choice,
+        labelling_started_at = excluded.labelling_started_at,` : ""}
         updated_at = now()`,
     [
       clientId(),
@@ -1252,6 +1296,15 @@ export async function upsertInboxSettingsInDatabase(settings: Partial<InboxSetti
       normalized.auto_send.website_chat,
       JSON.stringify(normalized.channels_enabled),
       JSON.stringify(normalized.cache_status),
+      ...(optIn ? [
+        normalized.categorization_enabled,
+        normalized.respect_existing_labels,
+        normalized.archive_after_send,
+        normalized.marketing_strictness,
+        JSON.stringify(normalized.category_rules),
+        normalized.onboarding_choice,
+        normalized.labelling_started_at || null,
+      ] : []),
     ],
   );
   return normalized;
@@ -1260,8 +1313,9 @@ export async function upsertInboxSettingsInDatabase(settings: Partial<InboxSetti
 export async function readInboxCategoriesFromDatabase(): Promise<InboxCategory[]> {
   if (!await tableReady("inbox_categories")) return DEFAULT_INBOX_CATEGORIES;
   await ensureInboxDefaultsInDatabase();
+  const hasDescription = (await tableColumns("inbox_categories")).has("description");
   const result = await getPool().query(
-    `select slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules
+    `select slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules${hasDescription ? ", description" : ""}
        from inbox_categories
       where client_id = $1
       order by sort_order asc, name asc`,
@@ -1291,12 +1345,13 @@ export async function updateInboxCategoryGmailLabelInDatabase(input: {
 export async function upsertInboxCategoriesInDatabase(categories: Partial<InboxCategory>[]): Promise<InboxCategory[]> {
   if (!await tableReady("inbox_categories")) return categories.map((category, index) => normalizeInboxCategory(category, DEFAULT_INBOX_CATEGORIES[index]));
   await ensureInboxDefaultsInDatabase();
-  for (const [index, input] of categories.entries()) {
-    const category = normalizeInboxCategory(input, DEFAULT_INBOX_CATEGORIES[index]);
+  const hasDescription = (await tableColumns("inbox_categories")).has("description");
+  for (const input of categories) {
+    const category = normalizeInboxCategory(input, inboxCategoryTemplate(String(input.slug || "")));
     await getPool().query(
       `insert into inbox_categories (
-          client_id, slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules
-        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+          client_id, slug, name, color, sort_order, enabled, gmail_label_id, gmail_label_name, auto_rules${hasDescription ? ", description" : ""}
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb${hasDescription ? ", $10" : ""})
         on conflict (client_id, slug) do update set
           name = excluded.name,
           color = excluded.color,
@@ -1304,7 +1359,8 @@ export async function upsertInboxCategoriesInDatabase(categories: Partial<InboxC
           enabled = excluded.enabled,
           gmail_label_id = excluded.gmail_label_id,
           gmail_label_name = excluded.gmail_label_name,
-          auto_rules = excluded.auto_rules,
+          auto_rules = excluded.auto_rules,${hasDescription ? `
+          description = excluded.description,` : ""}
           updated_at = now()`,
       [
         clientId(),
@@ -1316,6 +1372,7 @@ export async function upsertInboxCategoriesInDatabase(categories: Partial<InboxC
         category.gmail_label_id,
         category.gmail_label_name,
         JSON.stringify(category.auto_rules),
+        ...(hasDescription ? [category.description] : []),
       ],
     );
   }

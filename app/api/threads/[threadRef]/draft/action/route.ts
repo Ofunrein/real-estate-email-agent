@@ -7,6 +7,7 @@ import {
   insertApprovedEmailStyleExampleInDatabase,
   readAiDraftFromDatabase,
   readInboxCategoriesFromDatabase,
+  readInboxSettingsFromDatabase,
   updateAiDraftStatusInDatabase,
   upsertAiDraftInDatabase,
   upsertThreadLinkInDatabase,
@@ -21,6 +22,7 @@ import {
   type GmailDraftResult,
   type GmailReplyInput,
 } from "@/lib/gmailConnection";
+import { planMailboxLabels } from "@/lib/inboxLabelPlan";
 import { sendManualReply } from "@/lib/manualReply";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
@@ -256,18 +258,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       gmailMessageId: result.gmailMessageId,
       threadStatus: result.threaded ? "current_mailbox_thread" : "sent_fresh_from_current_mailbox",
     });
-    const categories = await readInboxCategoriesFromDatabase();
-    const waitingLabel = categories.find((category) => category.slug === "waiting_lead")?.gmail_label_name || "Iris/Waiting on Lead";
-    const managedStatusLabels = categories
-      .filter((category) => String(category.auto_rules?.tier || "status") === "status")
-      .map((category) => category.gmail_label_name)
-      .filter(Boolean);
+    // A human approving the draft IS a confirmed authorized send, so `Auto Replied` is earned and
+    // `Needs Human` is cleared. Routed through the same plan as every other write so this path
+    // cannot reintroduce internal tokens or an `Iris/` namespace into the user's label list.
+    const [categories, settings] = await Promise.all([
+      readInboxCategoriesFromDatabase(),
+      readInboxSettingsFromDatabase(),
+    ]);
+    const plan = planMailboxLabels({
+      settings,
+      categories,
+      sendConfirmed: true,
+      stoppedForReview: false,
+      signals: { fromEmail: to, subject: emailSubject(threadEvents, body.subject), knownContact: true },
+    });
     const gmailSession = await createIrisGmailSession();
     await replaceGmailThreadLabels(gmailSession.gmail, {
       threadId: result.gmailThreadId || "",
       messageId: result.gmailMessageId || "",
-      addLabelNames: ["AUTO_REPLIED", waitingLabel],
-      managedLabelNames: ["AUTO_REPLIED", "NEEDS_HUMAN", ...managedStatusLabels],
+      addLabelNames: plan.addLabels,
+      managedLabelNames: [...plan.managedLabels, ...(plan.removeFromInbox ? ["INBOX"] : [])],
     }).catch(() => undefined);
     const redactedExcerpt = redactEmailStyleExample(draftBody);
     if (redactedExcerpt) {

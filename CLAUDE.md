@@ -57,6 +57,24 @@ The `/api/data` route returns `AgentInboxData` (defined in `lib/inboxData.ts`). 
 
 `agent.py` (now in `deprecated/`) is the LEGACY daemon and is not the runtime. Live Iris is the Gmail push webhook → Inngest `gmail.push.received` → `gmailPushReceived.ts` → `classifyIrisEmailText` (in `lib/irisEmail.ts`) → reply via `generateIrisEmailReplyRich` → property matching via `retrievePropertiesForAgent` (`lib/propertyRetrieval.ts`, Neon then Apify fallback). Classification returns structured lead fields (budget, timeline, area, beds) and carries them forward across the thread from the DB lead-context block. Compliance flags trigger `NEEDS_HUMAN` with no reply.
 
+### Mailbox labels (never break)
+
+`lib/inboxLabelPlan.ts` is the ONLY place that decides what Iris writes into a real mailbox. It is
+pure and provider-neutral (label names + two booleans), so Gmail and Outlook apply the same plan.
+
+- Default managed labels are exactly `Auto Replied` and `Needs Human`. No prefix, no third label.
+- A label is evidence, never a permission. `Auto Replied` needs a confirmed send; `Needs Human`
+  needs a stop for review. Sending is gated solely by `decideIrisEmailExecution`'s Tier A allowlist.
+- Everything else is opt-in and needs TWO facts: `categorization_enabled` **and** a
+  `labelling_started_at` timestamp. `categorizationActive()` is the single check.
+- A category may reach a mailbox only when `auto_rules.mailbox === true`. The rows in
+  `DEFAULT_INBOX_CATEGORIES` are internal workflow state for `inferCategorySlug` and are pinned to
+  `mailbox: false` — `normalizeInboxCategory` re-derives that flag, so a caller cannot promote them.
+- Only names in `managedLabels` may be removed. A user's own labels are never in that set.
+
+Settings saves are PATCHes: `mergeInboxSettings` merges each card's keys over stored state, because
+`normalizeInboxSettings` fills absent keys from the defaults.
+
 ### Voice agent (Aria)
 
 Vapi manages the call loop. Tool calls hit `app/api/webhooks/aria-tools/[tool]/route.ts` → `lib/ariaTools.ts`. Data is cache-first with a 3.5s budget; falls back to SMS if Vapi tool call times out. **Source of truth for Aria config is `lib/ariaAssistant.ts`** — run `npm run aria:provision` after every change; do not edit via Vapi dashboard.
@@ -77,7 +95,9 @@ Key behavior: `getCallerContext()` returns silently (never triggers "welcome bac
 
 ### DB migrations
 
-`db/migrations/001_agent_os.sql` through `026_property_context_fields.sql` — 26 files, run in filename order. `CLIENT_ID=austin-realty` is required env for multi-tenant DB queries. See `docs/DEVELOPER_SETUP.md` for the local apply loop.
+`db/migrations/001_agent_os.sql` through `028_inbox_categorization_optin.sql` — 28 files, run in filename order. `CLIENT_ID=austin-realty` is required env for multi-tenant DB queries. See `docs/DEVELOPER_SETUP.md` for the local apply loop.
+
+Reads that depend on a recent migration probe `tableColumns()` first and fall back to the safe default when the column is absent, so the app runs correctly against a database that has not been migrated yet.
 
 ## Vapi config
 

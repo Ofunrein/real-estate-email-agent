@@ -412,7 +412,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             color: colors[cat.id],
             sort_order: (index + 1) * 10,
             enabled: categoriesOn[cat.id],
-            gmail_label_name: cat.gmailLabelName || `Iris/${cat.label}`,
+            // Plain title case, never an `Iris/` namespace. Whether this name is ever created in a
+            // mailbox is decided by the label plan, not by saving it here.
+            gmail_label_name: cat.gmailLabelName || cat.label,
           })),
         }),
       });

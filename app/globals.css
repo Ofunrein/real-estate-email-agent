@@ -4575,6 +4575,18 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
 .iris-workflow-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.iris-workflow-groups>div{min-width:0}.iris-workflow-head{display:grid;gap:2px;margin-bottom:8px}.iris-workflow-head b{font-size:13px}.iris-workflow-head em{font-size:11px;color:var(--iris-text-muted);font-style:normal}.iris-workflow-list{display:grid;gap:7px}.iris-workflow-row{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--iris-card-bd);border-radius:6px;background:var(--iris-surface);cursor:pointer}.iris-workflow-row>i{width:10px;height:10px;border-radius:50%}.iris-workflow-row>span{display:grid;gap:1px;min-width:0}.iris-workflow-row b{font-size:12px}.iris-workflow-row em{font-size:10px;color:var(--iris-text-muted);font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.iris-workflow-row input{accent-color:var(--iris-accent)}
 @media (max-width:700px){.iris-reply-mode-grid,.iris-workflow-groups{grid-template-columns:1fr}}
 
+/* Mailbox organization card. Reuses the workflow row shell; only the column tracks differ. */
+.iris-onboarding-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.iris-pile-row{grid-template-columns:32px minmax(0,1fr) 68px auto auto;cursor:default}
+.iris-rule-row{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1fr) auto;cursor:default}
+.iris-preview-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);cursor:default}
+.iris-preview-note{display:block;font-size:11px;color:var(--iris-text-muted);font-style:normal}
+.iris-field{display:grid;gap:6px}.iris-field b{font-size:12px}
+.iris-settings-card .iris-field select,.iris-pile-row input[type=text],.iris-pile-row input[type=number],.iris-pile-row select,.iris-rule-row input,.iris-rule-row select{width:100%;border:1px solid var(--iris-card-bd);border-radius:8px;background:var(--iris-surface-2);color:var(--iris-text);padding:7px 9px;font:inherit;font-size:12px}
+.iris-pile-row input[type=color]{width:32px;height:26px;padding:0;border:1px solid var(--iris-card-bd);border-radius:6px;background:none}
+.iris-settings-card .iris-rule-row button{padding:6px 11px;font-size:11px}
+@media (max-width:700px){.iris-onboarding-grid{grid-template-columns:1fr}.iris-pile-row,.iris-rule-row,.iris-preview-row{grid-template-columns:1fr}}
+
 .iris-property-photo img[src=""],.iris-property-modal>img[src=""]{display:none!important}.iris-property-photo:has(img[src=""])::before{content:"No listing photo";position:absolute;inset:0;display:grid;place-items:center;color:var(--iris-text-subtle);font-weight:800;background:var(--iris-surface-2)}
 .iris-voice-settings-grid{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(280px,1fr);gap:12px}.iris-voice-settings-grid label{display:grid;gap:6px;min-width:0}.iris-voice-settings-grid b{font-size:12px}.iris-voice-settings-grid select,.iris-voice-settings-grid textarea{width:100%;border:1px solid var(--iris-card-bd);border-radius:11px;background:var(--iris-surface);color:var(--iris-text);padding:10px 11px;font:inherit;font-size:12px}.iris-voice-settings-grid textarea{min-height:86px;resize:vertical}.iris-settings-card audio{width:100%;max-width:520px}
 @media (max-width:900px){.iris-voice-settings-grid{grid-template-columns:1fr}}
