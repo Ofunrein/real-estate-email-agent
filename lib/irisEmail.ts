@@ -1466,10 +1466,10 @@ async function generateIrisEmailReplyRich(
   const publicDataRequested = /\b(?:rent|rental|income|population|vacancy|stat(?:istic)?s?|mortgage rate|data source|source dataset|data (?:date|year))\b/i.test(latestBody);
   const publicDataSeed: Partial<SheetRow> = {
     ...(properties[0] || {}),
-    address: properties[0]?.address || classification.addresses[0] || "",
+    address: classification.addresses[0] || properties[0]?.address || "",
     city: properties[0]?.city || (/\baustin\b/i.test(latestBody) ? "Austin" : ""),
     state: properties[0]?.state || (/\b(?:tx|texas)\b/i.test(latestBody) ? "TX" : ""),
-    zip: properties[0]?.zip || latestBody.match(/\b\d{5}\b/)?.[0] || "",
+    zip: latestBody.match(/\b\d{5}(?:-\d{4})?\b/)?.[0] || properties[0]?.zip || "",
   };
   const publicDataContext = publicDataRequested
     ? (await fetchPublicPropertyContext(publicDataSeed).catch(() => ({ context: "", metrics: [] }))).context
@@ -1477,7 +1477,7 @@ async function generateIrisEmailReplyRich(
   const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null)
     || generateIrisPublicDataReply(publicDataContext)
     || fallbackPlain;
-  return buildHtmlEmailReply(plain, properties, classification);
+  return buildHtmlEmailReply(plain, publicDataRequested ? [] : properties, classification);
 }
 
 function normalizeReplyDraft(reply: string | IrisEmailReplyDraft | null): IrisEmailReplyDraft | null {
