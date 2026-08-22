@@ -125,6 +125,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
 
     def test_theo_agent_has_v1_safety_contract(self):
         theo_agent = read("lib/theoAgent.ts")
+        sms_formatting = read("lib/smsFormatting.ts")
         self.assertIn("SMS_LIMIT = 320", theo_agent)
         self.assertIn("Fair Housing-sensitive question", theo_agent)
         self.assertIn("Mortgage/licensed lending question", theo_agent)
@@ -142,12 +143,23 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("formatTheoPropertyOptions", theo_agent)
         self.assertIn("property_options_reply_ready", theo_agent)
         self.assertIn("property_options_handoff_reply_ready", theo_agent)
-        self.assertIn("I can do both", theo_agent)
+        # Options plus a human-judgment note ship as separate blocks in one reply. The old
+        # "I can do both" copy was replaced by the humanNote block; the prompt-side rule is
+        # asserted separately in test_theo_llm_gets_iris_level_context.
+        self.assertIn("humanNote", theo_agent)
+        self.assertIn("a person on the team should help", theo_agent)
         self.assertIn("latestMessageHasSensitiveTopic", theo_agent)
         self.assertIn('recommendedNextAction: "reply_and_qualify"', theo_agent)
         self.assertIn("cleanSmsReply", theo_agent)
-        self.assertIn(".replace(/\\n(?=\\d+\\.\\s)/g, \"\\n\\n\")", theo_agent)
-        self.assertIn(".replace(/\\n{3,}/g, \"\\n\\n\")", theo_agent)
+        # Blank-line-before-numbered-item is no longer a local regex in theoAgent. The shared
+        # finalizer owns it, so a run-on "1. ... 2. ..." is split wherever it originates.
+        self.assertIn("messagesBlocks", theo_agent)
+        self.assertIn("normalizeMessagesReply", sms_formatting)
+        self.assertIn("splitInlineListItems", sms_formatting)
+        self.assertIn("function isolateUrls", sms_formatting)
+        self.assertIn("url_not_isolated", sms_formatting)
+        # Excess-blank-line collapsing also lives in the shared finalizer now, not in theoAgent.
+        self.assertIn(".replace(/\\n{3,}/g, \"\\n\\n\")", sms_formatting)
         self.assertIn("LINK_SMS_LIMIT = 1200", theo_agent)
         self.assertIn("wantsPropertyLinks", theo_agent)
         self.assertIn("FILLOUT_VALUATION_URL", theo_agent)
@@ -156,7 +168,11 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("isSellerValuationContext", theo_agent)
         self.assertIn("formatTheoSellerValuationReply", theo_agent)
         self.assertIn("seller_valuation_link_reply_ready", theo_agent)
-        self.assertIn("For the home you need to sell, start the free valuation here:", theo_agent)
+        # Valuation copy is personalized and has a no-booking-link fallback now. Assert the
+        # flow and its outbound link, not the retired one-line marketing string.
+        self.assertIn("formatTheoSellerValuationReply", theo_agent)
+        self.assertIn("function valuationUrl", theo_agent)
+        self.assertIn("an agent will walk you through what", theo_agent)
         self.assertIn("formatTheoPropertyLinks", theo_agent)
         self.assertIn("property_links_reply_ready", theo_agent)
         self.assertIn("formatTheoPropertyPhotos", theo_agent)
@@ -187,13 +203,20 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("preferred channel, timeline, area, price range, bedroom/bathroom fit", theo_llm)
         self.assertIn("Human-assisted monitoring is backup", theo_llm)
         self.assertIn("greater Austin / Central Texas metro", theo_llm)
-        self.assertIn("put a blank line before each numbered listing", theo_llm)
+        # Spacing rules were made explicit and stricter than the old one-line version: a bare
+        # URL on its own line with no "Listing:" label, and a blank line between listing blocks.
+        self.assertIn("blank line between blocks", theo_llm)
+        self.assertIn("Bare URLs on their own line", theo_llm)
+        self.assertIn('No "Listing:" in front of them', theo_llm)
         self.assertIn("Do not say links are not loaded when listing_url is present", theo_llm)
         self.assertIn("do both: provide the safe property facts/options", theo_llm)
         self.assertIn("use short blocks separated by a blank line", theo_llm)
         self.assertIn("Do not say an agent has to pull matches unless no property rows are provided", theo_llm)
         self.assertIn("cleanSmsReply", theo_llm)
-        self.assertIn("sentenceEnd", theo_llm)
+        # Truncation is no longer a local sentence-boundary scan. fitMessagesReply drops whole
+        # trailing blocks instead of severing a clause, and the shared normalizer owns spacing.
+        self.assertIn("fitMessagesReply", theo_llm)
+        self.assertIn("normalizeMessagesReply", theo_llm)
         self.assertIn("Do not use human_required only because prior messages had service friction", theo_llm)
         self.assertIn("Never send maps.googleapis.com", theo_llm)
         for property_field in [
@@ -351,7 +374,14 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("mediaCount", twilio_sender)
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', twilio_sender)
         self.assertIn("smsMessageWithMediaLog", twilio_sender)
-        self.assertIn('return "MMS image"', twilio_sender)
+        # The outbound body is finalized at the transport boundary, so no caller can ship a
+        # wall or a URL sharing its line even if its own normalization is skipped.
+        self.assertIn("finalizeOutboundSmsBody", twilio_sender)
+        self.assertIn("normalizeMessagesReply", twilio_sender)
+        # Media URLs get their own paragraph. The old "MMS image: https://..." label put text
+        # on the URL's own line, which is the defect Martin's screenshots captured. Locked out.
+        self.assertNotIn('"MMS image"', twilio_sender)
+        self.assertNotIn('"MMS audio"', twilio_sender)
         self.assertIn("https://api.twilio.com/2010-04-01/Accounts/", twilio_sender)
         self.assertNotIn("AC4758", twilio_sender)
         self.assertNotIn("c0e300", twilio_sender)
