@@ -17,7 +17,13 @@ import {
   type IrisEmailMessage,
 } from "@/lib/irisEmail";
 import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
-import { DEFAULT_INBOX_CATEGORIES, DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
+import {
+  DEFAULT_INBOX_CATEGORIES,
+  DEFAULT_INBOX_SETTINGS,
+  MANAGED_SYSTEM_CATEGORIES,
+  OPTIONAL_CATEGORY_PRESETS,
+  normalizeInboxSettings,
+} from "@/lib/inboxSettings";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
@@ -339,8 +345,8 @@ test("processIrisEmailPoll: human-only turn creates a proactive review draft", a
   assert.equal(stored.length, 1);
   assert.equal(stored[0].needs_human, true);
   assert.ok(calls.labels[0].includes("NEEDS_HUMAN"));
-  assert.ok(calls.labels[0].includes("Iris/Needs Human"));
-  assert.ok(calls.managedLabels?.[0].includes("Iris/Waiting on Lead"));
+  assert.ok(calls.labels[0].includes("Needs Human"));
+  assert.ok(calls.managedLabels?.[0].includes("Waiting on Reply"));
 });
 
 test("processIrisEmailPoll: a later safe turn auto-sends and clears the old review draft", async () => {
@@ -372,9 +378,9 @@ test("processIrisEmailPoll: a later safe turn auto-sends and clears the old revi
   assert.deepEqual(calls.deletedDrafts, ["draft_old"]);
   assert.deepEqual(archived, ["thread_1"]);
   assert.ok(calls.labels[0].includes("AUTO_REPLIED"));
-  assert.ok(calls.labels[0].includes("Iris/Waiting on Lead"));
+  assert.ok(calls.labels[0].includes("Waiting on Reply"));
   assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
-  assert.ok(!calls.labels[0].includes("Iris/Needs Human"));
+  assert.ok(!calls.labels[0].includes("Needs Human"));
 });
 
 test("processIrisEmailPoll: a human-sent Gmail review draft resolves without another Iris reply", async () => {
@@ -441,7 +447,7 @@ test("processIrisEmailPoll: spam closes without a review draft", async () => {
 
   assert.equal(calls.sent.length, 0);
   assert.equal(calls.drafts?.length, 0);
-  assert.ok(calls.labels[0].includes("Iris/Closed No Reply"));
+  assert.ok(calls.labels[0].includes("Closed No Reply"));
   assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
 });
 
@@ -910,4 +916,81 @@ test("email auto-send is off by default and draft_first stays a global switch", 
   for (const channel of ["sms", "whatsapp", "messenger", "instagram", "website_chat"] as const) {
     assert.equal(DEFAULT_INBOX_SETTINGS.auto_send[channel], true, `${channel} auto-send was disabled as a side effect`);
   }
+});
+
+// Second half of the incident: canReply:false stops the send, but the DRAFT was still a
+// real-estate pitch. The fintech cold email got "putting a shortlist together against your price
+// range and bedroom count" — selling houses to someone who never asked, the same class of defect
+// as attaching a property card. Assert no pitch, no card, no CTA on unrelated mail.
+test("unrelated mail gets no property card, listing, price or real-estate pitch in the draft", () => {
+  const properties: SheetRow[] = [{
+    address: "70 Rainey St #1509", price: "750000", beds: "2", baths: "2", sqft: "1128",
+    neighborhood: "Downtown Austin", listing_url: "https://www.zillow.com/homedetails/x/1_zpid/",
+  } as SheetRow];
+
+  for (const item of COLD_OUTBOUND_CASES) {
+    const message = { id: "m1", threadId: "t1", from: item.from, subject: item.subject, body: item.body };
+    const classification = classifyIrisEmailText(message);
+    const reply = generateIrisEmailReply(message, classification, properties) || "";
+
+    assert.doesNotMatch(reply, /70 Rainey St/, `${item.id}: leaked a property address`);
+    assert.doesNotMatch(reply, /zillow\.com/, `${item.id}: leaked a listing URL`);
+    assert.doesNotMatch(reply, /750,?000/, `${item.id}: leaked a price`);
+    assert.doesNotMatch(reply, /valuation|home value|what it should list/i, `${item.id}: leaked a valuation CTA`);
+    // No real-estate pitch either: no invented buyer brief for someone who never asked.
+    assert.doesNotMatch(reply, /shortlist|bedroom count|price range|listings? (?:in|near)/i, `${item.id}: pitched real estate`);
+  }
+});
+
+// Final product direction: the ONLY labels Iris may create in a user's mailbox by default are
+// "Auto Replied" and "Needs Human", clean title case, no Iris/ prefix. Everything else is opt-in.
+test("only two labels are managed in the user's mailbox, with no Iris/ prefix anywhere", () => {
+  assert.deepEqual(
+    MANAGED_SYSTEM_CATEGORIES.map((c) => c.gmail_label_name).sort(),
+    ["Auto Replied", "Needs Human"],
+  );
+  // Auto Replied is evidence of a completed send, never a trigger.
+  const autoReplied = MANAGED_SYSTEM_CATEGORIES.find((c) => c.slug === "auto_replied")!;
+  assert.equal(autoReplied.auto_rules.applies_after_send, true);
+  assert.equal(autoReplied.auto_rules.auto_send, "off");
+
+  // No category anywhere may carry an Iris/ prefix into the mailbox.
+  for (const category of [...DEFAULT_INBOX_CATEGORIES, ...MANAGED_SYSTEM_CATEGORIES, ...OPTIONAL_CATEGORY_PRESETS]) {
+    assert.doesNotMatch(category.gmail_label_name, /^Iris\//, `${category.slug} still writes an Iris/ label`);
+  }
+});
+
+test("no label or rule can authorize an auto-send", () => {
+  // Sending is decided solely by decideIrisEmailExecution's Tier A gate. If any category could
+  // opt itself into sending, a user renaming a label would become a send permission.
+  for (const category of [...DEFAULT_INBOX_CATEGORIES, ...MANAGED_SYSTEM_CATEGORIES, ...OPTIONAL_CATEGORY_PRESETS]) {
+    assert.notEqual(category.auto_rules.auto_send, "on", `${category.slug} grants auto_send`);
+    assert.notEqual(category.auto_rules.auto_send, "inherit", `${category.slug} inherits auto_send`);
+  }
+});
+
+test("defaults respect the user's existing inbox", () => {
+  const s = DEFAULT_INBOX_SETTINGS;
+  assert.equal(s.categorization_enabled, false, "categorization must be off by default");
+  assert.equal(s.respect_existing_labels, true, "existing labels must be respected by default");
+  assert.equal(s.archive_after_send, false, "archive-after-send must be opt-in");
+  assert.equal(s.marketing_strictness, "off");
+  assert.deepEqual(s.category_rules, []);
+});
+
+test("an absent respect_existing_labels is never read as permission to re-sort", () => {
+  // A partial settings row from an older client must not silently opt into re-sorting their mail.
+  assert.equal(normalizeInboxSettings({}).respect_existing_labels, true);
+  assert.equal(normalizeInboxSettings({ categorization_enabled: true }).respect_existing_labels, true);
+  assert.equal(normalizeInboxSettings({ respect_existing_labels: false }).respect_existing_labels, false);
+  // Optional customization round-trips.
+  const custom = normalizeInboxSettings({
+    categorization_enabled: true,
+    marketing_strictness: "cold_and_unknown",
+    category_rules: [{ category_slug: "marketing", domain: "example.com" }, { category_slug: "" } as never],
+  });
+  assert.equal(custom.marketing_strictness, "cold_and_unknown");
+  assert.equal(custom.category_rules.length, 1, "rules with no category_slug are dropped");
+  // An unknown strictness value falls back to off rather than being trusted.
+  assert.equal(normalizeInboxSettings({ marketing_strictness: "everything" as never }).marketing_strictness, "off");
 });

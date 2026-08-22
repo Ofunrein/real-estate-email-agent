@@ -26,8 +26,8 @@ test("replaceGmailThreadLabels atomically swaps managed workflow labels on the t
             labels: [
               { id: "auto", name: "AUTO_REPLIED" },
               { id: "human", name: "NEEDS_HUMAN" },
-              { id: "needs-human", name: "Iris/Needs Human" },
-              { id: "waiting", name: "Iris/Waiting on Lead" },
+              { id: "needs-human", name: "Needs Human" },
+              { id: "waiting", name: "Waiting on Reply" },
               { id: "UNREAD", name: "UNREAD" },
             ],
           },
@@ -48,8 +48,8 @@ test("replaceGmailThreadLabels atomically swaps managed workflow labels on the t
   await replaceGmailThreadLabels(gmail as never, {
     threadId: "18abcdef12345678",
     messageId: "message-1",
-    addLabelNames: ["AUTO_REPLIED", "Iris/Waiting on Lead"],
-    managedLabelNames: ["AUTO_REPLIED", "NEEDS_HUMAN", "Iris/Needs Human", "Iris/Waiting on Lead", "UNREAD"],
+    addLabelNames: ["AUTO_REPLIED", "Waiting on Reply"],
+    managedLabelNames: ["AUTO_REPLIED", "NEEDS_HUMAN", "Needs Human", "Waiting on Reply", "UNREAD"],
   });
 
   assert.deepEqual(modifyInput, {
@@ -76,7 +76,7 @@ test("needs-human Gmail label uses a supported Gmail palette color", async () =>
     },
   };
 
-  await ensureGmailLabel(gmail as never, "Iris/Needs Human", "#be123c");
+  await ensureGmailLabel(gmail as never, "Needs Human", "#be123c");
   // #be123c snaps to the nearest legal Gmail background (#ac2b16, a dark red);
   // white text is auto-picked for contrast.
   assert.deepEqual((requestBody as { color: unknown }).color, {

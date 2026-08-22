@@ -724,6 +724,12 @@ export function decideIrisEmailExecution(classification: IrisEmailClassification
 export const IRIS_REVIEW_MARKER = "[Review before sending:";
 
 function irisReviewNextStep(classification: IrisEmailClassification): string {
+  // Out of scope means no real-estate pitch of any kind. Offering "a shortlist against your
+  // price range and bedroom count" to a fintech cold email is the same class of defect as
+  // attaching a property card to it: Iris is selling houses to someone who never asked.
+  if ((classification.opportunity_tags || []).includes("out_of_scope_no_reply")) {
+    return "confirming what you are actually asking for before I take this any further";
+  }
   const address = classification.address;
   if (classification.intent === "showing_request") {
     return `getting${address ? ` ${address}` : " the property"} on your calendar, so tell me a day and a rough time window and I will confirm access`;
@@ -732,6 +738,16 @@ function irisReviewNextStep(classification: IrisEmailClassification): string {
     return `pulling the current facts on ${address}, list price, taxes, HOA dues, days on market, and what has sold nearby`;
   }
   const area = classification.lead_fields.area;
+  // Only pitch a search when the intent is genuinely real estate. Extracted lead_fields are not
+  // sufficient evidence: "$15k deposit threshold" in a fintech cold email parses as a budget, and
+  // gating on field presence let that mail get a shortlist pitch anyway.
+  if (!TIER_A_INTENTS.has(classification.intent)) {
+    return "confirming what you are actually asking for before I take this any further";
+  }
+  // No address, no area, no stated criteria: do not invent a buyer brief. Ask first.
+  if (!area && !classification.lead_fields.budget && !classification.lead_fields.beds) {
+    return "confirming what you are looking for before I put anything together";
+  }
   return `putting a shortlist together${area ? ` in ${area}` : ""} against your price range and bedroom count`;
 }
 
