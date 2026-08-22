@@ -10,6 +10,7 @@ import {
   insertApprovedEmailStyleExampleInDatabase,
   readAiDraftFromDatabase,
   readConversationEventByGmailMessageId,
+  readRecentInboundEmailDuplicate,
   readEventsForLeadFromDatabase,
   readInboxCategoriesFromDatabase,
   readInboxSettingsFromDatabase,
@@ -1763,7 +1764,12 @@ export async function processIrisEmailPoll(
       const existingEvent = deps.duplicateExists
         ? ((await deps.duplicateExists(message.id)) ? ({ status: "processed" } as SheetRow) : null)
         : databaseEnabled()
-          ? await readConversationEventByGmailMessageId(message.id)
+          ? (await readConversationEventByGmailMessageId(message.id))
+            || (await readRecentInboundEmailDuplicate({
+              email: parseEmailContact(message.from).email,
+              messageText: cleanBody(message.body),
+              gmailMessageId: message.id,
+            }))
           : null;
       const hasRecoveredReply = existingEvent?.thread_ref && existingEvent.event_at && databaseEnabled()
         ? await hasOutboundEmailReplyAfterEventInDatabase({

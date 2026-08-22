@@ -2105,6 +2105,34 @@ export async function readConversationEventByGmailMessageId(gmailMessageId: stri
   return result.rows[0] ? rowToStrings(CONVERSATION_EVENTS_HEADERS, result.rows[0]) : null;
 }
 
+export async function readRecentInboundEmailDuplicate(input: {
+  email: string;
+  messageText: string;
+  gmailMessageId: string;
+  withinMinutes?: number;
+}): Promise<SheetRow | null> {
+  const email = input.email.trim().toLowerCase();
+  const messageText = input.messageText.trim();
+  if (!email || !messageText || !await tableReady("conversation_events")) return null;
+  const columns = await selectHeaders("conversation_events", CONVERSATION_EVENTS_HEADERS);
+  const withinMinutes = Math.max(1, Math.min(input.withinMinutes || 15, 1440));
+  const result = await getPool().query(
+    `select ${columns}
+       from conversation_events
+      where client_id = $1
+        and channel = 'email'
+        and direction = 'inbound'
+        and lower(email) = $2
+        and message_text = $3
+        and gmail_message_id <> $4
+        and event_at::timestamptz >= now() - ($5::text || ' minutes')::interval
+      order by created_at desc, id desc
+      limit 1`,
+    [clientId(), email, messageText, input.gmailMessageId, withinMinutes],
+  );
+  return result.rows[0] ? rowToStrings(CONVERSATION_EVENTS_HEADERS, result.rows[0]) : null;
+}
+
 export async function conversationEventMessageIdExists(messageId: string): Promise<boolean> {
   const id = messageId.trim();
   if (!id || !await tableReady("conversation_events")) return false;
