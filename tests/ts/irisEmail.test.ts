@@ -7,6 +7,7 @@ import {
   classifyIrisEmailText,
   coalesceIrisEmailThreadFollowUps,
   decideIrisEmailExecution,
+  formatPlainTextEmail,
   generateIrisEmailReply,
   irisEmailPollQuery,
   irisGmailMessageDirection,
@@ -36,6 +37,37 @@ function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
     ...partial,
   };
 }
+
+test("adversarial: suffixless Austin property addresses stay exact", () => {
+  for (const address of ["1701 South Lamar", "2400 East Cesar Chavez"]) {
+    const classification = classifyIrisEmailText(email({
+      subject: `Details for ${address}`,
+      body: `I saw the listing at ${address}. Is it still available?`,
+    }));
+    assert.equal(classification.address, address);
+    assert.equal(classification.intent, "property_details");
+  }
+});
+
+test("adversarial: vague property ask and conflicting showings require human review", () => {
+  const vague = classifyIrisEmailText(email({
+    subject: "Need your help",
+    body: "Handle that thing we discussed for the property. Take care of it today.",
+  }));
+  const conflict = classifyIrisEmailText(email({
+    subject: "Move both showings",
+    body: "Move my Friday 2 PM showing to 3 PM, but I have another showing at 3 PM. Confirm both.",
+  }));
+  assert.equal(decideIrisEmailExecution(vague).canReply, false);
+  assert.equal(decideIrisEmailExecution(vague).status, "needs_human");
+  assert.equal(decideIrisEmailExecution(conflict).canReply, false);
+  assert.ok(conflict.compliance_flags.includes("broker_approval"));
+});
+
+test("plain-text email puts every URL in its own blank-line-delimited paragraph", () => {
+  const formatted = formatPlainTextEmail("Schedule Showing: https://example.com/book Continue here");
+  assert.equal(formatted, "Schedule Showing:\n\nhttps://example.com/book\n\nContinue here");
+});
 
 type FakeEmailCalls = {
   labels: string[][];
@@ -708,7 +740,7 @@ test("buildHtmlEmailReply: showing flow includes a Gmail-compatible schedule but
     assert.match(reply.html || "", />Schedule Showing<\/a>/);
     assert.match(reply.html || "", /role="presentation"/);
     assert.match(reply.html || "", /background-color:\s*#2563eb/i);
-    assert.match(reply.text, /Schedule Showing: https:\/\/calendly\.com\/martin-lumenosis\/30min/);
+    assert.match(reply.text, /Schedule Showing\n\nhttps:\/\/calendly\.com\/martin-lumenosis\/30min/);
   } finally {
     if (previous === undefined) delete process.env.CALENDLY_URL;
     else process.env.CALENDLY_URL = previous;
@@ -734,7 +766,7 @@ test("buildHtmlEmailReply: seller flow includes a Gmail-compatible free valuatio
     assert.match(reply.html || "", />Get Free Home Valuation<\/a>/);
     assert.match(reply.html || "", /role="presentation"/);
     assert.match(reply.html || "", /background-color:\s*#16803c/i);
-    assert.match(reply.text, /Get Free Home Valuation: https:\/\/lumenosis\.fillout\.com\/t\/uVsRftdUNFus/);
+    assert.match(reply.text, /Get Free Home Valuation\n\nhttps:\/\/lumenosis\.fillout\.com\/t\/uVsRftdUNFus/);
   } finally {
     if (previous === undefined) delete process.env.FILLOUT_VALUATION_URL;
     else process.env.FILLOUT_VALUATION_URL = previous;

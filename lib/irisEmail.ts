@@ -333,7 +333,7 @@ export function detectIrisComplianceFlags(text: string): string[] {
   }
   if (
     /(?:what (?:exact )?price should i offer|how much (?:below|above) asking|offer strategy|negotiate (?:the )?(?:price|best terms|terms)|write (?:an|the) offer|submit (?:an|the) offer)/.test(text_l)
-    || /(?:conflicting (?:appointments?|showings?|times?)|(?:move|cancel|reschedule) (?:one|an? appointment|an? showing) without asking|which showing should i attend)/.test(text_l)
+    || /(?:conflicting (?:appointments?|showings?|times?)|(?:move|cancel|reschedule) (?:one|an? appointment|an? showing) without asking|which showing should i attend|\b(?:move|reschedule)\b[^.]{0,140}\b(?:another|other)\s+showing\b)/.test(text_l)
   ) {
     flags.push("broker_approval");
   }
@@ -355,7 +355,10 @@ export function detectIrisComplianceFlags(text: string): string[] {
 }
 
 function extractAddresses(text: string): string[] {
-  return uniq((text.match(STREET_ADDRESS_RE) || []).map((value) => value.replace(/\s+/g, " ")));
+  const standard = text.match(STREET_ADDRESS_RE) || [];
+  const suffixless = [...text.matchAll(/\b(?:at|about|for|in|listing at|property at)[ \t]+(\d{2,6}[ \t]+(?:north|south|east|west|n|s|e|w)[ \t]+[A-Za-z][A-Za-z.'-]*(?:[ \t]+[A-Za-z][A-Za-z.'-]*){0,2}?)(?=[.,;!?\n]|[ \t]+(?:is|are|can|could|what|does|do|has|please|and)\b|$)/gi)]
+    .map((match) => match[1]);
+  return uniq([...standard, ...suffixless].map((value) => value.replace(/\s+/g, " ")));
 }
 
 function extractPropertyUrls(text: string): string[] {
@@ -542,13 +545,16 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const noUsableText = !bodyOnlyClean.replace(/\[[^\]]*\]/g, "").replace(/[^a-z0-9]/gi, "").trim()
     && !addresses.length
     && !propertyUrls.length;
+  const unresolvedVagueAsk = /\b(?:that|the) thing\b|\bwhat we discussed\b|\btake care of it\b|\bhandle (?:that|it)\b/i.test(latestClean)
+    && !latestAddresses.length
+    && !propertyUrls.length;
   if (spamLike) {
     intent = "spam";
   } else if (wrongRecipient) {
     // Answering a stranger's "you have the wrong person" with more qualification questions
     // is how an inbox earns a spam complaint.
     intent = "human_required";
-  } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop") {
+  } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop" || unresolvedVagueAsk) {
     intent = "human_required";
   } else if (pivotingToOtherOptions && /(options?|alternatives?|another|other|what else|looking for|better fit|three bed|3 bed|bedroom|homes?|houses?|properties|listings?)/i.test(latestClean)) {
     intent = "property_search";
@@ -605,6 +611,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     && !noSignal
     && !wrongRecipient
     && !noUsableText
+    && !unresolvedVagueAsk
     && !businessOutreachLike
     && !systemEmailLike
   ) {
@@ -1082,6 +1089,15 @@ function propertyPlain(property: SheetRow): string {
   return [address, facts, property.listing_url].filter(Boolean).join("\n");
 }
 
+export function formatPlainTextEmail(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/([^\n])\s+(https?:\/\/[^\s<>]+)/g, "$1\n\n$2")
+    .replace(/(https?:\/\/[^\s<>]+)\s+([^\n])/g, "$1\n\n$2")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function dedupeProperties(properties: SheetRow[]): SheetRow[] {
   const seen = new Set<string>();
   const out: SheetRow[] = [];
@@ -1160,9 +1176,9 @@ ${cta ? irisEmailCtaHtml(cta) : ""}
   const propertyText = plainProperties.length
     ? `\n\nProperty details:\n${plainProperties.map(propertyPlain).join("\n\n")}`
     : "";
-  const ctaText = cta && !bodyText.includes(cta.url) ? `\n\n${cta.label}: ${cta.url}` : "";
+  const ctaText = cta && !bodyText.includes(cta.url) ? `\n\n${cta.label}\n\n${cta.url}` : "";
   return {
-    text: `${bodyText}${propertyText}${ctaText}`,
+    text: formatPlainTextEmail(`${bodyText}${propertyText}${ctaText}`),
     html,
   };
 }
@@ -1357,9 +1373,9 @@ async function generateIrisEmailReplyRich(
 
 function normalizeReplyDraft(reply: string | IrisEmailReplyDraft | null): IrisEmailReplyDraft | null {
   if (!reply) return null;
-  if (typeof reply === "string") return { text: removeEmDashes(reply) };
+  if (typeof reply === "string") return { text: formatPlainTextEmail(removeEmDashes(reply)) };
   if (!reply.text.trim() && !reply.html?.trim()) return null;
-  return { ...reply, text: removeEmDashes(reply.text), html: removeEmDashes(reply.html || "") };
+  return { ...reply, text: formatPlainTextEmail(removeEmDashes(reply.text)), html: removeEmDashes(reply.html || "") };
 }
 
 async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEmailMessage> {

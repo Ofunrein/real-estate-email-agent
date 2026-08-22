@@ -299,6 +299,12 @@ export async function sendGmailReply(gmail: GmailClient, input: GmailReplyInput)
 
 function buildGmailReplyMessage(inputRaw: GmailReplyInput): { raw: string; normalizedThreadId: string } {
   const input = removeEmDashesFromRecord(inputRaw, ["subject", "body", "htmlBody"]);
+  input.body = input.body
+    .replace(/\r\n?/g, "\n")
+    .replace(/([^\n])\s+(https?:\/\/[^\s<>]+)/g, "$1\n\n$2")
+    .replace(/(https?:\/\/[^\s<>]+)\s+([^\n])/g, "$1\n\n$2")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   const subjectRaw = input.subject || "(no subject)";
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
   const boundary = `boundary_${Date.now().toString(36)}`;
