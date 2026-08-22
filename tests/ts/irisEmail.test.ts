@@ -9,6 +9,7 @@ import {
   decideIrisEmailExecution,
   formatPlainTextEmail,
   generateIrisEmailReply,
+  generateIrisPublicDataReply,
   irisEmailPollQuery,
   irisGmailMessageDirection,
   isExactPropertyAddressMatch,
@@ -48,6 +49,19 @@ test("adversarial: suffixless Austin property addresses stay exact", () => {
     assert.equal(classification.address, address);
     assert.equal(classification.intent, "property_details");
   }
+});
+
+test("public-data fallback answers with dated sources and does not call ZIP rent a property estimate", () => {
+  const reply = generateIrisPublicDataReply([
+    "Current mortgage rate context from FRED: 30yr fixed 6.1% (2026-08-20).",
+    "U.S. Census Bureau 2024 ACS 5-year ZIP 78704 context: median income $91,000, population 52,000, 6.2% vacancy, median gross rent $1,850/month",
+  ].join("\n")) || "";
+
+  assert.match(reply, /FRED/);
+  assert.match(reply, /2026-08-20/);
+  assert.match(reply, /2024 ACS 5-year/);
+  assert.match(reply, /area benchmark, not a property-specific rent estimate/);
+  assert.match(reply, /Best,\nIris$/);
 });
 
 test("adversarial: buyer property details never receive seller valuation copy or CTA", () => {

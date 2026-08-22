@@ -1421,6 +1421,17 @@ ${publicDataContext || "(none)"}`;
   return text && /Best,\s*\n\s*Iris\s*$/i.test(text) ? text : null;
 }
 
+export function generateIrisPublicDataReply(publicDataContext: string): string | null {
+  const context = cleanBody(publicDataContext);
+  if (!context) return null;
+  return [
+    "Here is the public data I could verify:",
+    context,
+    "The Census median gross rent is a ZIP-wide area benchmark, not a property-specific rent estimate. Without a verified property-level rental source, I would not present it as the expected rent for this address.",
+    `Best,\n${IRIS_AGENT_NAME}`,
+  ].join("\n\n");
+}
+
 async function generateIrisEmailReplyRich(
   message: IrisEmailMessage,
   classification: IrisEmailClassification,
@@ -1463,7 +1474,9 @@ async function generateIrisEmailReplyRich(
   const publicDataContext = publicDataRequested
     ? (await fetchPublicPropertyContext(publicDataSeed).catch(() => ({ context: "", metrics: [] }))).context
     : "";
-  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null) || fallbackPlain;
+  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null)
+    || generateIrisPublicDataReply(publicDataContext)
+    || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
 
