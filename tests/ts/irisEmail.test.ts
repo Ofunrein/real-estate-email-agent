@@ -11,6 +11,7 @@ import {
   generateIrisEmailReply,
   irisEmailPollQuery,
   irisGmailMessageDirection,
+  isExactPropertyAddressMatch,
   isIrisEligibleEmail,
   parseEmailContact,
   processIrisEmailPoll,
@@ -47,6 +48,36 @@ test("adversarial: suffixless Austin property addresses stay exact", () => {
     assert.equal(classification.address, address);
     assert.equal(classification.intent, "property_details");
   }
+});
+
+test("adversarial: buyer property details never receive seller valuation copy or CTA", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    const message = email({
+      subject: "Interested in 1701 South Lamar",
+      body: "I saw the listing at 1701 South Lamar. Is it still available and how many bedrooms and bathrooms does it have?",
+    });
+    const classification = classifyIrisEmailText(message);
+    const reply = generateIrisEmailReply(message, classification) || "";
+    const rendered = buildHtmlEmailReply(reply, [], classification);
+    assert.equal(classification.intent, "property_details");
+    assert.equal(classification.address, "1701 South Lamar");
+    assert.doesNotMatch(reply, /valuation/i);
+    assert.doesNotMatch(rendered.text, /free home valuation|free-valuation/i);
+    assert.doesNotMatch(rendered.html || "", /free home valuation|free-valuation/i);
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
+test("exact-address guard accepts suffix expansion but rejects other units and properties", () => {
+  assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1701 S Lamar Blvd, Austin, TX"), true);
+  assert.equal(isExactPropertyAddressMatch("100 E 51st St #7", "100 E 51st St #7, Austin, TX"), true);
+  assert.equal(isExactPropertyAddressMatch("100 E 51st St #7", "100 E 51st St #8, Austin, TX"), false);
+  assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1707 S Lamar Blvd, Austin, TX"), false);
+  assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1701 S Lamar Blvd Apt 204, Austin, TX"), false);
 });
 
 test("adversarial: vague property ask and conflicting showings require human review", () => {
@@ -681,6 +712,32 @@ test("buildHtmlEmailReply: proxies usable photos and avoids duplicate property c
     if (previousBase === undefined) delete process.env.PUBLIC_BASE_URL;
     else process.env.PUBLIC_BASE_URL = previousBase;
   }
+});
+
+test("buildHtmlEmailReply: listing facts are source-backed and missing facts are explicit", () => {
+  const property = {
+    address: "1701 S Lamar Blvd",
+    price: "725000",
+    beds: "2",
+    baths: "2",
+    sqft: "1240",
+    status: "Active",
+    pet_policy: "",
+    parking: "1 reserved space",
+    year_built: "2018",
+    listing_url: "https://example.com/listing/1701",
+  } as SheetRow;
+  const classification = classifyIrisEmailText(email({
+    subject: "1701 South Lamar",
+    body: "Send price, beds, baths, square footage, pet policy, parking, year built, and availability for 1701 South Lamar.",
+  }));
+  const rendered = buildHtmlEmailReply("Hello,\n\nHere are the current listing facts.\n\nBest,\nIris", [property], classification);
+  for (const fact of ["Price: $725,000", "Bedrooms: 2", "Bathrooms: 2", "Square footage: 1240 sqft", "Availability: Active", "Parking: 1 reserved space", "Year built: 2018"]) {
+    assert.match(rendered.text, new RegExp(fact.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(rendered.text, /Pet policy: Not available in current listing data/);
+  assert.match(rendered.html || "", /<strong>Pet policy:<\/strong> Not available in current listing data/);
+  assert.doesNotMatch(rendered.text, /pets allowed/i);
 });
 
 test("buildHtmlEmailReply: showing requests focus on the selected property instead of similar options", () => {

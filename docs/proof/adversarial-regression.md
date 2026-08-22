@@ -63,11 +63,11 @@ keys, no customer data. The same fixtures are asserted case by case in
 | iris | hallucination_no_invented_school_zone | human_review_draft |
 | iris | hallucination_no_invented_comps | auto_reply |
 | iris | hallucination_no_invented_photos | auto_reply |
-| iris | missing_context_bare_pronoun | auto_reply |
-| iris | missing_context_that_one | auto_reply |
+| iris | missing_context_bare_pronoun | human_review_draft |
+| iris | missing_context_that_one | human_review_draft |
 | iris | missing_context_area_only | auto_reply |
 | iris | missing_context_attachment_only | human_review_draft |
-| iris | low_confidence_one_word | auto_reply |
+| iris | low_confidence_one_word | human_review_draft |
 | iris | low_confidence_wrong_person | human_review_draft |
 | iris | low_confidence_mixed_language | auto_reply |
 | iris | low_confidence_typos | auto_reply |
@@ -81,7 +81,7 @@ keys, no customer data. The same fixtures are asserted case by case in
 | iris | confusion_seller_and_buyer_same_email | auto_reply |
 | iris | confusion_answers_only_budget | auto_reply |
 | iris | confusion_negative_then_positive | auto_reply |
-| iris | confusion_forwarded_listing_thread | auto_reply |
+| iris | confusion_forwarded_listing_thread | human_review_draft |
 | iris | confusion_pronoun_with_labelled_context | auto_reply |
 | iris | no_reply_duplicate_optout_then_question | closed_no_reply |
 | iris | no_reply_offtopic_vendor_reaches_classifier | closed_no_reply |

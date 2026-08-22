@@ -63,6 +63,10 @@ test("normalizeApifyItemToProperty: preserves Zillow listing keys and media", ()
     homeType: "condo",
     imgSrc: "https://images.example/photo.jpg",
     zpid: "123456",
+    petsAllowed: "Cats and dogs allowed",
+    parkingDetails: "1 reserved space",
+    availableDate: "2026-09-01",
+    openHouse: "Sunday 1-3 PM",
   });
 
   assert.equal(row.address, "1200 Barton Springs Rd");
@@ -72,6 +76,10 @@ test("normalizeApifyItemToProperty: preserves Zillow listing keys and media", ()
   assert.equal(row.property_type, "Condo");
   assert.equal(row.photo_url, "https://images.example/photo.jpg");
   assert.equal(row.listing_url, "https://www.zillow.com/homedetails/123456_zpid/");
+  assert.equal(row.pet_policy, "Cats and dogs allowed");
+  assert.equal(row.parking, "1 reserved space");
+  assert.equal(row.available_date, "2026-09-01");
+  assert.equal(row.showing_instructions, "Sunday 1-3 PM");
 });
 
 test("searchAndImportMissingProperties: runs actor, filters criteria, upserts, and optionally appends sheets", async () => {

@@ -565,7 +565,8 @@
     "from": "Vague Lead <vague@example.com>",
     "subject": "Re: options",
     "body": "I like the second one, can I see it Thursday at 4pm?",
-    "expectAutoReply": true,
+    "expectIntent": "human_required",
+    "expectAutoReply": false,
     "mustNotInclude": [
       "9605 Corbe",
       "12725 Bloomington",
@@ -766,7 +767,8 @@
     "from": "Fwd Lead <fwd@example.com>",
     "subject": "Fwd: Zillow listing",
     "body": "Can we tour this one this weekend?\n\nOn Tue, Jun 3 2026 at 9:01 AM Zillow wrote:\n> https://www.zillow.com/homedetails/9605-Corbe-Dr/12345_zpid/",
-    "expectAutoReply": true,
+    "expectIntent": "human_required",
+    "expectAutoReply": false,
     "mustNotInclude": [
       "no-reply@zillow.com"
     ]

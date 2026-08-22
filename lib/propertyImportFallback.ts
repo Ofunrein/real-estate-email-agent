@@ -153,6 +153,20 @@ export function normalizeApifyItemToProperty(item: Record<string, unknown>, slic
     listing_url: normalizeListingUrl(item),
     agent_name: pick(item.agent_name, item.agentName, contact.agent, contact.agency, attribution.agentName, attribution.brokerName),
     agent_email: pick(item.agent_email, item.agentEmail, contact.email, attribution.agentEmail),
+    utilities_included: pick(item.utilities_included, item.utilitiesIncluded),
+    appliances_included: pick(item.appliances_included, item.appliancesIncluded),
+    parking: pick(item.parking, item.parking_details, item.parkingDetails, item.garage, item.garageSpaces),
+    pet_policy: pick(item.pet_policy, item.petPolicy, item.pets_policy, item.petsAllowed, item.pets),
+    deposit: pick(item.deposit, item.security_deposit, item.securityDeposit),
+    fees: pick(item.fees, item.application_fees, item.applicationFees),
+    lease_terms: pick(item.lease_terms, item.leaseTerms),
+    floor: pick(item.floor, item.floorNumber),
+    unit_number: pick(item.unit_number, item.unitNumber, addressObject.unit),
+    available_date: pick(item.available_date, item.availableDate, item.availability_date, item.availabilityDate),
+    showing_instructions: pick(item.showing_instructions, item.showingInstructions, item.open_house, item.openHouse),
+    negotiability_notes: pick(item.negotiability_notes, item.negotiabilityNotes),
+    listing_agent_name: pick(item.listing_agent_name, item.listingAgentName, attribution.agentName),
+    listing_agent_phone: pick(item.listing_agent_phone, item.listingAgentPhone, contact.phone, attribution.agentPhoneNumber),
   };
   return Object.fromEntries(PROPERTIES_HEADERS.map((header) => [header, row[header] || ""])) as SheetRow;
 }

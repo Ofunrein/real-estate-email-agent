@@ -39,7 +39,7 @@ Offline and deterministic: no network, no API keys, no customer data.
 | hallucination_no_invented_comps | listing_hallucination | true | seller_lead | reply_and_qualify | true | AUTO_REPLIED | - |
 | hallucination_no_invented_photos | listing_hallucination | true | property_details | reply_and_qualify | true | AUTO_REPLIED | - |
 | missing_context_bare_pronoun | missing_property_context | true | human_required | route_human | false | NEEDS_HUMAN | - |
-| missing_context_that_one | missing_property_context | true | showing_request | send_booking_link | true | AUTO_REPLIED | - |
+| missing_context_that_one | missing_property_context | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | missing_context_area_only | missing_property_context | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
 | missing_context_attachment_only | missing_property_context | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | low_confidence_one_word | low_confidence | true | human_required | route_human | false | NEEDS_HUMAN | - |
@@ -56,7 +56,7 @@ Offline and deterministic: no network, no API keys, no customer data.
 | confusion_seller_and_buyer_same_email | confusion | true | seller_lead | reply_and_qualify | true | AUTO_REPLIED | - |
 | confusion_answers_only_budget | confusion | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
 | confusion_negative_then_positive | confusion | true | showing_request | send_booking_link | true | AUTO_REPLIED | - |
-| confusion_forwarded_listing_thread | confusion | true | showing_request | send_booking_link | true | AUTO_REPLIED | - |
+| confusion_forwarded_listing_thread | confusion | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | confusion_pronoun_with_labelled_context | confusion | true | showing_request | send_booking_link | true | AUTO_REPLIED | - |
 | no_reply_duplicate_optout_then_question | no_reply | true | human_required | route_human | false |  | - |
 | no_reply_offtopic_vendor_reaches_classifier | no_reply | true | spam | review | false |  | - |
@@ -66,9 +66,9 @@ Offline and deterministic: no network, no API keys, no customer data.
   "ok": true,
   "total": 55,
   "failed": 0,
-  "autonomous": 24,
-  "escalated": 26,
-  "ordinaryAutonomyRate": "16/20 (80%)",
+  "autonomous": 22,
+  "escalated": 28,
+  "ordinaryAutonomyRate": "14/20 (70%)",
   "probingAutonomyRate": "7/10 (70%)",
   "families": [
     {

@@ -49,6 +49,7 @@ import { releaseTakeover } from "@/lib/humanTakeover";
 import { isProxiableImageUrl, mediaProxyUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
+import { searchAndImportMissingProperties } from "@/lib/propertyImportFallback";
 import { understandMediaItems } from "@/lib/mediaUnderstanding";
 import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
@@ -321,7 +322,7 @@ export function detectIrisComplianceFlags(text: string): string[] {
   ) {
     flags.push("fair_housing");
   }
-  if (/(do i qualify|can i qualify|will i qualify|get approved|approved for a loan|what rate can i get|which loan should|should i choose fha|nmls)/.test(text_l)) {
+  if (/(do i qualify|can i qualify|will i qualify|get approved|approved for a loan|guarantee (?:mortgage|loan) approval|(?:mortgage|loan) approval (?:odds|chance|guarantee)|what rate can i get|which loan should|should i choose fha|nmls)/.test(text_l)) {
     flags.push("mortgage_license");
   }
   // Word boundaries matter here: an unanchored "sue" fires on "hosue", and an unanchored
@@ -357,9 +358,9 @@ export function detectIrisComplianceFlags(text: string): string[] {
 
 function extractAddresses(text: string): string[] {
   const standard = text.match(STREET_ADDRESS_RE) || [];
-  const suffixless = [...text.matchAll(/\b(?:at|about|for|in|listing at|property at)[ \t]+(\d{2,6}[ \t]+(?:north|south|east|west|n|s|e|w)[ \t]+[A-Za-z][A-Za-z.'-]*(?:[ \t]+[A-Za-z][A-Za-z.'-]*){0,2}?)(?=[.,;!?\n]|[ \t]+(?:is|are|can|could|what|does|do|has|please|and)\b|$)/gi)]
+  const suffixless = [...text.matchAll(/\b(?:is|at|about|for|in|listing at|property at)[ \t]+(\d{2,6}[ \t]+(?:north|south|east|west|n|s|e|w)[ \t]+[A-Za-z][A-Za-z.'-]*(?:[ \t]+[A-Za-z][A-Za-z.'-]*){0,2}?)(?=[.,;!?\n]|[ \t]+(?:is|are|can|could|what|does|do|has|please|and|available)\b|$)/gi)]
     .map((match) => match[1]);
-  return uniq([...standard, ...suffixless].map((value) => value.replace(/\s+/g, " ")));
+  return uniq([...standard, ...suffixless].map((value) => value.replace(/\s+/g, " ").replace(/[.,;:!?]+$/g, "").trim()));
 }
 
 function extractPropertyUrls(text: string): string[] {
@@ -483,7 +484,7 @@ function noOrStopSignal(text: string): "stop" | "no" | "" {
 }
 
 function wrongRecipientSignal(text: string): boolean {
-  return /\b(?:wrong (?:person|number|email|address)|not the right person|you have the wrong|i am not (?:the )?\w+|never contacted you|who is this)\b/i.test(text);
+  return /\b(?:wrong (?:person|number|email|address)|not the right person|you have the wrong|never contacted you|who is this)\b/i.test(text);
 }
 
 function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: IrisLeadRole, tags: string[], latestText = ""): string | null {
@@ -496,7 +497,8 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: Iri
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
   if (!fields.budget && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "What price range should I stay under?";
-  if (["property_details", "buyer_lead"].includes(intent) && fields.current_property_status === "unknown") return "Is this your first purchase, or do you also own a property that may need a valuation?";
+  if (intent === "property_details") return "Would you like to tour it, compare it with similar homes, or confirm anything else?";
+  if (intent === "buyer_lead" && fields.current_property_status === "unknown") return "Is this your first purchase, or have you bought a home before?";
   return null;
 }
 
@@ -538,7 +540,9 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const businessOutreachLike = /(seo|backlinks?|guest post|sponsored post|crypto|web design|rank on google|lead generation service|press release distribution|partners? at|technical founders?|zero slide decks?|collaborative docs?|prospects sell themselves|want the method|selling all day|deals moving|actual deals|cold email|sales automation|marketing automation|partnerships?)/i.test(latestClean);
   const explicitNonRealEstate = /\b(?:not about|not related to|unrelated to)\b.{0,50}\b(?:buying|selling|real estate|property|homes?)\b/i.test(latestClean);
   const realEstateLeadLike = !explicitNonRealEstate && (/(home|house|condo|property|listing|showing|tour|buyer|seller|\brent\b|\blease\b|realtor|real estate|bedroom|bathroom|mortgage|valuation|zillow|mls|open house)/i.test(latestClean) || addresses.length > 0 || propertyUrls.length > 0);
-  const spamLike = systemEmailLike || (businessOutreachLike && !realEstateLeadLike);
+  const explicitServicePitch = businessOutreachLike
+    && /\b(?:sell you|offer you|our (?:seo|marketing|lead generation|web design) services?|book a demo|grow your (?:website|business|pipeline))\b/i.test(latestClean);
+  const spamLike = systemEmailLike || explicitServicePitch || (businessOutreachLike && !realEstateLeadLike);
   const wrongRecipient = wrongRecipientSignal(latestClean);
   // An email whose body is only an attachment placeholder gives Iris nothing to answer.
   // A human glances at the image; Iris does not guess what it shows.
@@ -546,9 +550,14 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const noUsableText = !bodyOnlyClean.replace(/\[[^\]]*\]/g, "").replace(/[^a-z0-9]/gi, "").trim()
     && !addresses.length
     && !propertyUrls.length;
-  const unresolvedVagueAsk = /\b(?:that|the) thing\b|\bwhat we discussed\b|\btake care of it\b|\bhandle (?:that|it)\b/i.test(latestClean)
+  const unresolvedPropertyReference = /\b(?:this property|that property|the property(?!\s+(?:valuation|value|appraisal|cma)\b)|that one|this one|same one|the (?:first|second|third) one)\b/i.test(latestClean)
     && !latestAddresses.length
-    && !propertyUrls.length;
+    && !propertyUrls.length
+    && !contextAddresses.length;
+  const unresolvedVagueAsk = (/\b(?:that|the) thing\b|\bwhat we discussed\b|\btake care of it\b|\bhandle (?:that|it)\b/i.test(latestClean)
+    && !latestAddresses.length
+    && !propertyUrls.length)
+    || unresolvedPropertyReference;
   if (spamLike) {
     intent = "spam";
   } else if (wrongRecipient) {
@@ -557,11 +566,14 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     intent = "human_required";
   } else if (flags.some((flag) => SENSITIVE_FLAGS.has(flag)) || noSignal === "stop" || unresolvedVagueAsk) {
     intent = "human_required";
+  } else if (/\b(?:application|rental application)\b.{0,40}\b(?:status|approved|approval|pending|denied)\b|\b(?:status|approved|approval|pending|denied)\b.{0,40}\b(?:application|rental application)\b/i.test(latestClean)) {
+    intent = "human_required";
+    opportunityTags.push("application_status_review");
   } else if (pivotingToOtherOptions && /(options?|alternatives?|another|other|what else|looking for|better fit|three bed|3 bed|bedroom|homes?|houses?|properties|listings?)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
     opportunityTags.push("property_pivot");
-  } else if (/(sell|selling|listing appointment|list my|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(latestClean)) {
+  } else if (/(sell|selling|listing appointment|list my|list (?:it|this|the property|my (?:home|house|property)) for sale|relist|home value|valuation|what is my house worth|what could it be worth|cma)/i.test(latestClean)) {
     intent = "seller_lead";
     role = "seller";
     opportunityTags.push("valuation_interest");
@@ -582,7 +594,9 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     role = "buyer";
   } else if (/\b(rent|lease|rental|tenant)\b/i.test(latestClean)) {
     intent = "renter_lead";
-    role = "renter";
+    role = /\b(?:i own|landlord|my rental|property manager|manage the tenant|managing tenants?)\b/i.test(latestClean)
+      ? "landlord"
+      : "renter";
   } else if (/(looking (?:for|to buy)|homes?|houses?|condos?|properties|property|available|inventory|options|under \$|\$[\d,]+ ?(?:to|-|–|and) ?\$?[\d,]+|price range|budget|move in|relocat|bedroom|bd)/i.test(latestClean)) {
     intent = "property_search";
     role = "buyer";
@@ -613,6 +627,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     && !wrongRecipient
     && !noUsableText
     && !unresolvedVagueAsk
+    && !opportunityTags.includes("application_status_review")
     && !businessOutreachLike
     && !systemEmailLike
   ) {
@@ -1025,6 +1040,24 @@ function propertyFacts(property: SheetRow): string {
   return facts.join(" &bull; ");
 }
 
+function displayedPropertyFact(value: string | undefined, formatter?: (value: string) => string): string {
+  const clean = (value || "").trim();
+  return clean ? (formatter ? formatter(clean) : clean) : "Not available in current listing data";
+}
+
+function propertyVerifiedFacts(property: SheetRow): Array<[string, string]> {
+  return [
+    ["Price", displayedPropertyFact(property.price, formatCurrency)],
+    ["Bedrooms", displayedPropertyFact(property.beds)],
+    ["Bathrooms", displayedPropertyFact(property.baths)],
+    ["Square footage", displayedPropertyFact(property.sqft, (value) => `${value.replace(/[^\d,]/g, "")} sqft`)],
+    ["Availability", displayedPropertyFact(property.available_date || property.status)],
+    ["Pet policy", displayedPropertyFact(property.pet_policy)],
+    ["Parking", displayedPropertyFact(property.parking)],
+    ["Year built", displayedPropertyFact(property.year_built)],
+  ];
+}
+
 function propertyHighlights(property: SheetRow): string {
   const features = (property.features || "")
     .split(/[,;|]/)
@@ -1063,6 +1096,9 @@ function propertyCardHtml(property: SheetRow, featured = false): string {
   const photo = propertyPhotoSrc(property);
   const listingUrl = property.listing_url || "";
   const highlights = propertyHighlights(property);
+  const verifiedFacts = propertyVerifiedFacts(property)
+    .map(([label, value]) => `<li style="margin:0 0 3px"><strong>${htmlEscape(label)}:</strong> ${htmlEscape(value)}</li>`)
+    .join("");
   const image = photo
     ? `<img src="${htmlEscape(photo)}" alt="${htmlEscape(address || "Property photo")}" style="display:block;width:100%;max-height:${featured ? 300 : 170}px;object-fit:cover;border-radius:8px;margin:0 0 12px" />`
     : "";
@@ -1074,6 +1110,7 @@ ${image}
 <h3 style="margin:0 0 6px;font-size:${featured ? 18 : 15}px;line-height:1.25;color:#111827">${htmlEscape(address)}</h3>
 ${price ? `<p style="margin:0 0 6px;font-size:${featured ? 17 : 14}px;font-weight:800;color:#111827">${htmlEscape(price)}</p>` : ""}
 ${facts ? `<p style="margin:0 0 8px;font-size:13px;line-height:1.45;color:#4b5563">${facts}</p>` : ""}
+<ul style="margin:8px 0;padding-left:18px;font-size:13px;line-height:1.45;color:#374151">${verifiedFacts}</ul>
 ${highlights ? `<p style="margin:0;font-size:13px;line-height:1.45;color:#374151">${htmlEscape(highlights)}</p>` : ""}
 ${viewLink}
 </div>`;
@@ -1081,13 +1118,8 @@ ${viewLink}
 
 function propertyPlain(property: SheetRow): string {
   const address = property.address || [property.city, property.state].filter(Boolean).join(", ");
-  const facts = [
-    formatCurrency(property.price || ""),
-    property.beds ? `${property.beds}bd` : "",
-    property.baths ? `${property.baths}ba` : "",
-    property.sqft ? `${property.sqft.replace(/[^\d,]/g, "")} sqft` : "",
-  ].filter(Boolean).join(" | ");
-  return [address, facts, property.listing_url].filter(Boolean).join("\n");
+  const facts = propertyVerifiedFacts(property).map(([label, value]) => `${label}: ${value}`);
+  return [address, ...facts, property.listing_url].filter(Boolean).join("\n");
 }
 
 export function formatPlainTextEmail(text: string): string {
@@ -1115,10 +1147,56 @@ function dedupeProperties(properties: SheetRow[]): SheetRow[] {
   return out;
 }
 
+function normalizedAddressIdentity(value: string): string {
+  const directions: Record<string, string> = { south: "s", north: "n", east: "e", west: "w" };
+  const suffixes: Record<string, string> = {
+    street: "st", road: "rd", drive: "dr", avenue: "ave", boulevard: "blvd",
+    lane: "ln", court: "ct", circle: "cir", trail: "trl", cove: "cv",
+  };
+  return value
+    .toLowerCase()
+    .replace(/\b(south|north|east|west)\b/g, (direction) => directions[direction] || direction)
+    .replace(/\b(street|road|drive|avenue|boulevard|lane|court|circle|trail|cove)\b/g, (suffix) => suffixes[suffix] || suffix)
+    .replace(/\b(?:austin|tx|texas)\b/g, " ")
+    .replace(/[^a-z0-9#]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isExactPropertyAddressMatch(requested: string, candidate: string): boolean {
+  const wanted = normalizedAddressIdentity(requested);
+  const found = normalizedAddressIdentity(candidate);
+  if (!wanted || !found) return false;
+  if (wanted === found) return true;
+  const wantedHasUnit = /(?:#|\b(?:unit|apt)\b)\s*\w+/i.test(requested);
+  if (wantedHasUnit || /(?:#|\b(?:unit|apt)\b)\s*\w+/i.test(candidate)) return false;
+  return found.startsWith(`${wanted} `)
+    && /\b(?:st|rd|dr|ave|blvd|ln|ct|cir|trl|cv)\b/.test(found.slice(wanted.length));
+}
+
+async function exactAddressProperties(addresses: string[], limit = 4): Promise<SheetRow[]> {
+  const stored = await findPropertiesByAddressesFromDatabase(addresses, limit);
+  const exactStored = stored.filter((property) => addresses.some((address) => isExactPropertyAddressMatch(address, property.address)));
+  if (exactStored.length) return exactStored.slice(0, limit);
+
+  const imported: SheetRow[] = [];
+  for (const address of addresses) {
+    const rows = await searchAndImportMissingProperties({
+      query: { query: address, area: address, mode: "general" },
+      limit: Math.max(1, limit - imported.length),
+      channel: "email",
+      source: "apify_fallback_email_exact_address",
+    });
+    imported.push(...rows.filter((property) => isExactPropertyAddressMatch(address, property.address)));
+    if (imported.length >= limit) break;
+  }
+  return dedupeProperties(imported).slice(0, limit);
+}
+
 function irisEmailCta(classification?: IrisEmailClassification): { label: string; url: string; color: string } | null {
   if (!classification) return null;
   const scheduling = classification.intent === "showing_request" || classification.intent === "property_details";
-  const valuation = classification.intent === "seller_lead" || classification.primary_lead_role === "second_time_buyer";
+  const valuation = classification.intent === "seller_lead";
   const rawUrl = scheduling
     ? process.env.CALENDLY_URL || ""
     : valuation
@@ -1358,7 +1436,7 @@ async function generateIrisEmailReplyRich(
   const properties = !shouldAttachProperties
     ? []
     : classification.addresses.length && classification.intent !== "property_search"
-      ? await findPropertiesByAddressesFromDatabase(classification.addresses, 4)
+      ? await exactAddressProperties(classification.addresses, 4)
       : await retrievePropertiesForAgent({
         query: latestBody,
         area: classification.lead_fields.area || latestBody,
