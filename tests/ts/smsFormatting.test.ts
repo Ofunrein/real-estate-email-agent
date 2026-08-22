@@ -534,3 +534,28 @@ test("a label that existed only to introduce the link is dropped, not stranded",
     assert.ok(urlLinesAreIsolated(normalized));
   }
 });
+
+// A compliance handoff says one thing. The judge caught a mortgage question on the social
+// channel being correctly routed to a licensed person and then having "What email should I copy
+// if you want the list there as well?" appended - a second question referencing a list that was
+// never sent.
+test("a compliance handoff never gets a contact-capture ask appended", () => {
+  for (const channel of ["sms", "website_chat", "instagram", "whatsapp"] as const) {
+    for (const classification of [
+      { status: "needs_human" as const, intent: "property_details" as const },
+      { status: "ready_to_reply" as const, intent: "human_required" as const },
+    ]) {
+      const decision = decideLeadProfileCapture({
+        channel,
+        message: "What interest rate could I get and how much down payment do I need to qualify?",
+        lead: { phone: "" },
+        classification,
+      });
+      assert.equal(decision.shouldAsk, false, `${channel} asked during a handoff`);
+      assert.equal(decision.reason, "compliance_handoff");
+
+      const reply = "That's one I want someone licensed on our team to answer for you.\n\nI'm looping them in now.";
+      assert.equal(appendLeadProfileCaptureAsk(reply, decision, 520), reply);
+    }
+  }
+});

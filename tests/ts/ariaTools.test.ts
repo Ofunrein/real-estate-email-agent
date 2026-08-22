@@ -214,7 +214,9 @@ test("sendPropertyDetailsSms: sends listing details and photo media", async () =
   assert.equal(logged!.channel, "sms");
   assert.equal(logged!.direction, "outbound");
   assert.equal(logged!.threadRef, `sms:${ctx.phone}`);
-  assert.match(logged!.messageText || "", /MMS image:/);
+  // Media URLs are their own paragraph now, with no "MMS image:" label sharing the line.
+  assert.match(logged!.messageText || "", /\n\nhttps:\/\/photos\.zillowstatic\.com\/fp\/one\.jpg$/);
+  assert.doesNotMatch(logged!.messageText || "", /MMS image:/);
   assert.match(out.result, /texted the listing details and photos/);
 });
 

@@ -417,9 +417,11 @@ const MULTI_LISTING_CLOSERS = [
   "Which one stands out?",
 ] as const;
 
+// All action-oriented on purpose. "Want me to pull the full amenity list?" is hollow when the
+// reply just reported every amenity the listing has.
 const AMENITY_CLOSERS = [
   "Want me to confirm the rest with the listing agent?",
-  "Should I check the rest with the listing side, or set up a walkthrough?",
+  "Want me to get you in to see it?",
   "Want a walkthrough so you can see it yourself?",
 ] as const;
 
@@ -650,14 +652,32 @@ const NON_AMENITY_FEATURE_RE = /\b(urban|suburban|convenient|prime|desirable|gre
  * "item" that was a whole sentence: "...parking and modern finishes apartment with community
  * pool and convenient austin access."
  */
+// A few feature-column phrases that no person would say back verbatim.
+const FEATURE_PHRASING: ReadonlyArray<[RegExp, string]> = [
+  [/^elevator building$/i, "elevator access"],
+  [/^elevator$/i, "elevator access"],
+  [/^washer dryer$/i, "in-unit laundry"],
+  [/^covered parking$/i, "covered parking"],
+];
+
 function spokenFeatureList(featureText: string): string {
   const items = cleanText(featureText)
     .split(/[,;]+/)
     .map((item) => item.trim().replace(/[.\s]+$/, ""))
     .filter(Boolean)
     .filter((item) => !NON_AMENITY_FEATURE_RE.test(item))
+    .map((item) => FEATURE_PHRASING.find(([pattern]) => pattern.test(item))?.[1] || item)
     // Preserve acronyms and unit numbers; only de-title-case ordinary words.
     .map((item) => item.replace(/\b[A-Z][a-z]+\b/g, (word) => word.toLowerCase()))
+    // "balcony" -> "a balcony". A bare list of nouns reads as an inventory dump; articles are
+    // what make it sound spoken. Mass nouns ("central air", "parking") take no article.
+    .map((item) => {
+      if (/^(?:central air|air|heat|heating|parking|storage|laundry|water|electricity|internet|elevator access|in-unit laundry)\b/.test(item)) return item;
+      if (/^(?:a|an|the)\b/.test(item)) return item;
+      // Plurals take no article: "a modern finishes" is not something a person says.
+      if (/s$/.test(item) && !/ss$/.test(item)) return item;
+      return `${/^[aeiou]/.test(item) ? "an" : "a"} ${item}`;
+    })
     .slice(0, 5);
   if (!items.length) return "";
   if (items.length === 1) return items[0];
@@ -814,12 +834,33 @@ function formatTheoPropertyOptions(
   const pool = rejectedPrior ? dropRejectedProperties(properties, events) : properties;
   const usable = pool.filter((property) => cleanText(property.address));
   if (!usable.length) return "";
-  const shown = usable.slice(0, 3);
+
+  // Rank by how close each row is to what the lead actually asked for, and drop the ones that
+  // are not a plausible substitute. The judge caught this live: a 1bd/$499,900 unit went out to
+  // a lead who asked for a 3-bed with a $1.5M budget, which reads as not listening.
+  const wantedBeds = requestedBedCount(message);
+  const bedFloor = wantedBeds != null ? wantedBeds - 1 : null;
+  const plausible = bedFloor == null
+    ? usable
+    : usable.filter((property) => {
+      const beds = numericValue(property.beds);
+      return beds == null || beds >= bedFloor;
+    });
+  const ranked = wantedBeds == null
+    ? plausible
+    : [...plausible].sort((a, b) => {
+      const distance = (row: SheetRow) => {
+        const beds = numericValue(row.beds);
+        return beds == null ? 99 : Math.abs(beds - wantedBeds);
+      };
+      return distance(a) - distance(b);
+    });
+  const shown = (ranked.length ? ranked : usable).slice(0, 3);
+  const dropped = usable.length - (ranked.length ? ranked.length : usable.length);
   const needsHuman = classification.status === "needs_human" || Boolean(classification.handoffReason);
   const hasSellBeforeBuy = (classification.opportunityTags || []).includes("sell_before_buy") || classification.leadRole === "seller";
 
   // Be honest when nothing hits the bed count they asked for.
-  const wantedBeds = requestedBedCount(message);
   const bedMiss = wantedBeds != null
     && shown.length > 0
     && shown.every((property) => {
@@ -830,14 +871,16 @@ function formatTheoPropertyOptions(
   const intro = rejectedPrior
     ? "No problem, skipping that one. These are closer:"
     : bedMiss
-    ? `Nothing at ${wantedBeds} beds downtown right now. Closest I have:`
+    ? `Happy to dig in. Nothing at ${wantedBeds} beds is open right now, so here's the closest I have:`
     : needsHuman
     ? `I found ${shown.length === 1 ? "one match" : `${shown.length} matches`}. A person will pick up the part that needs judgment.`
     : shown.length === 1
-    ? "I found one match:"
-    : `I found ${shown.length} matches:`;
+    ? "Here's the one I have that fits:"
+    : `Here are the ${shown.length} closest I have:`;
   const humanNote = !needsHuman && hasSellBeforeBuy
     ? "Since the sell and buy timing has to line up, a person on the team should help with the valuation side."
+    : dropped > 0
+    ? `I left out ${dropped === 1 ? "one that was" : `${dropped} that were`} too far off what you asked for.`
     : "";
   // A single result is not a list. Only number things when there are parallel items.
   const body = shown.length === 1
@@ -882,7 +925,7 @@ function formatTheoHandoff(lead: Partial<SheetRow> = {}, properties: SheetRow[] 
     address
       ? `${opener}'s one I want someone licensed on our team to answer for you on ${address}.`
       : `${opener}'s one I want someone licensed on our team to answer for you.`,
-    "I'm having them reach out right here shortly.",
+    "I'm looping them in now and they'll text you here today.",
   );
 }
 
@@ -890,15 +933,15 @@ function formatTheoHandoff(lead: Partial<SheetRow> = {}, properties: SheetRow[] 
 // The tail still has to be answerable in a word: "let me know what you want next" hands the
 // whole job back to the lead, which is how threads go cold.
 const SHORT_ACK_REPLIES = [
-  "Anytime. Want me to keep pulling options in the meantime?",
-  "Of course. Should I keep an eye out for new ones?",
-  "Happy to help. Want me to line up a couple more to look at?",
+  "Anytime. Want me to pull a few more options now?",
+  "Sounds good. Want me to line up the next round now?",
+  "Happy to help. Want me to keep going and send a couple more?",
 ] as const;
 
 const SHORT_ACK_ANCHORED = [
-  "Anytime. Want me to keep pulling {anchor} options in the meantime?",
-  "Of course. Should I keep an eye out for new {anchor} listings?",
-  "Happy to help. Want me to line up a couple more in {anchor}?",
+  "Anytime. Want me to pull a few {anchor} options now?",
+  "Sounds good. Want me to line up more in {anchor} now?",
+  "Happy to help. Want me to send a couple more {anchor} options now?",
 ] as const;
 
 /** The one lead fact worth naming back in a one-line ack. Area only: a bare budget figure

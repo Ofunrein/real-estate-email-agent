@@ -130,6 +130,14 @@ export function decideLeadProfileCapture(input: {
   const important = highIntent(input.message, input.classification);
   const hasQuestionableIdentity = socialChannel(input.channel) || input.channel === "website_chat";
 
+  // Never bolt a contact-capture ask onto a compliance handoff. Caught by the judge on the
+  // social channel: a mortgage question was correctly routed to a licensed person and then had
+  // "What email should I copy if you want the list there as well?" appended, which references a
+  // list that was never sent and adds a second question to a message meant to say one thing.
+  if (input.classification?.status === "needs_human" || input.classification?.intent === "human_required") {
+    return { extracted, shouldAsk: false, askFor: "", question: "", reason: "compliance_handoff" };
+  }
+
   if (!important) {
     return { extracted, shouldAsk: false, askFor: "", question: "", reason: "low_intent" };
   }

@@ -1,0 +1,61 @@
+{
+  "source": "Four screenshots of the live Iris AI thread (chat 1984) supplied as production failure evidence. Each `received` string is the outbound text as it arrived on the phone, transcribed verbatim from the screenshot. Every one of these must come out of the final outbound serializer with each URL alone on its own physical line, a blank line before and after it, and no numbered listing beginning immediately after a `_zpid/`.",
+  "cases": [
+    {
+      "id": "screenshot_single_listing_beatty",
+      "screenshot": "img_f9d1d1bb9727.jpg",
+      "received": "I found one match: 1. 6816 Beatty Dr $2,800 per month, 3bd/2ba, 1,687 sqft, Austin Listing: https://www.zillow.com/homedetails/6816-Beatty-Dr-Austin-TX-78749/29492081_zpid/ Want me to find more options, or focus on this one?",
+      "urlCount": 1,
+      "mustNotContain": ["Listing: https"]
+    },
+    {
+      "id": "screenshot_three_listings_south_austin",
+      "screenshot": "img_6625bedf66be.jpg",
+      "received": "I found 3 matches: 1. 6828 Walkup Ln, Austin, Texas 78747 $319,500, 4bd/3ba, 2,068 sqft, Southeast Austin / Slaughter Listing: https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/ 2. 6814 Old Quarry Ln $1,703 per month, 1,020 sqft, Northwest Austin Listing: https://www.zillow.com/homedetails/6814-Old-Quarry-Ln-Austin-TX-78731/29349813_zpid/ 3. 6822 Willamette Dr $650,000, 4bd/2ba, 2,286 sqft, Austin Listing: https://www.zillow.com/homedetails/6822-Willamette-Dr-Austin-TX-78723/29408737_zpid/ Which one should I focus on?",
+      "urlCount": 3,
+      "mustNotContain": ["_zpid/ 2.", "_zpid/ 3.", "Listing: https"]
+    },
+    {
+      "id": "screenshot_three_listings_castlekeep",
+      "screenshot": "img_b330cde1858c.jpg",
+      "received": "I found 3 matches: 1. 6828 Walkup Ln, Austin, Texas 78747 $319,500, 4bd/3ba, 2,068 sqft, Southeast Austin / Slaughter Listing: https://www.zillow.com/homedetails/6828-Walkup-Ln-Austin-TX-78747/70342397_zpid/ 2. 6913 Castlekeep Way $2,880 per month, 3bd/2ba, 1,235 sqft, Southwest Austin Listing: https://www.zillow.com/homedetails/6913-Castlekeep-Way-Austin-TX-78745/29498901_zpid/ 3. 6900 Magenta Ln $1,185,000, 4bd/4ba, 3,502 sqft, Southwest Austin Listing: https://www.zillow.com/homedetails/6900-Magenta-Ln-Austin-TX-78739/64685069_zpid/ Which one should I focus on?",
+      "urlCount": 3,
+      "mustNotContain": ["_zpid/ 2.", "_zpid/ 3.", "Listing: https"]
+    },
+    {
+      "id": "screenshot_single_listing_cougar_run",
+      "screenshot": "img_08c78f2db886.jpg",
+      "received": "Here's the one Northwest Austin 3-bed I have on file: 1. 6815 Cougar Run - $969,800, 3bd/3ba, 2,625 sqft, Northwest Austin https://www.zillow.com/homedetails/6815-Cougar-Run-Austin-TX-78731/29353832_zpid/ Are you looking to buy or rent in Northwest Austin?",
+      "urlCount": 1,
+      "mustNotContain": ["sqft, Northwest Austin https"]
+    },
+    {
+      "id": "screenshot_walkthrough_no_url",
+      "screenshot": "img_f9d1d1bb9727.jpg",
+      "received": "Martin, got your thumbs up. An agent will call you shortly to lock in the walkthrough for 6816 Beatty Dr and get your application moving. Do you have any pets or specific move-in requirements we should flag for them?",
+      "urlCount": 0,
+      "mustNotContain": []
+    },
+    {
+      "id": "punctuation_wrapped_url",
+      "screenshot": "synthetic, derived from the same shape",
+      "received": "The unit is still open (https://www.zillow.com/homedetails/6815-Cougar-Run-Austin-TX-78731/29353832_zpid/). Want a walkthrough this week?",
+      "urlCount": 1,
+      "mustNotContain": ["(https", "_zpid/)."]
+    },
+    {
+      "id": "url_at_message_start",
+      "screenshot": "synthetic, derived from the same shape",
+      "received": "https://www.zillow.com/homedetails/6815-Cougar-Run-Austin-TX-78731/29353832_zpid/ is the one I meant. What day works?",
+      "urlCount": 1,
+      "mustNotContain": ["_zpid/ is the one"]
+    },
+    {
+      "id": "url_at_message_end",
+      "screenshot": "synthetic, derived from the same shape",
+      "received": "6815 Cougar Run\n$969,800 | 3 bed | 3 bath | 2,625 sq ft\nhttps://www.zillow.com/homedetails/6815-Cougar-Run-Austin-TX-78731/29353832_zpid/",
+      "urlCount": 1,
+      "mustNotContain": []
+    }
+  ]
+}

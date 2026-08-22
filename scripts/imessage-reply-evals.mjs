@@ -30,6 +30,11 @@ const flag = (name) => {
 const outPath = flag("--out");
 const onlyCase = flag("--case");
 const offline = args.includes("--offline");
+// Every messaging channel funnels through generateTheoReply, so the same judged corpus is run
+// per channel to prove the rendering invariants hold on each one, not just on SMS.
+// olivia-website posts source "form"; meta social posts the platform name.
+const source = flag("--source") || "sms";
+const CAPTURE_CHANNEL = { sms: "sms", form: "website", whatsapp: "whatsapp", instagram: "instagram", messenger: "instagram" };
 
 const JUDGE_MODEL = "claude-sonnet-4-6";
 const PASS_MEAN = 4.0;
@@ -107,7 +112,7 @@ async function generate(testCase) {
   const message = inbound[inbound.length - 1];
   const result = await generateTheoReply({
     message,
-    source: "sms",
+    source,
     lead: testCase.lead || {},
     properties,
     recentEvents,
@@ -118,7 +123,7 @@ async function generate(testCase) {
   // and that step is where the "every SMS is one line" bug lived.
   if (result.reply) {
     const profileDecision = decideLeadProfileCapture({
-      channel: "sms",
+      channel: CAPTURE_CHANNEL[source] || "sms",
       message,
       lead: testCase.lead || {},
       classification: result.classification,
@@ -147,6 +152,12 @@ function judgePrompt(testCase, reply, properties, recentEvents) {
   return `You are an independent evaluator. You are a 20-year Austin residential real estate broker who also runs your team's texting playbook. You are grading ONE outbound text message that an AI ISA named Iris sent on behalf of Austin Realty.
 
 The lead reads this in Apple Messages on an iPhone. Apple Messages renders newlines and blank lines literally. It cannot render bold, headings, or Markdown link syntax.
+MANDATORY HOUSE FORMATTING STANDARD (do NOT penalise these; they are required):
+- Every URL is its own paragraph: alone on its line, with a blank line before and after it, and nothing preceding or following it on that line. A blank line between a listing's facts and its link is CORRECT and required, not visual noise.
+- Property details start on their own line after the intro, never jammed into the intro sentence.
+- Multiple listings use blocks: heading/details, blank line, isolated URL, blank line, then the next block or the closing question.
+- No Markdown anywhere. Raw clickable URLs only.
+Judge spacing ONLY on deviations from this standard.
 
 RESPONSE TYPE: ${testCase.family} (${testCase.label})
 
@@ -330,6 +341,7 @@ const overallValues = rows.flatMap((row) => Object.values(row.scores));
 const summary = {
   ok: failed.length === 0,
   mode: offline ? "offline-deterministic" : "ai-judge",
+  channel: source,
   judgeModel: offline ? null : JUDGE_MODEL,
   threshold: { mean: PASS_MEAN, floor: PASS_FLOOR },
   corpusId: corpus.corpusId,

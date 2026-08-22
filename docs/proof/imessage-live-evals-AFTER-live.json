@@ -1,0 +1,147 @@
+{
+  "ok": false,
+  "aborted": null,
+  "casesPlanned": 2,
+  "mode": "live-ai-judge",
+  "runtimeGraded": "deployed",
+  "judgeModel": "claude-sonnet-4-6",
+  "threshold": {
+    "mean": 4,
+    "floor": 3
+  },
+  "target": {
+    "id": "1984",
+    "identifier": "+15128469460",
+    "service": "SMS",
+    "accountLogin": "+1512XXX2595",
+    "isGroup": "false"
+  },
+  "bounds": {
+    "perTurnTimeoutMs": 95000,
+    "settleMs": 4000,
+    "totalTimeoutMs": 1320000
+  },
+  "elapsedMs": 123039,
+  "totalCases": 2,
+  "passed": 1,
+  "failed": 1,
+  "overallMean": 3.75,
+  "perCriterion": {
+    "formatting": 3.5,
+    "readability": 4,
+    "spacing": 4.5,
+    "messageLength": 4,
+    "naturalness": 3,
+    "contextRetention": 4,
+    "specificity": 4.5,
+    "usefulNextStep": 4,
+    "brokerageVoice": 3,
+    "seamlessExtension": 3
+  },
+  "cases": [
+    {
+      "id": "property_lookup",
+      "family": "multi_listing",
+      "exchanges": [
+        {
+          "outbound": {
+            "text": "Do you have any 2 bedroom condos downtown?",
+            "sentAt": "2026-08-22T01:35:53.032Z",
+            "afterMessageId": 217385,
+            "attachment": null
+          },
+          "inbound": [
+            {
+              "messageId": 217390,
+              "chatId": 1984,
+              "direction": "inbound",
+              "timestamp": "2026-08-22T01:36:19.105Z",
+              "sender": "+15128469460",
+              "senderName": "Iris AI",
+              "text": "I found 3 matches:\n\n1. 70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\n2. 70 Rainey St #2208\n$1,450,000, 2bd/2ba, 1,434 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/\n\n3. 84 East Ave #3009\n$1,073,000, 2bd/2ba, 1,176 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/84-East-Ave-3009-Austin-TX-78701/351022208_zpid/\n\nWhich of these do you want to see first?",
+              "attachments": []
+            }
+          ],
+          "timedOut": false,
+          "waitedMs": 46744,
+          "pollFailures": 0
+        }
+      ],
+      "reply": "I found 3 matches:\n\n1. 70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\n2. 70 Rainey St #2208\n$1,450,000, 2bd/2ba, 1,434 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/\n\n3. 84 East Ave #3009\n$1,073,000, 2bd/2ba, 1,176 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/84-East-Ave-3009-Austin-TX-78701/351022208_zpid/\n\nWhich of these do you want to see first?",
+      "deterministic": [],
+      "mean": 4,
+      "min": 3,
+      "scores": {
+        "formatting": 4,
+        "readability": 4,
+        "spacing": 5,
+        "messageLength": 4,
+        "naturalness": 3,
+        "contextRetention": 5,
+        "specificity": 5,
+        "usefulNextStep": 4,
+        "brokerageVoice": 3,
+        "seamlessExtension": 3
+      },
+      "reasoning": "The reply delivers exactly what was asked — three real-looking downtown 2/2 condos with address, price, size, and isolated URLs — and the spacing fully conforms to the mandatory standard. The numbered-list prefix ('1.', '2.', '3.') is functional and not Markdown, but it does give the message a slightly templated, system-printout feel that a skilled human agent would rarely use in a first-contact text. The opener 'I found 3 matches:' is serviceable but robotic; a human agent would more naturally say something like 'Here are three downtown 2-bedrooms I pulled up for you' or similar. The closing question is clean and actionable but generic — a stronger agent might add a light qualifier (e.g., budget range or a note about the price spread) to show they're reading the lead, not just dumping results.",
+      "violations": [
+        "Numbered list prefixes ('1.', '2.', '3.') give a system-printout feel inconsistent with native Apple Messages texting style",
+        "Opener 'I found 3 matches:' reads as template/AI output rather than a skilled human agent voice"
+      ],
+      "pass": true
+    },
+    {
+      "id": "dynamic_formatting",
+      "family": "multi_listing",
+      "exchanges": [
+        {
+          "outbound": {
+            "text": "send me your top 3 options with the details",
+            "sentAt": "2026-08-22T01:36:49.232Z",
+            "afterMessageId": 217390,
+            "attachment": null
+          },
+          "inbound": [
+            {
+              "messageId": 217392,
+              "chatId": 1984,
+              "direction": "inbound",
+              "timestamp": "2026-08-22T01:37:09.244Z",
+              "sender": "+15128469460",
+              "senderName": "Iris AI",
+              "text": "I found 3 matches:\n\n1. 70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\n2. 70 Rainey St #2701\n$2,501,900, 3bd/3ba, 2,851 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2701-Austin-TX-78701/306645052_zpid/\n\n3. 70 Rainey St #2208\n$1,450,000, 2bd/2ba, 1,434 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/\n\nWhich of these do you want to see first?",
+              "attachments": []
+            }
+          ],
+          "timedOut": false,
+          "waitedMs": 37707,
+          "pollFailures": 0
+        }
+      ],
+      "reply": "I found 3 matches:\n\n1. 70 Rainey St #1509\n$750,000, 2bd/2ba, 1,128 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-1509-Austin-TX-78701/306644848_zpid/\n\n2. 70 Rainey St #2701\n$2,501,900, 3bd/3ba, 2,851 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2701-Austin-TX-78701/306645052_zpid/\n\n3. 70 Rainey St #2208\n$1,450,000, 2bd/2ba, 1,434 sqft, Downtown Austin\n\nhttps://www.zillow.com/homedetails/70-Rainey-St-2208-Austin-TX-78701/306644542_zpid/\n\nWhich of these do you want to see first?",
+      "deterministic": [],
+      "mean": 3.5,
+      "min": 3,
+      "scores": {
+        "formatting": 3,
+        "readability": 4,
+        "spacing": 4,
+        "messageLength": 4,
+        "naturalness": 3,
+        "contextRetention": 3,
+        "specificity": 4,
+        "usefulNextStep": 4,
+        "brokerageVoice": 3,
+        "seamlessExtension": 3
+      },
+      "reasoning": "The structure is largely correct — URLs are isolated on their own lines with blank lines before and after, and each listing block is separated cleanly, which satisfies the mandatory formatting standard. However, the numbered prefixes ('1.', '2.', '3.') read as template scaffolding rather than natural agent prose, and the opener 'I found 3 matches:' is a robotic ISA tell that no skilled human agent would type. All three listings are at the same address (70 Rainey St), which a real agent would acknowledge to avoid confusion, and the lack of any differentiating commentary beyond raw specs makes this feel like a database dump rather than a curated recommendation. The closing question is functional but generic.",
+      "violations": [
+        "Numbered list prefixes ('1.', '2.', '3.') read as Markdown-adjacent template syntax, not native Apple Messages prose",
+        "Opener 'I found 3 matches:' is a robotic ISA tell, not a skilled human agent voice",
+        "All three listings share the same street address with no acknowledgment — a real agent would flag this to avoid lead confusion",
+        "No contextRetention signal — this is a first contact with no prior thread, yet the reply treats it as if criteria were already established, with no warm opener or brief context-setting"
+      ],
+      "pass": false
+    }
+  ]
+}

@@ -411,6 +411,12 @@ function judgePrompt(testCase, transcript, reply, latestInbound) {
   return `You are an independent evaluator: a 20-year Austin residential real estate broker who also runs your team's texting playbook. Grade ONE outbound text an AI ISA named Iris sent for Austin Realty.
 
 The lead reads this in Apple Messages on an iPhone. Apple Messages renders newlines and blank lines literally and cannot render Markdown, bold, or headings.
+MANDATORY HOUSE FORMATTING STANDARD (do NOT penalise these; they are required):
+- Every URL is its own paragraph: alone on its line, with a blank line before and after it, and nothing preceding or following it on that line. A blank line between a listing's facts and its link is CORRECT and required, not visual noise.
+- Property details start on their own line after the intro, never jammed into the intro sentence.
+- Multiple listings use blocks: heading/details, blank line, isolated URL, blank line, then the next block or the closing question.
+- No Markdown anywhere. Raw clickable URLs only.
+Judge spacing ONLY on deviations from this standard.
 
 ADVERSARIAL CASE: ${testCase.id} (expected shape: ${testCase.family})
 

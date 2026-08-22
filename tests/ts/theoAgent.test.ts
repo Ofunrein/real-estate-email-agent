@@ -85,7 +85,7 @@ test("generateTheoReply: typo similar options stays deterministic", async () => 
   assert.equal(result.status, "ready_to_reply");
   assert.equal(result.aiAction, "property_options_reply_ready");
   assert.equal(result.handoffReason, "");
-  assert.match(result.reply, /found 2 matches/i);
+  assert.match(result.reply, /2 closest I have/i);
   assert.match(result.reply, /6814 Old Quarry Ln/);
 });
 
@@ -261,7 +261,7 @@ test("generateTheoReply: generic amenity follow-up stays on the current listing"
   assert.equal(result.handoffReason, "");
   assert.match(result.reply, /610 Davis St #2508/);
   // Spoken, not a pasted Title Case column dump.
-  assert.match(result.reply, /central air, balcony, parking and modern finishes/i);
+  assert.match(result.reply, /central air, a balcony, parking and modern finishes/i);
   assert.doesNotMatch(result.reply, /Central Air, Balcony, Parking, Modern Finishes/);
   // The free-text description must not be spliced into the comma list.
   assert.doesNotMatch(result.reply, /finishes apartment with/i);

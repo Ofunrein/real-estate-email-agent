@@ -1,6 +1,7 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import { removeEmDashes } from "@/lib/noEmDash";
+import { normalizeMessagesReply } from "@/lib/smsFormatting";
 import { requestWorkspaceId } from "@/lib/workspaceContext";
 import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
@@ -53,22 +54,27 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
     .slice(0, Math.max(0, Number(process.env.SMS_MAX_IMAGES || "3")));
 }
 
-function mediaLogLabel(url: string): string {
-  const lower = url.toLowerCase();
-  if (/\.(?:caf|m4a|mp3|aac|wav|ogg|webm)(?:[?#]|$)/i.test(lower) || /(?:audio|voice)/i.test(lower)) {
-    return "MMS audio";
-  }
-  if (/\.(?:jpg|jpeg|png|gif|webp|heic)(?:[?#]|$)/i.test(lower) || /(?:photo|image)/i.test(lower)) {
-    return "MMS image";
-  }
-  return "MMS media";
-}
 
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
-  const cleanBody = body.trim();
+  const cleanBody = finalizeOutboundSmsBody(body);
   const cleanUrls = cleanMediaUrls(mediaUrls);
   if (!cleanUrls.length) return cleanBody;
-  return [cleanBody, "", ...cleanUrls.map((url) => `${mediaLogLabel(url)}: ${url}`)].filter(Boolean).join("\n");
+  // Media URLs are paragraphs too. "MMS image: https://…" put a label on the URL's own line,
+  // and this text is what the dashboard renders for the outbound event.
+  return finalizeOutboundSmsBody([cleanBody, ...cleanUrls].filter(Boolean).join("\n\n"));
+}
+
+/**
+ * The LAST thing that touches an outbound SMS body before it is serialized into the Twilio
+ * form POST. Every reply generator already normalizes, but this is the transport boundary and
+ * it must not depend on that: any caller, including a future LLM path, ships through here.
+ *
+ * Martin's screenshots of the live thread showed exactly what happens without it - a whole
+ * listing roundup arriving as one run-on paragraph with the next numbered listing starting
+ * immediately after `/zpid/`.
+ */
+export function finalizeOutboundSmsBody(body: string): string {
+  return normalizeMessagesReply(removeEmDashes(String(body || "")));
 }
 
 export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
@@ -86,7 +92,7 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
   }
 
   const recipient = smsRecipientAddress(to);
-  const message = removeEmDashes(body).trim();
+  const message = finalizeOutboundSmsBody(body);
   if (!recipient || (!message && !cleanUrls.length)) {
     return { sent: false, skipped: true, sid: "", error: "Missing SMS recipient or message media", mediaCount: cleanUrls.length };
   }

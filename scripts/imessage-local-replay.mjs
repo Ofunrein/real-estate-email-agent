@@ -28,6 +28,10 @@ const flag = (name) => {
 };
 const outPath = flag("--out");
 const journalPath = flag("--journal") || "docs/proof/imessage-live-evals-journal.jsonl";
+// The same 21 live adversarial inputs are replayed per channel, because every messaging
+// surface funnels through generateTheoReply and must inherit the rendering invariants.
+const source = flag("--source") || "sms";
+const CAPTURE_CHANNEL = { sms: "sms", form: "website", whatsapp: "whatsapp", instagram: "instagram", messenger: "instagram" };
 
 // Family per case id, matching the live suite so the budgets applied are the same.
 const FAMILIES = {
@@ -128,7 +132,7 @@ async function replay(entry) {
   for (const turn of turns) {
     result = await generateTheoReply({
       message: turn,
-      source: "sms",
+      source,
       lead: LEAD,
       properties: PROPERTIES,
       recentEvents: [...recentEvents],
@@ -137,7 +141,7 @@ async function replay(entry) {
     if (reply) {
       // Mirror the webhook's post-processing, where the "one long line" bug used to live.
       const decision = decideLeadProfileCapture({
-        channel: "sms",
+        channel: CAPTURE_CHANNEL[source] || "sms",
         message: turn,
         lead: LEAD,
         classification: result.classification,
@@ -191,6 +195,7 @@ for (const row of rows.filter((item) => !item.clean)) {
 const summary = {
   ok: rows.every((row) => row.clean),
   mode: "local-replay-deterministic",
+  channel: source,
   runtimeGraded: "local working tree",
   source: journalPath,
   totalCases: rows.length,
