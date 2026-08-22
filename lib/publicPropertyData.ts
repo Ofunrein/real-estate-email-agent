@@ -100,7 +100,8 @@ export async function fetchFredMortgageRates(): Promise<string> {
     const data = await getJson(`https://api.stlouisfed.org/fred/series/observations?${params.toString()}`) as Record<string, unknown> | null;
     const observations = Array.isArray(data?.observations) ? data.observations as Record<string, unknown>[] : [];
     const value = clean(String(observations[0]?.value || ""));
-    return value && value !== "." ? `${label} ${value}%` : "";
+    const date = clean(String(observations[0]?.date || ""));
+    return value && value !== "." ? `${label} ${value}%${date ? ` (${date})` : ""}` : "";
   }));
   const cleanRates = rates.filter(Boolean);
   return cleanRates.length ? `Current mortgage rate context from FRED: ${cleanRates.join(", ")}.` : "";
@@ -110,13 +111,14 @@ export async function fetchCensusZipStats(zip?: string): Promise<string> {
   const normalizedZip = clean(zip).match(/\b\d{5}\b/)?.[0] || "";
   if (!normalizedZip) return "";
   const params = new URLSearchParams({
-    get: "B19013_001E,B01003_001E,B25002_003E,B25002_001E",
+    get: "B19013_001E,B01003_001E,B25002_003E,B25002_001E,B25064_001E",
     for: `zip code tabulation area:${normalizedZip}`,
   });
   addOptionalParam(params, "key", process.env.CENSUS_API_KEY);
-  const data = await getJson(`https://api.census.gov/data/2022/acs/acs5?${params.toString()}`);
+  const dataYear = "2024";
+  const data = await getJson(`https://api.census.gov/data/${dataYear}/acs/acs5?${params.toString()}`);
   if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) return "";
-  const [income, population, vacant, totalHousing] = data[1] as string[];
+  const [income, population, vacant, totalHousing, medianGrossRent] = data[1] as string[];
   const incomeText = income && income !== "-666666666" ? formatCurrency(income) : "";
   const populationText = Number(population);
   const vacantUnits = Number(vacant);
@@ -128,7 +130,8 @@ export async function fetchCensusZipStats(zip?: string): Promise<string> {
     incomeText ? `median income ${incomeText}` : "",
     Number.isFinite(populationText) && populationText > 0 ? `population ${populationText.toLocaleString("en-US")}` : "",
     vacancyRate,
-  ].filter(Boolean).join(", ").replace(/^/, `Census ZIP ${normalizedZip} context: `);
+    formatCurrency(medianGrossRent) ? `median gross rent ${formatCurrency(medianGrossRent)}/month` : "",
+  ].filter(Boolean).join(", ").replace(/^/, `U.S. Census Bureau ${dataYear} ACS 5-year ZIP ${normalizedZip} context: `);
 }
 
 function socrataDatasetsForProperty(property: Partial<SheetRow>): SocrataDatasetConfig[] {

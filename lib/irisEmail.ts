@@ -50,6 +50,7 @@ import { isProxiableImageUrl, mediaProxyUrl } from "@/lib/mediaProxy";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
 import { searchAndImportMissingProperties } from "@/lib/propertyImportFallback";
+import { fetchPublicPropertyContext } from "@/lib/publicPropertyData";
 import { understandMediaItems } from "@/lib/mediaUnderstanding";
 import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
@@ -1309,6 +1310,7 @@ async function generateClaudeIrisEmailReplyText(
   classification: IrisEmailClassification,
   properties: SheetRow[],
   styleContext = "",
+  publicDataContext = "",
 ): Promise<string | null> {
   const key = anthropicApiKey();
   if (!key) return null;
@@ -1331,6 +1333,7 @@ Rules:
 - Keep it concise and useful.
 ${advancedQualificationPlaybook()}
 - Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
+- When public data is provided, answer requested rent, area-statistic, rate, source, and data-date questions directly. A Census median gross rent is an area benchmark, not a property-specific rent estimate, so label it accurately.
 - The app will render property facts in an HTML property card below your body, so do not repeat the full price/beds/baths/sqft block in prose.
 - Mention the primary address at most once.
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
@@ -1359,7 +1362,10 @@ Classification:
 ${JSON.stringify(classification)}
 
 Property facts available to the HTML card:
-${JSON.stringify(propertyContext)}`;
+${JSON.stringify(propertyContext)}
+
+Verified public data context:
+${publicDataContext || "(none)"}`;
 
   const startedAt = Date.now();
   const model = irisEmailClaudeModel();
@@ -1446,7 +1452,18 @@ async function generateIrisEmailReplyRich(
         excludeAddresses,
         mode: "general",
       }, 4, { channel: "email" });
-  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext).catch(() => null) || fallbackPlain;
+  const publicDataRequested = /\b(?:rent|rental|income|population|vacancy|stat(?:istic)?s?|mortgage rate|data source|source dataset|data (?:date|year))\b/i.test(latestBody);
+  const publicDataSeed: Partial<SheetRow> = {
+    ...(properties[0] || {}),
+    address: properties[0]?.address || classification.addresses[0] || "",
+    city: properties[0]?.city || (/\baustin\b/i.test(latestBody) ? "Austin" : ""),
+    state: properties[0]?.state || (/\b(?:tx|texas)\b/i.test(latestBody) ? "TX" : ""),
+    zip: properties[0]?.zip || latestBody.match(/\b\d{5}\b/)?.[0] || "",
+  };
+  const publicDataContext = publicDataRequested
+    ? (await fetchPublicPropertyContext(publicDataSeed).catch(() => ({ context: "", metrics: [] }))).context
+    : "";
+  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null) || fallbackPlain;
   return buildHtmlEmailReply(plain, properties, classification);
 }
 

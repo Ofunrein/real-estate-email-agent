@@ -54,12 +54,12 @@ test("fetchPublicPropertyContext: uses FRED, Census, and Socrata without RentCas
     const url = String(input);
     urls.push(url);
     if (url.includes("fred/series/observations")) {
-      return Response.json({ observations: [{ value: url.includes("MORTGAGE15US") ? "5.77" : "6.81" }] });
+      return Response.json({ observations: [{ value: url.includes("MORTGAGE15US") ? "5.77" : "6.81", date: "2026-08-20" }] });
     }
-    if (url.includes("api.census.gov/data/2022/acs/acs5")) {
+    if (url.includes("api.census.gov/data/2024/acs/acs5")) {
       return Response.json([
-        ["B19013_001E", "B01003_001E", "B25002_003E", "B25002_001E", "zip code tabulation area"],
-        ["98000", "22000", "550", "11000", "78751"],
+        ["B19013_001E", "B01003_001E", "B25002_003E", "B25002_001E", "B25064_001E", "zip code tabulation area"],
+        ["98000", "22000", "550", "11000", "1850", "78751"],
       ]);
     }
     if (url.includes("data.austintexas.gov/resource/3syk-w9eu.json")) {
@@ -81,7 +81,9 @@ test("fetchPublicPropertyContext: uses FRED, Census, and Socrata without RentCas
     });
 
     assert.match(result.context, /Current mortgage rate context from FRED/);
-    assert.match(result.context, /Census ZIP 78751 context/);
+    assert.match(result.context, /U.S. Census Bureau 2024 ACS 5-year ZIP 78751 context/);
+    assert.match(result.context, /median gross rent \$1,850\/month/);
+    assert.match(result.context, /2026-08-20/);
     assert.match(result.context, /Public-record permit context from Socrata/);
     assert.equal(urls.some((url) => /rentcast/i.test(url)), false);
     assert.deepEqual(result.metrics.map((metric) => metric.service).sort(), ["census", "fred", "socrata"]);
