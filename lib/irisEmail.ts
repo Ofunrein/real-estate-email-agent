@@ -1463,7 +1463,7 @@ async function generateIrisEmailReplyRich(
         excludeAddresses,
         mode: "general",
       }, 4, { channel: "email" });
-  const publicDataRequested = /\b(?:rent|rental|income|population|vacancy|stat(?:istic)?s?|mortgage rate|data source|source dataset|data (?:date|year))\b/i.test(latestBody);
+  const publicDataRequested = /\b(?:public data|census|fred|median gross rent|median household income|vacancy rate|rent|rental|income|population|vacancy|stat(?:istic)?s?|mortgage rate|data source|source dataset|data (?:date|year))\b/i.test(latestBody);
   const publicDataSeed: Partial<SheetRow> = {
     ...(properties[0] || {}),
     address: classification.addresses[0] || properties[0]?.address || "",
