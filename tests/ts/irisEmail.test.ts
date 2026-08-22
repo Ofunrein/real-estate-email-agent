@@ -17,7 +17,7 @@ import {
   type IrisEmailMessage,
 } from "@/lib/irisEmail";
 import { irisEmailCronDryRun, irisEmailCronSendReplies } from "@/lib/irisEmailCron";
-import { DEFAULT_INBOX_CATEGORIES } from "@/lib/inboxSettings";
+import { DEFAULT_INBOX_CATEGORIES, DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 function email(partial: Partial<IrisEmailMessage> = {}): IrisEmailMessage {
@@ -816,4 +816,98 @@ test("classifyIrisEmailText: blocks non-real-estate founder outreach from auto-r
   })), false);
   assert.equal(classification.intent, "spam");
   assert.equal(execution.canReply, false);
+});
+
+// Production incident, evidenced by Martin's Gmail screenshots: Iris auto-replied to cold
+// outbound sales mail from Mercury (fintech) and a business-development sender, then appended a
+// property card and a valuation CTA, and Gmail showed AUTO_REPLIED + Iris/Seller Valuation +
+// Iris/Waiting on Lead on unrelated fintech marketing.
+//
+// Two independent fail-opens caused it and both are asserted here:
+//   1. classifyIrisEmailText's "autonomy floor" downgraded the safe human_required default to
+//      property_search/buyer whenever no blocklist keyword matched. Mercury's copy ("IO card",
+//      "cash back", "spend controls") matches no blocklist term AND no real-estate term, so it
+//      became a buyer lead at confidence 0.72.
+//   2. decideIrisEmailExecution replied to anything not spam/human_required/sensitive.
+// Bodies below are anonymized structural reproductions, not the customers' mail.
+const COLD_OUTBOUND_CASES: Array<{ id: string; subject: string; from: string; body: string }> = [
+  {
+    id: "fintech_card_outbound",
+    subject: "finance tools",
+    from: "Sender Name <bd@examplefintech.com>",
+    body: "Martin, our IO card isn't built around fees or interest. You earn 1.5% cash back, get higher limits tied to your balance, built-in spend controls, and can build business credit.\n\nEven if you're not at the $15k deposit threshold yet, we can still get you set up on day one, with the same benefits.\n\nOpen to learning more about how this could work for you?\n\nBusiness Development",
+  },
+  {
+    id: "bizdev_cold_call_request",
+    subject: "Quick question about your business",
+    from: "Sender Name <bd@examplevendor.com>",
+    body: "Hi Martin,\n\nI came across your company and wanted to reach out. We help founders scale their outbound. Would you be open to a quick 15 minute call next week to see if there's a fit?\n\nBest,\nBusiness Development",
+  },
+];
+
+test("cold outbound sales email is never auto-replied to and never gets a property pitch", () => {
+  for (const item of COLD_OUTBOUND_CASES) {
+    const classification = classifyIrisEmailText({ subject: item.subject, body: item.body, from: item.from });
+    const execution = decideIrisEmailExecution(classification);
+
+    // 1. No send, ever.
+    assert.equal(execution.canReply, false, `${item.id}: would auto-reply to cold outbound`);
+    // 2. Never labeled AUTO_REPLIED.
+    assert.ok(!execution.labels.includes("AUTO_REPLIED"), `${item.id}: got AUTO_REPLIED`);
+    // 3. Never classified as a real-estate lead, so no inventory retrieval is triggered and no
+    //    Seller/Valuation topic tag can be derived from the intent.
+    assert.ok(
+      !["property_search", "property_details", "showing_request", "buyer_lead", "seller_lead", "renter_lead"].includes(classification.intent),
+      `${item.id}: classified as real-estate intent ${classification.intent}`,
+    );
+    assert.notEqual(classification.primary_lead_role, "buyer", `${item.id}: assigned buyer role`);
+    // 4. The autonomy floor must not have fired.
+    assert.ok(
+      !classification.opportunity_tags.includes("autonomy_floor_reply"),
+      `${item.id}: autonomy floor downgraded unrelated mail into a repliable lead`,
+    );
+    // 5. No valuation opportunity invented from fintech marketing.
+    assert.ok(
+      !classification.opportunity_tags.includes("valuation_interest"),
+      `${item.id}: invented valuation interest`,
+    );
+  }
+});
+
+test("the autonomy floor requires affirmative real-estate evidence", () => {
+  // Same shape of message, with and without real-estate evidence. Only the second may reply.
+  const withoutEvidence = classifyIrisEmailText({
+    subject: "following up",
+    body: "Just circling back on my note from last week. Worth a quick chat?",
+    from: "Sender Name <bd@examplevendor.com>",
+  });
+  assert.ok(!withoutEvidence.opportunity_tags.includes("autonomy_floor_reply"));
+  assert.equal(decideIrisEmailExecution(withoutEvidence).canReply, false);
+
+  const withEvidence = classifyIrisEmailText({
+    subject: "following up",
+    body: "Just circling back on my note from last week. Is the condo at 70 Rainey St still available? Worth a quick chat?",
+    from: "Lead Name <lead@example.com>",
+  });
+  assert.ok(withEvidence.intent !== "human_required", "real real-estate mail must stay answerable");
+});
+
+test("ambiguous mail from a possible lead drafts for a human instead of going silent", () => {
+  // No resolvable real-estate context, but this is not affirmatively someone else's business.
+  // Silence on a real lead is its own failure, so this is Tier B: a draft, not a no-op.
+  const classification = classifyIrisEmailText({ subject: "question", body: "How much is it?", from: "Lead Name <lead@example.com>" });
+  const execution = decideIrisEmailExecution(classification);
+  assert.equal(execution.canReply, false, "must not auto-send on unresolved ambiguity");
+  assert.equal(execution.aiAction, "draft_reply", "must still produce a draft, not silence");
+  assert.ok(!classification.opportunity_tags.includes("out_of_scope_no_reply"));
+});
+
+test("email auto-send is off by default and draft_first stays a global switch", () => {
+  // Email must be opt-in. draft_first must NOT be flipped to achieve that, because it is a
+  // global kill switch and would silently disable SMS, WhatsApp and social auto-send too.
+  assert.equal(DEFAULT_INBOX_SETTINGS.auto_send.email, false);
+  assert.equal(DEFAULT_INBOX_SETTINGS.draft_first, false);
+  for (const channel of ["sms", "whatsapp", "messenger", "instagram", "website_chat"] as const) {
+    assert.equal(DEFAULT_INBOX_SETTINGS.auto_send[channel], true, `${channel} auto-send was disabled as a side effect`);
+  }
 });

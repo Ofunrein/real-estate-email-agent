@@ -553,8 +553,17 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   // screened robots, vendors and system mail). Iris answers those, which is the difference
   // between a realtor reading 15% of the inbox and reading all of it. Human review stays
   // for real risk: sensitive flags, opt-outs, wrong recipients, spam.
+  // The autonomy floor exists so Iris answers ordinary real-estate mail without a human. It
+  // must require AFFIRMATIVE real-estate evidence, not merely the absence of red flags.
+  //
+  // Without `realEstateLeadLike` this was fail-open on anything the blocklist did not name:
+  // a Mercury fintech cold-outbound ("IO card", "cash back", "spend controls") matches no
+  // businessOutreachLike keyword and no real-estate keyword, so it was downgraded to
+  // property_search/buyer at 0.72 and auto-replied to with a property card and a valuation CTA.
+  // Unknown mail now stays human_required, which does not reply.
   if (
     intent === "human_required"
+    && realEstateLeadLike
     && !flags.length
     && !noSignal
     && !wrongRecipient
@@ -565,6 +574,18 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     intent = addresses.length || propertyUrls.length ? "property_details" : "property_search";
     if (role === "unknown") role = "buyer";
     opportunityTags.push("autonomy_floor_reply");
+  }
+  // Out of scope means AFFIRMATIVELY someone else's business: cold outbound, vendor pitch,
+  // SaaS/fintech marketing, automated system mail. Triage it, never answer it, never attach a
+  // property card or valuation CTA. Tier C: classify only.
+  //
+  // Absence of real-estate evidence is NOT enough to be silent. "How much is it?" from a real
+  // lead has no keywords either, and going silent on a lead is its own failure. Those get a
+  // complete human-approved draft instead (Tier B), never silence.
+  const affirmativelyOutOfScope = !realEstateLeadLike
+    && (businessOutreachLike || systemEmailLike || /(unsubscribe|view in browser|manage preferences|sales navigator|book a demo|our platform|pricing plans?|free trial|webinar|newsletter)/i.test(latestClean));
+  if (intent === "human_required" && affirmativelyOutOfScope && !flags.length && !noSignal) {
+    opportunityTags.push("out_of_scope_no_reply");
   }
 
   if (/(asap|today|tomorrow|urgent|this week)/i.test(latestClean)) opportunityTags.push("high_urgency");
@@ -612,11 +633,29 @@ function humanHandoffReason(intent: IrisEmailIntent, flags: string[], noSignal: 
   if (wrongRecipient) return "wrong_recipient";
   return "needs_human_review";
 }
+/** Intents that can ever be answered without a human. Anything absent from this set drafts. */
+const TIER_A_INTENTS = new Set<IrisEmailIntent>([
+  "property_search",
+  "property_details",
+  "showing_request",
+  "buyer_lead",
+  "seller_lead",
+  "renter_lead",
+]);
+
+// Deliberately NOT a confidence threshold. Measured across the 55-scenario corpus, this
+// classifier's `confidence` is effectively two-valued (0.35 / 0.72): cases that must auto-send
+// top out at 0.72 while cases that must NOT reach 0.80, so the signal is inverted at the top
+// and cannot separate the classes. A numeric bar here would block every intended auto-reply and
+// admit the highest-confidence blocked one. Confidence is still surfaced in the UI; it does not
+// gate sending until it is genuinely calibrated.
+
 export function decideIrisEmailExecution(classification: IrisEmailClassification): IrisEmailExecution {
-  // Only route to human for genuine blockers: compliance flags, spam, explicit human_required.
-  // "review" recommended_next_action alone does NOT block auto-reply — Iris handles real estate
-  // follow-ups autonomously. Human review is reserved for truly sensitive situations.
+  // ALLOWLIST, not blocklist. The previous rule was "reply unless something is obviously
+  // wrong", which sent real replies to cold outbound sales mail because nothing matched a
+  // blocklist keyword. Auto-send now has to be affirmatively earned on every gate.
   const closesWithoutReply = classification.intent === "spam" || classification.human_handoff_reason === "opt_out_or_stop_request";
+  const outOfScope = (classification.opportunity_tags || []).includes("out_of_scope_no_reply");
   const needsHuman = classification.intent === "human_required" ||
     classification.compliance_flags.some((flag) => SENSITIVE_FLAGS.has(flag));
   if (closesWithoutReply) {
@@ -629,14 +668,43 @@ export function decideIrisEmailExecution(classification: IrisEmailClassification
       handoffReason: classification.human_handoff_reason || "spam_or_promotional_email",
     };
   }
+  // Out of scope is not "needs human judgment", it is "not our mail". Classify only: no reply,
+  // no draft, and never a redirect, property card or valuation CTA.
+  if (outOfScope) {
+    return {
+      labels: [],
+      status: "processed",
+      eventType: "email_inbound",
+      aiAction: "review",
+      canReply: false,
+      handoffReason: "out_of_scope_no_reply",
+    };
+  }
   if (needsHuman) {
+    // Tier B, not silence. A human-review case still gets a complete, sendable draft: Iris
+    // answers everything it can answer safely and marks only the uncertain span via
+    // IRIS_REVIEW_MARKER, so the realtor edits one line instead of composing from scratch.
     return {
       labels: ["NEEDS_HUMAN"],
       status: "needs_human",
       eventType: "human_handoff",
-      aiAction: "route_human",
+      aiAction: "draft_reply",
       canReply: false,
       handoffReason: classification.human_handoff_reason || "needs_human_review",
+    };
+  }
+  // Tier A gate: affirmative real-estate intent and no unresolved routing doubt.
+  const tierA = TIER_A_INTENTS.has(classification.intent)
+    && classification.recommended_next_action !== "route_human";
+  if (!tierA) {
+    // Tier B: a complete, sendable draft a human approves. Not a placeholder.
+    return {
+      labels: ["NEEDS_HUMAN"],
+      status: "needs_human",
+      eventType: "email_inbound",
+      aiAction: "draft_reply",
+      canReply: false,
+      handoffReason: classification.human_handoff_reason || "below_auto_send_bar",
     };
   }
   return {

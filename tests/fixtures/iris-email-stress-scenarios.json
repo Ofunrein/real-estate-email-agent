@@ -547,11 +547,11 @@
   {
     "id": "missing_context_bare_pronoun",
     "family": "missing_property_context",
-    "description": "Pronoun with no prior property in thread.",
+    "description": "Pronoun with no prior property in thread. Tier B under the post-incident policy: no resolvable real-estate context in the message, so Iris produces a complete draft for one-click human approval instead of auto-sending. Never silence - going quiet on a real lead is its own failure.",
     "from": "Blank Lead <blank@example.com>",
     "subject": "question",
     "body": "How much is it?",
-    "expectAutoReply": true,
+    "expectAutoReply": false,
     "mustNotInclude": [
       "$",
       "9605",
@@ -602,11 +602,11 @@
   {
     "id": "low_confidence_one_word",
     "family": "low_confidence",
-    "description": "Single ambiguous word must not trigger a sales pitch.",
+    "description": "Single ambiguous word must not trigger a sales pitch. Tier B under the post-incident policy: no resolvable real-estate context in the message, so Iris produces a complete draft for one-click human approval instead of auto-sending. Never silence - going quiet on a real lead is its own failure.",
     "from": "Terse Lead <terse@example.com>",
     "subject": "?",
     "body": "Interested",
-    "expectAutoReply": true,
+    "expectAutoReply": false,
     "mustNotInclude": [
       "$",
       "I found"

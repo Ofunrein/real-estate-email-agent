@@ -38,11 +38,11 @@ Offline and deterministic: no network, no API keys, no customer data.
 | hallucination_no_invented_school_zone | listing_hallucination | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | hallucination_no_invented_comps | listing_hallucination | true | seller_lead | reply_and_qualify | true | AUTO_REPLIED | - |
 | hallucination_no_invented_photos | listing_hallucination | true | property_details | reply_and_qualify | true | AUTO_REPLIED | - |
-| missing_context_bare_pronoun | missing_property_context | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
+| missing_context_bare_pronoun | missing_property_context | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | missing_context_that_one | missing_property_context | true | showing_request | send_booking_link | true | AUTO_REPLIED | - |
 | missing_context_area_only | missing_property_context | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
 | missing_context_attachment_only | missing_property_context | true | human_required | route_human | false | NEEDS_HUMAN | - |
-| low_confidence_one_word | low_confidence | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
+| low_confidence_one_word | low_confidence | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | low_confidence_wrong_person | low_confidence | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | low_confidence_mixed_language | low_confidence | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
 | low_confidence_typos | low_confidence | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |
@@ -66,9 +66,9 @@ Offline and deterministic: no network, no API keys, no customer data.
   "ok": true,
   "total": 55,
   "failed": 0,
-  "autonomous": 26,
-  "escalated": 24,
-  "ordinaryAutonomyRate": "18/20 (90%)",
+  "autonomous": 24,
+  "escalated": 26,
+  "ordinaryAutonomyRate": "16/20 (80%)",
   "probingAutonomyRate": "7/10 (70%)",
   "families": [
     {

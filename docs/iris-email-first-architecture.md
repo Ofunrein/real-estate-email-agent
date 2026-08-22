@@ -180,17 +180,146 @@ new accessible hues distinct from the existing seven. I will **not** claim Fyxer
 
 ---
 
-## 3. Fyxer evidence
+## 3. Fyxer evidence and comparison
 
-**Pending.** A bounded research pass is running against local Atlas/Hermes caches and public Fyxer
-sources. It is instructed to record claim → source → confidence for every item and to report
-"not established" rather than guess, and specifically **not to invent hex values**.
+Vendor-primary sources plus one vendor product screenshot. Every visual claim below is measured or
+quoted, never inferred. Full claim/source/confidence table produced during research; the load-bearing
+findings and the ones that changed my recommendation:
 
-Stated position regardless of what it returns: adopt Fyxer's *shape* (a small, flat, whole-inbox
-triage queue as the primary axis) because that is the part that makes an inbox feel organized.
-Do not adopt its posture on autonomy — Iris keeps the stricter human-control model, and keeps the
-real-estate topic tier Fyxer has no equivalent for. If exact colors cannot be sourced, Iris keeps
-its own palette and the report says so explicitly instead of implying parity.
+### 3.1 The category set — the brief's list is close, but drops one and adds one
+
+Canonical Fyxer set, five categories, ranked
+(`support.fyxer.com/article/fyxer-email-categorization-handbook`, confirmed):
+
+`To do / To respond` → `FYI` → `To follow up / Awaiting reply` → `Notification` → `Marketing`
+
+Real Gmail label strings are numbered and lowercase — `1: to do`, `2: FYI`, `3: notification`,
+`4: to follow up`, `5: marketing` — verified by reading the vendor screenshot at
+`/tmp/fyxer_labelpane.png` myself. Note the screenshot puts **notification 3rd and to-follow-up 4th**,
+contradicting the handbook's ordering. Both are quoted; likely an A/B variant. Casing is inconsistent
+across Fyxer's own surfaces (`To do/To respond`, `1: to do`, `To Respond`).
+
+Mapped against the brief's requested queue:
+
+| Fyxer | brief | verdict |
+| --- | --- | --- |
+| To do / To respond | Needs Reply | same thing |
+| FYI | FYI | same |
+| To follow up / Awaiting reply | Waiting on Reply | same |
+| Marketing | Marketing | same |
+| **Notification** | *absent* | **the brief folded this into FYI** |
+| *absent* | **Needs Human** | Iris-only; Fyxer needs no such state because it never sends |
+
+**Recommendation change: add `Notification` as a sixth status.** Fyxer separates receipts, alerts and
+calendar mail from FYI specifically because drafting is suppressed there — which is exactly Iris's
+Tier C. Collapsing it into FYI throws away the signal that already drives the no-draft decision.
+
+Fyxer's categories are **fixed** — "You can't rename them / You can't add or remove categories"
+(handbook + `docs.fyxer.com` FAQ). Iris's are DB-backed and editable per client. Keep that; it is a
+differentiator, not a gap.
+
+Fyxer also runs a **second topic tier** inside the five ("newsletters, meeting updates, comments,
+orders"), on by default, individually toggleable. That is structurally the same two-tier idea Iris
+already has — independent convergent evidence the architecture is right. `Meeting update` is a topic
+sub-label, **not** a top-level category, correcting a common misreading.
+
+### 3.2 Colors — do not copy the hexes into Iris's current treatment
+
+Fyxer publishes no color spec. The only evidence is one vendor screenshot dated 2026-03-26 served
+through GitBook's resizing proxy. I sampled it independently rather than trusting the research pass:
+
+| label | measured fill | Gmail official palette |
+| --- | --- | --- |
+| 1: to do | `#efa193` | `#efa093` (±1 one channel) |
+| 2: FYI | `#ffbc6b` | `#ffbc6b` exact |
+| 3: notification | `#68e0a9` | `#68dfa9` (±1) |
+| 4: to follow up | `#a4c2f4` | `#a4c2f4` exact |
+| 5: marketing | `#fbd4e0` | `#fbd3e0` (±1) |
+
+So: **palette membership is confirmed** (Gmail's official label palette), exact hexes are indicative
+only — two exact matches, three off by one channel, consistent with proxy resampling.
+
+The critical finding is that these are **pastel background fills for chips with dark text**, not text
+colors. Measured contrast:
+
+| model | range | verdict |
+| --- | --- | --- |
+| `#202124` text on Fyxer fill | 7.81 – 11.96 | all pass AA |
+| Fyxer fill as text on white | 1.35 – 2.06 | **all five fail AA** |
+
+Iris currently uses category color as a *text/dot* color. Dropping Fyxer's hexes into that treatment
+would be a severe accessibility regression. **Recommendation:** adopt Fyxer's *treatment* — pastel
+chip fill + dark text — using the Gmail-palette fills for the four shared categories, and keep Iris's
+existing dark hexes wherever color is applied to text or a status dot. Two token sets, one per usage,
+each with a recorded ratio.
+
+Separately, Iris's own palette has two real AA failures as text on white today: `waiting_lead`
+`#ca8a04` at 2.94 and `showing` `#ea580c` at 3.56. AA-passing replacements are verified
+(`#a16207` at 4.92, `#c2410c` at 5.18), and all sixteen proposed categories clear 4.5.
+
+Treatment details, confirmed from `/tmp/fyxer_inbox.png`: filled colored chip with dark text
+immediately left of the subject; topic sub-labels render as a separate neutral grey chip; per-label
+counts right-aligned in the label list. No left-border or stripe. No Fyxer-owned inbox chrome — it is
+all native Gmail label rendering. Vendor explicitly disclaims stability: "Outlook category colors may
+vary by version," and every categorization page carries a "experiences can vary" notice.
+
+### 3.3 Draft-first — Fyxer never auto-sends, at all
+
+Confirmed three times from vendor primary sources:
+
+- "Fyxer never sends drafts automatically – you always review and approve."
+- "Fyxer can't send emails on your behalf. We only draft your emails. We never send them." (pricing)
+- "Fyxer will never send on your behalf." / "Nothing gets sent without you approving it first."
+
+This is direct evidence for inverting Iris's current default. Iris keeps a **narrow certified Tier A
+auto-send** as its differentiation, but the burden of proof sits with auto-send, not with drafting.
+
+Drafts are **native mail-client drafts**, placed as the newest message in the thread, plus the Drafts
+folder. Actions are just open → review → small edits → send. **No approve / regenerate / dismiss
+affordance is documented anywhere**; regeneration only via forwarding to `ai@fyxer.com` or Fyxer Chat.
+Dismissal is passive: unused drafts auto-delete after a retention window, default **14 days**,
+adjustable 1–30.
+
+So Iris's proposed draft-first UX (explicit Approve and Send, Edit, Regenerate, Dismiss, Take Over,
+Resume AI) is **stronger than Fyxer's**, not catching up to it. Worth adopting from Fyxer: the
+retention window with a user control, and the guidance that small edits are the training signal.
+
+Drafts only fire for `To do`/`To respond`; FYI gets nothing; manually relabelling FYI → To do does
+**not** trigger a draft. That is the same status-drives-drafting coupling proposed in §4.
+
+### 3.4 Published limits and one vendor self-contradiction
+
+No published accuracy or precision figure exists anywhere. Quality claims are customer-attributed
+time savings only ("3.45hrs saved per person per week", Knight Frank). Onboarding analyses only
+"~300 of your recent emails" and "doesn't scan your entire inbox history".
+
+Fyxer's own docs contradict themselves on learning: pricing says "Fyxer learns from your corrections
+over time to improve accuracy"; support says relabelling mislabelled mail "doesn't train Fyxer".
+Both quoted. Iris should not copy either claim.
+
+Documented failure modes worth stealing as test cases: automated/transactional mail skipped, CC-only
+threads, very short and extremely long threads, user replied first, snoozed/archived mail, Gmail
+filters that archive or skip-inbox overriding the labeller, duplicate integrations wedging
+categorisation, and a password change silently breaking the integration.
+
+### 3.5 What could not be established
+
+- Published hex values — none exist; the five above are my measurements of one proxied screenshot.
+- The "7-label setup" referenced twice in the handbook; contents undocumented, confirmed gap.
+- Whether `notification` sits 3rd or 4th — sources disagree.
+- Whether "To do" or "To respond" is the current default; every source hedges with the dual form.
+- Any approve/regenerate/dismiss affordance in the running app. Absent from all draft docs, but
+  absence of documentation is not proof of absence. I did not log into `app.fyxer.com`.
+- Independent review aggregates. Trustpilot returned 403; DuckDuckGo served a CAPTCHA; the only
+  other hit looked like affiliate SEO and was not cited.
+
+No prior Fyxer research existed in Atlas or `.hermes`. Local Safari history does show a real Fyxer
+trial on 2025-08-21/22 with `gmail.modify` + calendar OAuth. Two Atlas ad PNGs are byte-identical
+duplicates and too low-res to be evidence.
+
+**Evidence paths:** `/tmp/fyxer_labelpane.png` (colors, 478×400), `/tmp/fyxer_inbox.png` (layout,
+1686×1354), `atlas/ads/competitor_ads/fyxer-ai.json`.
+
 
 ---
 

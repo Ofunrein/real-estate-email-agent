@@ -66,10 +66,17 @@ export const DEFAULT_INBOX_CATEGORIES: InboxCategory[] = [
   { slug: "financing", name: "Financing", color: "#2563eb", sort_order: 90, enabled: true, gmail_label_id: "", gmail_label_name: "Iris/Financing", auto_rules: { tier: "topic", words: ["preapproved", "mortgage", "loan", "down payment"] } },
 ];
 
+// Email is draft-first by default: auto_send.email starts false, so an email reply needs both an
+// explicit per-client opt-in AND every Tier A gate in decideIrisEmailExecution. Shipping
+// auto_send.email:true is what let cold outbound sales mail receive a real auto-reply with a
+// property card and a valuation CTA attached.
+//
+// draft_first stays false because it is a GLOBAL kill switch across every channel — flipping it
+// would silently disable SMS, WhatsApp and social auto-send too, which is not the intent here.
 export const DEFAULT_INBOX_SETTINGS: InboxSettings = {
   draft_first: false,
   auto_send: {
-    email: true,
+    email: false,
     sms: true,
     whatsapp: true,
     messenger: true,
