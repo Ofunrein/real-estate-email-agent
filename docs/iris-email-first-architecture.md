@@ -487,3 +487,44 @@ Approve, and tell me which §0 option to take:
 
 On approval I implement in this order: taxonomy → Tier gate → manifest → gauntlet → draft-first UX,
 with no Gmail mutation until the §8 plan is separately approved.
+
+---
+
+## SUPERSEDED — final product direction (2026-08-22)
+
+Martin's final direction **replaces §2's queue and every fixed-taxonomy proposal in this document**,
+including the later six-label Fyxer-aligned variant. Do not implement those. Recorded here so the
+research above is not mistaken for the plan.
+
+**Two Iris-managed labels only, title case, no `Iris/` prefix:**
+
+- `Auto Replied` — applied **only after** Iris successfully sends an authorized reply. Evidence of a
+  send, never a decision input. Verified: `AUTO_REPLIED` is only ever written in `lib/irisEmail.ts`
+  and the draft-action route; nothing reads it to decide behavior.
+- `Needs Human` — applied only when Iris stops for human review. Never triggers a send.
+
+**Respect the user's inbox by default:** `Respect my existing categories/labels` ON; categorization
+OFF; no legacy Fyxer/`Iris/*` migration; never rename, delete, recolor, move or archive existing
+labels; no archive-after-send by default. Internal machine states stay in the database and must not
+leak into the mailbox as extra labels.
+
+**Optional custom categories** (opt-in only): global enable/disable, "Don't categorize my emails"
+first-class, create/rename/delete/reorder, custom name + colour with an accessible-contrast preview
+and provider colour mapping, keep-in-inbox vs move-out per category, respect-existing-labels,
+optional deterministic rules by sender/domain/exact subject, optional marketing-strictness presets.
+Custom labels are organizational only and can **never** authorize auto-send.
+
+**Onboarding:** connect inbox → leave organization unchanged (default) or customize → optional
+calendar → one-screen summary before activation.
+
+**Calendar:** Google and Outlook/M365 parity, least-privilege, identity/tenant fail-closed, with
+provider parity tests (disconnected, expired, permission denied, multiple calendars, timezone/DST,
+conflict, cancellation/reschedule, duplicate webhook, retry, tenant isolation).
+
+Consequence for this document: §2's five-status queue, the nine real-estate topic tags, and the
+colour work in §3.2 are **reference research only**. The Fyxer evidence stays valid as evidence —
+notably that Fyxer never auto-sends, which is the safety baseline this direction adopts.
+
+**Implementation status:** not started. `DEFAULT_INBOX_CATEGORIES` still ships nine `Iris/*`
+categories and must shrink to the two managed labels above. The auto-send bug in §7's ordering is
+already fixed (commit `e85a2a6`).

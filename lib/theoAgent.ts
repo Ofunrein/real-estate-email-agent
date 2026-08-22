@@ -920,12 +920,16 @@ function formatTheoNoPropertyOptions(message: string, lead: Partial<SheetRow> = 
 function formatTheoHandoff(lead: Partial<SheetRow> = {}, properties: SheetRow[] = []): string {
   const firstName = cleanText(lead.full_name).split(" ")[0];
   const address = cleanText(properties.find((row) => cleanText(row.address))?.address);
-  const opener = firstName ? `${firstName}, that` : "That";
+  // Lead with the listing so the handoff is visibly grounded in what they asked about, then the
+  // routing, then a concrete thing they can do. A bare "someone will follow up" reads as a
+  // routing note and leaves the thread suspended.
+  const opener = address
+    ? `${firstName ? `${firstName}, on` : "On"} ${address}, that's one I want someone licensed on our team to answer for you.`
+    : `${firstName ? `${firstName}, that` : "That"}'s one I want someone licensed on our team to answer for you.`;
   return messagesBlocks(
-    address
-      ? `${opener}'s one I want someone licensed on our team to answer for you on ${address}.`
-      : `${opener}'s one I want someone licensed on our team to answer for you.`,
+    opener,
     "I'm looping them in now and they'll text you here today.",
+    "Send over your timeline and I'll pass it along so they come prepared.",
   );
 }
 
