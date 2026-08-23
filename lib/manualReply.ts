@@ -5,6 +5,7 @@ import { sendInstagramBrowserThreadMessage } from "@/lib/instagramBrowserBridge"
 import { metaSocialDirectEnabled, sendMetaSocialMessage } from "@/lib/metaSocial";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { removeEmDashesFromRecord } from "@/lib/noEmDash";
+import { finalizeOutboundTextBody } from "@/lib/smsFormatting";
 import { sendMetaWhatsApp } from "@/lib/metaWhatsapp";
 
 export type EmailAttachment = { filename: string; contentType: string; path?: string; data?: Buffer };
@@ -41,7 +42,13 @@ function instagramUsernameTarget(value: string): string {
 }
 
 export async function sendManualReply(inputRaw: ManualReplyInput): Promise<ManualReplyResult> {
-  const input = removeEmDashesFromRecord(inputRaw, ["body", "subject"]);
+  const withoutEmDashes = removeEmDashesFromRecord(inputRaw, ["body", "subject"]);
+  // Every text channel shares one spacing contract, applied once here so no branch below can
+  // skip it - the direct Twilio WhatsApp path used to POST input.body untouched. Email is
+  // excluded on purpose: it is HTML or its own plain-text format and must not be reflowed.
+  const input = withoutEmDashes.channel === "email"
+    ? withoutEmDashes
+    : { ...withoutEmDashes, body: finalizeOutboundTextBody(withoutEmDashes.body) };
   try {
     switch (input.channel) {
       case "sms": {

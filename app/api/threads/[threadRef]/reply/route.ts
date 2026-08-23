@@ -13,7 +13,7 @@ import {
   upsertThreadLinkInDatabase,
 } from "@/lib/database";
 import { readMediaUpload } from "@/lib/mediaUploads";
-import { normalizeMessagesReply } from "@/lib/smsFormatting";
+import { finalizeOutboundTextBody } from "@/lib/smsFormatting";
 import { createRequestAudit } from "@/lib/requestAudit";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { blockLoadTestMutation } from "@/lib/loadTestGuard";
@@ -96,7 +96,7 @@ function messageWithMediaLog(input: Pick<ReplyBody, "channel"> & {
       transcript ? `Voice note transcript: ${transcript}` : "",
     ].filter(Boolean);
   });
-  return normalizeMessagesReply([body, ...mediaLines].filter(Boolean).join("\n\n"));
+  return finalizeOutboundTextBody([body, ...mediaLines].filter(Boolean).join("\n\n"));
 }
 
 function inferReplyMediaType(url: string): "audio" | "image" | "video" | "file" {

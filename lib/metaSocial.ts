@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { removeEmDashes } from "@/lib/noEmDash";
+import { finalizeOutboundTextBody } from "@/lib/smsFormatting";
 
 import { mediaProxyUrl } from "@/lib/mediaProxy";
 import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
@@ -439,7 +439,9 @@ export async function sendMetaSocialMessage(input: {
     };
   }
   const recipientId = cleanText(input.to);
-  const body = cleanText(removeEmDashes(input.body));
+  // Instagram and Messenger DMs render newlines. Same finalizer as SMS/WhatsApp so a URL keeps
+  // its own paragraph on every channel instead of only the ones that remembered to normalize.
+  const body = finalizeOutboundTextBody(input.body);
   const mediaUrls = sendableMediaUrls(input.mediaUrls);
   if (!recipientId || (!body && !mediaUrls.length)) {
     return {

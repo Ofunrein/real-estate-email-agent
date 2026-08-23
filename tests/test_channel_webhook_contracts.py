@@ -110,6 +110,12 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('source: "whatsapp"', whatsapp_route)
         self.assertIn("sendMetaWhatsApp", whatsapp_route)
         self.assertIn("whatsAppMessageWithMediaLog", whatsapp_route)
+        # WhatsApp shares the cross-channel spacing contract. It used to .trim() and ship, and
+        # it labelled media with a prefix on the URL's own line. Match the emitted string, not
+        # the prose: the comment explaining the fix legitimately names the old label.
+        self.assertIn("finalizeOutboundTextBody", meta_sender)
+        self.assertIn("finalizeOutboundTextWithMedia", meta_sender)
+        self.assertNotIn("`WhatsApp image: ${url}`", meta_sender)
         self.assertIn("recordTheoWhatsAppOutbound", whatsapp_route)
         self.assertIn("ENABLE_WHATSAPP_AGENT", meta_sender)
         self.assertIn("WHATSAPP_PHONE_NUMBER_ID", meta_sender)
@@ -375,9 +381,15 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn('Number(process.env.SMS_MAX_IMAGES || "3")', twilio_sender)
         self.assertIn("smsMessageWithMediaLog", twilio_sender)
         # The outbound body is finalized at the transport boundary, so no caller can ship a
-        # wall or a URL sharing its line even if its own normalization is skipped.
+        # wall or a URL sharing its line even if its own normalization is skipped. The
+        # normalizer itself is now shared with WhatsApp, social DMs and website chat, so
+        # every tenant and channel inherits one spacing contract instead of a per-transport copy.
         self.assertIn("finalizeOutboundSmsBody", twilio_sender)
-        self.assertIn("normalizeMessagesReply", twilio_sender)
+        self.assertIn("finalizeOutboundTextBody", twilio_sender)
+        self.assertIn("finalizeOutboundTextWithMedia", twilio_sender)
+        shared_formatter = read("lib/smsFormatting.ts")
+        self.assertIn("export function finalizeOutboundTextBody", shared_formatter)
+        self.assertIn("normalizeMessagesReply", shared_formatter)
         # Media URLs get their own paragraph. The old "MMS image: https://..." label put text
         # on the URL's own line, which is the defect Martin's screenshots captured. Locked out.
         self.assertNotIn('"MMS image"', twilio_sender)

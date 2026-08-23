@@ -1,6 +1,6 @@
 import { composioExternalUserId, createComposioClient } from "@/lib/composioConnection";
 import { listChannelConnections, type ChannelConnectionRecord } from "@/lib/channelConnections";
-import { removeEmDashes } from "@/lib/noEmDash";
+import { finalizeOutboundTextBody } from "@/lib/smsFormatting";
 
 export type ComposioSocialChannel = "instagram" | "messenger" | "whatsapp";
 export type ComposioSocialSendResult =
@@ -119,11 +119,15 @@ function prepareComposioSocialSend(
   // Append an indicator to the body and strip audio URLs so they don't reach the API.
   let mediaUrls = input.mediaUrls;
   let droppedMediaUrls: string[] = [];
-  let body = input.body;
+  // Finalize here too: this helper is exported and tested on its own, and the voice-note line
+  // below is appended after the caller already normalized.
+  let body = finalizeOutboundTextBody(input.body);
   if (channel === "instagram" && mediaUrls?.length) {
     const audioUrls = mediaUrls.filter(isAudioUrl);
     if (audioUrls.length > 0) {
-      body = body ? `${body}\n\n[Voice note attached in dashboard]` : "[Voice note attached in dashboard]";
+      body = finalizeOutboundTextBody(
+        body ? `${body}\n\n[Voice note attached in dashboard]` : "[Voice note attached in dashboard]",
+      );
       droppedMediaUrls = audioUrls;
       mediaUrls = mediaUrls.filter((url) => !isAudioUrl(url));
     }
@@ -209,7 +213,7 @@ export async function sendComposioSocialMessage(input: {
   mediaUrls?: string[];
   threadRef?: string;
 }): Promise<ComposioSocialSendResult> {
-  const body = removeEmDashes(input.body);
+  const body = finalizeOutboundTextBody(input.body);
   if (!composioSocialSendsEnabled()) {
     return { ok: false, error: "Composio social sends are disabled. Use Meta direct webhooks for Instagram/Messenger replies." };
   }

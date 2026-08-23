@@ -1,6 +1,7 @@
 import crypto from "crypto";
 
 import { mediaProxyUrl } from "@/lib/mediaProxy";
+import { finalizeOutboundTextBody, finalizeOutboundTextWithMedia } from "@/lib/smsFormatting";
 import { isUnsafeSmsRecipient } from "@/lib/twilioSms";
 import type { OmnichannelMedia } from "@/lib/omnichannelEvents";
 
@@ -88,10 +89,9 @@ async function postMetaMessage(body: Record<string, unknown>): Promise<{ ok: boo
 }
 
 export function whatsAppMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
-  const cleanBody = body.trim();
-  const cleanUrls = cleanMediaUrls(mediaUrls);
-  if (!cleanUrls.length) return cleanBody;
-  return [cleanBody, "", ...cleanUrls.map((url) => `WhatsApp image: ${url}`)].join("\n");
+  // Same contract as SMS: each media URL is its own paragraph, no "WhatsApp image:" label
+  // sharing the URL's line. This string is also what the dashboard renders for the event.
+  return finalizeOutboundTextWithMedia(body, cleanMediaUrls(mediaUrls));
 }
 
 export async function sendMetaWhatsApp(to: string, body: string, mediaUrls: string[] = []): Promise<MetaWhatsAppSendResult> {
@@ -106,7 +106,9 @@ export async function sendMetaWhatsApp(to: string, body: string, mediaUrls: stri
   }
 
   const recipient = cleanRecipient(to);
-  const message = body.trim();
+  // Transport boundary. WhatsApp renders newlines the same way Messages does, so it gets the
+  // same finalizer instead of a bare .trim() that shipped whatever the generator produced.
+  const message = finalizeOutboundTextBody(body);
   if (!recipient || !message) {
     return { sent: false, skipped: true, messageIds: [], error: "Missing WhatsApp recipient or body", mediaCount: cleanUrls.length };
   }

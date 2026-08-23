@@ -311,6 +311,27 @@ export function messagesBlocks(...parts: Array<string | false | null | undefined
     .join("\n\n");
 }
 
+/**
+ * The last thing that touches ANY outbound text-channel body before it is serialized for a
+ * provider. SMS, RCS, iMessage, WhatsApp, website chat and social DMs all share one contract, so
+ * they share one finalizer - a per-transport copy is how three of them drifted and shipped walls.
+ *
+ * Tenant-independent by construction: it reads no client id, no env, and no config. Every
+ * client/tenant inherits identical spacing because there is nothing here to configure.
+ */
+export function finalizeOutboundTextBody(body: string): string {
+  return normalizeMessagesReply(removeEmDashes(String(body || "")));
+}
+
+/**
+ * Attach media URLs to a body as their own paragraphs. A label sharing the URL's line
+ * ("WhatsApp image: https://…") is exactly what made links unreadable on a phone.
+ */
+export function finalizeOutboundTextWithMedia(body: string, mediaUrls: string[] = []): string {
+  const urls = mediaUrls.map((url) => String(url || "").trim()).filter(Boolean);
+  return finalizeOutboundTextBody([finalizeOutboundTextBody(body), ...urls].filter(Boolean).join("\n\n"));
+}
+
 export function messagesLines(text: string): string[] {
   return normalizeMessagesReply(text).split("\n").filter((line) => line.trim().length > 0);
 }

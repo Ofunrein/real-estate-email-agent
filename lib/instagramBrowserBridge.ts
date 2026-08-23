@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 
+import { finalizeOutboundTextWithMedia } from "@/lib/smsFormatting";
+
 export type InstagramBrowserSendInput = {
   threadId: string;
   body: string;
@@ -41,10 +43,10 @@ export function instagramBrowserBridgeEnabled(): boolean {
 }
 
 function deliveredBody(input: InstagramBrowserSendInput): string {
-  const body = input.body.trim();
+  // "Attachments:" used to sit on its own line directly above the URLs, which put the label and
+  // the first link in the same paragraph. Same finalizer as every other text channel.
   const media = (input.mediaUrls || []).map((url) => clean(url)).filter(Boolean);
-  if (!media.length) return body;
-  return [body, "Attachments:", ...media].filter(Boolean).join("\n");
+  return finalizeOutboundTextWithMedia(input.body, media);
 }
 
 export async function sendInstagramBrowserThreadMessage(input: InstagramBrowserSendInput): Promise<InstagramBrowserSendResult> {

@@ -1,7 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { mediaProxyUrl } from "@/lib/mediaProxy";
-import { removeEmDashes } from "@/lib/noEmDash";
-import { normalizeMessagesReply } from "@/lib/smsFormatting";
+import { finalizeOutboundTextBody, finalizeOutboundTextWithMedia } from "@/lib/smsFormatting";
 import { requestWorkspaceId } from "@/lib/workspaceContext";
 import { mayUseSharedEnvironmentConnections } from "@/lib/workspace";
 
@@ -56,12 +55,9 @@ function cleanMediaUrls(mediaUrls: string[] = []): string[] {
 
 
 export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): string {
-  const cleanBody = finalizeOutboundSmsBody(body);
-  const cleanUrls = cleanMediaUrls(mediaUrls);
-  if (!cleanUrls.length) return cleanBody;
   // Media URLs are paragraphs too. "MMS image: https://…" put a label on the URL's own line,
   // and this text is what the dashboard renders for the outbound event.
-  return finalizeOutboundSmsBody([cleanBody, ...cleanUrls].filter(Boolean).join("\n\n"));
+  return finalizeOutboundTextWithMedia(body, cleanMediaUrls(mediaUrls));
 }
 
 /**
@@ -72,9 +68,12 @@ export function smsMessageWithMediaLog(body: string, mediaUrls: string[] = []): 
  * Martin's screenshots of the live thread showed exactly what happens without it - a whole
  * listing roundup arriving as one run-on paragraph with the next numbered listing starting
  * immediately after `/zpid/`.
+ *
+ * Delegates to the shared cross-channel finalizer so SMS cannot drift away from WhatsApp,
+ * social DMs and website chat, and so no tenant gets its own spacing.
  */
 export function finalizeOutboundSmsBody(body: string): string {
-  return normalizeMessagesReply(removeEmDashes(String(body || "")));
+  return finalizeOutboundTextBody(body);
 }
 
 export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
