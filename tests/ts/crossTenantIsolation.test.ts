@@ -77,6 +77,12 @@ test("Twilio: a message to another tenant's number is rejected", () => {
   });
 });
 
+test("Twilio: a callback missing its provider-owned To number is rejected", () => {
+  withEnv(CLIENT_A, () => {
+    assert.equal(assertTwilioInboundTenant("").ok, false);
+  });
+});
+
 test("Twilio: our own number is accepted in any common format", () => {
   withEnv(CLIENT_A, () => {
     for (const shape of ["+15125550100", "15125550100", "5125550100", "(512) 555-0100"]) {
@@ -158,6 +164,13 @@ test("Vapi: our own assistant and number pass", () => {
   });
 });
 
+test("Vapi: configured identities cannot be bypassed by omitting them", () => {
+  withEnv(CLIENT_A, () => {
+    assert.equal(assertVapiTenant({}).ok, false);
+    assert.equal(assertVapiTenant({ assistantId: CLIENT_A.VAPI_ASSISTANT_ID }).ok, false);
+  });
+});
+
 test("Vapi: parseCallMeta reads the identifiers from both payload shapes", () => {
   const expanded = parseCallMeta({
     message: { call: { id: "c1", assistant: { id: "asst_x" }, phoneNumber: { id: "pn_x" } } },
@@ -175,6 +188,19 @@ test("Vapi: parseCallMeta reads the identifiers from both payload shapes", () =>
 test("Gmail: a push about another tenant's mailbox is rejected", () => {
   assert.equal(assertGmailMailboxTenant("leads@acme.example.com", "leads@bravo.example.com").ok, false);
   assert.equal(assertGmailMailboxTenant("leads@acme.example.com", "LEADS@ACME.EXAMPLE.COM").ok, true);
+});
+
+test("Gmail: an expected mailbox cannot be bypassed by omitting the pushed address", () => {
+  assert.equal(assertGmailMailboxTenant("leads@acme.example.com", "").ok, false);
+});
+
+test("Gmail: the live push handler does not bypass tenant matching when the pushed address is absent", () => {
+  const source = readFileSync(
+    new URL("../../lib/inngest/functions/gmailPushReceived.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /!databaseEnabled\(\)\s*\|\|\s*!input\.emailAddress/);
+  assert.match(source, /assertGmailMailboxTenant\(account\?\.email, input\.emailAddress\)/);
 });
 
 // ----------------------------------------------------------- OAuth state

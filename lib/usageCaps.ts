@@ -7,10 +7,10 @@
  * with no per-client attribution.
  *
  * These caps are a spend circuit breaker, not a billing system. They are
- * deliberately coarse (a rolling 24h window per client) and fail OPEN when the
- * database is unavailable: a monitoring outage must not silence a real client's
- * agent. Every decision is auditable, and exceeding a cap parks work for human
- * review rather than dropping it.
+ * deliberately coarse (a rolling 24h window per client). When a configured cap
+ * cannot be evaluated they fail CLOSED by default: a broken meter must not turn
+ * a contractual spend limit into unlimited provider usage. Operators can opt
+ * into availability-first behavior with USAGE_CAP_FAILURE_MODE=open.
  *
  * Caps are read from env so each deployment sets its own, sized to the client's
  * contract.
@@ -66,6 +66,10 @@ export function usageCaps(): Record<UsageKind, number> {
   return { ai: limitFor("ai"), sms: limitFor("sms"), voice: limitFor("voice") };
 }
 
+function failOpenOnUnavailable(): boolean {
+  return String(process.env.USAGE_CAP_FAILURE_MODE || "closed").trim().toLowerCase() === "open";
+}
+
 /** Rolling 24h usage for this client, from the audit trail. */
 export async function usageInLastDay(kind: UsageKind, clientId = activeClientId()): Promise<number> {
   if (!databaseEnabled()) return 0;
@@ -103,8 +107,8 @@ export async function usageInLastDay(kind: UsageKind, clientId = activeClientId(
 /**
  * May this client spend more of `kind` right now?
  *
- * Fails open on any database error — see the module note. The caller records
- * the verdict either way, so a silent open is still visible in the audit trail.
+ * Fails closed on a database error unless the deployment explicitly chooses
+ * availability-first behavior with USAGE_CAP_FAILURE_MODE=open.
  */
 export async function checkUsageCap(kind: UsageKind, clientId = activeClientId()): Promise<UsageVerdict> {
   const limit = limitFor(kind);
@@ -116,11 +120,14 @@ export async function checkUsageCap(kind: UsageKind, clientId = activeClientId()
   try {
     used = await usageInLastDay(kind, clientId);
   } catch {
+    const allowed = failOpenOnUnavailable();
     return {
-      allowed: true,
+      allowed,
       kind,
       code: "unavailable",
-      reason: "Usage cap could not be evaluated; allowing rather than silencing the agent.",
+      reason: allowed
+        ? "Usage cap could not be evaluated; availability-first override allowed the request."
+        : "Usage cap could not be evaluated; request parked to preserve the configured spend limit.",
       used: 0,
       limit,
     };

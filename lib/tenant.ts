@@ -92,11 +92,10 @@ export function inngestAppId(env: TenantEnv = process.env): string {
  * Compare a provider-supplied identifier against this deployment's configured
  * value.
  *
- * `unconfigured` (we never set the expected value) and `absent` (the provider
- * did not send one) both pass: this is defense in depth layered on top of
- * signature verification, not a replacement for it, and failing closed on an
- * unset optional env var would break every existing deployment. A value that
- * is present on BOTH sides and disagrees is the real signal, and that fails.
+ * `unconfigured` (we never set the expected value) passes so existing
+ * deployments without an optional provider id keep working. Once an expected
+ * value is configured, the provider must send a matching value; both omission
+ * and mismatch fail closed.
  */
 export function tenantIdentityMatches(
   expected: unknown,
@@ -106,7 +105,9 @@ export function tenantIdentityMatches(
   const want = normalize(expected);
   const got = normalize(received);
   if (!want) return { ok: true, reason: "unconfigured" };
-  if (!got) return { ok: true, reason: "absent" };
+  // Once this deployment declares a provider identity, every callback must
+  // carry it. An omitted identifier must not bypass the tenant binding.
+  if (!got) return { ok: false, reason: "mismatch", expected: want, received: "[absent]" };
   if (want === got) return { ok: true, reason: "match" };
   return { ok: false, reason: "mismatch", expected: want, received: got };
 }
@@ -128,7 +129,7 @@ export function assertTwilioInboundTenant(to: unknown, env: TenantEnv = process.
   const allowed = twilioInboundNumbers(env);
   if (!allowed.length) return { ok: true, reason: "unconfigured" };
   const received = normalizePhoneIdentity(to);
-  if (!received) return { ok: true, reason: "absent" };
+  if (!received) return { ok: false, reason: "mismatch", expected: allowed.join(","), received: "[absent]" };
   if (allowed.includes(received)) return { ok: true, reason: "match" };
   return { ok: false, reason: "mismatch", expected: allowed.join(","), received };
 }

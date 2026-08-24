@@ -5,15 +5,30 @@ import { readFileSync } from "node:fs";
 
 import { checkUsageCap, usageCaps } from "@/lib/usageCaps";
 
-function withEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
+function resetUsageEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const prior = { ...process.env };
   delete process.env.DATABASE_URL;
   delete process.env.CLIENT_DAILY_AI_COST_USD_CAP;
   delete process.env.CLIENT_DAILY_SMS_CAP;
   delete process.env.CLIENT_DAILY_VOICE_CALL_CAP;
+  delete process.env.USAGE_CAP_FAILURE_MODE;
   Object.assign(process.env, env);
+  return prior;
+}
+
+function withEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
+  const prior = resetUsageEnv(env);
   try {
     return run();
+  } finally {
+    process.env = prior;
+  }
+}
+
+async function withEnvAsync<T>(env: NodeJS.ProcessEnv, run: () => Promise<T>): Promise<T> {
+  const prior = resetUsageEnv(env);
+  try {
+    return await run();
   } finally {
     process.env = prior;
   }
@@ -22,7 +37,7 @@ function withEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
 test("no cap configured means uncapped, not blocked", async () => {
   // A missing env var must never be read as "limit of zero" — that would take a
   // client's agent offline on a typo.
-  const verdict = await withEnv({}, () => checkUsageCap("sms"));
+  const verdict = await withEnvAsync({}, () => checkUsageCap("sms"));
   assert.equal(verdict.allowed, true);
   assert.equal(verdict.limit, 0);
   assert.equal(verdict.reason, "uncapped");
@@ -30,16 +45,27 @@ test("no cap configured means uncapped, not blocked", async () => {
 
 test("a zero or negative cap is treated as uncapped", async () => {
   for (const value of ["0", "-5", "not-a-number", ""]) {
-    const verdict = await withEnv({ CLIENT_DAILY_SMS_CAP: value }, () => checkUsageCap("sms"));
+    const verdict = await withEnvAsync({ CLIENT_DAILY_SMS_CAP: value }, () => checkUsageCap("sms"));
     assert.equal(verdict.allowed, true, `cap=${value}`);
   }
 });
 
-test("caps fail OPEN when the database is unreachable", async () => {
-  // A monitoring outage must not silence a real client's agent. The verdict is
-  // still recorded so the open is visible.
-  const verdict = await withEnv(
+test("configured caps fail closed when the database is unreachable", async () => {
+  const verdict = await withEnvAsync(
     { CLIENT_DAILY_SMS_CAP: "10", DATABASE_URL: "postgres://invalid:1/none" },
+    () => checkUsageCap("sms"),
+  );
+  assert.equal(verdict.allowed, false);
+  assert.equal(verdict.code, "unavailable");
+});
+
+test("an explicit availability-first override may fail open", async () => {
+  const verdict = await withEnvAsync(
+    {
+      CLIENT_DAILY_SMS_CAP: "10",
+      DATABASE_URL: "postgres://invalid:1/none",
+      USAGE_CAP_FAILURE_MODE: "open",
+    },
     () => checkUsageCap("sms"),
   );
   assert.equal(verdict.allowed, true);
@@ -55,7 +81,7 @@ test("usageCaps reports each configured limit", () => {
 });
 
 test("with no database the usage read is zero, so a cap cannot spuriously trip", async () => {
-  const verdict = await withEnv({ CLIENT_DAILY_AI_COST_USD_CAP: "25" }, () => checkUsageCap("ai"));
+  const verdict = await withEnvAsync({ CLIENT_DAILY_AI_COST_USD_CAP: "25" }, () => checkUsageCap("ai"));
   assert.equal(verdict.allowed, true);
   assert.equal(verdict.used, 0);
   assert.equal(verdict.limit, 25);
