@@ -150,6 +150,26 @@ export function crossOriginMutation(headers: Headers, requestUrl: string): boole
   return !allowedOrigins().has(origin);
 }
 
+/**
+ * Inngest's out-of-band sync probe is an empty PUT. Vercel strips
+ * `Content-Length: 0`, so the generic payload guard otherwise rejects every
+ * automatic function sync with 411. Keep the exemption narrow: in-band syncs,
+ * chunked requests, and any declared non-empty body still go through the normal
+ * payload cap.
+ */
+export function emptyInngestOutOfBandSync(
+  method: string,
+  pathname: string,
+  headers: Headers,
+): boolean {
+  if (method.toUpperCase() !== "PUT" || pathname !== "/api/inngest") return false;
+  if (headers.get("transfer-encoding")) return false;
+  if ((headers.get("x-inngest-sync-kind") || "").trim().toLowerCase() === "in-band") return false;
+
+  const declared = headers.get("content-length")?.trim();
+  return declared == null || declared === "" || declared === "0";
+}
+
 export type BodySizeVerdict = "ok" | "length-required" | "too-large";
 
 /**

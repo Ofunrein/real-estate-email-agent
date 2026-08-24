@@ -7,6 +7,7 @@ import {
   clientKey,
   crossOriginExemptPath,
   crossOriginMutation,
+  emptyInngestOutOfBandSync,
   payloadLimitForPath,
   resetRateLimitsForTests,
   secretsMatch,
@@ -108,6 +109,25 @@ test("a chunked or missing Content-Length cannot slip past the payload cap", () 
   assert.equal(
     bodySizeVerdict(new Headers({ "content-length": "9000000", "content-type": "multipart/form-data" }), "/api/media/transcribe"),
     "ok",
+  );
+});
+
+test("only empty out-of-band Inngest PUT syncs bypass the generic body-size verdict", () => {
+  assert.equal(emptyInngestOutOfBandSync("PUT", "/api/inngest", new Headers()), true);
+  assert.equal(emptyInngestOutOfBandSync("PUT", "/api/inngest", new Headers({ "content-length": "0" })), true);
+  assert.equal(emptyInngestOutOfBandSync("POST", "/api/inngest", new Headers()), false);
+  assert.equal(emptyInngestOutOfBandSync("PUT", "/api/leads", new Headers()), false);
+  assert.equal(
+    emptyInngestOutOfBandSync("PUT", "/api/inngest", new Headers({ "content-length": "2" })),
+    false,
+  );
+  assert.equal(
+    emptyInngestOutOfBandSync("PUT", "/api/inngest", new Headers({ "transfer-encoding": "chunked" })),
+    false,
+  );
+  assert.equal(
+    emptyInngestOutOfBandSync("PUT", "/api/inngest", new Headers({ "x-inngest-sync-kind": "in-band" })),
+    false,
   );
 });
 

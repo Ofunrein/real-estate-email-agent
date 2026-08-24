@@ -8,6 +8,7 @@ import {
   clientKey,
   crossOriginExemptPath,
   crossOriginMutation,
+  emptyInngestOutOfBandSync,
   type RateLimitPolicy,
 } from "@/lib/requestSecurity";
 import { sharedRateLimit } from "@/lib/sharedRateLimit";
@@ -75,7 +76,7 @@ export async function middleware(request: NextRequest) {
     ));
   }
 
-  if (isMutation) {
+  if (isMutation && !emptyInngestOutOfBandSync(method, pathname, request.headers)) {
     const verdict = bodySizeVerdict(request.headers, pathname);
     if (verdict === "length-required") {
       return securityHeaders(NextResponse.json(
