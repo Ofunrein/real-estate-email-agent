@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAriaAssistant } from "@/lib/ariaAssistant";
+import { buildAriaAssistant, recordingDisclosure } from "@/lib/ariaAssistant";
 import { resolveClientConfig } from "@/lib/clientConfig";
 
 function config() {
@@ -71,7 +71,7 @@ test("buildAriaAssistant: sends final call reports to the app lifecycle webhook"
 
 test("buildAriaAssistant: keeps saved first message inbound-safe", () => {
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
-  assert.equal(assistant.firstMessage, "Thanks for calling Acme Realty, this is Iris. How can I help?");
+  assert.equal(assistant.firstMessage, "Thanks for calling Acme Realty, this is Iris. This call is recorded for quality and training. How can I help?");
   assert.equal(assistant.firstMessageMode, "assistant-speaks-first");
   assert.doesNotMatch(String(assistant.firstMessage), /\{\{#|{%\s*if/i);
 });
@@ -84,7 +84,7 @@ test("buildAriaAssistant: voice brand can differ from inbox client name", () => 
   });
   const assistant = buildAriaAssistant(voiceConfig, { publicUrl: "https://app.example.com" });
   assert.equal(assistant.name, "Iris — Austin Realty");
-  assert.equal(assistant.firstMessage, "Thanks for calling Austin Realty, this is Iris. How can I help?");
+  assert.equal(assistant.firstMessage, "Thanks for calling Austin Realty, this is Iris. This call is recorded for quality and training. How can I help?");
   const messages = (assistant.model as Record<string, unknown>).messages as Array<Record<string, string>>;
   assert.match(messages[0].content, /voice assistant for Austin Realty/);
   assert.doesNotMatch(messages[0].content, /voice assistant for Legacy Realty/);
@@ -241,4 +241,23 @@ test("buildAriaAssistant: allows explicit Anthropic model/provider override", ()
   const model = assistant.model as Record<string, unknown>;
   assert.equal(model.provider, "anthropic");
   assert.equal(model.model, "claude-sonnet-4-5");
+});
+
+test("buildAriaAssistant: every opener discloses that the call is recorded", () => {
+  // Vapi records by default and the recording URL is persisted, so the greeting
+  // is where consent is obtained. All-party-consent states make a silent
+  // recording a real problem; the operator-side decision is in docs/PILOT_GATES.md.
+  const assistant = buildAriaAssistant(
+    resolveClientConfig({ CLIENT_NAME: "Acme Realty", HUMAN_TRANSFER_NUMBER: "+15125550111" }),
+    { publicUrl: "https://acme.example.com", secret: "s3cret" },
+  );
+  assert.match(String(assistant.firstMessage), /recorded/i);
+});
+
+test("recordingDisclosure: configurable, and disableable only by explicit opt-out", () => {
+  assert.match(recordingDisclosure({}), /recorded/i);
+  assert.equal(recordingDisclosure({ ARIA_RECORDING_DISCLOSURE: "Calls are taped." }), "Calls are taped.");
+  // "off" is the only way to remove it, and it is documented as valid ONLY when
+  // recording is actually disabled in Vapi.
+  assert.equal(recordingDisclosure({ ARIA_RECORDING_DISCLOSURE: "off" }), "");
 });

@@ -113,6 +113,26 @@ ${advancedQualificationPlaybook()}
 Keep replies short and human. One question at a time.`;
 }
 
+/**
+ * Call-recording disclosure.
+ *
+ * Vapi records by default and the recording URL is persisted
+ * (lib/ariaWebhook.ts) and proxied to the dashboard. Texas is a one-party
+ * consent state, but callers dial in from everywhere and several states —
+ * California, Florida, Pennsylvania, Illinois, Washington — require all-party
+ * consent. Disclosing on the opening line is the enforceable product
+ * safeguard; whether recording is lawful for a given client and call remains
+ * an operator/counsel decision, documented in docs/PILOT_GATES.md.
+ *
+ * Set ARIA_RECORDING_DISCLOSURE to override the wording, or
+ * ARIA_RECORDING_DISCLOSURE=off ONLY if recording is disabled in Vapi.
+ */
+export function recordingDisclosure(env: Record<string, string | undefined> = process.env): string {
+  const configured = (env.ARIA_RECORDING_DISCLOSURE || "").trim();
+  if (configured.toLowerCase() === "off") return "";
+  return configured || "This call is recorded for quality and training.";
+}
+
 function modelProviderFor(model: string, explicit?: string): string {
   if (explicit) return explicit;
   const normalized = model.toLowerCase();
@@ -243,9 +263,14 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
     },
   ];
 
+  const disclosure = recordingDisclosure();
   const assistant: Record<string, unknown> = {
     name: `${voiceName} — ${companyName}`,
-    firstMessage: `Thanks for calling ${companyName}, this is ${voiceName}. How can I help?`,
+    firstMessage: [
+      `Thanks for calling ${companyName}, this is ${voiceName}.`,
+      disclosure,
+      "How can I help?",
+    ].filter(Boolean).join(" "),
     firstMessageMode: "assistant-speaks-first",
     // No voice block on purpose. Omitting it means a PATCH leaves the deployed voice alone,
     // which is what keeps provisioning from stomping a voice chosen in the dashboard. See

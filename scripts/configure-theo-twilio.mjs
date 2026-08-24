@@ -52,6 +52,8 @@ async function listTwilioCollection(baseUrl) {
 
 loadDotEnv();
 
+const dryRun = process.argv.includes("--dry-run");
+
 const accountSid = required("TWILIO_ACCOUNT_SID");
 const authToken = required("TWILIO_AUTH_TOKEN");
 const serviceSid = required("TWILIO_MESSAGING_SERVICE_SID");
@@ -61,7 +63,37 @@ const webhookSecret = process.env.CHANNEL_WEBHOOK_SECRET || "";
 const inbound = new URL(`${publicBaseUrl}/api/webhooks/theo-sms`);
 if (webhookSecret) inbound.searchParams.set("secret", webhookSecret);
 const inboundUrl = inbound.toString();
+const status = new URL(`${publicBaseUrl}/api/webhooks/twilio-status`);
+if (webhookSecret) status.searchParams.set("secret", webhookSecret);
+const statusUrl = status.toString();
 const auth = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
+
+/** Never print a URL that carries the webhook secret in its query string. */
+function redactUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    if (url.searchParams.has("secret")) url.searchParams.set("secret", "[redacted]");
+    return url.toString();
+  } catch {
+    return String(value || "");
+  }
+}
+
+if (dryRun) {
+  console.log(JSON.stringify({
+    dry_run: true,
+    account_sid_configured: Boolean(accountSid),
+    messaging_service_sid: serviceSid,
+    phone_number: twilioFrom,
+    would_set: {
+      inbound_request_url: redactUrl(inboundUrl),
+      status_callback_url: redactUrl(statusUrl),
+      use_inbound_webhook_on_number: "false",
+    },
+    destructive_steps: ["deletes every RCS channel sender on the messaging service"],
+  }, null, 2));
+  process.exit(0);
+}
 
 const response = await fetch(`https://messaging.twilio.com/v1/Services/${encodeURIComponent(serviceSid)}`, {
   method: "POST",
@@ -72,6 +104,7 @@ const response = await fetch(`https://messaging.twilio.com/v1/Services/${encodeU
   body: new URLSearchParams({
     InboundRequestUrl: inboundUrl,
     InboundMethod: "POST",
+    StatusCallback: statusUrl,
     UseInboundWebhookOnNumber: "false",
   }).toString(),
 });
@@ -84,8 +117,9 @@ if (!response.ok) {
 console.log(JSON.stringify({
   sid: payload.sid,
   friendly_name: payload.friendly_name,
-  inbound_request_url: payload.inbound_request_url,
+  inbound_request_url: redactUrl(payload.inbound_request_url),
   inbound_method: payload.inbound_method,
+  status_callback: redactUrl(payload.status_callback),
   use_inbound_webhook_on_number: payload.use_inbound_webhook_on_number,
 }, null, 2));
 
@@ -144,6 +178,8 @@ const numberResponse = await fetch(
     body: new URLSearchParams({
       SmsUrl: inboundUrl,
       SmsMethod: "POST",
+      StatusCallback: statusUrl,
+      StatusCallbackMethod: "POST",
     }).toString(),
   },
 );
@@ -155,9 +191,10 @@ if (!numberResponse.ok) {
 console.log(JSON.stringify({
   phone_number: numberPayload.phone_number,
   phone_number_sid: numberPayload.sid,
-  sms_url: numberPayload.sms_url,
+  sms_url: redactUrl(numberPayload.sms_url),
   sms_method: numberPayload.sms_method,
-  voice_url_preserved: numberPayload.voice_url,
+  status_callback: redactUrl(numberPayload.status_callback),
+  voice_url_preserved: redactUrl(numberPayload.voice_url),
 }, null, 2));
 
 const servicePhoneNumbers = await listTwilioCollection(

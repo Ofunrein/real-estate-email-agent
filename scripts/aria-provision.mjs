@@ -434,10 +434,10 @@ function buildVapiPlatformTools(publicUrl, secret) {
       },
     },
     {
-      type: "code",
+      type: "function",
       function: {
         name: "sendBookingSmsConfirmation",
-        description: "Send a booking confirmation SMS to the caller and an agent booking alert SMS through Twilio. Use immediately after bookConsultation succeeds.",
+        description: "Send a booking confirmation SMS to the caller and an agent booking alert SMS. Use immediately after bookConsultation succeeds.",
         parameters: {
           type: "object",
           properties: {
@@ -469,87 +469,11 @@ function buildVapiPlatformTools(publicUrl, secret) {
           required: ["appointmentTime"],
         },
       },
-      timeoutSeconds: 30,
-      code: `
-const twilioSid = env.TWILIO_ACCOUNT_SID;
-const twilioToken = env.TWILIO_AUTH_TOKEN;
-const twilioFrom = env.TWILIO_FROM;
-const agentPhone = env.ARIA_AGENT_CONFIRMATION_PHONE || "+15128115302";
-
-function cleanPhone(value) {
-  const raw = String(value || "").replace(/^(?:sms|rcs):/i, "").trim();
-  if (!raw) return "";
-  if (raw.startsWith("+")) return raw;
-  const digits = raw.replace(/\\D/g, "");
-  if (digits.length === 10) return "+1" + digits;
-  if (digits.length === 11 && digits.startsWith("1")) return "+" + digits;
-  return raw;
-}
-
-function unsafeRecipient(value) {
-  const digits = cleanPhone(value).replace(/\\D/g, "");
-  if (!digits || digits.length < 8 || digits.length > 15) return true;
-  if (/^0+$/.test(digits)) return true;
-  if (digits.length === 11 && digits.startsWith("1") && digits.slice(4, 7) === "555") return true;
-  if (digits.length === 10 && digits.slice(3, 6) === "555") return true;
-  return false;
-}
-
-async function sendSms(to, body) {
-  const recipient = cleanPhone(to);
-  if (!twilioSid || !twilioToken || !twilioFrom) return { sent: false, skipped: true, error: "twilio_not_configured" };
-  if (!recipient || !body) return { sent: false, skipped: true, error: "missing_recipient_or_body" };
-  if (unsafeRecipient(recipient)) return { sent: false, skipped: true, error: "unsafe_recipient" };
-
-  const url = \`https://api.twilio.com/2010-04-01/Accounts/\${encodeURIComponent(twilioSid)}/Messages.json\`;
-  const form = new URLSearchParams({ To: recipient, From: twilioFrom, Body: body.slice(0, 1500) });
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: \`Basic \${Buffer.from(\`\${twilioSid}:\${twilioToken}\`).toString("base64")}\`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: form,
-  });
-  const payload = await response.json().catch(() => ({}));
-  return {
-    sent: response.ok,
-    skipped: false,
-    status: response.status,
-    sid: payload.sid || "",
-    error: response.ok ? "" : String(payload.message || response.statusText || "twilio_send_failed"),
-  };
-}
-
-const callerName = args.callerName || "there";
-const appointmentType = args.appointmentType || "consultation";
-const propertyLine = args.propertyAddress ? \`\\nProperty: \${args.propertyAddress}\` : "";
-const callerBody = [
-  \`Confirmed: your \${appointmentType} is set for \${args.appointmentTime}.\`,
-  args.propertyAddress ? \`Property: \${args.propertyAddress}\` : "",
-  "Reply here with questions.",
-].filter(Boolean).join("\\n");
-const agentBody = [
-  "Aria booking confirmed",
-  \`Lead: \${callerName}\`,
-  args.callerPhone ? \`Phone: \${cleanPhone(args.callerPhone)}\` : "",
-  \`When: \${args.appointmentTime}\`,
-  \`Type: \${appointmentType}\`,
-  args.propertyAddress ? \`Property: \${args.propertyAddress}\` : "",
-  args.summary ? \`Summary: \${args.summary}\` : "",
-].filter(Boolean).join("\\n");
-
-const callerSms = args.callerPhone ? await sendSms(args.callerPhone, callerBody) : { sent: false, skipped: true, error: "missing_caller_phone" };
-const agentSms = await sendSms(agentPhone, agentBody);
-
-return { ok: Boolean(callerSms.sent || agentSms.sent), callerSms, agentSms };
-`.trim(),
-      environmentVariables: [
-        { name: "TWILIO_ACCOUNT_SID", value: process.env.TWILIO_ACCOUNT_SID || "" },
-        { name: "TWILIO_AUTH_TOKEN", value: process.env.TWILIO_AUTH_TOKEN || "" },
-        { name: "TWILIO_FROM", value: process.env.TWILIO_FROM || "" },
-        { name: "ARIA_AGENT_CONFIRMATION_PHONE", value: process.env.ARIA_AGENT_CONFIRMATION_PHONE || "+15128115302" },
-      ],
+      // Server webhook, NOT a Vapi-hosted code tool. The previous `type: "code"`
+      // version carried TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN in Vapi's tool
+      // environment — a full-privilege credential stored in a third party and,
+      // because tools upsert by name org-wide, shared across tenants.
+      server: { url: ariaToolUrl(publicUrl, secret, "sendBookingSmsConfirmation") },
     },
   ];
 }
@@ -578,11 +502,39 @@ async function vapiRequest(path, apiKey, init = {}) {
   return payload;
 }
 
+/**
+ * Identity of a tool for reuse purposes.
+ *
+ * Matching on function.name alone is org-wide: provisioning client B would
+ * PATCH client A's tool and repoint its server.url at B's domain and secret.
+ * Including the server origin scopes reuse to tools that already belong to
+ * THIS deployment, so two clients in one Vapi org get two tools.
+ *
+ * The function name itself is deliberately NOT namespaced — it is what the
+ * model calls by name in the prompt, and renaming it would break the prompt
+ * contract and lib/ariaTools.ts dispatch.
+ */
+function toolReuseKey(tool) {
+  const name = tool.function?.name || tool.name || "";
+  const rawUrl = tool.server?.url || "";
+  let origin = "";
+  try {
+    origin = rawUrl ? new URL(rawUrl).origin : "";
+  } catch {
+    origin = "";
+  }
+  // ponytail: native tools (Slack, transferCall) carry no server URL, so they
+  // still match by name alone. That is safe under the documented one-Vapi-
+  // account-per-client model; if clients ever share a Vapi org, give those
+  // tools per-client names too.
+  return `${name}::${origin}`;
+}
+
 async function upsertTool(apiKey, existingByName, tool) {
   const name = tool.function?.name;
   if (!name) throw new Error(`Vapi tool is missing function.name: ${JSON.stringify(tool)}`);
 
-  const existing = existingByName.get(name);
+  const existing = existingByName.get(toolReuseKey(tool));
   if (existing?.id) {
     const { type: _type, ...patchableTool } = tool;
     await vapiRequest(`/tool/${existing.id}`, apiKey, {
@@ -609,8 +561,8 @@ async function attachReusableTools(apiKey, assistant, publicUrl, secret) {
   const existingTools = Array.isArray(allTools) ? allTools : allTools.data || [];
   const existingByName = new Map();
   for (const tool of existingTools) {
-    const name = tool.function?.name || tool.name;
-    if (name && !existingByName.has(name)) existingByName.set(name, tool);
+    const key = toolReuseKey(tool);
+    if (key !== "::" && !existingByName.has(key)) existingByName.set(key, tool);
   }
 
   const syncedTools = [];
@@ -631,6 +583,18 @@ async function attachReusableTools(apiKey, assistant, publicUrl, secret) {
   };
 }
 
+/** JSON.stringify replacer that strips webhook secrets out of any URL value. */
+function redactSecretsInJson(key, value) {
+  if (typeof value !== "string" || !/^https?:\/\//.test(value)) return value;
+  try {
+    const url = new URL(value);
+    if (url.searchParams.has("secret")) url.searchParams.set("secret", "[redacted]");
+    return url.toString();
+  } catch {
+    return value;
+  }
+}
+
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const apiKey = process.env.VAPI_API_KEY || "";
@@ -647,7 +611,9 @@ async function main() {
   let assistant = buildAriaAssistant(config, { publicUrl: publicUrl || "https://vapi.local", secret, styleContext: await fetchStyleContext().catch(() => "") });
 
   if (dryRun) {
-    console.log(JSON.stringify(assistant, null, 2));
+    // Redacted: server.url carries CHANNEL_WEBHOOK_SECRET as a query param, so
+    // a raw dump would print a live secret to stdout and into CI logs.
+    console.log(JSON.stringify(assistant, redactSecretsInJson, 2));
     return;
   }
 

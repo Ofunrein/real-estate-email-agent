@@ -10,6 +10,7 @@
 
 import { nextTouch, type TouchDecision } from "@/lib/cadence";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { recordingDisclosure } from "@/lib/ariaAssistant";
 import type { CadenceConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { sendTheoSms } from "@/lib/twilioSms";
@@ -81,12 +82,13 @@ export function outboundFirstMessage(input: OutboundCallInput): string {
   const companyName = clean(input.companyName) || defaultVoiceCompanyName();
   const callReason = outboundCallReason(input);
   const leadName = clean(input.leadName);
-  if (leadName) {
-    if (!looksLikePhone(leadName)) {
-      return `Hi ${leadName}, this is ${agentName} with ${companyName}. I'm calling about ${callReason}. Do you have a quick minute?`;
-    }
-  }
-  return `Hi, this is ${agentName} with ${companyName}. I'm calling about your real estate request. Do you have a quick minute?`;
+  // Outbound calls are recorded the same as inbound, so they carry the same
+  // disclosure. See recordingDisclosure() for the consent reasoning.
+  const disclosure = recordingDisclosure();
+  const greeting = leadName && !looksLikePhone(leadName)
+    ? `Hi ${leadName}, this is ${agentName} with ${companyName}. I'm calling about ${callReason}.`
+    : `Hi, this is ${agentName} with ${companyName}. I'm calling about your real estate request.`;
+  return [greeting, disclosure, "Do you have a quick minute?"].filter(Boolean).join(" ");
 }
 
 function outboundCallBody(config: OutboundConfig, input: OutboundCallInput): Record<string, unknown> {

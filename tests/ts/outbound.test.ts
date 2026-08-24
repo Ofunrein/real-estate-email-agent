@@ -78,7 +78,7 @@ test("placeOutboundCall: posts assistant + customer + outbound overrides", async
   assert.equal(overrides.firstMessageMode, "assistant-speaks-first");
   assert.equal(overrides.firstMessage, "{{outboundFirstMessage}}");
   assert.deepEqual(overrides.variableValues, {
-    outboundFirstMessage: "Hi Maya Chen, this is Aria with Austin Realty. I'm calling about the Mueller listings. Do you have a quick minute?",
+    outboundFirstMessage: "Hi Maya Chen, this is Aria with Austin Realty. I'm calling about the Mueller listings. This call is recorded for quality and training. Do you have a quick minute?",
     leadName: "Maya Chen",
     clientName: "Austin Realty",
     agentName: "Aria",
@@ -108,7 +108,7 @@ test("outboundFirstMessage: named and unknown lead openers", () => {
       companyName: "Austin Realty",
       callReason: "your showing request",
     }),
-    "Hi Maya, this is Aria with Austin Realty. I'm calling about your showing request. Do you have a quick minute?",
+    "Hi Maya, this is Aria with Austin Realty. I'm calling about your showing request. This call is recorded for quality and training. Do you have a quick minute?",
   );
   assert.equal(
     outboundFirstMessage({
@@ -116,7 +116,7 @@ test("outboundFirstMessage: named and unknown lead openers", () => {
       agentName: "Aria",
       companyName: "Austin Realty",
     }),
-    "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+    "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. This call is recorded for quality and training. Do you have a quick minute?",
   );
 });
 
@@ -129,7 +129,7 @@ test("outboundFirstMessage: never uses phone-like leadName or long context as op
       companyName: "Austin Realty",
       callReason: "A user called Austin Realty seeking a three-bedroom home in South Austin and became frustrated because the assistant could not pull listings immediately over the phone.",
     }),
-    "Hi, this is Iris with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+    "Hi, this is Iris with Austin Realty. I'm calling about your real estate request. This call is recorded for quality and training. Do you have a quick minute?",
   );
 });
 
@@ -143,7 +143,7 @@ test("outboundFirstMessage: defaults voice company to team name before client na
     process.env.CLIENT_NAME = "Austin Realty";
     assert.equal(
       outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
-      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. This call is recorded for quality and training. Do you have a quick minute?",
     );
   } finally {
     if (priorTeam == null) delete process.env.TEAM_NAME;
@@ -163,7 +163,7 @@ test("outboundFirstMessage: ARIA_CLIENT_NAME overrides team name", () => {
     process.env.TEAM_NAME = "Austin Realty";
     assert.equal(
       outboundFirstMessage({ customerNumber: "+15125550000", agentName: "Aria" }),
-      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. Do you have a quick minute?",
+      "Hi, this is Aria with Austin Realty. I'm calling about your real estate request. This call is recorded for quality and training. Do you have a quick minute?",
     );
   } finally {
     if (priorTeam == null) delete process.env.TEAM_NAME;

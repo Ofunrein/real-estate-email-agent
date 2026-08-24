@@ -365,10 +365,15 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("TWILIO_ACCOUNT_SID", twilio_sender)
         self.assertIn("TWILIO_AUTH_TOKEN", twilio_sender)
         self.assertIn("TWILIO_FROM", twilio_sender)
-        self.assertIn("TWILIO_FROM is required for SMS replies", twilio_sender)
+        self.assertIn("TWILIO_FROM or TWILIO_MESSAGING_SERVICE_SID is required for SMS replies", twilio_sender)
         self.assertIn("function smsRecipientAddress", twilio_sender)
-        self.assertIn("From: fromNumber", twilio_sender)
-        self.assertNotIn("MessagingServiceSid", twilio_sender)
+        # A2P 10DLC registers the carrier campaign against the Messaging Service, not
+        # the number, so the service owns the send whenever one is configured. The bare
+        # From path stays for deployments without a service. This assertion previously
+        # pinned From-only, which kept every send on unregistered traffic.
+        self.assertIn('form.set("MessagingServiceSid", messagingServiceSid)', twilio_sender)
+        self.assertIn('form.set("From", fromNumber)', twilio_sender)
+        self.assertIn("StatusCallback", twilio_sender)
         self.assertNotIn("isRcsAddress", twilio_sender)
         self.assertIn("mediaProxyUrl", twilio_sender)
         self.assertIn("return mediaProxyPath(url)", media_proxy)
@@ -447,6 +452,32 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("IncomingPhoneNumbers.json?PhoneNumber", script)
         self.assertIn("SmsUrl", script)
         self.assertIn("voice_url_preserved", script)
+        # Delivery state must come back to us or a carrier rejection (including
+        # 21610 opted-out) is invisible and the send still reads as delivered.
+        self.assertIn("StatusCallback", script)
+
+    def test_twilio_webhooks_verify_signature_and_destination_number(self):
+        for route in (
+            "app/api/webhooks/theo-sms/route.ts",
+            "app/api/webhooks/aria-sms-control/route.ts",
+            "app/api/webhooks/twilio-status/route.ts",
+        ):
+            source = read(route)
+            self.assertIn("verifyTwilioWebhook", source, route)
+            self.assertIn("x-twilio-signature", source, route)
+            self.assertIn("assertTwilioInboundTenant", source, route)
+
+    def test_twilio_signature_gate_fails_closed_in_production(self):
+        signature = read("lib/twilioSignature.ts")
+        self.assertIn("export function verifyTwilioWebhook", signature)
+        self.assertIn('nodeEnv === "production"', signature)
+        self.assertIn('reason: "not_configured"', signature)
+
+    def test_status_callback_records_carrier_opt_out(self):
+        route = read("app/api/webhooks/twilio-status/route.ts")
+        self.assertIn("OPT_OUT_ERROR_CODES", route)
+        self.assertIn("21610", route)
+        self.assertIn("optOutPatch", route)
 
     def test_media_proxy_allows_only_known_image_hosts(self):
         route = read("app/api/media/proxy/route.ts")
