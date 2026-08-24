@@ -52,7 +52,7 @@
     "migrate:baseline": "node scripts/migrate.mjs --baseline",
     "provision:client": "node --import tsx scripts/provision-client.mjs",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
-    "test:py": "pytest tests/",
+    "test:py": "node scripts/run-python-tests.mjs",
     "sync:instagram-browser-thread": "node scripts/sync-instagram-browser-thread.mjs"
   },
   "dependencies": {
