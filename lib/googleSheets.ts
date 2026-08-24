@@ -10,6 +10,7 @@ import {
   PROPERTIES_TAB,
   type SheetRow,
 } from "@/lib/sheetSchema";
+import { createIrisGoogleOAuthSession, GOOGLE_SHEETS_SCOPE } from "@/lib/gmailConnection";
 
 type OAuthCredentials = {
   installed?: {
@@ -55,6 +56,15 @@ export function spreadsheetId(): string {
 }
 
 export async function sheetsClient(): Promise<sheets_v4.Sheets> {
+  try {
+    const connected = await createIrisGoogleOAuthSession();
+    if (connected.scopes.includes(GOOGLE_SHEETS_SCOPE)) {
+      return google.sheets({ version: "v4", auth: connected.oauth });
+    }
+  } catch {
+    // Local and pre-OAuth installations continue through the legacy credential path below.
+  }
+
   const { credentialsPath, tokenPath } = credentialPaths();
   const credentials = readJsonEnv<OAuthCredentials>("GMAIL_CREDENTIALS_JSON") || readJson<OAuthCredentials>(credentialsPath);
   const token = readJsonEnv<Record<string, string>>("GMAIL_TOKEN_JSON") || readJson<Record<string, string>>(tokenPath);

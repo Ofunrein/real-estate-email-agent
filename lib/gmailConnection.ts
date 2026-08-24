@@ -179,18 +179,18 @@ function normalizeGmailTokenJson(tokens: object): GmailTokenJson {
   ) as GmailTokenJson;
 }
 
-function gmailClientFromToken(input: {
+function googleOAuthFromToken(input: {
   token: GmailTokenJson;
   oauth: ReturnType<typeof createGmailOAuthClient>;
   onTokens?: (tokens: GmailTokenJson) => void;
-}): GmailClient {
+}) {
   input.oauth.setCredentials(input.token);
   if (input.onTokens) {
     input.oauth.on("tokens", (tokens) => {
       input.onTokens?.(normalizeGmailTokenJson(tokens));
     });
   }
-  return google.gmail({ version: "v1", auth: input.oauth });
+  return input.oauth;
 }
 
 export async function connectGmailAccountFromCode(input: {
@@ -222,9 +222,9 @@ export async function createIrisGmailClient(): Promise<GmailClient> {
   return session.gmail;
 }
 
-export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; accountEmail: string; legacy: boolean }> {
+export async function createIrisGoogleOAuthSession() {
   if (!databaseEnabled()) {
-    throw new Error("Gmail OAuth requires DATABASE_URL so app-connected email accounts can be read.");
+    throw new Error("Google OAuth requires DATABASE_URL so app-connected accounts can be read.");
   }
 
   const account = await readDefaultEmailAccountFromDatabase();
@@ -235,25 +235,34 @@ export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; ac
   const token = decryptEmailAccountToken<GmailTokenJson>(account.token_json_encrypted);
   const oauth = createGmailOAuthClient(gmailOAuthRedirectUri());
   return {
-    gmail: gmailClientFromToken({
-        token,
-        oauth,
-        onTokens: (tokens) => {
-          const nextToken = {
-            ...token,
-            ...tokens,
-            refresh_token: tokens.refresh_token || token.refresh_token,
-          };
-          updateEmailAccountTokenInDatabase(
-            account.email,
-            encryptEmailAccountToken(nextToken),
-          ).catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : String(error);
-            markEmailAccountErrorInDatabase(account.email, message).catch(() => {});
-          });
-        },
+    oauth: googleOAuthFromToken({
+      token,
+      oauth,
+      onTokens: (tokens) => {
+        const nextToken = {
+          ...token,
+          ...tokens,
+          refresh_token: tokens.refresh_token || token.refresh_token,
+        };
+        updateEmailAccountTokenInDatabase(
+          account.email,
+          encryptEmailAccountToken(nextToken),
+        ).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          markEmailAccountErrorInDatabase(account.email, message).catch(() => {});
+        });
+      },
     }),
     accountEmail: account.email,
+    scopes: account.scopes,
+  };
+}
+
+export async function createIrisGmailSession(): Promise<{ gmail: GmailClient; accountEmail: string; legacy: boolean }> {
+  const session = await createIrisGoogleOAuthSession();
+  return {
+    gmail: google.gmail({ version: "v1", auth: session.oauth }),
+    accountEmail: session.accountEmail,
     legacy: false,
   };
 }
