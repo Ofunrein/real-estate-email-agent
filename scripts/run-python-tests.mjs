@@ -35,7 +35,6 @@ const requiredModules = [
   "dotenv",
   "google.oauth2",
   "googleapiclient",
-  "gspread",
   "pytest",
   "requests",
 ];
