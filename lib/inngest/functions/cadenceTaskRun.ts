@@ -1,8 +1,9 @@
 import { recordChannelInteraction } from "@/lib/channelIngest";
-import { claimDueCadenceTasksInDatabase, completeCadenceTaskInDatabase, failCadenceTaskInDatabase } from "@/lib/database";
+import { claimDueCadenceTasksInDatabase, completeCadenceTaskInDatabase, failCadenceTaskInDatabase, findLeadInDatabase } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { sendManualReply } from "@/lib/manualReply";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { channelSuppression, type SuppressibleChannel } from "@/lib/contactSuppression";
 
 function clean(value: unknown): string {
   return String(value || "").trim();
@@ -45,6 +46,22 @@ export const cadenceTaskRun = inngest.createFunction(
       }
       try {
         const channel = task.channel === "email" ? "email" : task.channel === "whatsapp" ? "whatsapp" : task.channel === "instagram" ? "instagram" : task.channel === "messenger" ? "messenger" : "sms";
+
+        // Re-read the lead at SEND time. `task.lead` is a snapshot frozen when
+        // the task was queued, so a STOP that arrived after queueing is not in
+        // it. Cancel-on-inbound is a race mitigation, not a gate: a task
+        // already claimed into `running`, or one whose lead_identity does not
+        // match the STOP write, would otherwise still send.
+        const storedLead = await findLeadInDatabase(
+          channel === "email" ? { email: to } : { phone: to },
+        ).catch(() => null);
+        const suppression = channelSuppression(storedLead ?? undefined, channel as SuppressibleChannel);
+        if (suppression.suppressed) {
+          await completeCadenceTaskInDatabase(task.id, { skipped_send: suppression.code, to });
+          results.push({ id: task.id, channel, skipped: suppression.code });
+          continue;
+        }
+
         const sent = await sendManualReply({ channel, to, body });
         await recordChannelInteraction({
           channel,

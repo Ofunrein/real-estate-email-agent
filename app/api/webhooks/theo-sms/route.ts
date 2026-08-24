@@ -10,6 +10,8 @@ import { addTheoSessionCost, elapsedMs, formatUsd, nowMs, theoSessionCost, type 
 import { isUnsafeSmsRecipient, sendTheoHandoffAlert, sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { fetchStyleContext } from "@/lib/styleTraining";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
+import { twilioSignedUrl, verifyTwilioWebhook } from "@/lib/twilioSignature";
+import { assertTwilioInboundTenant, describeTenantMismatch } from "@/lib/tenant";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { writeTheoMetricAuditEvents } from "@/lib/agentCostAudit";
 import { shouldAutoSendForChannel } from "@/lib/inboxSettings";
@@ -375,6 +377,34 @@ export async function POST(request: NextRequest) {
     assertWebhookSecret(request);
     const parseStarted = nowMs();
     let payload = stringPayload(await parseWebhookPayload(request));
+
+    // Signature is computed over the RAW form params, before
+    // payloadWithVoiceTranscripts rewrites Body. A shared query-string secret
+    // proves nothing about the sender; the HMAC proves this deployment's own
+    // Twilio account signed it.
+    const signature = verifyTwilioWebhook({
+      url: twilioSignedUrl(request.url),
+      params: payload,
+      signature: request.headers.get("x-twilio-signature") || "",
+    });
+    if (!signature.ok) {
+      await audit.write("auth", "blocked", { statusCode: signature.status, errorCode: signature.reason });
+      return webhookResponse(
+        request,
+        { ok: false, error: "Twilio signature verification failed." },
+        { status: signature.status },
+      );
+    }
+
+    // The To number must be one this deployment owns. Otherwise a number
+    // re-pointed at the wrong client's webhook writes into the wrong database.
+    const tenant = assertTwilioInboundTenant(payload.To);
+    if (!tenant.ok) {
+      console.warn("theo_sms_tenant_mismatch", describeTenantMismatch(tenant));
+      await audit.write("auth", "blocked", { statusCode: 404, errorCode: "twilio_tenant_mismatch" });
+      return webhookResponse(request, { ok: false, error: "Unknown destination number." }, { status: 404 });
+    }
+
     const leadPhone = normalizeTwilioContactAddress(payload.From || "");
     await audit.write("received", "received", {
       contactRef: leadPhone,
@@ -479,7 +509,10 @@ export async function POST(request: NextRequest) {
         ? "You're opted back in. What home or area can I help with?"
         : "Iris with Austin Realty here. Reply with the home or area you're asking about, or STOP to opt out.";
       const controlSendStarted = nowMs();
-      const sendResult = await sendTheoSms(payload.From || "", body);
+      // START and HELP must reach a suppressed lead: START is how they opt
+      // back in, and HELP is a carrier-required response. Marking these
+      // operator-initiated is what lets them through the transport gate.
+      const sendResult = await sendTheoSms(payload.From || "", body, [], { operatorInitiated: true });
       const controlSendMs = elapsedMs(controlSendStarted);
       let handoffAlertSent = false;
       let handoffAlertError = "";

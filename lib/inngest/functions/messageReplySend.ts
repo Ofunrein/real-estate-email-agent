@@ -1,4 +1,5 @@
 import {
+  findLeadInDatabase,
   hasNewerInboundForThreadInDatabase,
   incrementReplyJobAttemptInDatabase,
   readInboxSettingsFromDatabase,
@@ -14,6 +15,9 @@ import { agentActionForReplyJob, IRIS_REPLY_SEND_RETRIES, requireSuccessfulReply
 import { claimProviderAction, completeProviderAction } from "@/lib/providerSendSafety";
 import { DEFAULT_INBOX_SETTINGS } from "@/lib/inboxSettings";
 import { runInRequestWorkspace, setRequestWorkspace } from "@/lib/workspaceContext";
+import { channelSuppression, type SuppressibleChannel } from "@/lib/contactSuppression";
+import { checkUsageCap } from "@/lib/usageCaps";
+import { writeRequestAuditEvent } from "@/lib/requestAudit";
 
 export const messageReplySend = inngest.createFunction(
   {
@@ -57,6 +61,48 @@ export const messageReplySend = inngest.createFunction(
 
     const action = agentActionForReplyJob(job);
     const settings = await readInboxSettingsFromDatabase().catch(() => DEFAULT_INBOX_SETTINGS);
+
+    // Suppression is read from the STORED lead, never from job metadata. The
+    // webhooks that queue these jobs attach smsConsent:"inbound_text", which
+    // no opted-out pattern can ever match — so trusting metadata meant a lead
+    // who texted STOP still got the next automated reply.
+    const suppression = await step.run("check contact suppression", async () => {
+      if (eventClientId) setRequestWorkspace(eventClientId);
+      const lead = await findLeadInDatabase(
+        job.channel === "email" ? { email: job.contactRef } : { phone: job.contactRef },
+      ).catch(() => null);
+      return channelSuppression(lead ?? undefined, job.channel as SuppressibleChannel);
+    });
+    if (suppression.suppressed) {
+      await step.run("mark send suppressed", async () => {
+        if (eventClientId) setRequestWorkspace(eventClientId);
+        await upsertReplyJobInDatabase({
+          dedupeKey, channel: job.channel, provider: job.provider, threadRef: job.threadRef,
+          contactRef: job.contactRef, status: "needs_human", error: suppression.reason,
+          nextAction: "human_review", metadata: { guardCode: suppression.code },
+        });
+      });
+      return { ok: true, skipped: suppression.code };
+    }
+
+    // Spend circuit breaker. Parks the job for a human rather than dropping it,
+    // so nothing is lost when a cap trips.
+    const cap = await step.run("check client usage cap", async () => {
+      if (eventClientId) setRequestWorkspace(eventClientId);
+      return checkUsageCap(job.channel === "sms" || job.channel === "whatsapp" ? "sms" : "ai");
+    });
+    if (!cap.allowed) {
+      await step.run("mark send over cap", async () => {
+        if (eventClientId) setRequestWorkspace(eventClientId);
+        await upsertReplyJobInDatabase({
+          dedupeKey, channel: job.channel, provider: job.provider, threadRef: job.threadRef,
+          contactRef: job.contactRef, status: "needs_human", error: cap.reason,
+          nextAction: "human_review", metadata: { guardCode: cap.code, used: cap.used, limit: cap.limit },
+        });
+      });
+      return { ok: true, skipped: cap.code };
+    }
+
     const guard = planAgentAction(action, settings);
     if (!guard.allowed) {
       await upsertReplyJobInDatabase({
@@ -131,6 +177,19 @@ export const messageReplySend = inngest.createFunction(
         dedupeKey, channel: job.channel, provider: job.provider, threadRef: job.threadRef,
         contactRef: job.contactRef, status: "sent", nextAction: "await_reply",
         metadata: { deliveredAt: new Date().toISOString() },
+      });
+      // The audit row is what usage caps count. Without it the SMS and voice
+      // caps read zero forever and can never trip, no matter the volume.
+      await writeRequestAuditEvent({
+        requestId: `reply-job:${job.id}`,
+        route: "inngest:message-reply-send",
+        method: "EVENT",
+        channel: job.channel,
+        provider: job.provider || job.channel,
+        threadRef: job.threadRef,
+        contactRef: job.contactRef,
+        stage: "send",
+        outcome: "sent",
       });
     });
 

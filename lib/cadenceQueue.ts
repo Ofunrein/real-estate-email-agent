@@ -3,6 +3,7 @@ import type { CadenceConfig } from "@/lib/clientConfig";
 import { normalizeEmail, normalizeName, normalizePhone } from "@/lib/leadIdentity";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { isUnsafeSmsRecipient } from "@/lib/twilioSms";
+import { channelSuppression, type SuppressibleChannel } from "@/lib/contactSuppression";
 
 export type CadenceQueueChannel =
   | "sms"
@@ -136,9 +137,10 @@ function needsHuman(lead: Partial<SheetRow>, events: SheetRow[]): boolean {
 
 function consentOk(channel: CadenceQueueChannel, lead: Partial<SheetRow>): boolean {
   if (channel === "manual_human") return true;
+  // Same suppression rule as the reply-send path — one STOP stops every
+  // automated channel, not just the one it arrived on.
+  if (channelSuppression(lead, channel as SuppressibleChannel).suppressed) return false;
   if (channel === "voice") return (lead.call_consent || "").toLowerCase() === "yes";
-  if (channel === "sms") return (lead.sms_consent || "").toLowerCase() !== "no";
-  if (channel === "whatsapp") return (lead.whatsapp_consent || lead.sms_consent || "").toLowerCase() !== "no";
   return true;
 }
 

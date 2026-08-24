@@ -25,6 +25,26 @@ function missingConfig(): string {
   return missing.join(", ");
 }
 
+/**
+ * Where Twilio reports delivery state. Without it a send is recorded as "sent"
+ * the moment Twilio returns a SID, so carrier rejections — including 21610,
+ * Twilio's own "recipient has opted out" — are never observed.
+ */
+export function twilioStatusCallbackUrl(): string {
+  const base = (process.env.TWILIO_WEBHOOK_BASE_URL || process.env.PUBLIC_BASE_URL || "").trim().replace(/\/$/, "");
+  if (!base) return "";
+  const secret = (process.env.CHANNEL_WEBHOOK_SECRET || "").trim();
+  try {
+    const url = new URL("/api/webhooks/twilio-status", base);
+    // The route verifies the Twilio signature; the secret only matches the
+    // existing webhook convention and is not what authenticates the caller.
+    if (secret) url.searchParams.set("secret", secret);
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
 function smsRecipientAddress(value: string): string {
   return value.replace(/^(?:rcs|sms):/i, "").trim();
 }
@@ -76,7 +96,43 @@ export function finalizeOutboundSmsBody(body: string): string {
   return finalizeOutboundTextBody(body);
 }
 
-export async function sendTheoSms(to: string, body: string, mediaUrls: string[] = []): Promise<TwilioSendResult> {
+/**
+ * Suppression at the transport boundary.
+ *
+ * Enforcing this only in messageReplySend left every other automated sender
+ * unguarded — speed-to-lead from Meta lead forms, the Olivia website reply,
+ * appointment confirmations, cadence tasks. Rather than patch each call site
+ * and hope the next one remembers, the check lives where the message actually
+ * leaves, exactly like finalizeOutboundSmsBody above it.
+ *
+ * `operatorInitiated` is the deliberate escape hatch: a human replying from the
+ * dashboard is an accountable decision and is not blocked. Nothing else may
+ * pass it.
+ *
+ * No-ops when the database is unavailable — a suppression lookup that cannot
+ * run must not silently stop a client's agent. The reply-send path does its own
+ * check with the lead already loaded, so the important case is still covered.
+ */
+async function suppressedRecipient(recipient: string): Promise<string> {
+  if (!process.env.DATABASE_URL) return "";
+  try {
+    const { findLeadInDatabase } = await import("@/lib/database");
+    const { channelSuppression } = await import("@/lib/contactSuppression");
+    const lead = await findLeadInDatabase({ phone: recipient });
+    if (!lead) return "";
+    const verdict = channelSuppression(lead, "sms");
+    return verdict.suppressed ? verdict.reason : "";
+  } catch {
+    return "";
+  }
+}
+
+export async function sendTheoSms(
+  to: string,
+  body: string,
+  mediaUrls: string[] = [],
+  options: { operatorInitiated?: boolean } = {},
+): Promise<TwilioSendResult> {
   const cleanUrls = cleanMediaUrls(mediaUrls);
   if (!mayUseSharedEnvironmentConnections(requestWorkspaceId())) {
     return { sent: false, skipped: true, sid: "", error: "Connect a workspace-specific Twilio account before sending SMS", mediaCount: cleanUrls.length };
@@ -105,23 +161,39 @@ export async function sendTheoSms(to: string, body: string, mediaUrls: string[] 
     };
   }
 
+  if (!options.operatorInitiated) {
+    const suppressed = await suppressedRecipient(recipient);
+    if (suppressed) {
+      return { sent: false, skipped: true, sid: "", error: suppressed, mediaCount: cleanUrls.length };
+    }
+  }
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
   const authToken = process.env.TWILIO_AUTH_TOKEN || "";
   const fromNumber = (process.env.TWILIO_FROM || "").trim();
-  if (!fromNumber) {
+  const messagingServiceSid = (process.env.TWILIO_MESSAGING_SERVICE_SID || "").trim();
+  if (!fromNumber && !messagingServiceSid) {
     return {
       sent: false,
       skipped: true,
       sid: "",
-      error: "TWILIO_FROM is required for SMS replies",
+      error: "TWILIO_FROM or TWILIO_MESSAGING_SERVICE_SID is required for SMS replies",
       mediaCount: cleanUrls.length,
     };
   }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
-  const form = new URLSearchParams({
-    To: recipient,
-    From: fromNumber,
-  });
+  const form = new URLSearchParams({ To: recipient });
+  // A2P 10DLC binds carrier campaign registration to the Messaging Service, not
+  // to the number. Sending with a bare From leaves the traffic unregistered
+  // (30032/30007 filtering at volume) and bypasses the service's own opt-out
+  // handling. Prefer the service; keep From for deployments without one.
+  if (messagingServiceSid) {
+    form.set("MessagingServiceSid", messagingServiceSid);
+  } else {
+    form.set("From", fromNumber);
+  }
+  const statusCallback = twilioStatusCallbackUrl();
+  if (statusCallback) form.set("StatusCallback", statusCallback);
   if (message) {
     form.append("Body", message);
   }
@@ -185,5 +257,6 @@ export async function sendTheoHandoffAlert(input: {
     input.summary ? `Summary: ${input.summary}` : "",
   ].filter(Boolean).join("\n").slice(0, 900);
 
-  return sendTheoSms(to, body);
+  // Alert to the agent's own phone, not a lead. Never suppression-gated.
+  return sendTheoSms(to, body, [], { operatorInitiated: true });
 }

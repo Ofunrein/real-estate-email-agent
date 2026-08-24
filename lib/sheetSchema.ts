@@ -67,6 +67,7 @@ export const LEAD_MEMORY_HEADERS = [
   "appointment_count",
   "do_not_contact",
   "whatsapp_consent",
+  "email_consent",
 ] as const;
 
 export const CONVERSATION_EVENTS_HEADERS = [

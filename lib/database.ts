@@ -28,6 +28,8 @@ import {
 } from "@/lib/serviceAreas";
 import type { ChannelConnectionInput, ChannelConnectionRecord } from "@/lib/channelConnections";
 import { requestWorkspaceId } from "@/lib/workspaceContext";
+import { preserveSuppression } from "@/lib/contactSuppression";
+import { decryptProviderTokenAtRest, encryptProviderTokenAtRest } from "@/lib/emailAccountCrypto";
 
 let pool: Pool | null = null;
 const tableColumnCache = new Map<string, Set<string>>();
@@ -371,7 +373,7 @@ function channelConnectionFromRow(row: Record<string, unknown>): ChannelConnecti
     status: String(row.status || ""),
     health_reason: String(row.health_reason || ""),
     webhook_status: String(row.webhook_status || ""),
-    page_access_token: String(row.page_access_token || ""),
+    page_access_token: decryptProviderTokenAtRest(String(row.page_access_token || "")),
     token_expires_at: row.token_expires_at ? new Date(String(row.token_expires_at)).toISOString() : "",
     metadata: jsonRecord(row.metadata),
     created_at: row.created_at ? new Date(String(row.created_at)).toISOString() : "",
@@ -405,10 +407,19 @@ function channelConnectionValues(input: ChannelConnectionInput) {
     status: cleanConnectionSlug(input.status || (selectedAssetId || connectedAccountId ? "connected" : "needs_config")),
     healthReason: cleanConnectionText(input.health_reason),
     webhookStatus: cleanConnectionSlug(input.webhook_status || ""),
-    pageAccessToken: cleanConnectionText(input.page_access_token),
+    pageAccessToken: encryptProviderTokenAtRest(cleanConnectionText(input.page_access_token)),
     tokenExpiresAt: cleanConnectionText(input.token_expires_at),
-    metadata: jsonRecord(input.metadata),
+    // Defense in depth: strip any token a caller still puts in metadata. That
+    // jsonb column is not encrypted, so a copy there would silently undo the
+    // encryption on the column next to it.
+    metadata: stripTokensFromMetadata(jsonRecord(input.metadata)),
   };
+}
+
+function stripTokensFromMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  if (!("page_access_token" in metadata) && !("access_token" in metadata)) return metadata;
+  const { page_access_token: _pageToken, access_token: _token, ...rest } = metadata;
+  return rest;
 }
 
 function channelConnectionSelectList(hasTokenColumns: boolean): string {
@@ -1070,21 +1081,23 @@ export async function listUnrepliedNeedsHumanEmailMessageIds(limit = 25): Promis
   const rows = await getPool().query<{ gmail_message_id: string }>(
     `select distinct ce.gmail_message_id
        from conversation_events ce
-      where ce.channel = 'email'
+      where ce.client_id = $2
+        and ce.channel = 'email'
         and ce.direction = 'inbound'
         and coalesce(ce.gmail_message_id, '') <> ''
         and (ce.status = 'needs_human' or ce.ai_action = 'route_human' or ce.event_type = 'human_handoff')
         and ce.created_at > now() - interval '10 days'
         and not exists (
           select 1 from conversation_events reply
-           where reply.channel = 'email'
+           where reply.client_id = ce.client_id
+             and reply.channel = 'email'
              and reply.direction = 'outbound'
              and reply.gmail_thread_id = ce.gmail_thread_id
              and reply.event_at > ce.event_at
         )
       order by ce.gmail_message_id
       limit $1`,
-    [Math.max(1, Math.min(limit, 50))],
+    [Math.max(1, Math.min(limit, 50)), clientId()],
   );
   return rows.rows.map((r) => String(r.gmail_message_id || "")).filter(Boolean);
 }
@@ -2230,7 +2243,10 @@ function mergeLeadMemory(existing: SheetRow, incoming: SheetRow): SheetRow {
       merged[field] = "";
     }
   }
-  return merged;
+  // mergeNonEmpty is last-write-wins, so the inbound message right after a STOP
+  // would overwrite next_action and quietly lift the opt-out. Only an explicit
+  // opt-in may clear it.
+  return preserveSuppression(existing, incoming, merged);
 }
 
 export async function appendConversationEventToDatabase(event: Partial<SheetRow>): Promise<SheetRow> {

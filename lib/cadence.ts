@@ -9,6 +9,7 @@
 
 import type { CadenceConfig } from "@/lib/clientConfig";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { channelSuppression, isDoNotContact } from "@/lib/contactSuppression";
 
 export type TouchChannel = "voice" | "sms" | "email";
 
@@ -60,14 +61,15 @@ function localHour(ms: number, timezone: string): number {
 }
 
 function consentOk(channel: TouchChannel, lead: Partial<SheetRow>): boolean {
+  // Shared with the reply-send path so a STOP suppresses cadence and immediate
+  // replies by the same rule.
+  if (channelSuppression(lead, channel).suppressed) return false;
   if (channel === "voice") return (lead.call_consent || "").toLowerCase() === "yes";
-  if (channel === "sms") return (lead.sms_consent || "").toLowerCase() !== "no";
-  return true; // email
+  return true; // sms + email handled by channelSuppression
 }
 
 function optedOut(lead: Partial<SheetRow>): boolean {
-  return (lead.next_action || "").toLowerCase() === "do_not_contact"
-    || (lead.handoff_status || "").toLowerCase() === "do_not_contact"
+  return isDoNotContact(lead)
     || (lead.sms_consent || "").toLowerCase() === "no" && (lead.call_consent || "").toLowerCase() === "no";
 }
 

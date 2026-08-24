@@ -52,7 +52,10 @@ export async function sendManualReply(inputRaw: ManualReplyInput): Promise<Manua
   try {
     switch (input.channel) {
       case "sms": {
-        const r = await sendTheoSms(input.to, input.body, input.mediaUrls ?? []);
+        // Operator-initiated: a human chose to send this. Suppression covers
+        // automated agents; blocking a person answering "why did I get this?"
+        // would be worse than the thing it prevents.
+        const r = await sendTheoSms(input.to, input.body, input.mediaUrls ?? [], { operatorInitiated: true });
         return r.sent
           ? { ok: true, deliveredBody: input.body, deliveredMediaUrls: input.mediaUrls ?? [], droppedMediaUrls: [] }
           : { ok: false, error: r.error || "SMS not sent" };

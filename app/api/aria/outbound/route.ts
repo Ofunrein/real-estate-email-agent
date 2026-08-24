@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { clientConfig } from "@/lib/clientConfig";
 import { placeOutboundCall, sendOutboundAttemptSms, type OutboundConfig } from "@/lib/outbound";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
+import { channelSuppression } from "@/lib/contactSuppression";
+import { findLeadInDatabase } from "@/lib/database";
+import { checkUsageCap } from "@/lib/usageCaps";
+import { writeRequestAuditEvent } from "@/lib/requestAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +30,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: "Missing phone" }, { status: 400 });
     }
     const config = clientConfig();
+
+    // Suppression applies here too. This endpoint dials AND sends a follow-up
+    // SMS, so without the check an opted-out lead gets contacted twice through
+    // the one path that bypasses the cadence queue's own consent gate.
+    const lead = await findLeadInDatabase({ phone }).catch(() => null);
+    const suppression = channelSuppression(lead ?? undefined, "voice");
+    if (suppression.suppressed) {
+      return NextResponse.json(
+        { ok: false, error: suppression.reason, code: suppression.code },
+        { status: 409 },
+      );
+    }
+
+    // Voice spend circuit breaker. This is the only path that dials, so the
+    // cap has to be here — the reply-send worker never handles voice.
+    const cap = await checkUsageCap("voice");
+    if (!cap.allowed) {
+      return NextResponse.json(
+        { ok: false, error: cap.reason, code: cap.code, used: cap.used, limit: cap.limit },
+        { status: 429 },
+      );
+    }
+
     const voiceCompanyName = config.voiceClientName || config.clientName;
     const callReason = String(payload.callReason || payload.reason || payload.propertyInterest || payload.intent || payload.summary || "");
     const leadContext = String(payload.leadContext || payload.context || payload.summary || "");
@@ -44,6 +71,21 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
+
+    // The row the voice cap counts. Without it usageInLastDay("voice") reads
+    // zero forever and the cap can never trip.
+    await writeRequestAuditEvent({
+      requestId: `voice-call:${result.id || phone}`,
+      route: "/api/aria/outbound",
+      method: "POST",
+      channel: "voice",
+      provider: "vapi",
+      contactRef: phone,
+      providerMessageId: result.id || "",
+      stage: "send",
+      outcome: "sent",
+    }).catch(() => undefined);
+
     const sms = await sendOutboundAttemptSms(phone, {
       agentName: config.agentNames.voice,
       companyName: voiceCompanyName,

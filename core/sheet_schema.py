@@ -16,7 +16,7 @@ LEAD_MEMORY_HEADERS = [
     "preferred_channel", "sms_consent", "call_consent", "last_channel",
     "last_ai_touch_at", "assigned_owner", "handoff_status", "handoff_reason",
     "next_action", "summary", "bedrooms", "bathrooms", "sell_before_buy",
-    "lead_score", "appointment_count", "do_not_contact", "whatsapp_consent",
+    "lead_score", "appointment_count", "do_not_contact", "whatsapp_consent", "email_consent",
 ]
 
 CONVERSATION_EVENTS_HEADERS = [

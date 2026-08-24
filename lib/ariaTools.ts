@@ -10,6 +10,7 @@
 // Pure except for the two injected async deps, so it is unit-testable.
 
 import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channelIngest";
+import { isDoNotContact } from "@/lib/contactSuppression";
 import { resolveCaller as resolveCallerDefault, type CallerIdentity } from "@/lib/identity";
 import {
   lookupPropertyForVoice,
@@ -1031,6 +1032,112 @@ function qualifyLead(ctx: AriaToolContext, args: Record<string, unknown>): AriaT
   };
 }
 
+/**
+ * Booking confirmation texts, run server-side.
+ *
+ * This used to be a Vapi-hosted `type: "code"` tool with TWILIO_ACCOUNT_SID and
+ * TWILIO_AUTH_TOKEN copied into Vapi's tool environment. That put a
+ * full-privilege account credential in a third party, and because Vapi tools
+ * are upserted by name across a whole org, provisioning a second client
+ * overwrote the first client's tool with the second's Twilio token.
+ *
+ * Running it here means the send uses this deployment's own env, and no Twilio
+ * credential ever leaves our infrastructure.
+ */
+async function sendBookingSmsConfirmationTool(
+  ctx: AriaToolContext,
+  args: Record<string, unknown>,
+  deps: AriaToolDeps,
+): Promise<AriaToolOutcome> {
+  const hydrated = await hydrateContext(ctx, deps);
+  const callerPhone = str(args.callerPhone || args.phone) || hydrated.phone;
+  const callerName = str(args.callerName || args.name) || "there";
+  const appointmentTime = str(args.appointmentTime || args.appointment_time);
+  const appointmentType = str(args.appointmentType || args.appointment_type) || "consultation";
+  const propertyAddress = str(args.propertyAddress || args.property_address);
+  const summary = str(args.summary);
+  const ingestBase = { ...baseIngest(hydrated), eventType: "voice_booking_confirmation_sms" };
+
+  if (!appointmentTime) {
+    return {
+      result: "What time should I confirm for the appointment?",
+      ingest: { ...ingestBase, aiAction: "booking_sms_needs_time", status: "awaiting_response", summary: "Booking confirmation SMS requested without an appointment time." },
+    };
+  }
+
+  const callerBody = [
+    `Confirmed: your ${appointmentType} is set for ${appointmentTime}.`,
+    propertyAddress ? `Property: ${propertyAddress}` : "",
+    "Reply here with questions.",
+  ].filter(Boolean).join("\n");
+
+  const agentBody = [
+    `${IRIS_AGENT_NAME} booking confirmed`,
+    `Lead: ${callerName}`,
+    callerPhone ? `Phone: ${callerPhone}` : "",
+    `When: ${appointmentTime}`,
+    `Type: ${appointmentType}`,
+    propertyAddress ? `Property: ${propertyAddress}` : "",
+    summary ? `Summary: ${summary}` : "",
+  ].filter(Boolean).join("\n");
+
+  const sentTo = (result: unknown) =>
+    typeof result === "object" && result !== null && "sent" in result
+      ? Boolean((result as { sent?: unknown }).sent)
+      : Boolean(result);
+
+  // A caller who dialled in and asked for a text has given fresh consent for
+  // THIS message, so a plain sms_consent="no" does not block it. A hard
+  // do_not_contact is different: that is a standing instruction, and honoring
+  // it is the whole point of the flag.
+  const hardStop = isDoNotContact(hydrated.lead || undefined);
+  const callerSent = callerPhone && !hardStop
+    ? sentTo(await deps.sendSms(callerPhone, callerBody))
+    : false;
+  // No hardcoded fallback number: an unset confirmation phone means the agent
+  // alert is skipped, not delivered to whoever the default happened to be.
+  const agentPhone = bookingAlertPhone();
+  const agentSent = agentPhone ? sentTo(await deps.sendSms(agentPhone, agentBody)) : false;
+
+  if (callerPhone) {
+    await deps.recordSms?.({
+      channel: "sms",
+      direction: "outbound",
+      agentName: IRIS_AGENT_NAME,
+      phone: callerPhone,
+      source: "vapi",
+      sourceDetail: ctx.callId ? `voice call ${ctx.callId}` : "voice tool",
+      threadRef: `sms:${callerPhone}`,
+      eventType: "sms_booking_confirmation",
+      messageText: callerBody,
+      summary: `${IRIS_AGENT_NAME} texted a booking confirmation from a voice call.`,
+      aiAction: "booking_confirmation_sms_sent",
+      status: callerSent ? "sent" : "send_failed",
+      preferredChannel: "sms",
+      nextAction: callerSent ? "await_response" : "human_follow_up",
+    }).catch(() => null);
+  }
+
+  return {
+    result: callerSent
+      ? "Sent — the confirmation text is on its way."
+      : hardStop
+        ? "I've got the booking confirmed. You're on our do-not-text list, so I won't send a text — the team will follow up."
+        : "I've got the booking confirmed. The confirmation text didn't go through, so the team will follow up.",
+    ingest: {
+      ...ingestBase,
+      messageText: callerBody,
+      aiAction: callerSent ? "booking_confirmation_sms_sent" : "booking_confirmation_sms_failed",
+      status: callerSent ? "sent" : "send_failed",
+      summary: `Booking confirmation SMS for ${appointmentTime} (caller sent: ${callerSent}, agent alert sent: ${agentSent}).`,
+    },
+  };
+}
+
+function bookingAlertPhone(): string {
+  return (process.env.ARIA_AGENT_CONFIRMATION_PHONE || process.env.AGENT_PHONE || process.env.TEAM_LEAD_PHONE || "").trim();
+}
+
 export async function runAriaTool(
   name: string,
   args: Record<string, unknown>,
@@ -1068,6 +1175,8 @@ export async function runAriaTool(
       return rescheduleAppointmentTool(await hydrateContext(ctx, deps), args, deps);
     case "syncToCrm":
       return syncToCrm(await hydrateContext(ctx, deps), args, deps);
+    case "sendBookingSmsConfirmation":
+      return sendBookingSmsConfirmationTool(ctx, args, deps);
     case "qualifyLead":
       return qualifyLead(ctx, args);
     default:

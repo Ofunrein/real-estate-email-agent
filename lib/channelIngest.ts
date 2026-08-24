@@ -5,6 +5,7 @@ import { leadIdentity } from "@/lib/cadenceQueue";
 import { cancelQueuedCadenceForLeadInDatabase } from "@/lib/database";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
+import { optInPatch, optOutPatch } from "@/lib/contactSuppression";
 
 export type ChannelIngestInput = {
   channel: Channel;
@@ -52,6 +53,12 @@ export type ChannelIngestInput = {
   mediaJson?: unknown[];
   providerMetadata?: Record<string, unknown>;
   replyJobId?: string;
+  /**
+   * Consent columns written verbatim onto lead_memory (do_not_contact,
+   * whatsapp_consent, email_consent). Built by optOutPatch/optInPatch so a
+   * STOP lands in a column that later merges cannot silently clear.
+   */
+  consentPatch?: Partial<SheetRow>;
 };
 
 const STOP_WORDS = new Set(["stop", "stopall", "unsubscribe", "cancel", "end", "quit"]);
@@ -131,6 +138,7 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
         handoff_reason: input.handoffReason || "",
         next_action: input.nextAction || "",
         summary: input.summary || input.messageText || "",
+        ...(input.consentPatch || {}),
       })
     : ({} as SheetRow);
 
@@ -231,6 +239,7 @@ export function metaWhatsAppIngestInput(payload: MetaWhatsAppIngestPayload): Cha
       handoffStatus: "human_review",
       handoffReason: "Lead opted out of WhatsApp",
       summary: "Lead opted out of WhatsApp.",
+      consentPatch: optOutPatch("whatsapp"),
     };
   }
 
@@ -241,6 +250,7 @@ export function metaWhatsAppIngestInput(payload: MetaWhatsAppIngestPayload): Cha
       aiAction: "opt_in_recorded",
       nextAction: "continue_whatsapp",
       summary: "Lead opted back into WhatsApp.",
+      consentPatch: optInPatch("whatsapp"),
     };
   }
 
@@ -294,6 +304,7 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
       handoffStatus: "human_review",
       handoffReason: `Lead opted out of ${channelLabel}`,
       summary: `Lead opted out of ${channelLabel}.`,
+      consentPatch: optOutPatch(channel),
     };
   }
 
@@ -304,6 +315,7 @@ function twilioTextIngestInput(payload: Record<string, string>, channel: "sms" |
       aiAction: "opt_in_recorded",
       nextAction: `continue_${channel}`,
       summary: `Lead opted back into ${channelLabel}.`,
+      consentPatch: optInPatch(channel),
     };
   }
 
