@@ -31,6 +31,12 @@ import { useColorMode } from '../theme/ColorModeContext';
 type CalendarViewMode = 'day' | 'week' | 'month';
 type CalendarTab = 'appointments' | 'settings';
 type LoadState = 'loading' | 'ready' | 'empty' | 'mock' | 'disconnected';
+type CalendarConnection = {
+  connected: boolean;
+  provider: 'google' | 'outlook' | 'legacy_env' | 'none';
+  accountEmail: string;
+  connectionId: string;
+};
 
 type CalendarAppointment = {
   id: string;
@@ -473,6 +479,7 @@ export function CalendarOsView() {
   const [state, setState] = useState<LoadState>('loading');
   const [message, setMessage] = useState('');
   const [busyAction, setBusyAction] = useState('');
+  const [connection, setConnection] = useState<CalendarConnection | null>(null);
 
   function handleModeChange(_: unknown, next: CalendarViewMode | null) {
     if (!next) return;
@@ -491,9 +498,10 @@ export function CalendarOsView() {
   const loadCalendar = useCallback(async () => {
     setState('loading');
     try {
-      const [appointmentsResult, settingsResult] = await Promise.allSettled([
+      const [appointmentsResult, settingsResult, connectionResult] = await Promise.allSettled([
         readJson('/api/calendar/appointments'),
-        readJson('/api/calendar/settings')
+        readJson('/api/calendar/settings'),
+        readJson('/api/calendar/connections'),
       ]);
 
       const nextAppointments = appointmentsResult.status === 'fulfilled'
@@ -505,6 +513,11 @@ export function CalendarOsView() {
 
       setAppointments(nextAppointments);
       setSettings(nextSettings);
+      setConnection(
+        connectionResult.status === 'fulfilled'
+          ? (connectionResult.value as { connection: CalendarConnection }).connection
+          : null,
+      );
 
       if (appointmentsResult.status === 'rejected' && settingsResult.status === 'rejected') {
         setState('disconnected');
@@ -543,6 +556,29 @@ export function CalendarOsView() {
       setMessage(`Synced ${data.summary?.itemsWritten || 0} calendar events from ${data.summary?.connections || 0} connected account(s).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Calendar sync failed');
+    } finally {
+      setBusyAction('');
+    }
+  }
+
+  async function disconnectCalendar() {
+    if (!connection?.connectionId) return;
+    const label = connection.accountEmail || connection.provider;
+    if (!window.confirm(`Disconnect ${label} from this workspace?`)) return;
+
+    setBusyAction('disconnect');
+    setMessage('');
+    try {
+      const response = await fetch(
+        `/api/calendar/connections?id=${encodeURIComponent(connection.connectionId)}`,
+        { method: 'DELETE' },
+      );
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Calendar disconnect failed');
+      await loadCalendar();
+      setMessage('Calendar disconnected. Availability and booking are now disabled.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Calendar disconnect failed');
     } finally {
       setBusyAction('');
     }
@@ -596,12 +632,34 @@ export function CalendarOsView() {
             onClick={() => void syncCalendar()}>
             Sync calendar
           </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('google'); }}>
-            Connect Google
-          </Button>
-          <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('outlook'); }}>
-            Connect Outlook
-          </Button>
+          {connection?.connected ? (
+            <>
+              <Chip
+                size="small"
+                color="success"
+                label={`${connection.provider === 'legacy_env' ? 'Legacy calendar' : connection.provider} connected${connection.accountEmail ? ` · ${connection.accountEmail}` : ''}`}
+              />
+              {connection.connectionId ? (
+                <Button
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  disabled={Boolean(busyAction)}
+                  onClick={() => void disconnectCalendar()}>
+                  Disconnect
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('google'); }}>
+                Connect Google
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => { window.location.href = calendarConnectHref('outlook'); }}>
+                Connect Outlook
+              </Button>
+            </>
+          )}
         </Stack>
       </Stack>
 

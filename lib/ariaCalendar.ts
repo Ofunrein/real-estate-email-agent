@@ -2,7 +2,8 @@ import { clientConfig } from "@/lib/clientConfig";
 import { createAppointment, type AppointmentType } from "@/lib/appointmentStore";
 import { resolveCrmAdapter } from "@/lib/crm";
 import { sendTheoSms } from "@/lib/twilioSms";
-import { resolveCalendarProvider, activeCalendarProviderName } from "@/lib/calendar/resolver";
+import { activeCalendarProviderName } from "@/lib/calendar/resolver";
+import { bookTenantCalendarEvent, requestedSlotIsAvailable, tenantCalendarConnectionStatus } from "@/lib/tenantCalendar";
 
 export type AppointmentInput = {
   date: string;
@@ -29,15 +30,60 @@ export type AppointmentResult = {
   error?: string;
 };
 
-export function parseLocalDateTime(date: string, time: string, _timezone = "America/Chicago"): string {
-  const match = time.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
-  if (!match) return `${date}T10:00:00`;
-  let hours = Number.parseInt(match[1], 10);
-  const minutes = Number.parseInt(match[2] || "00", 10);
-  const ampm = match[3].toLowerCase();
+export function parseLocalDateTime(date: string, time: string, timezone = "America/Chicago"): string {
+  const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = time.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (!dateMatch || !timeMatch) throw new Error("Invalid local appointment date or time");
+  let hours = Number.parseInt(timeMatch[1], 10);
+  const minutes = Number.parseInt(timeMatch[2] || "00", 10);
+  const ampm = timeMatch[3].toLowerCase();
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) throw new Error("Invalid local appointment time");
   if (ampm === "pm" && hours < 12) hours += 12;
   if (ampm === "am" && hours === 12) hours = 0;
-  return `${date}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+
+  const desiredLocalMs = Date.UTC(
+    Number(dateMatch[1]),
+    Number(dateMatch[2]) - 1,
+    Number(dateMatch[3]),
+    hours,
+    minutes,
+    0,
+  );
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  let instant = desiredLocalMs;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(instant)).map((part) => [part.type, part.value]));
+    const representedLocalMs = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second),
+    );
+    const correction = desiredLocalMs - representedLocalMs;
+    instant += correction;
+    if (correction === 0) break;
+  }
+  const roundTrip = formatter.formatToParts(new Date(instant));
+  const values = Object.fromEntries(roundTrip.map((part) => [part.type, part.value]));
+  if (
+    Number(values.year) !== Number(dateMatch[1])
+    || Number(values.month) !== Number(dateMatch[2])
+    || Number(values.day) !== Number(dateMatch[3])
+    || Number(values.hour) !== hours
+    || Number(values.minute) !== minutes
+  ) throw new Error("The requested local time does not exist in this timezone");
+  return new Date(instant).toISOString();
 }
 
 function addMinutes(isoString: string, minutes: number): string {
@@ -95,15 +141,18 @@ export async function bookAppointment(input: AppointmentInput): Promise<Appointm
   const timezone = input.timezone || process.env.CALENDAR_TIMEZONE || "America/Chicago";
   const scheduledAt = parseLocalDateTime(input.date, input.time, timezone);
   const endAt = addMinutes(scheduledAt, input.duration_minutes ?? 30);
-  const providerName = activeCalendarProviderName();
+  const connection = await tenantCalendarConnectionStatus();
+  const providerName = connection.connected && connection.provider !== "legacy_env"
+    ? connection.provider
+    : activeCalendarProviderName();
 
   let result: AppointmentResult;
 
-  // Google / Outlook: use CalendarProvider abstraction
-  if (providerName === "google" || providerName === "outlook") {
-    const calendarProvider = resolveCalendarProvider();
+  // Google / Outlook: use the tenant-scoped connection and always verify
+  // free/busy immediately before creating the event.
+  if (connection.connected || providerName === "google" || providerName === "outlook") {
     const title = `${input.appointment_type === "showing" ? "Showing" : "Appointment"} — ${input.caller_name || input.caller_phone}`;
-    const booked = await calendarProvider.bookAppointment({
+    const booked = await bookTenantCalendarEvent({
       start: scheduledAt,
       end: endAt,
       timezone,
@@ -123,8 +172,12 @@ export async function bookAppointment(input: AppointmentInput): Promise<Appointm
       error: booked.error,
     };
   } else {
-    // GHL fallback
-    result = await bookGHL(input);
+    // Fail closed: creating a GHL event without first reading the authoritative
+    // calendar could double-book the tenant. Legacy behavior is an explicit,
+    // temporary escape hatch only.
+    result = process.env.ALLOW_UNVERIFIED_GHL_BOOKING === "true"
+      ? await bookGHL(input)
+      : { success: false, provider_used: "none", error: "A conflict-aware calendar connection is required" };
   }
 
   if (!result.success) return result;
@@ -175,6 +228,10 @@ export async function rescheduleGHLEvent(
   if (!adapter || !ghlEventId) return { success: false, error: "Missing GHL adapter or event id" };
   const startTime = parseLocalDateTime(newDate, newTime, timezone);
   const endTime = addMinutes(startTime, 30);
+  const availability = await requestedSlotIsAvailable({ start: startTime, end: endTime, timezone });
+  if (!availability.ok || !availability.available) {
+    return { success: false, error: availability.reason === "not_connected" ? "Calendar is not connected" : "Requested time is unavailable" };
+  }
   await adapter.updateAppointment(ghlEventId, { startTime, endTime, timezone });
   return { success: true, confirmed_time: `${newDate} at ${newTime}` };
 }

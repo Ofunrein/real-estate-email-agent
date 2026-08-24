@@ -4,6 +4,7 @@ import { createAppointment, type AppointmentType } from "@/lib/appointmentStore"
 import { notifySlackOnBooking } from "@/lib/ariaSlack";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { assertWebhookSecret } from "@/lib/webhookRequest";
+import { bookTenantCalendarEvent } from "@/lib/tenantCalendar";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing caller_phone or scheduled_at" }, { status: 400 });
     }
 
+    const start = new Date(scheduledAt);
+    if (!Number.isFinite(start.getTime())) {
+      return NextResponse.json({ success: false, error: "Invalid scheduled_at" }, { status: 400 });
+    }
+    const durationMinutes = Math.max(5, Number(body.duration_minutes || 30));
+    const end = new Date(start.getTime() + durationMinutes * 60_000);
+    const external = await bookTenantCalendarEvent({
+      start: start.toISOString(),
+      end: end.toISOString(),
+      timezone: body.timezone || process.env.CALENDAR_TIMEZONE || "America/Chicago",
+      title: `${appointmentType(body.appointment_type || "") === "showing" ? "Showing" : "Appointment"} — ${body.caller_name || callerPhone}`,
+      description: body.notes || "Booked via Iris email",
+      attendeeEmail: body.caller_email || "",
+      attendeeName: body.caller_name || "",
+      attendeePhone: callerPhone,
+      propertyAddress: body.property_address || "",
+    });
+    if (!external.success) {
+      return NextResponse.json({ success: false, error: external.error || "Requested time is unavailable" }, { status: 409 });
+    }
+
     const record = await createAppointment({
       caller_phone: callerPhone,
       caller_name: body.caller_name || "",
@@ -30,6 +52,8 @@ export async function POST(request: NextRequest) {
       property_address: body.property_address || "",
       scheduled_at: scheduledAt,
       scheduled_at_local: body.scheduled_at_local || scheduledAt,
+      duration_minutes: durationMinutes,
+      ghl_event_id: external.eventId || "",
       booked_via_channel: "email",
       notes: body.notes || "",
     });
@@ -53,7 +77,7 @@ export async function POST(request: NextRequest) {
       await sendTheoSms(callerPhone, message).catch(() => null);
     }
 
-    return NextResponse.json({ success: true, appointment_id: record.id });
+    return NextResponse.json({ success: true, appointment_id: record.id, calendar_event_id: external.eventId });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("secret") ? 401 : 500;

@@ -236,6 +236,32 @@ export async function listProviderConnections(input: {
   return result.rows as ProviderConnectionRecord[];
 }
 
+export async function disconnectProviderConnection(id: string): Promise<boolean> {
+  const existing = await pool().query(
+    `select composio_connected_account_id
+       from calendar_provider_connections
+      where client_id = $1 and id = $2
+      limit 1`,
+    [clientId(), id],
+  );
+  const row = existing.rows[0] as { composio_connected_account_id?: string } | undefined;
+  if (!row) return false;
+  const connectedAccountId = text(row.composio_connected_account_id);
+  if (connectedAccountId) {
+    await createComposioClient().connectedAccounts.delete(connectedAccountId);
+  }
+  await pool().query(
+    `update calendar_provider_connections
+        set status = 'disconnected',
+            last_error = '',
+            metadata = metadata - 'raw',
+            updated_at = now()
+      where client_id = $1 and id = $2`,
+    [clientId(), id],
+  );
+  return true;
+}
+
 export async function reconcileComposioProviderConnections(input: {
   domain: ProviderDomain;
   provider: ExternalProvider;

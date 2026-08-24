@@ -76,8 +76,11 @@ export const CLIENT_ENV_MANIFEST: readonly EnvRequirement[] = [
   { name: "ARIA_RECORDING_DISCLOSURE", scope: "shared", required: false, channel: "voice", why: "Override the recorded-call disclosure wording; 'off' only when recording is disabled in Vapi." },
 
   // ---- calendar / CRM -----------------------------------------------------
-  { name: "CALENDAR_PROVIDER", scope: "shared", required: false, channel: "calendar", why: "google | outlook | ghl | neon." },
-  { name: "GOOGLE_REFRESH_TOKEN", scope: "isolated", required: false, channel: "calendar", why: "This client's calendar account." },
+  { name: "CALENDAR_PROVIDER", scope: "shared", required: false, channel: "calendar", why: "Legacy env adapter only; tenant OAuth connections take precedence." },
+  { name: "COMPOSIO_API_KEY", scope: "isolated", required: false, channel: "calendar", why: "Hosted OAuth and calendar tool execution for this isolated client deployment." },
+  { name: "COMPOSIO_GOOGLE_CALENDAR_AUTH_CONFIG_ID", scope: "isolated", required: false, channel: "calendar", why: "Google Calendar tenant-facing OAuth configuration." },
+  { name: "COMPOSIO_OUTLOOK_CALENDAR_AUTH_CONFIG_ID", scope: "isolated", required: false, channel: "calendar", why: "Microsoft Calendar tenant-facing OAuth configuration." },
+  { name: "GOOGLE_REFRESH_TOKEN", scope: "isolated", required: false, channel: "calendar", why: "Legacy admin-managed connection only; prefer tenant OAuth through Composio." },
   { name: "GOOGLE_CALENDAR_ID", scope: "isolated", required: false, channel: "calendar", why: "Calendar bookings land on." },
   { name: "CRM_PROVIDER", scope: "shared", required: false, channel: "crm", why: "ghl | fub | kvcore | none." },
   { name: "GHL_PRIVATE_INTEGRATION_TOKEN", scope: "isolated", required: false, channel: "crm", why: "This client's GHL location." },
