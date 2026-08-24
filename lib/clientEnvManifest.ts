@@ -87,6 +87,7 @@ export const CLIENT_ENV_MANIFEST: readonly EnvRequirement[] = [
   { name: "FRED_API_KEY", scope: "shared", required: false, why: "Read-only public economic data." },
   { name: "CENSUS_API_KEY", scope: "shared", required: false, why: "Read-only public demographic data." },
   { name: "APIFY_TOKEN", scope: "shared", required: false, why: "Property import scraper; usage is metered, not tenant-bearing." },
+  { name: "USAGE_CAP_FAILURE_MODE", scope: "shared", required: false, why: "closed by default; explicit open favors availability over configured spend protection." },
 ] as const;
 
 export type EnvCheck = {

@@ -206,11 +206,11 @@ function planSteps(clientId, env) {
   return [
     { id: "env", label: `Validate clients/${clientId}.env against the manifest`, automated: true },
     { id: "migrate", label: "Apply pending migrations and seed the clients row", automated: true, command: "node scripts/migrate.mjs" },
-    { id: "vercel-env", label: `Push env vars to Vercel project ${env.VERCEL_PROJECT_NAME || "<unset>"}`, automated: true },
-    { id: "twilio", label: "Point Twilio inbound + status webhooks at this deployment", automated: true, command: "node scripts/configure-theo-twilio.mjs" },
-    { id: "vapi", label: "Provision the Vapi assistant", automated: true, command: "npm run aria:provision" },
-    { id: "gmail", label: "Register the Gmail watch", automated: true, command: "npm run setup:gmail-push" },
-    { id: "validate", label: "Verify the live deployment answers on every configured channel", automated: true },
+    { id: "vercel-env", label: `Push env vars to Vercel project ${env.VERCEL_PROJECT_NAME || "<unset>"}`, automated: false, note: "Account-level write; run only after reviewing the redacted manifest." },
+    { id: "twilio", label: "Point Twilio inbound + status webhooks at this deployment", automated: false, command: "node scripts/configure-theo-twilio.mjs", note: "Provider write; run with this client's env after approval." },
+    { id: "vapi", label: "Provision the Vapi assistant", automated: false, command: "npm run aria:provision", note: "Creates or updates a live provider resource." },
+    { id: "gmail", label: "Register the Gmail watch", automated: false, command: "npm run setup:gmail-push", note: "Requires the client's authorized mailbox." },
+    { id: "validate", label: "Verify the live deployment answers on every configured channel", automated: true, command: `npm run provision:client -- --client ${clientId} --validate` },
   ];
 }
 
@@ -337,8 +337,8 @@ async function main() {
   console.error("\nApplying migrations…");
   run("node", ["scripts/migrate.mjs"], { cwd: ROOT, env: { ...process.env, ...env }, stdio: ["ignore", "inherit", "inherit"] });
 
-  console.error("\nMigrations applied. Remaining provider registration steps are printed above;");
-  console.error("run each with this client's env loaded, then re-run with --validate.");
+  console.error("\nMigrations applied. No Vercel, Twilio, Vapi, Gmail, DNS, or deployment writes were made.");
+  console.error("The reviewed provider commands are printed above; run them with this client's env, then re-run with --validate.");
 }
 
 main().catch((error) => {
