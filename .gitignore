@@ -4,6 +4,12 @@
 credentials.json
 token.json
 
+# Per-client provisioning env. One file per paying client, each holding that
+# client's live database URL, Twilio token, and provider credentials.
+# clients/template.env is the only one that is tracked.
+clients/*.env
+!clients/template.env
+
 # Runtime state
 state.json
 agent.log

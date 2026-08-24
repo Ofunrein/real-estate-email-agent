@@ -43,7 +43,9 @@ if (!pubSubToken) {
   throw new Error("GMAIL_PUBSUB_TOKEN is required. Set it explicitly; setup will not fall back to a generic webhook secret.");
 }
 const publicUrl = process.env.PUBLIC_BASE_URL || "https://app.lumenosis.com";
-const pushEndpoint = `${publicUrl}/api/webhooks/iris-gmail-push?token=${pubSubToken}`;
+// The real endpoint carries the push token, so nothing prints it — the display
+// form names the env var instead, which is also what you paste into gcloud.
+const pushEndpointForDisplay = `${publicUrl}/api/webhooks/iris-gmail-push?token=$GMAIL_PUBSUB_TOKEN`;
 const EMAIL_ACCOUNT_CLIENT_ID = process.env.EMAIL_ACCOUNT_CLIENT_ID || process.env.CLIENT_ID || "default";
 
 function configuredClientId() {
@@ -177,7 +179,7 @@ async function buildAuth() {
 async function main() {
   console.log("=== Gmail Pub/Sub Watch Setup ===");
   console.log("Topic:", topicName);
-  console.log("Push endpoint:", pushEndpoint);
+  console.log("Push endpoint:", pushEndpointForDisplay);
   console.log("Email account client:", EMAIL_ACCOUNT_CLIENT_ID);
   console.log("");
 
@@ -224,13 +226,14 @@ async function main() {
   console.log("3. Create a push subscription pointing to your webhook:");
   console.log(`   gcloud pubsub subscriptions create gmail-iris-push-sub \\`);
   console.log(`     --topic=gmail-iris-push \\`);
-  console.log(`     --push-endpoint="${pushEndpoint}" \\`);
+  console.log(`     --push-endpoint="${pushEndpointForDisplay}" \\`);
   console.log(`     --ack-deadline=30 \\`);
   console.log(`     --project=${projectId}`);
   console.log("");
   console.log("4. Add to .env:");
   console.log(`   EMAIL_ACCOUNT_CLIENT_ID=${EMAIL_ACCOUNT_CLIENT_ID}`);
-  console.log(`   GMAIL_PUBSUB_TOKEN=${pubSubToken || "<set CHANNEL_WEBHOOK_SECRET>"}`);
+  // Value withheld on purpose — it authenticates the push endpoint.
+  console.log(`   GMAIL_PUBSUB_TOKEN=${pubSubToken ? "[already set in env; reuse that value]" : "<set CHANNEL_WEBHOOK_SECRET>"}`);
   console.log(`   GOOGLE_CLOUD_PROJECT_ID=${projectId}`);
   console.log("");
   console.log("5. Watch expires every 7 days. Inngest renews connected Gmail accounts daily via:");

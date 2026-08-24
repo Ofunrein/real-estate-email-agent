@@ -90,13 +90,15 @@ const server = http.createServer(async (req, res) => {
       existing.includes("GOOGLE_CALENDAR_ID=") ? null : "GOOGLE_CALENDAR_ID=martin@lumenosis.com",
     ].filter(Boolean);
 
+    // Never echo values: this token is a long-lived credential and stdout ends
+    // up in scrollback, CI logs, and screen shares. Print key names only.
     if (lines.length) {
       fs.appendFileSync(envPath, "\n" + lines.join("\n") + "\n");
       console.log("✓ Written to .env:");
-      lines.forEach((l) => console.log(" ", l));
+      lines.forEach((l) => console.log(" ", `${String(l).split("=")[0]}=[set]`));
     } else {
-      console.log("✓ Refresh token obtained. Update GOOGLE_REFRESH_TOKEN in .env manually:");
-      console.log(`GOOGLE_REFRESH_TOKEN=${refreshToken}`);
+      console.log("✓ Refresh token obtained, but GOOGLE_REFRESH_TOKEN already exists in .env.");
+      console.log("  Delete the existing GOOGLE_REFRESH_TOKEN line and re-run to rotate it.");
     }
 
     console.log("\nNext: npm run aria:provision to activate Google Calendar for Iris.\n");
