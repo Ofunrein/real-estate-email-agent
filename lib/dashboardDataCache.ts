@@ -1,12 +1,14 @@
 type CacheResult = { value: string; cacheStatus: "MISS" | "HIT" | "WAIT" | "STALE" };
+type MemoryEntry = { value: string; expiresAt: number };
 
 const TTL_MS = Number(process.env.IRIS_DASHBOARD_DATA_CACHE_MS || 30_000);
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "";
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "";
 
-let memoryValue = "";
-let memoryExpiresAt = 0;
-let inflight: Promise<string> | null = null;
+// Keyed by cache key, not a module-level singleton. The key carries the tenant,
+// so a shared value would serve one client's whole inbox to another.
+const memory = new Map<string, MemoryEntry>();
+const inflight = new Map<string, Promise<string>>();
 
 function externalCacheEnabled() {
   return Boolean(UPSTASH_URL && UPSTASH_TOKEN);
@@ -39,31 +41,33 @@ async function externalSet(key: string, value: string, ttlMs = TTL_MS) {
 
 export async function cachedDashboardData(key: string, loader: () => Promise<string>): Promise<CacheResult> {
   const now = Date.now();
-  if (memoryValue && memoryExpiresAt > now) return { value: memoryValue, cacheStatus: "HIT" };
+  const cached = memory.get(key);
+  if (cached && cached.expiresAt > now) return { value: cached.value, cacheStatus: "HIT" };
 
-  if (inflight) return { value: await inflight, cacheStatus: "WAIT" };
-  inflight = (async () => {
+  const pending = inflight.get(key);
+  if (pending) return { value: await pending, cacheStatus: "WAIT" };
+
+  const work = (async () => {
     const external = await externalGet(key);
     if (external) {
-      memoryValue = external;
-      memoryExpiresAt = Date.now() + TTL_MS;
+      memory.set(key, { value: external, expiresAt: Date.now() + TTL_MS });
       return external;
     }
 
     const value = await loader();
-    memoryValue = value;
-    memoryExpiresAt = Date.now() + TTL_MS;
+    memory.set(key, { value, expiresAt: Date.now() + TTL_MS });
     await externalSet(key, value);
     return value;
-  })()
-    .finally(() => {
-      inflight = null;
-    });
+  })().finally(() => {
+    inflight.delete(key);
+  });
+  inflight.set(key, work);
 
   try {
-    return { value: await inflight, cacheStatus: "MISS" };
+    return { value: await work, cacheStatus: "MISS" };
   } catch (error) {
-    if (memoryValue) return { value: memoryValue, cacheStatus: "STALE" };
+    const stale = memory.get(key);
+    if (stale) return { value: stale.value, cacheStatus: "STALE" };
     throw error;
   }
 }

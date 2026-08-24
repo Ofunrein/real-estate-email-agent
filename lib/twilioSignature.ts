@@ -46,3 +46,42 @@ export function twilioSignedUrl(requestUrl: string): string {
 export function twilioSignatureEnforced(): boolean {
   return Boolean(process.env.TWILIO_AUTH_TOKEN);
 }
+
+export type TwilioWebhookVerdict =
+  | { ok: true; reason: "verified" | "unenforced_outside_production" }
+  | { ok: false; status: 403 | 503; reason: "not_configured" | "invalid_signature" };
+
+/**
+ * The single gate every Twilio-facing route runs before trusting a payload.
+ *
+ * Fails CLOSED in production: without TWILIO_AUTH_TOKEN the signature cannot
+ * be checked, so `From` is unauthenticated and the route must refuse rather
+ * than quietly accept forged inbound messages. Outside production an unset
+ * token is allowed so local replay harnesses still work.
+ *
+ * The token is this deployment's own, which is what ties the check to this
+ * tenant: a signature minted by another client's Twilio account will not
+ * validate here.
+ */
+export function verifyTwilioWebhook(input: {
+  url: string;
+  params: Record<string, string>;
+  signature: string;
+  authToken?: string;
+  nodeEnv?: string;
+}): TwilioWebhookVerdict {
+  const authToken = (input.authToken ?? process.env.TWILIO_AUTH_TOKEN ?? "").trim();
+  if (!authToken) {
+    const nodeEnv = input.nodeEnv ?? process.env.NODE_ENV;
+    if (nodeEnv === "production") return { ok: false, status: 503, reason: "not_configured" };
+    return { ok: true, reason: "unenforced_outside_production" };
+  }
+
+  const valid = twilioSignatureValid({
+    url: input.url,
+    params: input.params,
+    signature: input.signature,
+    authToken,
+  });
+  return valid ? { ok: true, reason: "verified" } : { ok: false, status: 403, reason: "invalid_signature" };
+}

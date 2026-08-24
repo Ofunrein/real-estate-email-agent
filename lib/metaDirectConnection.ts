@@ -41,7 +41,9 @@ export function metaDirectConnectionInputForPage(
       metadata: {
         page_id: page.id,
         page_name: page.name,
-        page_access_token: page.access_token,
+        // No token here. The column is encrypted at the storage boundary; a
+        // duplicate in this jsonb blob would be plaintext and would make that
+        // encryption cosmetic, since resolvePageAccessToken reads it too.
         instagram_user_id: instagramUserId,
         instagram_username: username,
         instagram_profile_picture_url: cleanText(instagramAccount?.profile_picture_url),
@@ -63,7 +65,7 @@ export function metaDirectConnectionInputForPage(
     metadata: {
       page_id: page.id,
       page_name: page.name,
-      page_access_token: page.access_token,
+      // See above: the token lives only in the encrypted column.
       category: page.category || "",
       connected_at: new Date().toISOString(),
     },

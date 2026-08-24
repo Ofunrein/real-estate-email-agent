@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
 import { createRequestAudit } from "@/lib/requestAudit";
+import { constantTimeSecretEqual } from "@/lib/webhookRequest";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -21,7 +22,7 @@ function authorized(request: NextRequest): boolean {
   const token = process.env.GMAIL_PUBSUB_TOKEN || process.env.CHANNEL_WEBHOOK_SECRET || "";
   if (!token) return false;
   // Google sends the token as a query param in the push endpoint URL you configured
-  return request.nextUrl.searchParams.get("token") === token;
+  return constantTimeSecretEqual(request.nextUrl.searchParams.get("token") || "", token);
 }
 
 type PubSubMessage = {

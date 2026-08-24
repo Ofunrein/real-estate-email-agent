@@ -44,3 +44,47 @@ export function decryptEmailAccountToken<T = Record<string, unknown>>(value: str
   ]);
   return JSON.parse(decrypted.toString("utf8")) as T;
 }
+
+/**
+ * Provider access tokens (Meta Page, TikTok advertiser) at rest.
+ *
+ * These were stored in plaintext in channel_connections.page_access_token, so
+ * any DB read yielded a usable credential. Encryption happens at the storage
+ * boundary in lib/database.ts, which keeps every caller reading a plain token.
+ *
+ * Both directions are transparent to already-stored plaintext so this can ship
+ * without a backfill: an unencrypted value decrypts to itself, and it is
+ * re-encrypted on the next write.
+ */
+export function encryptProviderTokenAtRest(value: string): string {
+  const token = String(value || "").trim();
+  if (!token) return "";
+  if (token.startsWith(`${VERSION}:`)) return token;
+  try {
+    return encryptEmailAccountToken(token);
+  } catch {
+    // No encryption secret configured. Storing plaintext preserves existing
+    // behavior rather than silently dropping a connection's credential.
+    return token;
+  }
+}
+
+export function decryptProviderTokenAtRest(value: string): string {
+  const token = String(value || "").trim();
+  if (!token.startsWith(`${VERSION}:`)) return token;
+  try {
+    return decryptEmailAccountToken<string>(token);
+  } catch {
+    // A GCM auth-tag failure here means the encryption secret changed — most
+    // likely because EMAIL_ACCOUNT_ENCRYPTION_KEY was added to a deployment
+    // whose tokens were encrypted under AUTH_SECRET, which silently changes
+    // which branch of the || chain wins. Returning "" quietly would show up
+    // only as "no page access token" much later, so make it loud. The value
+    // itself is never logged.
+    console.error("provider_token_decrypt_failed", {
+      reason: "encryption_key_mismatch_or_corrupt_ciphertext",
+      hint: "Check EMAIL_ACCOUNT_ENCRYPTION_KEY / AUTH_SECRET; the connection must be reconnected if the key is gone.",
+    });
+    return "";
+  }
+}

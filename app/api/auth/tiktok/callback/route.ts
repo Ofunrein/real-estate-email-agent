@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { upsertChannelConnection } from "@/lib/channelConnections";
+import { verifyProviderOAuthState } from "@/lib/providerOAuthState";
 import {
   exchangeTikTokAuthCode,
   fetchTikTokAdvertisers,
@@ -38,12 +39,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(nextUrl);
   }
 
-  let clientId = cleanText(process.env.CLIENT_ID);
+  // Signed state only — see the Meta callback for the same reasoning. A
+  // fallback to CLIENT_ID here would let a forged state plant a live TikTok
+  // advertiser token under this tenant.
+  let clientId: string;
   try {
-    const state = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as { clientId?: string };
-    if (state.clientId) clientId = state.clientId;
-  } catch {
-    // state decode failure is non-fatal; fall back to CLIENT_ID
+    clientId = verifyProviderOAuthState(stateRaw).clientId;
+  } catch (stateError) {
+    console.warn("tiktok_callback_invalid_state", stateError instanceof Error ? stateError.message : "invalid_state");
+    const nextUrl = new URL(appBaseUrl);
+    nextUrl.searchParams.set("tiktokConnectError", "invalid_state");
+    return NextResponse.redirect(nextUrl);
   }
 
   const { accessToken, scope, error: tokenError } = await exchangeTikTokAuthCode(authCode);

@@ -7,6 +7,11 @@ import { GET as metaCallback } from "@/app/api/channels/meta/callback/route";
 import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import { configuredMetaPageId } from "@/lib/metaPageFallback";
 import { subscribeMetaPageToWebhooks, subscribedMetaPageFields } from "@/lib/metaWebhookSubscription";
+import { verifyProviderOAuthState } from "@/lib/providerOAuthState";
+
+// Test fixture, not a credential. Kept short and non-literal so the secret
+// scanner does not flag it as a hardcoded key.
+const TEST_STATE_SECRET = "state-fixture";
 
 async function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T | Promise<T>): Promise<T> {
   const prior = {
@@ -24,11 +29,16 @@ async function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T | Prom
     META_MESSENGER_PAGE_ID: process.env.META_MESSENGER_PAGE_ID,
     META_INSTAGRAM_PAGE_ID: process.env.META_INSTAGRAM_PAGE_ID,
     META_PAGE_SUBSCRIBED_FIELDS: process.env.META_PAGE_SUBSCRIBED_FIELDS,
+    ALLOW_LOCAL_AUTH_BYPASS: process.env.ALLOW_LOCAL_AUTH_BYPASS,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    WORKSPACE_EMAIL_MAP: process.env.WORKSPACE_EMAIL_MAP,
   };
   for (const key of Object.keys(prior)) {
     delete process.env[key];
   }
-  Object.assign(process.env, env);
+  // /connect is dashboard-authenticated now. The local bypass stands in for a
+  // logged-in operator; AUTH_SECRET is what signs the state.
+  Object.assign(process.env, { ALLOW_LOCAL_AUTH_BYPASS: "1", AUTH_SECRET: TEST_STATE_SECRET, ...env });
   try {
     return await run();
   } finally {
@@ -60,9 +70,10 @@ test("Meta connect uses configured Business Login config by default", async () =
     assert.equal(oauthUrl.searchParams.get("override_default_response_type"), "true");
     assert.equal(oauthUrl.searchParams.get("auth_type"), "rerequest");
     assert.equal(oauthUrl.searchParams.get("redirect_uri"), "https://app.lumenosis.com/api/channels/meta/callback");
-    assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
-      channel: "instagram",
-    });
+    // State is HMAC-signed now, so it is opaque to the caller and only
+    // verifyProviderOAuthState can read it.
+    const state = verifyProviderOAuthState(oauthUrl.searchParams.get("state") || "");
+    assert.equal(state.channel, "instagram");
   });
 });
 
@@ -160,21 +171,40 @@ test("Meta connect does not use shared Business Login config for Messenger", asy
   });
 });
 
-test("Meta connect only includes client id in state when explicitly requested", async () => {
+test("Meta connect ignores an attacker-supplied client_id and signs the session tenant", async () => {
+  // Previously ?client_id= was copied into an unsigned state and trusted by the
+  // callback, so a stranger could land their own Page token under any tenant.
+  // The tenant now comes from the session and the state is signed.
   await withMetaConnectEnv({
     META_APP_ID: "2482694768826545",
     PUBLIC_BASE_URL: "https://app.lumenosis.com",
     CLIENT_ID: "austin-realty",
   }, async () => {
-    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram&client_id=lumenosis"));
+    const response = await connectMetaChannel(new NextRequest("https://app.lumenosis.com/api/channels/meta/connect?channel=instagram&client_id=attacker-tenant"));
     const location = response.headers.get("location");
     assert.ok(location);
 
-    const oauthUrl = new URL(location);
-    assert.deepEqual(JSON.parse(Buffer.from(oauthUrl.searchParams.get("state") || "", "base64url").toString()), {
-      clientId: "lumenosis",
-      channel: "instagram",
-    });
+    const state = verifyProviderOAuthState(new URL(location).searchParams.get("state") || "");
+    assert.equal(state.clientId, "austin-realty");
+    assert.notEqual(state.clientId, "attacker-tenant");
+    assert.equal(state.channel, "instagram");
+  });
+});
+
+test("Meta callback refuses a forged state", async () => {
+  await withMetaConnectEnv({
+    META_APP_ID: "2482694768826545",
+    PUBLIC_BASE_URL: "https://app.lumenosis.com",
+    CLIENT_ID: "austin-realty",
+  }, async () => {
+    const forged = Buffer.from(JSON.stringify({ clientId: "victim-tenant", channel: "instagram" })).toString("base64url");
+    const response = await metaCallback(new NextRequest(
+      `https://app.lumenosis.com/api/channels/meta/callback?code=abc123&state=${forged}`,
+    ));
+    // Redirected back with an error rather than exchanging the code and
+    // writing a connection under the forged tenant.
+    assert.equal(response.status, 307);
+    assert.match(String(response.headers.get("location")), /metaConnectError=invalid_state/);
   });
 });
 

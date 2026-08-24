@@ -102,10 +102,16 @@ function metaSocialAccessToken(pageAccessToken?: string): string {
   return cleanText(pageAccessToken);
 }
 
-// Resolve per-page token from a channel_connections record metadata.
+// Resolve per-page token from a channel_connections record.
+//
+// The column is the source of truth and is decrypted on read. The metadata
+// fallback exists only for rows written before tokens moved out of that jsonb
+// blob; new writes strip it (see stripTokensFromMetadata in lib/database.ts),
+// so this path drains as connections are refreshed.
 export function resolvePageAccessToken(connection?: { metadata?: Record<string, unknown>; page_access_token?: string } | null): string {
-  const fromRecord = cleanText(connection?.page_access_token || String(connection?.metadata?.page_access_token || ""));
-  return fromRecord;
+  const fromColumn = cleanText(connection?.page_access_token);
+  if (fromColumn) return fromColumn;
+  return cleanText(String(connection?.metadata?.page_access_token || ""));
 }
 
 function absoluteMediaUrl(value: string): string {

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { activeClientId } from "@/lib/tenant";
 
 const DEFAULT_RATE_LIMIT = Number(process.env.IRIS_PROVIDER_SENDS_PER_MINUTE || 12);
 const PENDING_TTL_MS = 90_000;
@@ -43,7 +44,7 @@ function databaseEnabled() {
 }
 
 function clientId() {
-  return process.env.CLIENT_ID || "default";
+  return activeClientId();
 }
 
 function getPool() {

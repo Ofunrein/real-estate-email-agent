@@ -2,6 +2,7 @@ import { serve } from "inngest/next";
 import { NextRequest, NextResponse } from "next/server";
 
 import { inngest } from "@/lib/inngest/client";
+import { inngestAppId } from "@/lib/tenant";
 import { messageReceived } from "@/lib/inngest/functions/messageReceived";
 import { messageReplyGenerate } from "@/lib/inngest/functions/messageReplyGenerate";
 import { messageReplySend } from "@/lib/inngest/functions/messageReplySend";
@@ -31,7 +32,7 @@ const inngestHandler = serve({
   ],
 });
 
-const inngestAppId = "lumenosis-real-estate-agent";
+const inngestAppIdValue = inngestAppId();
 
 const activeRawInngestFunctionIds = [
   "message-received",
@@ -52,12 +53,12 @@ const retiredRawInngestFunctionIds = [
 
 const activeInngestFunctionIds = new Set([
   ...activeRawInngestFunctionIds,
-  ...activeRawInngestFunctionIds.map((id) => `${inngestAppId}-${id}`),
+  ...activeRawInngestFunctionIds.map((id) => `${inngestAppIdValue}-${id}`),
 ]);
 
 const retiredInngestFunctionIds = new Set([
   ...retiredRawInngestFunctionIds,
-  ...retiredRawInngestFunctionIds.map((id) => `${inngestAppId}-${id}`),
+  ...retiredRawInngestFunctionIds.map((id) => `${inngestAppIdValue}-${id}`),
 ]);
 
 function missingSigningKeyResponse() {

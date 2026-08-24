@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+import { clientId } from "@/lib/database";
+import { signProviderOAuthState } from "@/lib/providerOAuthState";
+
 export const dynamic = "force-dynamic";
 
 function cleanText(value: unknown): string {
@@ -9,7 +13,12 @@ function cleanText(value: unknown): string {
 // GET /api/auth/tiktok/connect?client_id=<id>
 // Redirects the advertiser to TikTok Marketing API OAuth to grant ad-account access.
 // After they approve, TikTok calls /api/auth/tiktok/callback with an auth_code.
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
+  // Authenticated dashboard flow only — the tenant comes from the session, not
+  // from a query param an anonymous caller can set.
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
+
   const appId = cleanText(process.env.TIKTOK_APP_ID);
   const publicBaseUrl = cleanText(process.env.PUBLIC_BASE_URL || process.env.AUTH_URL).replace(/\/$/, "");
 
@@ -20,9 +29,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "PUBLIC_BASE_URL is not configured" }, { status: 503 });
   }
 
-  const requestedClientId = cleanText(request.nextUrl.searchParams.get("client_id"));
-  const statePayload = requestedClientId ? { clientId: requestedClientId } : {};
-  const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
+  const state = signProviderOAuthState({
+    clientId: clientId(),
+    operatorEmail: cleanText(session.user?.email) || "dashboard",
+    channel: "tiktok_ads",
+  });
 
   const redirectUri = `${publicBaseUrl}/api/auth/tiktok/callback`;
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { handleAgentSmsControl } from "@/lib/ariaSmsControl";
-import { twilioSignatureEnforced, twilioSignatureValid, twilioSignedUrl } from "@/lib/twilioSignature";
+import { twilioSignedUrl, verifyTwilioWebhook } from "@/lib/twilioSignature";
+import { assertTwilioInboundTenant, describeTenantMismatch } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -19,18 +20,22 @@ export async function POST(request: NextRequest) {
     if (typeof value === "string") params[key] = value;
   }
 
-  if (!twilioSignatureEnforced()) {
-    return NextResponse.json({ ok: false, error: "SMS control is not configured." }, { status: 503 });
-  }
-
-  const valid = twilioSignatureValid({
+  const verdict = verifyTwilioWebhook({
     url: twilioSignedUrl(request.url),
     params,
     signature: request.headers.get("x-twilio-signature") || "",
-    authToken: process.env.TWILIO_AUTH_TOKEN || "",
   });
-  if (!valid) {
-    return NextResponse.json({ ok: false, error: "Invalid Twilio signature." }, { status: 403 });
+  if (!verdict.ok) {
+    const error = verdict.reason === "not_configured"
+      ? "SMS control is not configured."
+      : "Invalid Twilio signature.";
+    return NextResponse.json({ ok: false, error }, { status: verdict.status });
+  }
+
+  const tenant = assertTwilioInboundTenant(params.To);
+  if (!tenant.ok) {
+    console.warn("aria_sms_control_tenant_mismatch", describeTenantMismatch(tenant));
+    return NextResponse.json({ ok: false, error: "Unknown destination number." }, { status: 404 });
   }
 
   await handleAgentSmsControl(params.From || "", params.Body || "");

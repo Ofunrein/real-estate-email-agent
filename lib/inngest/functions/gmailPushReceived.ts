@@ -17,6 +17,7 @@ import {
 import { inngest } from "@/lib/inngest/client";
 import { channelEnabled, shouldAutoSendForChannel } from "@/lib/inboxSettings";
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
+import { assertGmailMailboxTenant, describeTenantMismatch } from "@/lib/tenant";
 
 export type GmailPushReceivedEvent = {
   historyId: string;
@@ -151,6 +152,30 @@ export const gmailPushReceived = inngest.createFunction(
     const settings = await step.run("load inbox settings", async () => {
       return databaseEnabled() ? await readInboxSettingsFromDatabase() : undefined;
     });
+
+    // The push names the mailbox it is about. If that is not the mailbox this
+    // deployment connected, the notification belongs to another tenant's watch
+    // and must not drive this tenant's Gmail session.
+    const mailbox = await step.run("verify push mailbox belongs to this client", async () => {
+      if (!databaseEnabled() || !input.emailAddress) return { ok: true as const, reason: "absent" };
+      const account = await readDefaultEmailAccountFromDatabase();
+      const match = assertGmailMailboxTenant(account?.email, input.emailAddress);
+      return match.ok
+        ? { ok: true as const, reason: match.reason }
+        : { ok: false as const, detail: describeTenantMismatch(match) };
+    });
+    if (!mailbox.ok) {
+      await step.run("audit mailbox tenant mismatch", async () => {
+        await writeRequestAuditEvent({
+          ...auditBase,
+          stage: "auth",
+          outcome: "blocked",
+          errorCode: "gmail_mailbox_tenant_mismatch",
+          metadata: { historyId: input.historyId, detail: mailbox.detail },
+        });
+      });
+      return { ok: true, skipped: "gmail_mailbox_tenant_mismatch", historyId: input.historyId };
+    }
 
     if (settings && !channelEnabled(settings, "email")) {
       await step.run("audit email channel disabled", async () => {

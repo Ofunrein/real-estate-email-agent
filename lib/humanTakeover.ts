@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { activeClientId } from "@/lib/tenant";
 
 // ponytail: own pool, not database.ts's (not exported). Fine for low-traffic dashboard.
 let pool: Pool | null = null;
@@ -15,7 +16,7 @@ function getPool(): Pool {
 }
 
 function clientId(): string {
-  return process.env.CLIENT_ID || "default";
+  return activeClientId();
 }
 
 async function ensureTakeoverTable() {

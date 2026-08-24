@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleAriaEndOfCall, handleAriaToolCalls } from "@/lib/ariaWebhook";
 import { recordChannelInteraction, vapiVoiceIngestInput } from "@/lib/channelIngest";
 import { upsertVoiceCallToDatabase } from "@/lib/database";
-import { messageType, parseToolCalls } from "@/lib/vapi";
+import { messageType, parseCallMeta, parseToolCalls } from "@/lib/vapi";
 import { assertWebhookSecret, parseWebhookPayload } from "@/lib/webhookRequest";
+import { assertVapiTenant, describeTenantMismatch } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,16 @@ export async function POST(request: NextRequest) {
   try {
     assertWebhookSecret(request);
     const payload = await parseWebhookPayload(request);
+
+    // The assistant and phone number on the payload must be the ones this
+    // deployment provisioned. A cloned assistant or a re-pointed Vapi number
+    // would otherwise write another client's call into this client's database.
+    const tenant = assertVapiTenant(parseCallMeta(payload));
+    if (!tenant.ok) {
+      console.warn("aria_voice_tenant_mismatch", describeTenantMismatch(tenant));
+      return NextResponse.json({ ok: false, error: "Unknown assistant for this deployment." }, { status: 404 });
+    }
+
     const type = messageType(payload);
 
     if (type === "end-of-call-report" || type === "end-of-call") {

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
+import { clientId } from "@/lib/database";
+import { signProviderOAuthState } from "@/lib/providerOAuthState";
+
 export const dynamic = "force-dynamic";
 
 function cleanText(value: unknown): string {
@@ -87,6 +91,12 @@ function sdkConnectPage(input: {
 // GET /api/channels/meta/connect?client_id=<id>&channel=messenger|instagram
 // Redirects the browser to Facebook OAuth to collect pages_messaging permission.
 export async function GET(request: NextRequest) {
+  // Authenticated dashboard flow only. This endpoint used to accept an
+  // arbitrary ?client_id= and encode it into an unsigned state, which let a
+  // stranger land their own Page's access token under someone else's tenant.
+  const session = await requireDashboardAuth();
+  if (!session) return unauthorizedResponse();
+
   const appId = cleanText(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID);
   const publicBaseUrl = cleanText(process.env.PUBLIC_BASE_URL || process.env.AUTH_URL).replace(/\/$/, "");
   if (!appId) {
@@ -96,13 +106,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "PUBLIC_BASE_URL is not configured" }, { status: 503 });
   }
 
-  const requestedClientId = cleanText(request.nextUrl.searchParams.get("client_id"));
   const channel = cleanText(request.nextUrl.searchParams.get("channel") || "messenger") as "messenger" | "instagram";
   const redirectUri = `${publicBaseUrl}/api/channels/meta/callback`;
 
-  // Keep the default dashboard OAuth URL tenant-neutral; callback falls back to CLIENT_ID.
-  const statePayload = requestedClientId ? { clientId: requestedClientId, channel } : { channel };
-  const state = Buffer.from(JSON.stringify(statePayload)).toString("base64url");
+  // The tenant comes from the session, never from the query string, and the
+  // state is HMAC-signed so the callback can trust it.
+  const state = signProviderOAuthState({
+    clientId: clientId(),
+    operatorEmail: cleanText(session.user?.email) || "dashboard",
+    channel,
+  });
 
   const scope = channel === "instagram"
     ? "openid,pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,instagram_basic,instagram_manage_messages"

@@ -5,6 +5,7 @@ import { metaDirectConnectionInputForPage } from "@/lib/metaDirectConnection";
 import type { FacebookPageForMetaDirect } from "@/lib/metaDirectConnection";
 import { configuredMetaPageId } from "@/lib/metaPageFallback";
 import { subscribeMetaPageToWebhooks } from "@/lib/metaWebhookSubscription";
+import { verifyProviderOAuthState } from "@/lib/providerOAuthState";
 
 export const dynamic = "force-dynamic";
 
@@ -125,14 +126,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(nextUrl);
   }
 
-  let clientId = cleanText(process.env.CLIENT_ID);
+  // The tenant comes from the HMAC-signed state minted by /connect for an
+  // authenticated dashboard session. An unsigned or tampered state is fatal:
+  // falling back to CLIENT_ID here is what previously let an attacker-chosen
+  // clientId reach upsertChannelConnection.
+  let clientId: string;
   let channel: "messenger" | "instagram" = "messenger";
   try {
-    const state = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as { clientId?: string; channel?: string };
-    if (state.clientId) clientId = state.clientId;
+    const state = verifyProviderOAuthState(stateRaw);
+    clientId = state.clientId;
     if (state.channel === "instagram") channel = "instagram";
-  } catch {
-    // state decode failure is non-fatal; fall back to defaults
+  } catch (stateError) {
+    console.warn("meta_callback_invalid_state", stateError instanceof Error ? stateError.message : "invalid_state");
+    const nextUrl = new URL(appBaseUrl);
+    nextUrl.searchParams.set("metaConnectError", "invalid_state");
+    return NextResponse.redirect(nextUrl);
   }
 
   const redirectUri = `${appBaseUrl}/api/channels/meta/callback`;

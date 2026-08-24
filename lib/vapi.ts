@@ -53,6 +53,9 @@ export type VapiCallMeta = {
   callId: string;
   phone: string;
   threadRef: string;
+  /** Provider-controlled identifiers used to prove the call belongs to this deployment. */
+  assistantId: string;
+  phoneNumberId: string;
 };
 
 // Caller identity for a tool-call payload: number + call id → voice thread ref.
@@ -60,9 +63,25 @@ export function parseCallMeta(payload: Record<string, unknown>): VapiCallMeta {
   const message = asObject(payload.message);
   const call = asObject(message.call || payload.call);
   const customer = asObject(call.customer || message.customer || payload.customer);
+  const assistant = asObject(call.assistant || message.assistant);
+  const phoneNumber = asObject(call.phoneNumber || message.phoneNumber);
   const phone = String(customer.number || message.phoneNumber || payload.phone || "");
   const callId = String(call.id || message.callId || payload.callId || phone || "unknown");
-  return { callId, phone, threadRef: `voice:${callId}` };
+  return {
+    callId,
+    phone,
+    threadRef: `voice:${callId}`,
+    assistantId: String(call.assistantId || message.assistantId || assistant.id || ""),
+    // phoneNumber can arrive as a bare id string or an expanded object; the
+    // asObject() above yields {} for the string case, so read both.
+    phoneNumberId: String(
+      call.phoneNumberId
+      || message.phoneNumberId
+      || phoneNumber.id
+      || (typeof call.phoneNumber === "string" ? call.phoneNumber : "")
+      || "",
+    ),
+  };
 }
 
 // Extract every tool call in the payload, normalized to {id, name, args}.

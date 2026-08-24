@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireDashboardAuth, unauthorizedResponse } from "@/lib/authGuard";
 import { loadAgentInboxData } from "@/lib/dataSource";
 import {
+  clientId,
   databaseEnabled,
   readActiveAiDraftsFromDatabase,
   readDefaultEmailAccountFromDatabase,
@@ -104,7 +105,9 @@ export async function GET() {
   const session = await requireDashboardAuth();
   if (!session) return unauthorizedResponse();
   try {
-    const result = await cachedDashboardData(`dashboard:data:${process.env.CLIENT_ID || "default"}`, loadDashboardDataBody);
+    // clientId() honors the workspace requireDashboardAuth just set for this
+    // session; process.env.CLIENT_ID would key every tenant to one bucket.
+    const result = await cachedDashboardData(`dashboard:data:${clientId()}`, loadDashboardDataBody);
     return jsonResponse(result.value, result.cacheStatus);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable load Google Sheets data.";

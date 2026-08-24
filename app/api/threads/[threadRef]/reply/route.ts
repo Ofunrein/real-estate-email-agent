@@ -40,7 +40,9 @@ async function resolveAttachments(mediaUrls: string[] = [], channel: ReplyBody["
   if (channel !== "email") return [];
   const attachments: EmailAttachment[] = [];
   for (const url of mediaUrls) {
-    const dbMatch = /\/api\/media\/uploads\/([^/?#]+)\/([^?#]+)$/.exec(url);
+    // Tolerate the ?t=<token> access token these URLs now carry — matching to
+    // end-of-string would silently drop every email attachment.
+    const dbMatch = /\/api\/media\/uploads\/([^/?#]+)\/([^?#]+)/.exec(url);
     if (dbMatch) {
       const upload = await readMediaUpload(decodeURIComponent(dbMatch[1]));
       if (upload) {

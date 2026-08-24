@@ -11,6 +11,7 @@ import {
 } from "@/lib/propertyEmbeddings";
 import { searchAndImportMissingProperties } from "@/lib/propertyImportFallback";
 import { PROPERTIES_HEADERS, type SheetRow } from "@/lib/sheetSchema";
+import { activeClientId } from "@/lib/tenant";
 
 export type SemanticPropertyMatch = {
   property: SheetRow;
@@ -49,7 +50,7 @@ function databaseEnabled(): boolean {
 }
 
 function clientId(): string {
-  return process.env.CLIENT_ID || "default";
+  return activeClientId();
 }
 
 function getPool(): Pool {

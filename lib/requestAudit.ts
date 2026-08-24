@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Pool } from "pg";
+import { activeClientId } from "@/lib/tenant";
 
 let pool: Pool | null = null;
 
@@ -9,7 +10,7 @@ function databaseEnabled(): boolean {
 }
 
 function clientId(): string {
-  return process.env.CLIENT_ID || "default";
+  return activeClientId();
 }
 
 function getPool(): Pool {
