@@ -95,7 +95,7 @@ Key behavior: `getCallerContext()` returns silently (never triggers "welcome bac
 
 ### DB migrations
 
-`db/migrations/001_agent_os.sql` through `028_inbox_categorization_optin.sql` — 28 files, run in filename order. `CLIENT_ID=austin-realty` is required env for multi-tenant DB queries. See `docs/DEVELOPER_SETUP.md` for the local apply loop.
+`db/migrations/001_agent_os.sql` through `029_contact_suppression.sql` — 29 files, applied by `npm run migrate` (ledgered in `schema_migrations`, one transaction each, seeds the `clients` row). Never the old bare `psql -f` loop. On a database that predates the ledger, run `npm run migrate:baseline`. `CLIENT_ID` is required env for multi-tenant DB queries. See `docs/DEVELOPER_SETUP.md` for the local apply loop.
 
 Reads that depend on a recent migration probe `tableColumns()` first and fall back to the safe default when the column is absent, so the app runs correctly against a database that has not been migrated yet.
 

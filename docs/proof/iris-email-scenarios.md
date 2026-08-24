@@ -29,7 +29,7 @@ Offline and deterministic: no network, no API keys, no customer data.
 | compliance_privacy_ssn | compliance | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | compliance_angry_scam_accusation | compliance | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | trick_nonexistent_address | trick_question | true | property_details | reply_and_qualify | true | AUTO_REPLIED | - |
-| trick_asks_for_seller_motivation | trick_question | true | seller_lead | reply_and_qualify | true | AUTO_REPLIED | - |
+| trick_asks_for_seller_motivation | trick_question | true | property_details | reply_and_qualify | true | AUTO_REPLIED | - |
 | trick_false_premise_prior_promise | trick_question | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | trick_impossible_timeline | trick_question | true | human_required | route_human | false | NEEDS_HUMAN | - |
 | trick_two_conflicting_asks | trick_question | true | property_search | reply_and_qualify | true | AUTO_REPLIED | - |

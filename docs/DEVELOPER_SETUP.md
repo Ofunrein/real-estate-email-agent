@@ -52,16 +52,17 @@ Safe-env rules:
 
 - Never commit `.env`, `credentials.json`, or `token.json` — all three are gitignored.
 - `npm run security:scan` runs automatically in `prebuild`, so a build fails if a credential is ever committed. Run it directly any time: `npm run security:scan`.
-- Non-secret client flags (`CLIENT_ID=austin-realty`) are fine to share. API keys, tokens, and connection strings are not.
+- Non-secret client flags (`CLIENT_ID`) are fine to share. API keys, tokens, and connection strings are not.
+- **`CLIENT_ID` must match the deployment you are pointing at.** It is the tenant key on every row AND the Inngest app id (`lib/tenant.ts`). Changing it on an existing deployment registers a NEW Inngest app and leaves the old one's functions unrouted. The original production deployment uses `default`; new clients get their own slug.
 - Leave a key blank rather than inventing a placeholder that looks live. The code treats blank as "feature off".
 
 **Minimum to boot locally** (put these in `.env`):
 
 ```bash
-CLIENT_ID=austin-realty
+CLIENT_ID=default            # the original deployment; a new client uses its own slug
 CLIENT_NAME="Austin Realty"
 TEAM_NAME="Austin Realty"
-EMAIL_ACCOUNT_CLIENT_ID=austin-realty
+EMAIL_ACCOUNT_CLIENT_ID=default
 PUBLIC_BASE_URL=http://127.0.0.1:3000
 AUTH_URL=http://127.0.0.1:3000
 ALLOW_LOCAL_AUTH_BYPASS=1
