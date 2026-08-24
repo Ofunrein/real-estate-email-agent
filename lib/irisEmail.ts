@@ -1184,6 +1184,7 @@ async function exactAddressProperties(addresses: string[], limit = 4): Promise<S
   for (const address of addresses) {
     const rows = await searchAndImportMissingProperties({
       query: { query: address, area: address, mode: "general" },
+      address,
       limit: Math.max(1, limit - imported.length),
       channel: "email",
       source: "apify_fallback_email_exact_address",

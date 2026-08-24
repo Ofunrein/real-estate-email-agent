@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildApifyAddressPayload,
   buildApifySearchPayloadFromCriteria,
   normalizeApifyItemToProperty,
   propertyApifyFallbackEnabled,
@@ -80,6 +81,86 @@ test("normalizeApifyItemToProperty: preserves Zillow listing keys and media", ()
   assert.equal(row.parking, "1 reserved space");
   assert.equal(row.available_date, "2026-09-01");
   assert.equal(row.showing_instructions, "Sunday 1-3 PM");
+});
+
+test("buildApifyAddressPayload: looks an exact street address up by address, not by area", () => {
+  assert.deepEqual(buildApifyAddressPayload(" 2400 E Cesar Chavez St, Austin, TX 78702 "), {
+    addresses: ["2400 E Cesar Chavez St, Austin, TX 78702"],
+    propertyStatus: "FOR_SALE",
+    extractBuildingUnits: "disabled",
+  });
+});
+
+test("normalizeApifyItemToProperty: reads the nested address object detail actors return", () => {
+  const row = normalizeApifyItemToProperty({
+    zpid: 29444874,
+    address: { streetAddress: "2400 E Cesar Chavez St", city: "Austin", state: "TX", zipcode: "78702" },
+    price: 750000,
+    bedrooms: 3,
+    bathrooms: 2,
+    livingArea: 1400,
+    homeStatus: "FOR_SALE",
+    homeType: "SINGLE_FAMILY",
+    hdpUrl: "/homedetails/2400-E-Cesar-Chavez-St-Austin-TX-78702/29444874_zpid/",
+  });
+
+  assert.equal(row.address, "2400 E Cesar Chavez St");
+  assert.equal(row.city, "Austin");
+  assert.equal(row.zip, "78702");
+  assert.equal(row.price, "750000");
+  assert.equal(
+    row.listing_url,
+    "https://www.zillow.com/homedetails/2400-E-Cesar-Chavez-St-Austin-TX-78702/29444874_zpid/",
+  );
+});
+
+test("searchAndImportMissingProperties: address lookups keep the home the buyer named", async () => {
+  const upserts: string[] = [];
+  const rows = await searchAndImportMissingProperties({
+    query: { query: "2400 E Cesar Chavez St", area: "2400 E Cesar Chavez St", mode: "general" },
+    address: "2400 E Cesar Chavez St, Austin, TX 78702",
+    channel: "email",
+    limit: 4,
+  }, {
+    runActor: async (payload) => {
+      assert.deepEqual(payload.addresses, ["2400 E Cesar Chavez St, Austin, TX 78702"]);
+      assert.equal(payload.location, undefined);
+      return [{
+        address: { streetAddress: "2400 E Cesar Chavez St", city: "Austin", state: "TX", zipcode: "78702" },
+        price: 750000,
+        homeStatus: "FOR_SALE",
+      }];
+    },
+    upsert: async (row) => {
+      upserts.push(row.address || "");
+      return row as never;
+    },
+    appendSheet: async () => true,
+  });
+
+  assert.deepEqual(rows.map((row) => row.address), ["2400 E Cesar Chavez St"]);
+  assert.deepEqual(upserts, ["2400 E Cesar Chavez St"]);
+});
+
+test("searchAndImportMissingProperties: repeated address lookups do not duplicate a home", async () => {
+  const item = {
+    address: { streetAddress: "2400 E Cesar Chavez St", city: "Austin", state: "TX", zipcode: "78702" },
+    price: 750000,
+    homeStatus: "FOR_SALE",
+  };
+  const rows = await searchAndImportMissingProperties({
+    query: { query: "2400 E Cesar Chavez St", mode: "general" },
+    address: "2400 E Cesar Chavez St, Austin, TX 78702",
+    channel: "email",
+    limit: 4,
+  }, {
+    // Detail actors can emit the same home twice (base row plus a unit row).
+    runActor: async () => [item, { ...item, zpid: 1 }],
+    upsert: async (row) => row as never,
+    appendSheet: async () => true,
+  });
+
+  assert.deepEqual(rows.map((row) => row.address), ["2400 E Cesar Chavez St"]);
 });
 
 test("searchAndImportMissingProperties: runs actor, filters criteria, upserts, and optionally appends sheets", async () => {

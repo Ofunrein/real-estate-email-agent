@@ -8,12 +8,17 @@ import { appendPropertyToSheets } from "@/lib/googleSheets";
 import { PROPERTIES_HEADERS, type SheetRow } from "@/lib/sheetSchema";
 
 const DEFAULT_ACTOR = "truefetch~zillow-real-estate-listings";
+// Area search takes a location string; an exact street address needs an
+// address-aware actor, so the two lookups cannot share one actor or payload.
+const DEFAULT_ADDRESS_ACTOR = "maxcopell~zillow-detail-scraper";
 
 type ApifyFallbackInput = {
   query: string | PropertySearchCriteria;
   channel?: string;
   limit?: number;
   source?: string;
+  /** Look the exact street address up by address instead of by area. */
+  address?: string;
 };
 
 type ApifyFallbackDeps = {
@@ -35,6 +40,9 @@ function intEnv(name: string, fallback: number, min: number, max: number): numbe
 }
 
 function clean(value: unknown): string {
+  // Some Zillow actors return `address` as an object; String() would make it
+  // the literal "[object Object]" and poison the row's primary identifier.
+  if (value != null && typeof value === "object") return "";
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
@@ -219,16 +227,31 @@ export function buildApifySearchPayloadFromCriteria(
   return payload;
 }
 
+/**
+ * Payload for an exact street-address lookup. The area-search actor only takes a
+ * location string, so a specific address there degrades into "any home nearby".
+ */
+export function buildApifyAddressPayload(address: string): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    addresses: [clean(address)],
+    propertyStatus: "FOR_SALE",
+    extractBuildingUnits: "disabled",
+  };
+  if (process.env.APIFY_ZILLOW_ADDRESS_EXTRA_JSON) {
+    return { ...payload, ...JSON.parse(process.env.APIFY_ZILLOW_ADDRESS_EXTRA_JSON) };
+  }
+  return payload;
+}
+
 export function propertyApifyFallbackEnabled(channel?: string): boolean {
   if (!boolEnv("PROPERTY_APIFY_FALLBACK_ENABLED")) return false;
   if (channel === "voice" && !boolEnv("PROPERTY_APIFY_FALLBACK_VOICE_ENABLED")) return false;
   return Boolean(process.env.APIFY_TOKEN);
 }
 
-async function runApifySearchActor(payload: Record<string, unknown>): Promise<unknown[]> {
+async function runApifyActor(actor: string, payload: Record<string, unknown>): Promise<unknown[]> {
   const token = process.env.APIFY_TOKEN || "";
   if (!token) return [];
-  const actor = process.env.APIFY_ZILLOW_SEARCH_ACTOR || DEFAULT_ACTOR;
   const timeoutSeconds = intEnv("PROPERTY_APIFY_FALLBACK_TIMEOUT_SECONDS", 25, 5, 60);
   const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=${timeoutSeconds}&memory=1024`;
   const controller = new AbortController();
@@ -247,6 +270,14 @@ async function runApifySearchActor(payload: Record<string, unknown>): Promise<un
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function runApifySearchActor(payload: Record<string, unknown>): Promise<unknown[]> {
+  return runApifyActor(process.env.APIFY_ZILLOW_SEARCH_ACTOR || DEFAULT_ACTOR, payload);
+}
+
+function runApifyAddressActor(payload: Record<string, unknown>): Promise<unknown[]> {
+  return runApifyActor(process.env.APIFY_ZILLOW_ADDRESS_ACTOR || DEFAULT_ADDRESS_ACTOR, payload);
 }
 
 function dedupeProperties(rows: SheetRow[]): SheetRow[] {
@@ -272,7 +303,11 @@ export async function searchAndImportMissingProperties(
 
   const maxResults = Math.max(1, Math.min(input.limit || intEnv("PROPERTY_APIFY_FALLBACK_MAX_RESULTS", 5, 1, 10), 10));
   const criteria = criteriaFromQuery(input.query);
-  const payload = buildApifySearchPayloadFromCriteria(criteria, maxResults);
+  const address = clean(input.address);
+  const byAddress = Boolean(address);
+  const payload = byAddress
+    ? buildApifyAddressPayload(address)
+    : buildApifySearchPayloadFromCriteria(criteria, maxResults);
   const slice = {
     city: String(payload.location || "").split(",")[0] || "Austin",
     state: "TX",
@@ -281,12 +316,15 @@ export async function searchAndImportMissingProperties(
   };
 
   try {
-    const items = await (deps.runActor || runApifySearchActor)(payload);
+    const runner = deps.runActor || (byAddress ? runApifyAddressActor : runApifySearchActor);
+    const items = await runner(payload);
     const rows = dedupeProperties(
       items
         .filter((item): item is Record<string, unknown> => item != null && typeof item === "object")
         .map((item) => normalizeApifyItemToProperty(item, slice))
-        .filter((row) => row.address && propertyMatchesCriteria(row, criteria))
+        // An address lookup already targets one home; re-filtering it through the
+        // area criteria would drop it for missing beds/price the buyer never gave.
+        .filter((row) => row.address && (byAddress || propertyMatchesCriteria(row, criteria)))
         .slice(0, maxResults),
     );
     const imported: SheetRow[] = [];
