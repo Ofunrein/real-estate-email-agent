@@ -12,6 +12,7 @@ import { gmailWatchRenewal } from "@/lib/inngest/functions/gmailWatchRenewal";
 import { gmailPushReceived } from "@/lib/inngest/functions/gmailPushReceived";
 import { cadencePlan } from "@/lib/inngest/functions/cadencePlan";
 import { cadenceTaskRun } from "@/lib/inngest/functions/cadenceTaskRun";
+import { onboardingIntakeCompleted } from "@/lib/inngest/functions/onboardingIntakeCompleted";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,6 +30,7 @@ const inngestHandler = serve({
     gmailPushReceived,
     cadencePlan,
     cadenceTaskRun,
+    onboardingIntakeCompleted,
   ],
 });
 
@@ -44,6 +46,7 @@ const activeRawInngestFunctionIds = [
   "gmail-push-received",
   "cadence-plan",
   "cadence-task-run",
+  "onboarding-intake-completed",
 ];
 
 const retiredRawInngestFunctionIds = [
