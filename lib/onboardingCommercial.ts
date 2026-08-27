@@ -53,23 +53,24 @@ function escapeHtml(value: string): string {
 }
 
 export async function sendKickoffEmail(input: { to: string; name: string }): Promise<string> {
-  const apiKey = process.env.RESEND_API_KEY || "";
-  const from = process.env.ONBOARDING_EMAIL_FROM || "Lumenosis <onboarding@lumenosis.com>";
+  const apiKey = process.env.AGENTMAIL_API_KEY || "";
+  const inbox = process.env.ONBOARDING_EMAIL_INBOX || "olivia@trylumenosis.com";
   const intakeUrl = process.env.TYPEFORM_ONBOARDING_URL || "https://form.typeform.com/to/v3hPCHwT";
   const bookingUrl = process.env.ONBOARDING_KICKOFF_BOOKING_URL || "";
-  if (!apiKey) throw new Error("RESEND_API_KEY is required");
+  if (!apiKey) throw new Error("AGENTMAIL_API_KEY is required");
   if (!bookingUrl) throw new Error("ONBOARDING_KICKOFF_BOOKING_URL is required");
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetch(`https://api.agentmail.to/v0/inboxes/${encodeURIComponent(inbox)}/messages/send`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from,
-      to: [input.to],
+      to: input.to,
       subject: "Payment confirmed: complete your Iris kickoff steps",
       html: kickoffEmailHtml({ name: input.name, intakeUrl, bookingUrl }),
+      labels: ["onboarding", "payment-confirmed"],
     }),
   });
-  const body = await response.json() as { id?: string; message?: string };
-  if (!response.ok || !body.id) throw new Error(`Resend failed (${response.status}): ${body.message || "unknown error"}`);
-  return body.id;
+  const body = await response.json() as { message_id?: string; id?: string; message?: string };
+  const messageId = body.message_id || body.id;
+  if (!response.ok || !messageId) throw new Error(`AgentMail failed (${response.status}): ${body.message || "unknown error"}`);
+  return messageId;
 }
