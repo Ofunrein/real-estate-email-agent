@@ -42,3 +42,28 @@ export async function recordOnboardingStep(sessionId: string, stepKey: string, s
 export async function updateOnboardingExternalIds(sessionId: string, externalIds: Record<string, unknown>, state?: OnboardingState): Promise<void> {
   await db().query(`update onboarding_sessions set external_ids=external_ids || $2::jsonb, state=coalesce($3,state), updated_at=now() where id=$1`, [sessionId, JSON.stringify(externalIds), state || null]);
 }
+
+export async function claimCommercialEvent(input: {
+  eventId: string; eventType: string; customerId: string; customerEmail: string; amount: number; currency: string;
+}): Promise<boolean> {
+  const result = await db().query(
+    `insert into onboarding_commercial_events
+       (provider,event_id,event_type,customer_id,customer_email,amount,currency,status)
+     values ('stripe',$1,$2,$3,$4,$5,$6,'processing')
+     on conflict (provider,event_id) do update set
+       status='processing', error='', updated_at=now()
+     where onboarding_commercial_events.status='failed'
+     returning event_id`,
+    [input.eventId, input.eventType, input.customerId, input.customerEmail, input.amount, input.currency],
+  );
+  return result.rowCount === 1;
+}
+
+export async function finishCommercialEvent(eventId: string, status: "complete" | "failed", providerMessageId = "", error = ""): Promise<void> {
+  await db().query(
+    `update onboarding_commercial_events
+     set status=$2, provider_message_id=$3, error=$4, updated_at=now()
+     where provider='stripe' and event_id=$1`,
+    [eventId, status, providerMessageId, error],
+  );
+}

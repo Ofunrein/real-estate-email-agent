@@ -80,7 +80,8 @@
     "pg": "^8.21.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
