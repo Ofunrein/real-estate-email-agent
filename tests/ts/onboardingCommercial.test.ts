@@ -24,7 +24,10 @@ test("extracts only paid checkout customers", () => {
 test("kickoff email includes intake, scheduling, and secure-access guidance", () => {
   const html = kickoffEmailHtml({ name: "A & B", intakeUrl: "https://example.com/intake", bookingUrl: "https://example.com/book" });
   assert.match(html, /A &amp; B/);
-  assert.match(html, /complete the short setup form/);
-  assert.match(html, /choose a kickoff time/);
+  assert.match(html, /Complete onboarding form/);
+  assert.match(html, /Schedule kickoff call/);
   assert.match(html, /Do not email passwords or API keys/);
+  assert.match(html, /lumenosis-logo-warm-rounded\.png/);
+  assert.match(html, /Olivia/);
+  assert.doesNotMatch(html, /<p>Martin<br>/);
 });
