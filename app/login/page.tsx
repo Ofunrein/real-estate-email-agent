@@ -57,7 +57,7 @@ export default async function LoginPage({
               <h1 id="login-title">Iris Front Desk</h1>
               <p>
                 One operating layer for approved teams to monitor leads, review drafts,
-                and keep every real estate conversation moving.
+                and keep every real estate opportunity moving.
               </p>
             </div>
           </div>
