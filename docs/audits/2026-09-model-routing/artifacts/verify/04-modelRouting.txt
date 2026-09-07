@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: legacy profile always returns the legacy tier regardless of task class, and never routes
+ok 1 - legacy profile always returns the legacy tier regardless of task class, and never routes
+  ---
+  duration_ms: 3.345667
+  type: 'test'
+  ...
+# Subtest: candidate profile routes classification and voice tasks to the low-effort tier
+ok 2 - candidate profile routes classification and voice tasks to the low-effort tier
+  ---
+  duration_ms: 0.434
+  type: 'test'
+  ...
+# Subtest: candidate profile routes routine email/sms replies to the medium tier
+ok 3 - candidate profile routes routine email/sms replies to the medium tier
+  ---
+  duration_ms: 0.280583
+  type: 'test'
+  ...
+# Subtest: sensitive-category text is ALWAYS routed to human_review=true, for every profile
+ok 4 - sensitive-category text is ALWAYS routed to human_review=true, for every profile
+  ---
+  duration_ms: 0.266916
+  type: 'test'
+  ...
+# Subtest: sensitive routing is a deterministic RULE, not a model decision — it cannot be disabled by clientProfile
+ok 5 - sensitive routing is a deterministic RULE, not a model decision — it cannot be disabled by clientProfile
+  ---
+  duration_ms: 0.093042
+  type: 'test'
+  ...
+# Subtest: prompt injection instructions cannot flip human_review to false
+ok 6 - prompt injection instructions cannot flip human_review to false
+  ---
+  duration_ms: 0.093458
+  type: 'test'
+  ...
+# Subtest: route never contains a field that could be read as send/injection compliance
+ok 7 - route never contains a field that could be read as send/injection compliance
+  ---
+  duration_ms: 0.228042
+  type: 'test'
+  ...
+# Subtest: candidate route exposes a fallback chain that never contains a cycle back to its own tier
+ok 8 - candidate route exposes a fallback chain that never contains a cycle back to its own tier
+  ---
+  duration_ms: 0.147792
+  type: 'test'
+  ...
+# Subtest: hard tier (sensitive/human_review) has an empty fallback chain — no model retries a compliance stop
+ok 9 - hard tier (sensitive/human_review) has an empty fallback chain — no model retries a compliance stop
+  ---
+  duration_ms: 1.326167
+  type: 'test'
+  ...
+# Subtest: voice-turn tier downgrades to legacy-equivalent latency-safe tier when the latency budget is tight
+ok 10 - voice-turn tier downgrades to legacy-equivalent latency-safe tier when the latency budget is tight
+  ---
+  duration_ms: 0.438875
+  type: 'test'
+  ...
+# Subtest: every non-legacy, non-human-review tier resolves to a model present in the pricing registry
+ok 11 - every non-legacy, non-human-review tier resolves to a model present in the pricing registry
+  ---
+  duration_ms: 0.143291
+  type: 'test'
+  ...
+# Subtest: router refuses to route to a model absent from the pricing registry
+ok 12 - router refuses to route to a model absent from the pricing registry
+  ---
+  duration_ms: 0.212666
+  type: 'test'
+  ...
+# Subtest: lib/modelRouting.ts source does not import decideIrisEmailExecution or any send-authorizing function
+ok 13 - lib/modelRouting.ts source does not import decideIrisEmailExecution or any send-authorizing function
+  ---
+  duration_ms: 0.327667
+  type: 'test'
+  ...
+# Subtest: identical input at temperature 0 (default) yields identical tier on repeated calls
+ok 14 - identical input at temperature 0 (default) yields identical tier on repeated calls
+  ---
+  duration_ms: 0.144167
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 521.423792
