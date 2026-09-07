@@ -53,6 +53,7 @@
     "provision:client": "node --import tsx scripts/provision-client.mjs",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
     "test:py": "node scripts/run-python-tests.mjs",
+    "eval:routing": "node --import tsx scripts/evalModelRouting.ts",
     "sync:instagram-browser-thread": "node scripts/sync-instagram-browser-thread.mjs"
   },
   "dependencies": {

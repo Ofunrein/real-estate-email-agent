@@ -85,6 +85,8 @@ const INJECTION_PATTERNS: RegExp[] = [
   /set\s+human_review\s*=\s*false/i,
   /pretend.*doesn'?t need a human/i,
   /send.*on my behalf|without (review|approval)/i,
+  /send.*automatically|skip.*approval/i,
+  /legally bind|without disclosure/i,
 ];
 
 function matchesAny(patterns: RegExp[], text: string): boolean {
