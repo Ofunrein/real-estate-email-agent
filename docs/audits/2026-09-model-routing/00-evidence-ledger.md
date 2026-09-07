@@ -131,6 +131,22 @@ literals/env-vars scattered across two files, and pricing tables are **duplicate
   deterministic rule engine over an already-produced classification. This audit's router must never be
   called by, or override, this function.
 
+## Correction recorded during implementation (Step 5)
+
+`lib/dataSource.ts:22-38` (`readLeads`, `readEvents`, `readProperties`) is a narrow **read-only**
+accessor over the AgentInboxData-shaped tables. It has no generic write path and is not the
+pattern this repo actually uses for telemetry/cost writes: the closest existing analog,
+`lib/requestAudit.ts:6-27`, owns its own `pg.Pool` gated by a local `databaseEnabled()` check and
+does **not** route through `lib/dataSource.ts`. `lib/modelAttemptTelemetry.ts` (this audit) follows
+that same established, already-shipped convention rather than forcing a new write path through a
+module that was never designed for it. Reality wins per this task's own instruction.
+
+## Frozen thresholds
+
+`evals/model-routing/thresholds.frozen.json` committed at commit following `0c710f6`, BEFORE any eval
+run. `git hash-object evals/model-routing/thresholds.frozen.json` = `e320203ed2a82729ad1a7400e675b6a68d40731c`.
+This hash is repeated in the PR body per the completion contract.
+
 ## 0.7 No prohibited reads performed
 
 No `conversation_events`, `lead_memory`, or mailbox content was queried. No `.env*` file was read for

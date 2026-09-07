@@ -1,5 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { removeEmDashes } from "@/lib/noEmDash";
+import { attemptCostUsd, getModelPrice } from "@/lib/modelPricing";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
@@ -1296,14 +1297,11 @@ function anthropicApiKey(): string {
   return process.env.ANTHROPIC_API_KEY || "";
 }
 
-const CLAUDE_PRICING_PER_MILLION: Record<string, { input: number; output: number }> = {
-  "claude-haiku-4-5": { input: 0.8, output: 4 },
-  "claude-sonnet-4-6": { input: 3, output: 15 },
-};
-
+// Pricing now lives in lib/modelPricing.ts (single source of truth — see
+// docs/audits/2026-09-model-routing/00-evidence-ledger.md §0.5 for why the old duplicated table
+// here and in lib/theoTelemetry.ts was removed).
 function claudeTokenCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = CLAUDE_PRICING_PER_MILLION[model] || { input: 3, output: 15 };
-  return ((inputTokens * pricing.input) + (outputTokens * pricing.output)) / 1_000_000;
+  return attemptCostUsd(model, { inputTokens, outputTokens });
 }
 
 async function generateClaudeIrisEmailReplyText(
@@ -1409,8 +1407,8 @@ ${publicDataContext || "(none)"}`;
       model,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      price_per_million_input: CLAUDE_PRICING_PER_MILLION[model]?.input || 3,
-      price_per_million_output: CLAUDE_PRICING_PER_MILLION[model]?.output || 15,
+      price_per_million_input: getModelPrice(model)?.inputPerMillion ?? 3,
+      price_per_million_output: getModelPrice(model)?.outputPerMillion ?? 15,
     },
     metadata: {
       intent: classification.intent,
