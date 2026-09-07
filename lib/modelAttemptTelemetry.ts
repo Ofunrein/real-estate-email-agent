@@ -21,7 +21,6 @@ import { createHash } from "node:crypto";
 import { Pool } from "pg";
 
 let pool: Pool | null = null;
-let tableColumnsCache: Set<string> | null = null;
 
 function databaseEnabled(): boolean {
   return Boolean(process.env.DATABASE_URL);
@@ -40,17 +39,23 @@ function getPool(): Pool {
   return pool;
 }
 
-async function hasTelemetryTable(): Promise<boolean> {
-  if (tableColumnsCache) return tableColumnsCache.size > 0;
-  try {
-    const result = await getPool().query(
+type TelemetryColumnQuery = () => Promise<{ rows: Array<{ column_name: unknown }> }>;
+
+/**
+ * Probe on every attempt. An absent table safely returns false, while a transient query failure is
+ * not cached and therefore cannot disable telemetry for the lifetime of a warm process.
+ */
+export async function probeTelemetryTable(
+  query: TelemetryColumnQuery = () =>
+    getPool().query(
       `select column_name from information_schema.columns
         where table_schema = 'public' and table_name = 'model_attempt_telemetry'`,
-    );
-    tableColumnsCache = new Set(result.rows.map((row) => String(row.column_name)));
-    return tableColumnsCache.size > 0;
+    ),
+): Promise<boolean> {
+  try {
+    const result = await query();
+    return result.rows.length > 0;
   } catch {
-    tableColumnsCache = new Set();
     return false;
   }
 }
@@ -101,7 +106,7 @@ export type ModelAttemptRecord = {
 export async function recordModelAttempt(record: ModelAttemptRecord): Promise<boolean> {
   if (!databaseEnabled()) return false;
   try {
-    if (!(await hasTelemetryTable())) return false;
+    if (!(await probeTelemetryTable())) return false;
     const { promptHash } = redactForTelemetry(record.promptText);
     await getPool().query(
       `insert into model_attempt_telemetry

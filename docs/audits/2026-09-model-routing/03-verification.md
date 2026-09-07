@@ -4,6 +4,19 @@ Run in the exact order specified. Each step's raw output is captured under
 `docs/audits/2026-09-model-routing/artifacts/verify/`. Two restart cycles occurred (documented
 below) — both are the intended behavior ("if a step fails, fix the cause and restart from 9.1").
 
+## Takeover rerun
+
+The prior log below is historical. A clean takeover rerun superseded its 9.1/9.2 claims:
+
+| Step | Command | Exit code | Artifact | Current result |
+|---|---|---|---|---|
+| 9.1 attempt 1 | `npm run lint` | wrapper failure | `artifacts/verify/01-lint.txt` | TypeScript completed, but the zsh capture wrapper used reserved variable `status`; wrapper repaired and sequence restarted. |
+| 9.1 restart | `npm run lint` | 0 | `artifacts/verify/01-lint.txt` | Clean. |
+| 9.2 | `npx tsc --noEmit` | 2 | `artifacts/verify/02-typecheck.txt` | Blocked by 65 existing test-only type errors outside `tests/ts/modelRouting/`. The one new `NODE_ENV` mutation error was fixed, 9.1 was restarted, and 9.2 still reports only unrelated pre-existing test files. Per the exact serial contract, steps 9.3-9.13 were not advanced. |
+
+Targeted checks completed before the serial rerun: lint; all modified model-routing test files; and
+the offline frozen-threshold eval all passed. They do not replace the blocked serial sequence.
+
 | Step | Command | Exit code | Artifact | Notes |
 |---|---|---|---|---|
 | 9.1 | `npm run lint` | 0 | `artifacts/verify/01-lint.txt` | Clean. |

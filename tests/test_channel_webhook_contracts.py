@@ -361,7 +361,7 @@ class ChannelWebhookContractTests(unittest.TestCase):
         self.assertIn("input_tokens", theo_llm)
         self.assertIn("output_tokens", theo_llm)
         self.assertIn("claudeCostUsd", theo_llm)
-        self.assertIn("attemptCostUsd", telemetry)
+        self.assertIn("legacyAttemptCostUsd", telemetry)
         self.assertIn("claude-haiku-4-5", model_pricing)
         self.assertIn("claude-sonnet-4-6", model_pricing)
         self.assertIn("theoSessionCost", telemetry)

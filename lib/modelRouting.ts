@@ -35,10 +35,17 @@ export type RouteInput = {
    * a hash/length may be logged). */
   text: string;
   clientProfile: ClientProfile;
-  /** Present for voice-turn only; used for the latency-budget downgrade rule. */
+  /**
+   * Present for voice-turn callers for audit/decision-record purposes only. The router does NOT
+   * currently vary its tier by this value: voice always resolves to the fast/low-effort tier
+   * regardless of budget headroom, because Aria's actual model is Vapi-owned (lib/ariaAssistant.ts)
+   * and this router cannot change it — see docs/audits/2026-09-model-routing/02-decision.md, Aria
+   * row. A real latency-budget downgrade rule would only matter once a candidate model is actually
+   * wired into a voice call path, which is explicitly out of scope for this PR.
+   */
   latencyBudgetMs?: number;
-  /** Test-only escape hatch to exercise the pricing-registry refusal path. Never set in production
-   * call sites. */
+  /** Test-only escape hatch to exercise the pricing-registry refusal path. Throws outside test/dev
+   * (see resolveModelRoute) so it cannot silently reach a production call site. */
   forceModelId?: string;
 };
 
@@ -93,11 +100,21 @@ function matchesAny(patterns: RegExp[], text: string): boolean {
   return patterns.some((p) => p.test(text));
 }
 
+/**
+ * Normalize compatibility characters, then collapse whitespace (including newlines) before
+ * matching. Several patterns join phrases with `.*`, and JS `.` does not match `\n` without the
+ * `s` flag. NFKC also closes simple full-width-character bypasses such as "ＤＥＶＥＬＯＰＥＲ MODE".
+ */
+function normalizeForMatching(text: string): string {
+  return text.normalize("NFKC").replace(/\s+/g, " ");
+}
+
 function isSensitiveOrAdversarial(text: string): { hit: boolean; reason: string } {
-  if (matchesAny(SENSITIVE_PATTERNS, text)) {
+  const normalized = normalizeForMatching(text);
+  if (matchesAny(SENSITIVE_PATTERNS, normalized)) {
     return { hit: true, reason: "sensitive_keyword_net" };
   }
-  if (matchesAny(INJECTION_PATTERNS, text)) {
+  if (matchesAny(INJECTION_PATTERNS, normalized)) {
     return { hit: true, reason: "adversarial_injection_net" };
   }
   return { hit: false, reason: "" };
@@ -160,6 +177,12 @@ export function resolveModelRoute(input: RouteInput): Route {
   // audit/decision purposes, but never actually changes Aria's live model (see risk register #7).
   const tier = tierForTaskClass(input.taskClass);
   const modelChoice = CANDIDATE_TIER_MODEL[tier];
+
+  if (input.forceModelId && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "resolveModelRoute: forceModelId is a test-only override and must never be set when NODE_ENV=production"
+    );
+  }
   const modelId = input.forceModelId ?? modelChoice.modelId;
 
   if (!MODEL_PRICING[modelId]) {

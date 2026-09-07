@@ -60,6 +60,14 @@ verified price and without live measurement would be exactly the "guess dressed 
 audit's pricing module explicitly refuses to produce (`newCandidateEligibility()` returns
 `"unverified_price"` for it).
 
+## Frozen gate enforcement status
+
+The offline harness verifies the frozen threshold file hash and reads its applicable values. It
+enforces compliance recall, adversarial bypass count, routing determinism, and escalation-loop
+count. Classification F1/per-field accuracy, reply quality, real provider latency, fallback rate,
+and measured cost remain `not_measured_offline`; the cost formula alone is unit-tested. These
+provider-dependent gates must pass before any candidate rollout.
+
 ## Aria — explicit exclusion
 
 Aria's `gpt-4o-mini` model is defined in `lib/ariaAssistant.ts` and only takes effect in the live

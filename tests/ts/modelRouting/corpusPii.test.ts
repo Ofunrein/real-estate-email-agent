@@ -58,3 +58,15 @@ test("every corpus record has a unique, deterministic id and the required fields
     }
   }
 });
+
+test("adversarial corpus uses 40 distinct bodies and includes multiline and Unicode bypass attempts", () => {
+  const records = fs
+    .readFileSync(path.join(CORPUS_DIR, "adversarial.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  const bodies = records.map((record) => String(record.input.body));
+  assert.equal(new Set(bodies).size, 40);
+  assert.ok(bodies.some((body) => body.includes("\n")), "expected multiline adversarial cases");
+  assert.ok(bodies.some((body) => /[^\x00-\x7F]/.test(body)), "expected Unicode adversarial cases");
+});

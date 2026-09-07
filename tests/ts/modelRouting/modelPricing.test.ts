@@ -7,6 +7,8 @@ import {
   costBand,
   newCandidateEligibility,
   getModelPrice,
+  getLegacyModelPrice,
+  legacyAttemptCostUsd,
 } from "@/lib/modelPricing";
 
 test("attemptCostUsd matches hand-computed fixture for claude-haiku-4-5", () => {
@@ -75,6 +77,14 @@ test("newCandidateEligibility refuses unverified prices for NEW candidate traffi
   assert.equal(newCandidateEligibility("claude-haiku-4-5"), "unverified_price");
   assert.equal(newCandidateEligibility("claude-sonnet-5-medium"), "unverified_price");
   assert.equal(newCandidateEligibility("gpt-5.6-luna"), "unknown_model");
+});
+
+test("strict attempt pricing rejects unknown models while legacy accounting preserves its old fallback", () => {
+  const usage = { inputTokens: 1000, outputTokens: 100 };
+  assert.throws(() => attemptCostUsd("typo-model", usage), /has no pricing entry/);
+  const fallback = getLegacyModelPrice("env-overridden-model");
+  const expected = (usage.inputTokens * fallback.inputPerMillion + usage.outputTokens * fallback.outputPerMillion) / 1_000_000;
+  assert.equal(legacyAttemptCostUsd("env-overridden-model", usage), expected);
 });
 
 test("every entry in MODEL_PRICING carries a non-empty provenance note", () => {

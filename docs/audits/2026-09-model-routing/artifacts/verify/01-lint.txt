@@ -2,4 +2,4 @@
 > lumenosis-real-estate-agent-inbox@0.1.0 lint
 > tsc --project tsconfig.lint.json --pretty false
 
-exit=0
+EXIT=0

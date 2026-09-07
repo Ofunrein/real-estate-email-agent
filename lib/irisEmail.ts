@@ -1,6 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { removeEmDashes } from "@/lib/noEmDash";
-import { attemptCostUsd, getModelPrice } from "@/lib/modelPricing";
+import { getLegacyModelPrice, legacyAttemptCostUsd } from "@/lib/modelPricing";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
@@ -1301,7 +1301,7 @@ function anthropicApiKey(): string {
 // docs/audits/2026-09-model-routing/00-evidence-ledger.md §0.5 for why the old duplicated table
 // here and in lib/theoTelemetry.ts was removed).
 function claudeTokenCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  return attemptCostUsd(model, { inputTokens, outputTokens });
+  return legacyAttemptCostUsd(model, { inputTokens, outputTokens });
 }
 
 async function generateClaudeIrisEmailReplyText(
@@ -1407,8 +1407,8 @@ ${publicDataContext || "(none)"}`;
       model,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      price_per_million_input: getModelPrice(model)?.inputPerMillion ?? 3,
-      price_per_million_output: getModelPrice(model)?.outputPerMillion ?? 15,
+      price_per_million_input: getLegacyModelPrice(model).inputPerMillion,
+      price_per_million_output: getLegacyModelPrice(model).outputPerMillion,
     },
     metadata: {
       intent: classification.intent,

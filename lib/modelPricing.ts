@@ -98,6 +98,24 @@ export function getModelPrice(modelId: string): ModelPriceEntry | null {
   return MODEL_PRICING[modelId] ?? null;
 }
 
+const LEGACY_UNKNOWN_MODEL_PRICE: ModelPriceEntry = {
+  modelId: "legacy-unknown-model",
+  inputPerMillion: 3,
+  outputPerMillion: 15,
+  cachedInputPerMillion: 0.3,
+  reasoningPerMillion: null,
+  verifiedAt: null,
+  sourceUrl: null,
+  note:
+    "Compatibility fallback for pre-router env-overridden models. New router-driven traffic must " +
+    "use attemptCostUsd, which rejects unknown model ids.",
+};
+
+/** Compatibility pricing for legacy call sites that historically accepted arbitrary env models. */
+export function getLegacyModelPrice(modelId: string): ModelPriceEntry {
+  return MODEL_PRICING[modelId] ?? LEGACY_UNKNOWN_MODEL_PRICE;
+}
+
 export type TokenUsage = {
   inputTokens: number;
   outputTokens: number;
@@ -108,17 +126,32 @@ export type TokenUsage = {
 /**
  * Cost for ONE attempt (not "per accepted result" — callers sum across all attempts, including
  * failed/retried/fallback ones, before dividing by accepted-output count; see
- * scripts/evalModelRouting.ts and tests/ts/modelRouting/costFormula.test.ts for the fixtures that
+ * tests/ts/modelRouting/modelPricing.test.ts for the fixtures that
  * pin this down).
  */
-export function attemptCostUsd(modelId: string, usage: TokenUsage): number {
-  const price = MODEL_PRICING[modelId] || { inputPerMillion: 3, outputPerMillion: 15, cachedInputPerMillion: 0.3, reasoningPerMillion: null };
+function costWithPrice(price: ModelPriceEntry, usage: TokenUsage): number {
   const input = usage.inputTokens * price.inputPerMillion;
   const cached = (usage.cachedInputTokens ?? 0) * price.cachedInputPerMillion;
   const reasoningRate = price.reasoningPerMillion ?? price.outputPerMillion;
   const reasoning = (usage.reasoningTokens ?? 0) * reasoningRate;
   const output = usage.outputTokens * price.outputPerMillion;
   return (input + cached + reasoning + output) / 1_000_000;
+}
+
+export function attemptCostUsd(modelId: string, usage: TokenUsage): number {
+  const price = MODEL_PRICING[modelId];
+  if (!price) {
+    throw new Error(`attemptCostUsd: unknown model "${modelId}" has no pricing entry`);
+  }
+  return costWithPrice(price, usage);
+}
+
+/**
+ * Preserves the pre-audit fallback for existing env-overridden Iris/Theo model ids. Router-driven
+ * and eval code must use strict attemptCostUsd instead.
+ */
+export function legacyAttemptCostUsd(modelId: string, usage: TokenUsage): number {
+  return costWithPrice(getLegacyModelPrice(modelId), usage);
 }
 
 export type Attempt = {

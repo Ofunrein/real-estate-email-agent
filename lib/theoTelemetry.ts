@@ -1,4 +1,4 @@
-import { attemptCostUsd } from "@/lib/modelPricing";
+import { legacyAttemptCostUsd } from "@/lib/modelPricing";
 
 export type TheoMetric = {
   service: string;
@@ -24,7 +24,7 @@ export function elapsedMs(startMs: number): number {
 }
 
 export function claudeCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  return attemptCostUsd(model, { inputTokens, outputTokens });
+  return legacyAttemptCostUsd(model, { inputTokens, outputTokens });
 }
 
 export function addTheoSessionCost(costUsd = 0): number {

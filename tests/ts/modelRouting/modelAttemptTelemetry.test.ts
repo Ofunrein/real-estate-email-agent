@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { redactForTelemetry, recordModelAttempt, type ModelAttemptRecord } from "@/lib/modelAttemptTelemetry";
+import {
+  probeTelemetryTable,
+  redactForTelemetry,
+  recordModelAttempt,
+  type ModelAttemptRecord,
+} from "@/lib/modelAttemptTelemetry";
 
 test("redactForTelemetry never returns the raw prompt text", () => {
   const promptText = "lead's real name and phone: 555-0100, address 123 Main St";
@@ -22,6 +27,19 @@ test("redactForTelemetry produces different hashes for different inputs", () => 
   const a = redactForTelemetry("text one");
   const b = redactForTelemetry("text two");
   assert.notEqual(a.promptHash, b.promptHash);
+});
+
+test("telemetry table probe retries after a transient query failure", async () => {
+  let calls = 0;
+  const query = async () => {
+    calls += 1;
+    if (calls === 1) throw new Error("temporary connection failure");
+    return { rows: [{ column_name: "attempt_id" }] };
+  };
+
+  assert.equal(await probeTelemetryTable(query), false);
+  assert.equal(await probeTelemetryTable(query), true);
+  assert.equal(calls, 2);
 });
 
 function baseRecord(overrides: Partial<ModelAttemptRecord> = {}): ModelAttemptRecord {
