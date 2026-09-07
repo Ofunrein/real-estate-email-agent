@@ -352,11 +352,18 @@ class ChannelWebhookContractTests(unittest.TestCase):
     def test_theo_claude_calls_report_costs(self):
         theo_llm = read("lib/theoLlm.ts")
         telemetry = read("lib/theoTelemetry.ts")
+        # Pricing moved to a centralized module (lib/modelPricing.ts) during the 2026-09
+        # model-routing audit (docs/audits/2026-09-model-routing/00-evidence-ledger.md sec 0.5) so
+        # the two per-model prices are not duplicated string literals in theoTelemetry.ts anymore.
+        # The contract this test actually cares about -- Theo's cost accounting stays wired up --
+        # is checked against the centralized registry instead.
+        model_pricing = read("lib/modelPricing.ts")
         self.assertIn("input_tokens", theo_llm)
         self.assertIn("output_tokens", theo_llm)
         self.assertIn("claudeCostUsd", theo_llm)
-        self.assertIn("claude-haiku-4-5", telemetry)
-        self.assertIn("claude-sonnet-4-6", telemetry)
+        self.assertIn("attemptCostUsd", telemetry)
+        self.assertIn("claude-haiku-4-5", model_pricing)
+        self.assertIn("claude-sonnet-4-6", model_pricing)
         self.assertIn("theoSessionCost", telemetry)
 
     def test_twilio_sender_uses_env_only(self):
