@@ -5364,6 +5364,19 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
   cursor:pointer;
 }
 .command-center-controls select{min-width:150px}
+.command-center-controls label.command-center-internal-toggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:44px;
+  cursor:pointer;
+}
+.command-center-internal-toggle input[type="checkbox"]{
+  width:18px;
+  height:18px;
+  flex:0 0 auto;
+  cursor:pointer;
+}
 .command-center-refresh{
   display:inline-flex;
   align-items:center;
