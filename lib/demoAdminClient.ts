@@ -1,40 +1,42 @@
 import { createHmac, randomUUID } from "node:crypto";
 
+import {
+  type DemoSummary,
+  demoClientId,
+  demoOwnershipEnabled,
+  listDemos as listDemosFromPostgres,
+} from "@/lib/demoOwnershipStore";
+
 /**
- * Client for the lumenosis-site demo-management API.
+ * Demo administration data source, across the ownership cutover.
  *
- * Decision B2: this app holds NO Turso credentials. It authenticates
- * server-to-server with an HMAC over the method, path, timestamp, nonce, and
- * exact body bytes, using LUMENOSIS_PLATFORM_API_SECRET.
+ * BEFORE cutover (DEMO_DATA_OWNER unset): reads and mutations both travel to
+ * lumenosis-site over the signed platform API, which is what PR #7 originally shipped.
  *
- * Decision B1: demo links are returned by the site verbatim and rendered as-is.
- * This client never derives, re-signs, or rotates a demo token, so every URL
- * already sent to a prospect keeps working.
+ * AFTER cutover (DEMO_DATA_OWNER=postgres): this app owns the data. Reads go straight to
+ * its own Neon database with no outbound request at all, and the signed client is no
+ * longer used for them. That is the app-to-app hop this architecture removes.
  *
- * The remote API does not exist yet (it ships as a separate dependency PR).
- * Until both LUMENOSIS_PLATFORM_API_URL and LUMENOSIS_PLATFORM_API_SECRET are
- * configured, every call returns `not_configured` and the UI renders a disabled
- * state. It never invents demo data and never weakens the auth check.
+ * Mutations (approve, send) are owned by this app after cutover too — they run against
+ * Postgres and this app performs the send. The signed API remains only as the
+ * pre-cutover path, so a mixed-version deploy has exactly one writer at any instant:
+ * whichever side the flag names.
+ *
+ * Decision B1 is unchanged in both directions: demo links are rendered verbatim. No token
+ * is derived, re-signed, or rotated, so every URL already sent to a prospect keeps working.
  */
 
 const SCHEME = "lumenosis-platform-v1";
 
-export type DemoSummary = {
-  id: string;
-  fullName: string;
-  businessName: string;
-  emailDomain: string;
-  address: string;
-  status: string;
-  outreachStatus: string;
-  subject: string;
-  demoUrl: string;
-  createdAt: string;
-};
+export type { DemoSummary };
 
 export type DemoAdminResult<T> =
   | { ok: true; data: T }
-  | { ok: false; reason: "not_configured" | "unauthorized" | "unavailable"; detail?: string };
+  | {
+      ok: false;
+      reason: "not_configured" | "unauthorized" | "unavailable";
+      detail?: string;
+    };
 
 export type PlatformApiConfig = { baseUrl: string; secret: string };
 
@@ -51,6 +53,14 @@ export function platformApiConfig(env: NodeJS.ProcessEnv = process.env): Platfor
 
 export function platformApiConfigured(env: NodeJS.ProcessEnv = process.env) {
   return platformApiConfig(env) !== null;
+}
+
+/**
+ * Which side owns demo data right now. Exposed so the UI can name the active source in
+ * its not-configured copy instead of guessing.
+ */
+export function demoDataSource(env: NodeJS.ProcessEnv = process.env): "postgres" | "platform-api" {
+  return demoOwnershipEnabled(env) ? "postgres" : "platform-api";
 }
 
 /**
@@ -115,10 +125,23 @@ async function call<T>(
   }
 }
 
+/**
+ * After cutover this is a local database read: no outbound request, no signed hop. A
+ * database failure surfaces as `unavailable` with a fixed string — the driver's message
+ * can embed a connection string, so it is never propagated to the UI.
+ */
 export async function listDemos(
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ demos: DemoSummary[] }>> {
+  if (demoOwnershipEnabled(env)) {
+    if (!env.DATABASE_URL) return { ok: false, reason: "not_configured" };
+    try {
+      return { ok: true, data: { demos: await listDemosFromPostgres(demoClientId(env)) } };
+    } catch {
+      return { ok: false, reason: "unavailable", detail: "Demo database read failed" };
+    }
+  }
   return call<{ demos: DemoSummary[] }>("GET", "/api/platform/demos", undefined, env, fetchImpl);
 }
 
@@ -127,6 +150,17 @@ export async function approveDemo(
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ ok: boolean; approved: boolean }>> {
+  if (demoOwnershipEnabled(env)) {
+    if (!env.DATABASE_URL) return { ok: false, reason: "not_configured" };
+    const { approveDemo: approveInPostgres } = await import("@/lib/demoOwnershipStore");
+    try {
+      const result = await approveInPostgres(id, demoClientId(env));
+      if (!result.ok) return { ok: false, reason: "unavailable", detail: "Demo room not found" };
+      return { ok: true, data: { ok: true, approved: result.approved } };
+    } catch {
+      return { ok: false, reason: "unavailable", detail: "Demo approve failed" };
+    }
+  }
   return call("POST", `/api/platform/demos/${encodeURIComponent(id)}/approve`, {}, env, fetchImpl);
 }
 
@@ -135,5 +169,28 @@ export async function sendDemoOutreach(
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ ok: boolean; alreadySent: boolean }>> {
+  if (demoOwnershipEnabled(env)) {
+    if (!env.DATABASE_URL) return { ok: false, reason: "not_configured" };
+    const { sendDemoOutreach: sendFromPostgres } = await import("@/lib/demoOwnershipStore");
+    try {
+      const result = await sendFromPostgres(id, demoClientId(env));
+      if (!result.ok) {
+        // not_configured is surfaced as itself so the UI tells the operator to set the
+        // provider key rather than reporting a generic outage.
+        if (result.reason === "not_configured") return { ok: false, reason: "not_configured" };
+        return {
+          ok: false,
+          reason: "unavailable",
+          detail:
+            result.reason === "not_found"
+              ? "No approved draft to send"
+              : "Email provider rejected the send; the draft is still sendable",
+        };
+      }
+      return { ok: true, data: { ok: true, alreadySent: result.alreadySent } };
+    } catch {
+      return { ok: false, reason: "unavailable", detail: "Demo send failed" };
+    }
+  }
   return call("POST", `/api/platform/demos/${encodeURIComponent(id)}/send`, {}, env, fetchImpl);
 }
