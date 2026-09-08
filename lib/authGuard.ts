@@ -11,6 +11,25 @@ import {
 import { setRequestWorkspace } from "@/lib/workspaceContext";
 import { databaseEnabled, ensureClientInDatabase } from "@/lib/database";
 
+/**
+ * Resolve the viewer for a development/preview auth bypass.
+ *
+ * The bypass picks the first configured workspace, which in a multi-tenant
+ * WORKSPACE_EMAIL_MAP can be the `platform_admin` entry. Once `/admin` exists as
+ * a real URL, that would hand the platform-admin surface to anyone who can reach
+ * a deploy with the bypass flag set. The bypass therefore always downgrades to
+ * `tenant_user`: it is a convenience for skipping the login screen, never a way
+ * to acquire a role.
+ */
+export function bypassViewer(
+  workspaces = configuredWorkspaces(),
+): WorkspaceViewer | null {
+  const firstEmail = Object.keys(workspaces)[0];
+  const viewer = viewerForEmail(firstEmail, workspaces);
+  if (!viewer) return null;
+  return { ...viewer, role: "tenant_user" };
+}
+
 export async function requireDashboardAuth() {
   if (localAuthBypassEnabled()) {
     const workspace = workspaceForConfiguredEmail("ofunrein123@gmail.com");
@@ -34,9 +53,7 @@ export async function requireDashboardAuth() {
 export async function requireCommandCenterViewer(): Promise<WorkspaceViewer | null> {
   let viewer: WorkspaceViewer | null = null;
   if (localAuthBypassEnabled()) {
-    const workspaces = configuredWorkspaces();
-    const firstEmail = Object.keys(workspaces)[0];
-    viewer = viewerForEmail(firstEmail, workspaces);
+    viewer = bypassViewer();
   } else {
     const session = await auth();
     const email = session?.user?.email;

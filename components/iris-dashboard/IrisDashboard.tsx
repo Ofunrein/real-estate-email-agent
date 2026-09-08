@@ -161,7 +161,7 @@ const VOICE_PRESETS: VoicePreset[] = [
   { id: "aura-orion-en", label: "Orion (v1)", provider: "deepgram", gender: "male", style: "calm legacy" },
 ];
 
-export function IrisDashboard() {
+export function IrisDashboard({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean } = {}) {
   const model = useInboxModel();
   const { mode, toggle } = useColorMode();
   const [activeNav, setActiveNav] = React.useState<DashboardViewId>("overview");
@@ -317,6 +317,20 @@ export function IrisDashboard() {
         <aside className={`iris-side-col ${mobileNavOpen ? "is-open" : ""}`}>
           <div className="iris-brand-lockup"><img src="/iris-design/iris-mark.png" alt="Iris" /><div><strong>Iris</strong><span>Austin Realty</span></div><button className="iris-round hide-desktop" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><X size={16} /></button></div>
           <nav className="iris-nav-list">{navItems.map((item) => { const Icon = item.icon; return <button key={item.id} className={activeNav === item.id ? "is-active" : ""} onClick={() => { setActiveNav(item.id); setMobileNavOpen(false); captureProductEvent("dashboard_navigation_selected", { section: item.id }); }}><span style={{ color: item.accent }}><Icon size={16} /></span><b>{item.label}</b>{Boolean(item.count) && <em>{compactMetric(item.count)}</em>}</button>; })}</nav>
+          {/* Additive dual path for the /admin surface. The in-page "Command center"
+              nav item above intentionally stays as-is for one release so that
+              reverting the /admin routes is a no-downtime code-only rollback. */}
+          {isPlatformAdmin && (
+            <nav className="iris-nav-list iris-nav-admin" aria-label="Platform administration">
+              <a
+                href="/admin"
+                onClick={() => { setMobileNavOpen(false); captureProductEvent("dashboard_navigation_selected", { section: "admin" }); }}
+              >
+                <span style={{ color: "var(--iris-success)" }}><Gauge size={16} /></span>
+                <b>Platform admin</b>
+              </a>
+            </nav>
+          )}
           <div className="iris-agent-card"><img src="/iris-design/iris-avatar.png" alt="Iris avatar" /><div><strong>Iris</strong><span>Active across {MESSAGE_CHANNELS.length} channels</span></div></div>
         </aside>
         <button className={`iris-scrim ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />

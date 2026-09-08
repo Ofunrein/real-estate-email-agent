@@ -23,7 +23,20 @@ export function isAllowedAuthEmail(email?: string | null) {
   return Boolean(email && getAllowedAuthEmails().has(email.toLowerCase()));
 }
 
+/**
+ * Is an auth bypass permitted in this environment?
+ *
+ * Hardened for the `/admin` platform-admin surface. `VERCEL_ENV === "production"`
+ * is checked explicitly and first: a production deploy must never honour a bypass
+ * flag, even one left set by mistake. Note that `NODE_ENV` is `"production"` on
+ * Vercel preview builds too, which is why the preview branch keys off `VERCEL_ENV`
+ * rather than `NODE_ENV`.
+ *
+ * A bypass only ever yields a `tenant_user` viewer; see `bypassViewer` in
+ * lib/authGuard.ts. It cannot grant `platform_admin`.
+ */
 export function localAuthBypassEnabled() {
+  if (process.env.VERCEL_ENV === "production") return false;
   const localBypass = process.env.NODE_ENV !== "production" && process.env.ALLOW_LOCAL_AUTH_BYPASS === "1";
   const previewBypass = process.env.VERCEL_ENV === "preview" && process.env.ALLOW_PREVIEW_AUTH_BYPASS === "1";
   return localBypass || previewBypass;

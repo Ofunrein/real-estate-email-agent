@@ -5630,3 +5630,52 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
 @media (prefers-reduced-motion:reduce){
   .command-center *{scroll-behavior:auto!important;transition:none!important}
 }
+
+/* ---------------------------------------------------------------------------
+   Platform administration shell (/admin)
+   Internal operator surface. Deliberately plain: it must be visually obvious
+   that this is not the tenant dashboard.
+   --------------------------------------------------------------------------- */
+.admin-shell{min-height:100dvh;display:flex;flex-direction:column;background:var(--iris-bg,#F7F5F2);color:var(--iris-text,#0F1210)}
+.admin-shell-header{
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:1px solid var(--iris-border,rgba(15,18,16,.12));
+  background:var(--iris-surface,#fff);
+}
+.admin-shell-brand{display:flex;align-items:center;gap:10px}
+.admin-shell-title{font-weight:700;font-size:15px}
+.admin-shell-badge{
+  font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;
+  background:var(--iris-warning,#B4690E);color:#fff;
+}
+.admin-shell-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.admin-shell-viewer{display:flex;align-items:center;gap:12px;margin-left:auto;font-size:13px;opacity:.85}
+.admin-shell-nav-link{
+  display:inline-flex;align-items:center;min-height:44px;padding:0 12px;
+  border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;color:inherit;
+}
+.admin-shell-nav-link:hover{background:var(--iris-hover,rgba(15,18,16,.06))}
+.admin-shell-nav-link:focus-visible{outline:2px solid var(--iris-accent,#3B5BDB);outline-offset:2px}
+.admin-shell-main{flex:1;padding:24px 20px;max-width:1200px;width:100%}
+.admin-page-title{font-size:22px;font-weight:700;margin:0 0 6px}
+.admin-page-lede{margin:0 0 24px;font-size:14px;opacity:.75}
+.admin-card-grid{list-style:none;margin:0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.admin-card{border:1px solid var(--iris-border,rgba(15,18,16,.12));border-radius:12px;background:var(--iris-surface,#fff)}
+.admin-card-link{display:flex;flex-direction:column;gap:6px;padding:16px;min-height:44px;text-decoration:none;color:inherit}
+.admin-card-link:focus-visible{outline:2px solid var(--iris-accent,#3B5BDB);outline-offset:2px}
+.admin-card-title{font-weight:600;font-size:15px}
+.admin-card-body{font-size:13px;opacity:.75}
+
+/* Additive platform-admin entry in the tenant dashboard sidebar. */
+.iris-nav-admin{margin-top:8px;padding-top:8px;border-top:1px solid var(--iris-border,rgba(15,18,16,.12))}
+.iris-nav-admin a{
+  display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;
+  border-radius:8px;text-decoration:none;color:inherit;font-size:14px;
+}
+.iris-nav-admin a:hover{background:var(--iris-hover,rgba(15,18,16,.06))}
+.iris-nav-admin a:focus-visible{outline:2px solid var(--iris-accent,#3B5BDB);outline-offset:2px}
+
+@media (prefers-reduced-motion:reduce){
+  .admin-shell *{transition:none!important}
+}

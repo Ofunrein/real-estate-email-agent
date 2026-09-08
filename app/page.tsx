@@ -13,6 +13,7 @@ export default async function Home() {
   return (
     <InboxApp
       data={composeInboxData([], [], [], [])}
+      isPlatformAdmin={viewer.role === "platform_admin"}
       analyticsIdentity={{
         distinctId: opaqueAnalyticsId(`${viewer.role}:${viewer.workspaceId}`),
         tenantId: viewer.workspaceId,

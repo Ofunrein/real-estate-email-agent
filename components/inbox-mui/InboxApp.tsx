@@ -18,10 +18,13 @@ interface InboxAppProps {
     tenantId: string;
     viewerRole: string;
   };
+  /** Renders the additive /admin nav entry. Presentation only — the real gate is
+      lib/adminGuard.ts on the server, so a forged prop grants nothing. */
+  isPlatformAdmin?: boolean;
   loadError?: string;
 }
 
-export function InboxApp({ data, analyticsIdentity }: InboxAppProps) {
+export function InboxApp({ data, analyticsIdentity, isPlatformAdmin = false }: InboxAppProps) {
   const [inboxData, setInboxData] = useState<AgentInboxData>(data);
   const refreshData = useCallback(async () => {
     const res = await fetch("/api/data", { cache: "no-store" });
@@ -72,7 +75,7 @@ export function InboxApp({ data, analyticsIdentity }: InboxAppProps) {
     <ColorModeProvider>
       <InboxDataProvider model={model} onDraftChanged={handleDraftChanged} onDataRefresh={refreshData}>
         <CategoryColorProvider categories={model.leadCategories}>
-          <IrisDashboard />
+          <IrisDashboard isPlatformAdmin={isPlatformAdmin} />
         </CategoryColorProvider>
       </InboxDataProvider>
     </ColorModeProvider>
