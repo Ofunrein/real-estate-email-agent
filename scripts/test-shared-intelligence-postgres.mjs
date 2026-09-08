@@ -60,7 +60,15 @@ async function main() {
     console.log("Shared intelligence PostgreSQL integration passed: migration idempotency, fact provenance, tenant isolation, and receipt gate verified");
   } finally {
     await client?.end().catch(() => undefined);
-    server.kill("SIGTERM");
+    if (server.exitCode === null && server.signalCode === null) {
+      const stopped = new Promise((resolve) => server.once("exit", resolve));
+      server.kill("SIGTERM");
+      await Promise.race([stopped, new Promise((resolve) => setTimeout(resolve, 5_000))]);
+      if (server.exitCode === null && server.signalCode === null) {
+        server.kill("SIGKILL");
+        await new Promise((resolve) => server.once("exit", resolve));
+      }
+    }
     await rm(temp, { recursive: true, force: true });
   }
 }
