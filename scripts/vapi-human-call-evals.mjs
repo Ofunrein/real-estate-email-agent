@@ -63,7 +63,10 @@ if (!manifestOnly && mode === "chat") {
     for (const c of manifest.cases) {
       if (c.evidence !== "vapi-chat") { results.push({ id: c.id, family: c.family, evidence: c.evidence, status: "skip", reason: c.skipUnless }); continue; }
       const started = Date.now();
-      try { results.push({ id: c.id, family: c.family, evidence: c.evidence, durationMs: Date.now() - started, ...(await within(runChat(c), timeoutMs)) }); }
+      try {
+        const outcome = await within(runChat(c), timeoutMs);
+        results.push({ id: c.id, family: c.family, evidence: c.evidence, durationMs: Date.now() - started, ...outcome });
+      }
       catch (error) { results.push({ id: c.id, family: c.family, evidence: c.evidence, durationMs: Date.now() - started, status: error.code === "CASE_TIMEOUT" ? "timeout" : "fail", errors: [String(error.message || error)] }); }
     }
   } finally { if (cloneId) await api(`/assistant/${cloneId}`, { method: "DELETE" }).catch((e) => results.push({ id: "cleanup-clone", family: "harness", evidence: "control-plane", status: "fail", errors: [e.message] })); }
