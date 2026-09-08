@@ -36,6 +36,13 @@ def tracked_files() -> list[str]:
             pass
 
     skipped = {".git", ".next", ".vercel", "node_modules", "venv", ".venv"}
+    submodules = set()
+    gitmodules = ROOT / ".gitmodules"
+    if gitmodules.exists():
+        for line in gitmodules.read_text().splitlines():
+            if line.strip().startswith("path ="):
+                submodules.add(line.split("=", 1)[1].strip())
+
     return [
         path.relative_to(ROOT).as_posix()
         for path in ROOT.rglob("*")
@@ -43,6 +50,11 @@ def tracked_files() -> list[str]:
         and not path.name.startswith(".env")
         and path.name not in {"credentials.json", "token.json"}
         and not any(part in skipped for part in path.relative_to(ROOT).parts)
+        and not any(
+            path.relative_to(ROOT).as_posix() == submodule
+            or path.relative_to(ROOT).as_posix().startswith(f"{submodule}/")
+            for submodule in submodules
+        )
     ]
 
 
