@@ -277,12 +277,17 @@ function breakdown(attempts: UsageAttempt[], keyFor: (attempt: UsageAttempt) => 
 
 function tracesFor(attempts: UsageAttempt[], clients: CommandCenterClient[]): CommandCenterTrace[] {
   const names = new Map(clients.map((client) => [client.id, client.name]));
+  // Group by tenant AND correlation id: correlation ids originate from upstream request ids and
+  // are not guaranteed unique across tenants, so keying on correlation id alone would merge two
+  // tenants' attempts into one trace and leak cross-tenant cost/latency in platform-admin scope.
   const groups = new Map<string, UsageAttempt[]>();
   for (const attempt of attempts) {
-    groups.set(attempt.correlationId, [...(groups.get(attempt.correlationId) || []), attempt]);
+    const key = `${attempt.clientId}\u0000${attempt.correlationId}`;
+    groups.set(key, [...(groups.get(key) || []), attempt]);
   }
-  return Array.from(groups.entries()).map(([correlationId, rows]) => {
+  return Array.from(groups.values()).map((rows) => {
     const ordered = [...rows].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+    const correlationId = ordered[0].correlationId;
     const first = ordered[0];
     const last = ordered[ordered.length - 1];
     const startMs = Date.parse(first.occurredAt);

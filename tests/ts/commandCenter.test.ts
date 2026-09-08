@@ -154,3 +154,26 @@ test("usage attempt normalization strips unsafe metadata and rejects missing cor
     /correlationId is required/,
   );
 });
+
+test("traces never merge attempts from different tenants that reuse a correlation id", () => {
+  const other: CommandCenterClient = { ...client, id: "beta", name: "Beta Group" };
+  const result = aggregateCommandCenter({
+    clients: [client, other],
+    attempts: [
+      attempt({ id: "a", clientId: "acme", correlationId: "shared", attemptId: "a", costUsd: 1 }),
+      attempt({ id: "b", clientId: "beta", correlationId: "shared", attemptId: "b", costUsd: 3 }),
+    ],
+    range: { start, end, window: "30d" },
+  });
+  assert.equal(result.traces.length, 2);
+  const acmeTrace = result.traces.find((trace) => trace.clientId === "acme");
+  const betaTrace = result.traces.find((trace) => trace.clientId === "beta");
+  assert.ok(acmeTrace && betaTrace, "each tenant must get its own trace");
+  assert.equal(acmeTrace.attemptCount, 1);
+  assert.equal(betaTrace.attemptCount, 1);
+  assert.equal(acmeTrace.costUsd, 1);
+  assert.equal(betaTrace.costUsd, 3);
+  for (const trace of result.traces) {
+    assert.equal(new Set(trace.attempts.map((row) => row.clientId)).size, 1);
+  }
+});

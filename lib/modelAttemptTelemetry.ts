@@ -1,6 +1,6 @@
 /**
  * One telemetry record per model ATTEMPT (not per successful result). See
- * db/migrations/031_model_attempt_telemetry.sql (additive, NOT applied by this audit).
+ * db/migrations/032_model_attempt_telemetry.sql (additive, NOT applied by this audit).
  *
  * Deviation from the audit's originating brief, recorded honestly: the brief asked for persistence
  * "via lib/dataSource.ts only." In practice, `lib/dataSource.ts` is a narrow read-only accessor for

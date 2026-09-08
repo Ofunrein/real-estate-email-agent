@@ -119,7 +119,7 @@ literals/env-vars scattered across two files, and pricing tables are **duplicate
   project interpreter per `05196b9`/`0ba60d3` commits).
 - `db/migrations/` contains **31 files**, highest-numbered `030_client_onboarding.sql` (not
   `029_contact_suppression.sql` as CLAUDE.md states — the repo has moved on; `029_contact_suppression.sql`
-  is the second-highest). This audit's new migration is therefore `031_model_attempt_telemetry.sql`.
+  is the second-highest). After command-center integration, this migration is `032_model_attempt_telemetry.sql`.
 - `lib/inboxData.ts:15-29` defines `AgentInboxData` with keys: `leads, events, voiceCalls, properties,
   metrics, threads, threadCategories, inboxCategories, inboxSettings, drafts, emailCapabilities,
   threadReadStates, channelAccounts, propertyHealth`. `direction` enum confirmed

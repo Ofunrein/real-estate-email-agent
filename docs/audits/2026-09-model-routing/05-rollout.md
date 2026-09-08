@@ -3,7 +3,7 @@
 ## Default state
 
 `MODEL_ROUTING_PROFILE` defaults to `legacy`. Merging this branch changes no selected production
-model and does not activate candidate routing. Migration `031_model_attempt_telemetry.sql` remains
+model and does not activate candidate routing. Migration `032_model_attempt_telemetry.sql` remains
 unapplied.
 
 ## Canary ladder
@@ -37,7 +37,7 @@ Before integration, identify the final routing commits with:
 `git log --oneline origin/main..HEAD -- lib/modelRouting.ts lib/modelPricing.ts lib/modelAttemptTelemetry.ts`
 
 Revert those commits in reverse order with `git revert <sha>`. Do not roll back by rewriting
-history. Migration `031_model_attempt_telemetry.sql` is additive and safe to leave unapplied; if it
+history. Migration `032_model_attempt_telemetry.sql` is additive and safe to leave unapplied; if it
 has already been applied, leave the table in place until a separately reviewed cleanup migration.
 
 ## Explicitly excluded human follow-up
@@ -45,7 +45,7 @@ has already been applied, leave the table in place until a separately reviewed c
 - Verify real provider model ids and public prices.
 - Implement production-path fake-adapter integration coverage before wiring the router.
 - Implement a no-deploy dynamic kill switch.
-- Apply migration `031_model_attempt_telemetry.sql` only through the normal reviewed migration flow.
+- Apply migration `032_model_attempt_telemetry.sql` only through the normal reviewed migration flow.
 - Change production environment/profile only after all canary prerequisites pass.
 - If Aria config ever changes, run `npm run aria:provision` deliberately as a separate human action.
 
