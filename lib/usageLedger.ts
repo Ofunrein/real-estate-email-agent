@@ -22,10 +22,20 @@ export type RecordUsageAttemptInput = Omit<UsageAttemptInput, "clientId"> & {
 };
 
 export async function recordUsageAttempt(input: RecordUsageAttemptInput): Promise<boolean> {
-  const attempt = normalizeUsageAttempt({
-    ...input,
-    clientId: input.clientId || activeClientId(),
-  });
+  // Metering is observability, never a control path: a malformed attempt must be dropped and
+  // logged, not surfaced as a rejection to the agent that produced it.
+  let attempt: ReturnType<typeof normalizeUsageAttempt>;
+  try {
+    attempt = normalizeUsageAttempt({
+      ...input,
+      clientId: input.clientId || activeClientId(),
+    });
+  } catch (error) {
+    console.warn("[usage-ledger] rejected malformed attempt", {
+      errorCode: error instanceof Error ? error.message.slice(0, 120) : "UnknownError",
+    });
+    return false;
+  }
   if (!process.env.DATABASE_URL) {
     if (process.env.NODE_ENV !== "test") {
       console.info("[usage-ledger] database unavailable", {

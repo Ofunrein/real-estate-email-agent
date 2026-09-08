@@ -223,7 +223,9 @@ function totalsFor(
   const failed = attempts.length - successful;
   const costUsd = rounded(attempts.reduce((sum, attempt) => sum + attempt.costUsd, 0));
   const revenues = clients.map((client) => allocatedRevenue(client, range));
-  const allocatedRevenueUsd = revenues.some((value) => value == null)
+  // With no tenants in scope, revenue is unknown — not zero. Reporting 0 here would render a
+  // fabricated "$0 revenue / $0 margin" headline instead of an honest "unavailable".
+  const allocatedRevenueUsd = !revenues.length || revenues.some((value) => value == null)
     ? null
     : rounded((revenues as number[]).reduce((sum, value) => sum + value, 0), 2);
   const allocatedMarginUsd = allocatedRevenueUsd == null ? null : rounded(allocatedRevenueUsd - costUsd, 2);

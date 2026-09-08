@@ -177,3 +177,16 @@ test("traces never merge attempts from different tenants that reuse a correlatio
     assert.equal(new Set(trace.attempts.map((row) => row.clientId)).size, 1);
   }
 });
+
+test("empty tenant set reports unknown revenue, not a fabricated zero", () => {
+  const result = aggregateCommandCenter({
+    clients: [],
+    attempts: [],
+    range: { start, end, window: "30d" },
+  });
+  assert.equal(result.totals.attempts, 0);
+  assert.equal(result.totals.costUsd, 0);
+  assert.equal(result.totals.allocatedRevenueUsd, null);
+  assert.equal(result.totals.allocatedMarginUsd, null);
+  assert.equal(result.totals.marginPct, null);
+});
