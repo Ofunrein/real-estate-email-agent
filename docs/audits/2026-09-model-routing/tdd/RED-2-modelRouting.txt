@@ -1,0 +1,44 @@
+TAP version 13
+# node:internal/modules/cjs/loader:1430
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/modelRouting'
+# Require stack:
+# - /Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/tests/ts/modelRouting/modelRouting.test.ts
+#     at node:internal/modules/cjs/loader:1430:15
+#     at T._resolveFilename (file:///Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:14889)
+#     at nextResolveSimple (/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-BOkp8V6j.cjs:10:1017)
+#     at /Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-BOkp8V6j.cjs:9:4388
+#     at /Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-BOkp8V6j.cjs:9:3818
+#     at resolveTsPaths (/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-BOkp8V6j.cjs:10:770)
+#     at Function._resolveFilename (/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/node_modules/tsx/dist/register-BOkp8V6j.cjs:10:1155)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1040:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1045:22)
+#     at Function._load (node:internal/modules/cjs/loader:1216:25) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     '/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/tests/ts/modelRouting/modelRouting.test.ts'
+#   ]
+# }
+# Node.js v22.22.3
+# Subtest: tests/ts/modelRouting/modelRouting.test.ts
+not ok 1 - tests/ts/modelRouting/modelRouting.test.ts
+  ---
+  duration_ms: 263.666125
+  type: 'test'
+  location: '/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/tests/ts/modelRouting/modelRouting.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 269.12375

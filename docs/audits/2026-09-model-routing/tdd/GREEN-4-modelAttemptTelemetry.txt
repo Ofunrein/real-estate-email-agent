@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: redactForTelemetry never returns the raw prompt text
+ok 1 - redactForTelemetry never returns the raw prompt text
+  ---
+  duration_ms: 0.870834
+  type: 'test'
+  ...
+# Subtest: redactForTelemetry is deterministic (same input -> same hash)
+ok 2 - redactForTelemetry is deterministic (same input -> same hash)
+  ---
+  duration_ms: 0.175542
+  type: 'test'
+  ...
+# Subtest: redactForTelemetry produces different hashes for different inputs
+ok 3 - redactForTelemetry produces different hashes for different inputs
+  ---
+  duration_ms: 0.102375
+  type: 'test'
+  ...
+# Subtest: recordModelAttempt no-ops (returns false, never throws) when DATABASE_URL is unset
+ok 4 - recordModelAttempt no-ops (returns false, never throws) when DATABASE_URL is unset
+  ---
+  duration_ms: 0.29775
+  type: 'test'
+  ...
+# Subtest: recordModelAttempt no-ops (never throws) when DATABASE_URL is set but unreachable
+ok 5 - recordModelAttempt no-ops (never throws) when DATABASE_URL is set but unreachable
+  ---
+  duration_ms: 386.016583
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1327.535042

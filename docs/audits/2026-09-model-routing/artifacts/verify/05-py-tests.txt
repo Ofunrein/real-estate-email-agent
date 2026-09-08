@@ -1,0 +1,32 @@
+
+> lumenosis-real-estate-agent-inbox@0.1.0 test:py
+> node scripts/run-python-tests.mjs
+
+Using Python test interpreter: /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+============================= test session starts ==============================
+platform darwin -- Python 3.13.1, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent
+plugins: asyncio-1.4.0, anyio-4.14.2, cov-7.1.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 96 items
+
+tests/test_agent_inbox.py ..                                             [  2%]
+tests/test_agent_lead_memory.py ..........                               [ 12%]
+tests/test_aria_outbound_contract.py ....                                [ 16%]
+tests/test_aria_voice_contract.py ..............                         [ 31%]
+tests/test_backfill_gmail_sent_events.py ...                             [ 34%]
+tests/test_channel_webhook_contracts.py .......................          [ 58%]
+tests/test_event_logger.py ...                                           [ 61%]
+tests/test_import_agent_log_events.py ....                               [ 65%]
+tests/test_iris_channel.py ...                                           [ 68%]
+tests/test_iris_style_training.py ...                                    [ 71%]
+tests/test_lead_matching.py ......                                       [ 78%]
+tests/test_properties_repair.py ....                                     [ 82%]
+tests/test_property_hygiene.py ....                                      [ 86%]
+tests/test_property_hygiene_script.py ....                               [ 90%]
+tests/test_sheet_schema.py ....                                          [ 94%]
+tests/test_sheets_store.py ...                                           [ 97%]
+tests/test_voice_migration_contract.py ..                                [100%]
+
+============================= 96 passed in 23.93s ==============================
+EXIT=0

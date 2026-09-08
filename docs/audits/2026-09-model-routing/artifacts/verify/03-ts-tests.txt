@@ -1,0 +1,5656 @@
+
+> lumenosis-real-estate-agent-inbox@0.1.0 test
+> node --import tsx --test "tests/ts/**/*.test.ts"
+
+TAP version 13
+# Subtest: iris adversarial: showing_selected_property
+ok 1 - iris adversarial: showing_selected_property
+  ---
+  duration_ms: 40.930083
+  type: 'test'
+  ...
+# Subtest: iris adversarial: ordinal_followup_second_property
+ok 2 - iris adversarial: ordinal_followup_second_property
+  ---
+  duration_ms: 12.4195
+  type: 'test'
+  ...
+# Subtest: iris adversarial: financing_question_safe
+ok 3 - iris adversarial: financing_question_safe
+  ---
+  duration_ms: 4.405458
+  type: 'test'
+  ...
+# Subtest: iris adversarial: fair_housing_handoff
+ok 4 - iris adversarial: fair_housing_handoff
+  ---
+  duration_ms: 2.064208
+  type: 'test'
+  ...
+# Subtest: iris adversarial: seller_valuation
+ok 5 - iris adversarial: seller_valuation
+  ---
+  duration_ms: 0.23675
+  type: 'test'
+  ...
+# Subtest: iris adversarial: vendor_api_spam
+ok 6 - iris adversarial: vendor_api_spam
+  ---
+  duration_ms: 0.064458
+  type: 'test'
+  ...
+# Subtest: iris adversarial: unsubscribe_stop
+ok 7 - iris adversarial: unsubscribe_stop
+  ---
+  duration_ms: 1.925458
+  type: 'test'
+  ...
+# Subtest: iris adversarial: ambiguous_pronoun_property
+ok 8 - iris adversarial: ambiguous_pronoun_property
+  ---
+  duration_ms: 8.882417
+  type: 'test'
+  ...
+# Subtest: iris adversarial: injection_bare_override
+ok 9 - iris adversarial: injection_bare_override
+  ---
+  duration_ms: 4.644792
+  type: 'test'
+  ...
+# Subtest: iris adversarial: injection_wrapped_in_property_question
+ok 10 - iris adversarial: injection_wrapped_in_property_question
+  ---
+  duration_ms: 14.473959
+  type: 'test'
+  ...
+# Subtest: iris adversarial: injection_persona_swap
+ok 11 - iris adversarial: injection_persona_swap
+  ---
+  duration_ms: 0.631208
+  type: 'test'
+  ...
+# Subtest: iris adversarial: injection_credential_request
+ok 12 - iris adversarial: injection_credential_request
+  ---
+  duration_ms: 0.447625
+  type: 'test'
+  ...
+# Subtest: iris adversarial: injection_quoted_thread_payload
+ok 13 - iris adversarial: injection_quoted_thread_payload
+  ---
+  duration_ms: 0.675125
+  type: 'test'
+  ...
+# Subtest: iris adversarial: tenancy_break_lease
+ok 14 - iris adversarial: tenancy_break_lease
+  ---
+  duration_ms: 0.765041
+  type: 'test'
+  ...
+# Subtest: iris adversarial: tenancy_eviction_timeline
+ok 15 - iris adversarial: tenancy_eviction_timeline
+  ---
+  duration_ms: 2.584375
+  type: 'test'
+  ...
+# Subtest: iris adversarial: tenancy_security_deposit_law
+ok 16 - iris adversarial: tenancy_security_deposit_law
+  ---
+  duration_ms: 1.872917
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_demographic_screening
+ok 17 - iris adversarial: compliance_demographic_screening
+  ---
+  duration_ms: 0.778875
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_school_rating_proxy
+ok 18 - iris adversarial: compliance_school_rating_proxy
+  ---
+  duration_ms: 1.838
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_mortgage_approval_odds
+ok 19 - iris adversarial: compliance_mortgage_approval_odds
+  ---
+  duration_ms: 3.025125
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_commission_negotiation
+ok 20 - iris adversarial: compliance_commission_negotiation
+  ---
+  duration_ms: 1.219292
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_waive_inspection
+ok 21 - iris adversarial: compliance_waive_inspection
+  ---
+  duration_ms: 0.234167
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_privacy_ssn
+ok 22 - iris adversarial: compliance_privacy_ssn
+  ---
+  duration_ms: 0.314791
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance_angry_scam_accusation
+ok 23 - iris adversarial: compliance_angry_scam_accusation
+  ---
+  duration_ms: 4.274875
+  type: 'test'
+  ...
+# Subtest: iris adversarial: trick_nonexistent_address
+ok 24 - iris adversarial: trick_nonexistent_address
+  ---
+  duration_ms: 5.307791
+  type: 'test'
+  ...
+# Subtest: iris adversarial: trick_asks_for_seller_motivation
+ok 25 - iris adversarial: trick_asks_for_seller_motivation
+  ---
+  duration_ms: 0.462
+  type: 'test'
+  ...
+# Subtest: iris adversarial: trick_false_premise_prior_promise
+ok 26 - iris adversarial: trick_false_premise_prior_promise
+  ---
+  duration_ms: 0.221333
+  type: 'test'
+  ...
+# Subtest: iris adversarial: trick_impossible_timeline
+ok 27 - iris adversarial: trick_impossible_timeline
+  ---
+  duration_ms: 0.574209
+  type: 'test'
+  ...
+# Subtest: iris adversarial: trick_two_conflicting_asks
+ok 28 - iris adversarial: trick_two_conflicting_asks
+  ---
+  duration_ms: 72.011459
+  type: 'test'
+  ...
+# Subtest: iris adversarial: hallucination_no_invented_price
+ok 29 - iris adversarial: hallucination_no_invented_price
+  ---
+  duration_ms: 0.510208
+  type: 'test'
+  ...
+# Subtest: iris adversarial: hallucination_no_invented_availability
+ok 30 - iris adversarial: hallucination_no_invented_availability
+  ---
+  duration_ms: 0.269667
+  type: 'test'
+  ...
+# Subtest: iris adversarial: hallucination_no_invented_school_zone
+ok 31 - iris adversarial: hallucination_no_invented_school_zone
+  ---
+  duration_ms: 0.571167
+  type: 'test'
+  ...
+# Subtest: iris adversarial: hallucination_no_invented_comps
+ok 32 - iris adversarial: hallucination_no_invented_comps
+  ---
+  duration_ms: 0.376042
+  type: 'test'
+  ...
+# Subtest: iris adversarial: hallucination_no_invented_photos
+ok 33 - iris adversarial: hallucination_no_invented_photos
+  ---
+  duration_ms: 6.272042
+  type: 'test'
+  ...
+# Subtest: iris adversarial: missing_context_bare_pronoun
+ok 34 - iris adversarial: missing_context_bare_pronoun
+  ---
+  duration_ms: 1.148084
+  type: 'test'
+  ...
+# Subtest: iris adversarial: missing_context_that_one
+ok 35 - iris adversarial: missing_context_that_one
+  ---
+  duration_ms: 4.7385
+  type: 'test'
+  ...
+# Subtest: iris adversarial: missing_context_area_only
+ok 36 - iris adversarial: missing_context_area_only
+  ---
+  duration_ms: 0.541792
+  type: 'test'
+  ...
+# Subtest: iris adversarial: missing_context_attachment_only
+ok 37 - iris adversarial: missing_context_attachment_only
+  ---
+  duration_ms: 0.185417
+  type: 'test'
+  ...
+# Subtest: iris adversarial: low_confidence_one_word
+ok 38 - iris adversarial: low_confidence_one_word
+  ---
+  duration_ms: 5.685708
+  type: 'test'
+  ...
+# Subtest: iris adversarial: low_confidence_wrong_person
+ok 39 - iris adversarial: low_confidence_wrong_person
+  ---
+  duration_ms: 0.243708
+  type: 'test'
+  ...
+# Subtest: iris adversarial: low_confidence_mixed_language
+ok 40 - iris adversarial: low_confidence_mixed_language
+  ---
+  duration_ms: 0.223792
+  type: 'test'
+  ...
+# Subtest: iris adversarial: low_confidence_typos
+ok 41 - iris adversarial: low_confidence_typos
+  ---
+  duration_ms: 0.096333
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_receipt_email
+ok 42 - iris adversarial: no_reply_receipt_email
+  ---
+  duration_ms: 0.056
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_security_alert
+ok 43 - iris adversarial: no_reply_security_alert
+  ---
+  duration_ms: 0.052208
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_account_verification
+ok 44 - iris adversarial: no_reply_account_verification
+  ---
+  duration_ms: 0.051542
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_seo_pitch
+ok 45 - iris adversarial: no_reply_seo_pitch
+  ---
+  duration_ms: 0.074
+  type: 'test'
+  ...
+# Subtest: iris adversarial: handoff_asks_for_attorney
+ok 46 - iris adversarial: handoff_asks_for_attorney
+  ---
+  duration_ms: 0.978917
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_two_addresses_one_ask
+ok 47 - iris adversarial: confusion_two_addresses_one_ask
+  ---
+  duration_ms: 0.432084
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_pivot_after_rejection
+ok 48 - iris adversarial: confusion_pivot_after_rejection
+  ---
+  duration_ms: 0.5275
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_seller_and_buyer_same_email
+ok 49 - iris adversarial: confusion_seller_and_buyer_same_email
+  ---
+  duration_ms: 2.699791
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_answers_only_budget
+ok 50 - iris adversarial: confusion_answers_only_budget
+  ---
+  duration_ms: 0.717791
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_negative_then_positive
+ok 51 - iris adversarial: confusion_negative_then_positive
+  ---
+  duration_ms: 2.557417
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_forwarded_listing_thread
+ok 52 - iris adversarial: confusion_forwarded_listing_thread
+  ---
+  duration_ms: 1.675417
+  type: 'test'
+  ...
+# Subtest: iris adversarial: confusion_pronoun_with_labelled_context
+ok 53 - iris adversarial: confusion_pronoun_with_labelled_context
+  ---
+  duration_ms: 0.172417
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_duplicate_optout_then_question
+ok 54 - iris adversarial: no_reply_duplicate_optout_then_question
+  ---
+  duration_ms: 0.147
+  type: 'test'
+  ...
+# Subtest: iris adversarial: no_reply_offtopic_vendor_reaches_classifier
+ok 55 - iris adversarial: no_reply_offtopic_vendor_reaches_classifier
+  ---
+  duration_ms: 0.425625
+  type: 'test'
+  ...
+# Subtest: iris adversarial: duplicate same-thread follow-ups coalesce to one reply
+ok 56 - iris adversarial: duplicate same-thread follow-ups coalesce to one reply
+  ---
+  duration_ms: 0.425166
+  type: 'test'
+  ...
+# Subtest: iris adversarial: an identical resend on a fresh thread is not silently dropped
+ok 57 - iris adversarial: an identical resend on a fresh thread is not silently dropped
+  ---
+  duration_ms: 0.09925
+  type: 'test'
+  ...
+# Subtest: iris adversarial: compliance patterns are word-bounded
+ok 58 - iris adversarial: compliance patterns are word-bounded
+  ---
+  duration_ms: 1.124459
+  type: 'test'
+  ...
+# Subtest: iris adversarial: review drafts answer the safe part for every sensitive flag
+ok 59 - iris adversarial: review drafts answer the safe part for every sensitive flag
+  ---
+  duration_ms: 2.943291
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_property_inquiry
+ok 60 - social gate: ig_text_property_inquiry
+  ---
+  duration_ms: 30.462833
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_general_inquiry_no_address
+ok 61 - social gate: ig_text_general_inquiry_no_address
+  ---
+  duration_ms: 5.313959
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_meme_chatter
+ok 62 - social gate: ig_text_meme_chatter
+  ---
+  duration_ms: 4.404334
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_greeting_only
+ok 63 - social gate: ig_text_greeting_only
+  ---
+  duration_ms: 2.884917
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_personal_with_home_word
+ok 64 - social gate: ig_text_personal_with_home_word
+  ---
+  duration_ms: 0.3705
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_handoff_commission
+ok 65 - social gate: ig_text_handoff_commission
+  ---
+  duration_ms: 0.435291
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_injection
+ok 66 - social gate: ig_text_injection
+  ---
+  duration_ms: 0.113209
+  type: 'test'
+  ...
+# Subtest: social gate: ig_text_injection_with_address
+ok 67 - social gate: ig_text_injection_with_address
+  ---
+  duration_ms: 0.203333
+  type: 'test'
+  ...
+# Subtest: social gate: ig_direct_photo_engages
+ok 68 - social gate: ig_direct_photo_engages
+  ---
+  duration_ms: 3.121916
+  type: 'test'
+  ...
+# Subtest: social gate: ig_direct_video_engages
+ok 69 - social gate: ig_direct_video_engages
+  ---
+  duration_ms: 6.533292
+  type: 'test'
+  ...
+# Subtest: social gate: ig_direct_media_uninspectable_still_engages
+ok 70 - social gate: ig_direct_media_uninspectable_still_engages
+  ---
+  duration_ms: 4.134
+  type: 'test'
+  ...
+# Subtest: social gate: ig_direct_voice_note_engages
+ok 71 - social gate: ig_direct_voice_note_engages
+  ---
+  duration_ms: 3.648042
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_listing_with_details
+ok 72 - social gate: ig_shared_listing_with_details
+  ---
+  duration_ms: 4.432708
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_listing_details_from_thumbnail
+ok 73 - social gate: ig_shared_listing_details_from_thumbnail
+  ---
+  duration_ms: 0.696125
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_vague_real_estate_post
+ok 74 - social gate: ig_shared_vague_real_estate_post
+  ---
+  duration_ms: 0.163791
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_meme_post
+ok 75 - social gate: ig_shared_meme_post
+  ---
+  duration_ms: 0.083375
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_business_reel
+ok 76 - social gate: ig_shared_business_reel
+  ---
+  duration_ms: 0.137583
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_inaccessible
+ok 77 - social gate: ig_shared_post_inaccessible
+  ---
+  duration_ms: 0.068792
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_heuristic_summary_is_not_evidence
+ok 78 - social gate: ig_shared_post_heuristic_summary_is_not_evidence
+  ---
+  duration_ms: 0.0875
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_malicious_caption
+ok 79 - social gate: ig_shared_post_malicious_caption
+  ---
+  duration_ms: 0.072125
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_injection_in_media_evidence
+ok 80 - social gate: ig_shared_post_injection_in_media_evidence
+  ---
+  duration_ms: 0.083375
+  type: 'test'
+  ...
+# Subtest: social gate: ig_story_mention_abstains
+ok 81 - social gate: ig_story_mention_abstains
+  ---
+  duration_ms: 0.048417
+  type: 'test'
+  ...
+# Subtest: social gate: ig_story_mention_with_address_engages
+ok 82 - social gate: ig_story_mention_with_address_engages
+  ---
+  duration_ms: 0.131917
+  type: 'test'
+  ...
+# Subtest: social gate: ig_sticker_abstains
+ok 83 - social gate: ig_sticker_abstains
+  ---
+  duration_ms: 0.158292
+  type: 'test'
+  ...
+# Subtest: social gate: ig_empty_message_abstains
+ok 84 - social gate: ig_empty_message_abstains
+  ---
+  duration_ms: 0.105291
+  type: 'test'
+  ...
+# Subtest: social gate: ig_attachment_placeholder_only_abstains
+ok 85 - social gate: ig_attachment_placeholder_only_abstains
+  ---
+  duration_ms: 0.096791
+  type: 'test'
+  ...
+# Subtest: social gate: ig_routed_ad_dm_engages
+ok 86 - social gate: ig_routed_ad_dm_engages
+  ---
+  duration_ms: 0.15
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_single_soft_detail_abstains
+ok 87 - social gate: ig_shared_post_single_soft_detail_abstains
+  ---
+  duration_ms: 0.529542
+  type: 'test'
+  ...
+# Subtest: social gate: ig_shared_post_two_soft_details_engages
+ok 88 - social gate: ig_shared_post_two_soft_details_engages
+  ---
+  duration_ms: 0.43525
+  type: 'test'
+  ...
+# Subtest: social gate: property details need something concrete, not vibes
+ok 89 - social gate: property details need something concrete, not vibes
+  ---
+  duration_ms: 0.339958
+  type: 'test'
+  ...
+# Subtest: social gate: heuristic envelope summaries are not media evidence
+ok 90 - social gate: heuristic envelope summaries are not media evidence
+  ---
+  duration_ms: 0.139083
+  type: 'test'
+  ...
+# Subtest: social gate: low confidence alone is never a reason to reply
+ok 91 - social gate: low confidence alone is never a reason to reply
+  ---
+  duration_ms: 5.087167
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_showing_request
+ok 92 - theo adversarial: sms_showing_request
+  ---
+  duration_ms: 4.677416
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_seller_valuation
+ok 93 - theo adversarial: sms_seller_valuation
+  ---
+  duration_ms: 77.85425
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_renter_lead
+ok 94 - theo adversarial: sms_renter_lead
+  ---
+  duration_ms: 2.879583
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_property_details
+ok 95 - theo adversarial: sms_property_details
+  ---
+  duration_ms: 1.000458
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_fair_housing_section8
+ok 96 - theo adversarial: sms_fair_housing_section8
+  ---
+  duration_ms: 0.191458
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_fair_housing_school_rating
+ok 97 - theo adversarial: sms_fair_housing_school_rating
+  ---
+  duration_ms: 0.110167
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_mortgage_preapproval
+ok 98 - theo adversarial: sms_mortgage_preapproval
+  ---
+  duration_ms: 0.26725
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_legal_eviction
+ok 99 - theo adversarial: sms_legal_eviction
+  ---
+  duration_ms: 0.119625
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_legal_break_lease
+ok 100 - theo adversarial: sms_legal_break_lease
+  ---
+  duration_ms: 0.114208
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_contract_commission
+ok 101 - theo adversarial: sms_contract_commission
+  ---
+  duration_ms: 0.116416
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_angry_scam
+ok 102 - theo adversarial: sms_angry_scam
+  ---
+  duration_ms: 0.09375
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_asks_for_human
+ok 103 - theo adversarial: sms_asks_for_human
+  ---
+  duration_ms: 0.090833
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_spam_crypto
+ok 104 - theo adversarial: sms_spam_crypto
+  ---
+  duration_ms: 0.108166
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_spam_empty
+ok 105 - theo adversarial: sms_spam_empty
+  ---
+  duration_ms: 13.484375
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_do_not_contact_lead
+ok 106 - theo adversarial: sms_do_not_contact_lead
+  ---
+  duration_ms: 1.546709
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_consent_no
+ok 107 - theo adversarial: sms_consent_no
+  ---
+  duration_ms: 0.191708
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_typos_options
+ok 108 - theo adversarial: sms_typos_options
+  ---
+  duration_ms: 0.093167
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_hosue_typo_is_not_a_lawsuit
+ok 109 - theo adversarial: sms_hosue_typo_is_not_a_lawsuit
+  ---
+  duration_ms: 0.389
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_contractor_is_not_a_contract
+ok 110 - theo adversarial: sms_contractor_is_not_a_contract
+  ---
+  duration_ms: 0.117375
+  type: 'test'
+  ...
+# Subtest: theo adversarial: sms_pursue_is_not_sue
+ok 111 - theo adversarial: sms_pursue_is_not_sue
+  ---
+  duration_ms: 0.058625
+  type: 'test'
+  ...
+# Subtest: aria adversarial: unknown caller gets no welcome-back and no invented history
+ok 112 - aria adversarial: unknown caller gets no welcome-back and no invented history
+  ---
+  duration_ms: 0.864667
+  type: 'test'
+  ...
+# Subtest: aria adversarial: a recognised caller is loaded silently, never announced
+ok 113 - aria adversarial: a recognised caller is loaded silently, never announced
+  ---
+  duration_ms: 8.79375
+  type: 'test'
+  ...
+# Subtest: aria adversarial: caller identity confusion does not overwrite the matched lead
+ok 114 - aria adversarial: caller identity confusion does not overwrite the matched lead
+  ---
+  duration_ms: 3.005833
+  type: 'test'
+  ...
+# Subtest: aria adversarial: no property match produces no fabricated facts
+ok 115 - aria adversarial: no property match produces no fabricated facts
+  ---
+  duration_ms: 0.805792
+  type: 'test'
+  ...
+# Subtest: aria adversarial: a timed-out lookup is reported as async, not as a result
+ok 116 - aria adversarial: a timed-out lookup is reported as async, not as a result
+  ---
+  duration_ms: 0.275959
+  type: 'test'
+  ...
+# Subtest: aria adversarial: prompt injection in a tool argument is data, not instruction
+ok 117 - aria adversarial: prompt injection in a tool argument is data, not instruction
+  ---
+  duration_ms: 0.308375
+  type: 'test'
+  ...
+# Subtest: aria adversarial: STT-mangled street suffixes still resolve to one base address
+ok 118 - aria adversarial: STT-mangled street suffixes still resolve to one base address
+  ---
+  duration_ms: 1.485125
+  type: 'test'
+  ...
+# Subtest: aria adversarial: an unknown tool name fails loudly instead of improvising
+ok 119 - aria adversarial: an unknown tool name fails loudly instead of improvising
+  ---
+  duration_ms: 0.58575
+  type: 'test'
+  ...
+# Subtest: aria adversarial: repeat calls in one session do not duplicate the lead record
+ok 120 - aria adversarial: repeat calls in one session do not duplicate the lead record
+  ---
+  duration_ms: 0.399625
+  type: 'test'
+  ...
+# Subtest: aria adversarial: the provisioned assistant carries every required safety rule
+ok 121 - aria adversarial: the provisioned assistant carries every required safety rule
+  ---
+  duration_ms: 4.092834
+  type: 'test'
+  ...
+# Subtest: aria adversarial: an uncoverable request is captured as a callback, not a dead end
+ok 122 - aria adversarial: an uncoverable request is captured as a callback, not a dead end
+  ---
+  duration_ms: 2.98025
+  type: 'test'
+  ...
+# Subtest: aria adversarial: a callback with no topic asks instead of logging a blank record
+ok 123 - aria adversarial: a callback with no topic asks instead of logging a blank record
+  ---
+  duration_ms: 0.427708
+  type: 'test'
+  ...
+# Subtest: planAgentAction blocks outbound sends until shared trigger context exists
+ok 124 - planAgentAction blocks outbound sends until shared trigger context exists
+  ---
+  duration_ms: 1.165417
+  type: 'test'
+  ...
+# Subtest: planAgentAction respects client autosend settings for scalable onboarding
+ok 125 - planAgentAction respects client autosend settings for scalable onboarding
+  ---
+  duration_ms: 0.3025
+  type: 'test'
+  ...
+# Subtest: planAgentAction requires call consent before outbound call
+ok 126 - planAgentAction requires call consent before outbound call
+  ---
+  duration_ms: 0.304333
+  type: 'test'
+  ...
+# Subtest: executeAgentAction sends through shared reply dependency and records audit event
+ok 127 - executeAgentAction sends through shared reply dependency and records audit event
+  ---
+  duration_ms: 1.198666
+  type: 'test'
+  ...
+# Subtest: executeAgentAction records blocked actions without provider call
+ok 128 - executeAgentAction records blocked actions without provider call
+  ---
+  duration_ms: 0.388959
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: builds Austin property link from id
+ok 129 - aiSearchPropertyUrl: builds Austin property link from id
+  ---
+  duration_ms: 1.139792
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: builds from a property row id field
+ok 130 - aiSearchPropertyUrl: builds from a property row id field
+  ---
+  duration_ms: 0.173666
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: extracts id from existing ai-search listing_url
+ok 131 - aiSearchPropertyUrl: extracts id from existing ai-search listing_url
+  ---
+  duration_ms: 0.282
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: preserves existing listing_url when config is missing
+ok 132 - aiSearchPropertyUrl: preserves existing listing_url when config is missing
+  ---
+  duration_ms: 0.75175
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: preserves existing listing_url when id is missing
+ok 133 - aiSearchPropertyUrl: preserves existing listing_url when id is missing
+  ---
+  duration_ms: 1.568209
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: degrades to empty string when config and fallback are missing
+ok 134 - aiSearchPropertyUrl: degrades to empty string when config and fallback are missing
+  ---
+  duration_ms: 0.103542
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: encodes property id and params
+ok 135 - aiSearchPropertyUrl: encodes property id and params
+  ---
+  duration_ms: 3.439958
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyUrl: can omit no_squeeze
+ok 136 - aiSearchPropertyUrl: can omit no_squeeze
+  ---
+  duration_ms: 0.173958
+  type: 'test'
+  ...
+# Subtest: resolveAiSearchConfig: accepts server-only base url alias
+ok 137 - resolveAiSearchConfig: accepts server-only base url alias
+  ---
+  duration_ms: 1.896333
+  type: 'test'
+  ...
+# Subtest: aiSearchPropertyId: supports common row id fields
+ok 138 - aiSearchPropertyId: supports common row id fields
+  ---
+  duration_ms: 4.141833
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: uses only Vapi-native inline call controls
+ok 139 - buildAriaAssistant: uses only Vapi-native inline call controls
+  ---
+  duration_ms: 7.996583
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: transferCall destination is the human transfer number
+ok 140 - buildAriaAssistant: transferCall destination is the human transfer number
+  ---
+  duration_ms: 0.548583
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: sends final call reports to the app lifecycle webhook
+ok 141 - buildAriaAssistant: sends final call reports to the app lifecycle webhook
+  ---
+  duration_ms: 0.274542
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: keeps saved first message inbound-safe
+ok 142 - buildAriaAssistant: keeps saved first message inbound-safe
+  ---
+  duration_ms: 0.311917
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: voice brand can differ from inbox client name
+ok 143 - buildAriaAssistant: voice brand can differ from inbox client name
+  ---
+  duration_ms: 0.434
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: custom voice id wired, system prompt branded
+ok 144 - buildAriaAssistant: custom voice id wired, system prompt branded
+  ---
+  duration_ms: 5.317917
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: sets Vapi response delay
+ok 145 - buildAriaAssistant: sets Vapi response delay
+  ---
+  duration_ms: 0.754708
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: supports ElevenLabs low-latency voice tuning
+ok 146 - buildAriaAssistant: supports ElevenLabs low-latency voice tuning
+  ---
+  duration_ms: 0.334375
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: allows explicit fallback voice for Vapi publish validation
+ok 147 - buildAriaAssistant: allows explicit fallback voice for Vapi publish validation
+  ---
+  duration_ms: 0.786708
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: qualifyLead captures channel and bed-bath preferences
+ok 148 - buildAriaAssistant: qualifyLead captures channel and bed-bath preferences
+  ---
+  duration_ms: 2.331208
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: extracts advanced buyer and seller qualification
+ok 149 - buildAriaAssistant: extracts advanced buyer and seller qualification
+  ---
+  duration_ms: 0.506459
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: no voice block when voiceId unset
+ok 150 - buildAriaAssistant: no voice block when voiceId unset
+  ---
+  duration_ms: 0.105208
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: appends styleContext to system prompt when provided
+ok 151 - buildAriaAssistant: appends styleContext to system prompt when provided
+  ---
+  duration_ms: 0.11825
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: no style text when styleContext absent
+ok 152 - buildAriaAssistant: no style text when styleContext absent
+  ---
+  duration_ms: 0.09175
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: defaults to matching OpenAI provider for GPT models
+ok 153 - buildAriaAssistant: defaults to matching OpenAI provider for GPT models
+  ---
+  duration_ms: 0.072542
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: allows explicit Anthropic model/provider override
+ok 154 - buildAriaAssistant: allows explicit Anthropic model/provider override
+  ---
+  duration_ms: 0.073541
+  type: 'test'
+  ...
+# Subtest: buildAriaAssistant: every opener discloses that the call is recorded
+ok 155 - buildAriaAssistant: every opener discloses that the call is recorded
+  ---
+  duration_ms: 171.597708
+  type: 'test'
+  ...
+# Subtest: recordingDisclosure: configurable, and disableable only by explicit opt-out
+ok 156 - recordingDisclosure: configurable, and disableable only by explicit opt-out
+  ---
+  duration_ms: 4.237208
+  type: 'test'
+  ...
+# Subtest: speakProperty: natural spoken sentence, no markdown
+ok 157 - speakProperty: natural spoken sentence, no markdown
+  ---
+  duration_ms: 88.845959
+  type: 'test'
+  ...
+# Subtest: speakProperty: partial data still readable
+ok 158 - speakProperty: partial data still readable
+  ---
+  duration_ms: 0.801166
+  type: 'test'
+  ...
+# Subtest: speakProperty: includes rich property context when available
+ok 159 - speakProperty: includes rich property context when available
+  ---
+  duration_ms: 0.449958
+  type: 'test'
+  ...
+# Subtest: propertySmsBody: includes address, facts, link
+ok 160 - propertySmsBody: includes address, facts, link
+  ---
+  duration_ms: 0.529625
+  type: 'test'
+  ...
+# Subtest: propertySmsBody: uses configured AI search link when property id is available
+ok 161 - propertySmsBody: uses configured AI search link when property id is available
+  ---
+  duration_ms: 0.327709
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: enrichment wins inside budget
+ok 162 - lookupPropertyForVoice: enrichment wins inside budget
+  ---
+  duration_ms: 1.612667
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: uses lead memory to correct STT-misheard address
+ok 163 - lookupPropertyForVoice: uses lead memory to correct STT-misheard address
+  ---
+  duration_ms: 255.608833
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: filters junk property rows and asks for confirmation
+ok 164 - lookupPropertyForVoice: filters junk property rows and asks for confirmation
+  ---
+  duration_ms: 8.005
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: timeout speaks cache + schedules SMS
+ok 165 - lookupPropertyForVoice: timeout speaks cache + schedules SMS
+  ---
+  duration_ms: 462.72225
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: timeout, no cache, no phone -> graceful
+ok 166 - lookupPropertyForVoice: timeout, no cache, no phone -> graceful
+  ---
+  duration_ms: 20.813083
+  type: 'test'
+  ...
+# Subtest: lookupPropertyForVoice: empty address asks for one
+ok 167 - lookupPropertyForVoice: empty address asks for one
+  ---
+  duration_ms: 0.185875
+  type: 'test'
+  ...
+# Subtest: speakSearchResults: lists up to 3 options with a question
+ok 168 - speakSearchResults: lists up to 3 options with a question
+  ---
+  duration_ms: 0.342917
+  type: 'test'
+  ...
+# Subtest: speakSearchResults: empty offers a follow-up
+ok 169 - speakSearchResults: empty offers a follow-up
+  ---
+  duration_ms: 0.068666
+  type: 'test'
+  ...
+# Subtest: searchPropertiesForVoice: builds criteria and speaks matches
+ok 170 - searchPropertiesForVoice: builds criteria and speaks matches
+  ---
+  duration_ms: 0.798584
+  type: 'test'
+  ...
+# Subtest: searchPropertiesForVoice: enrichment can win and be cached
+ok 171 - searchPropertiesForVoice: enrichment can win and be cached
+  ---
+  duration_ms: 0.249875
+  type: 'test'
+  ...
+# Subtest: searchPropertiesForVoice: timeout speaks cache and texts fresh results
+ok 172 - searchPropertiesForVoice: timeout speaks cache and texts fresh results
+  ---
+  duration_ms: 12.662125
+  type: 'test'
+  ...
+# Subtest: searchPropertiesForVoice: no matches asks for search criteria instead of deferring to text
+ok 173 - searchPropertiesForVoice: no matches asks for search criteria instead of deferring to text
+  ---
+  duration_ms: 5.242459
+  type: 'test'
+  ...
+# Subtest: getCallerContext: returning caller summary + matched action
+ok 174 - getCallerContext: returning caller summary + matched action
+  ---
+  duration_ms: 10.625958
+  type: 'test'
+  ...
+# Subtest: getCallerContext: unknown caller
+ok 175 - getCallerContext: unknown caller
+  ---
+  duration_ms: 0.209875
+  type: 'test'
+  ...
+# Subtest: lookupProperty: relays spoken result + logs event
+ok 176 - lookupProperty: relays spoken result + logs event
+  ---
+  duration_ms: 0.269959
+  type: 'test'
+  ...
+# Subtest: lookupProperty: hydrates prior lead memory before lookup
+ok 177 - lookupProperty: hydrates prior lead memory before lookup
+  ---
+  duration_ms: 2.984542
+  type: 'test'
+  ...
+# Subtest: lookupProperty: failed lookup does not overwrite known property interest
+ok 178 - lookupProperty: failed lookup does not overwrite known property interest
+  ---
+  duration_ms: 1.38825
+  type: 'test'
+  ...
+# Subtest: lookupProperty: timeout sets async-sms action
+ok 179 - lookupProperty: timeout sets async-sms action
+  ---
+  duration_ms: 0.160333
+  type: 'test'
+  ...
+# Subtest: searchProperties: relays matches + results action
+ok 180 - searchProperties: relays matches + results action
+  ---
+  duration_ms: 11.594584
+  type: 'test'
+  ...
+# Subtest: searchProperties: empty result action
+ok 181 - searchProperties: empty result action
+  ---
+  duration_ms: 2.588208
+  type: 'test'
+  ...
+# Subtest: checkAvailability: returns available slots from repo calendar stack
+ok 182 - checkAvailability: returns available slots from repo calendar stack
+  ---
+  duration_ms: 149.426084
+  type: 'test'
+  ...
+# Subtest: checkAvailability: no slots asks for another time
+ok 183 - checkAvailability: no slots asks for another time
+  ---
+  duration_ms: 1.432583
+  type: 'test'
+  ...
+# Subtest: bookConsultation: maps Vapi appointment shape into server appointment booking
+ok 184 - bookConsultation: maps Vapi appointment shape into server appointment booking
+  ---
+  duration_ms: 4.521875
+  type: 'test'
+  ...
+# Subtest: sendPropertyDetailsSms: sends listing details and photo media
+ok 185 - sendPropertyDetailsSms: sends listing details and photo media
+  ---
+  duration_ms: 108.588084
+  type: 'test'
+  ...
+# Subtest: sendPropertyDetailsSms: searches when no exact address was selected
+ok 186 - sendPropertyDetailsSms: searches when no exact address was selected
+  ---
+  duration_ms: 1.480625
+  type: 'test'
+  ...
+# Subtest: qualifyLead: captures fields, normalizes consent + intent
+ok 187 - qualifyLead: captures fields, normalizes consent + intent
+  ---
+  duration_ms: 0.867125
+  type: 'test'
+  ...
+# Subtest: unknown tool: safe error outcome
+ok 188 - unknown tool: safe error outcome
+  ---
+  duration_ms: 0.323125
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: unavailable when no CRM
+ok 189 - scheduleShowing: unavailable when no CRM
+  ---
+  duration_ms: 1.252625
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: books with CRM + calendar
+ok 190 - scheduleShowing: books with CRM + calendar
+  ---
+  duration_ms: 2.930666
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: book without time asks for one
+ok 191 - scheduleShowing: book without time asks for one
+  ---
+  duration_ms: 0.268041
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: cancel uses next upcoming
+ok 192 - scheduleShowing: cancel uses next upcoming
+  ---
+  duration_ms: 0.545333
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: needs identity when phone + email missing
+ok 193 - scheduleShowing: needs identity when phone + email missing
+  ---
+  duration_ms: 0.09725
+  type: 'test'
+  ...
+# Subtest: syncToCrm: upserts + logs note
+ok 194 - syncToCrm: upserts + logs note
+  ---
+  duration_ms: 0.491167
+  type: 'test'
+  ...
+# Subtest: syncToCrm: skipped without CRM
+ok 195 - syncToCrm: skipped without CRM
+  ---
+  duration_ms: 0.091625
+  type: 'test'
+  ...
+# Subtest: every tool tags channel voice + Iris
+ok 196 - every tool tags channel voice + Iris
+  ---
+  duration_ms: 2.048167
+  type: 'test'
+  ...
+# Subtest: sendMessage: sends arbitrary caller-composed text, not just property details
+ok 197 - sendMessage: sends arbitrary caller-composed text, not just property details
+  ---
+  duration_ms: 0.74775
+  type: 'test'
+  ...
+# Subtest: sendMessage: asks for phone when missing instead of failing silently
+ok 198 - sendMessage: asks for phone when missing instead of failing silently
+  ---
+  duration_ms: 0.097625
+  type: 'test'
+  ...
+# Subtest: sendMessage: asks for content when body missing
+ok 199 - sendMessage: asks for content when body missing
+  ---
+  duration_ms: 0.064
+  type: 'test'
+  ...
+# Subtest: sendMessage: reports send failure without throwing, flags for human follow-up
+ok 200 - sendMessage: reports send failure without throwing, flags for human follow-up
+  ---
+  duration_ms: 0.26325
+  type: 'test'
+  ...
+# Subtest: sendEmail: sends with recipient/subject/body from confirmed args — this is the Naomi-call fix
+ok 201 - sendEmail: sends with recipient/subject/body from confirmed args — this is the Naomi-call fix
+  ---
+  duration_ms: 0.679417
+  type: 'test'
+  ...
+# Subtest: sendEmail: asks for missing recipient/body instead of declining outright
+ok 202 - sendEmail: asks for missing recipient/body instead of declining outright
+  ---
+  duration_ms: 0.210875
+  type: 'test'
+  ...
+# Subtest: sendEmail: defaults a subject when none given
+ok 203 - sendEmail: defaults a subject when none given
+  ---
+  duration_ms: 0.139334
+  type: 'test'
+  ...
+# Subtest: sendEmail: send failure routes to human follow-up, does not throw
+ok 204 - sendEmail: send failure routes to human follow-up, does not throw
+  ---
+  duration_ms: 0.118458
+  type: 'test'
+  ...
+# Subtest: scheduleCallback: logs a generic (non-property) callback — the core Naomi-call fallback fix
+ok 205 - scheduleCallback: logs a generic (non-property) callback — the core Naomi-call fallback fix
+  ---
+  duration_ms: 0.858042
+  type: 'test'
+  ...
+# Subtest: scheduleCallback: asks for missing phone/topic instead of just declining
+ok 206 - scheduleCallback: asks for missing phone/topic instead of just declining
+  ---
+  duration_ms: 0.322375
+  type: 'test'
+  ...
+# Subtest: scheduleCallback: DB failure still gives the caller a clean answer, never throws to Vapi
+ok 207 - scheduleCallback: DB failure still gives the caller a clean answer, never throws to Vapi
+  ---
+  duration_ms: 0.164958
+  type: 'test'
+  ...
+# Subtest: handleAriaToolCalls: records event + returns results body
+ok 208 - handleAriaToolCalls: records event + returns results body
+  ---
+  duration_ms: 270.884417
+  type: 'test'
+  ...
+# Subtest: handleAriaToolCalls: notifies on showing_booked, not on lookup
+ok 209 - handleAriaToolCalls: notifies on showing_booked, not on lookup
+  ---
+  duration_ms: 2.71425
+  type: 'test'
+  ...
+# Subtest: handleAriaEndOfCall: notifies on transfer endedReason
+ok 210 - handleAriaEndOfCall: notifies on transfer endedReason
+  ---
+  duration_ms: 46.462583
+  type: 'test'
+  ...
+# Subtest: handleAriaEndOfCall: persists outbound direction from Vapi call type
+ok 211 - handleAriaEndOfCall: persists outbound direction from Vapi call type
+  ---
+  duration_ms: 0.8875
+  type: 'test'
+  ...
+# Subtest: handleAriaEndOfCall: defaults to inbound direction
+ok 212 - handleAriaEndOfCall: defaults to inbound direction
+  ---
+  duration_ms: 0.175666
+  type: 'test'
+  ...
+# Subtest: handleAriaEndOfCall: no notify on normal hangup
+ok 213 - handleAriaEndOfCall: no notify on normal hangup
+  ---
+  duration_ms: 0.204667
+  type: 'test'
+  ...
+# Subtest: manual browser voice upload falls back when ffmpeg cannot decode the webm
+ok 214 - manual browser voice upload falls back when ffmpeg cannot decode the webm
+  ---
+  duration_ms: 668.755125
+  type: 'test'
+  ...
+# Subtest: voice clone sample falls back when browser webm cannot be transcoded
+ok 215 - voice clone sample falls back when browser webm cannot be transcoded
+  ---
+  duration_ms: 36.821417
+  type: 'test'
+  ...
+# Subtest: transcription media accepts video files and falls back safely when ffmpeg cannot decode
+ok 216 - transcription media accepts video files and falls back safely when ffmpeg cannot decode
+  ---
+  duration_ms: 160.145833
+  type: 'test'
+  ...
+# Subtest: nextTouch: speed-to-lead on first contact picks a soft channel
+ok 217 - nextTouch: speed-to-lead on first contact picks a soft channel
+  ---
+  duration_ms: 208.486
+  type: 'test'
+  ...
+# Subtest: nextTouch: stops when opted out
+ok 218 - nextTouch: stops when opted out
+  ---
+  duration_ms: 0.428541
+  type: 'test'
+  ...
+# Subtest: nextTouch: holds when lead replied after last outbound
+ok 219 - nextTouch: holds when lead replied after last outbound
+  ---
+  duration_ms: 0.34
+  type: 'test'
+  ...
+# Subtest: nextTouch: stops at max touches
+ok 220 - nextTouch: stops at max touches
+  ---
+  duration_ms: 0.258541
+  type: 'test'
+  ...
+# Subtest: nextTouch: waits when min gap not elapsed
+ok 221 - nextTouch: waits when min gap not elapsed
+  ---
+  duration_ms: 0.138167
+  type: 'test'
+  ...
+# Subtest: nextTouch: waits when already touched today
+ok 222 - nextTouch: waits when already touched today
+  ---
+  duration_ms: 0.355333
+  type: 'test'
+  ...
+# Subtest: nextTouch: voice only after a soft touch, in window, with consent
+ok 223 - nextTouch: voice only after a soft touch, in window, with consent
+  ---
+  duration_ms: 1.901959
+  type: 'test'
+  ...
+# Subtest: nextTouch: first touch still starts soft even when voice is preferred
+ok 224 - nextTouch: first touch still starts soft even when voice is preferred
+  ---
+  duration_ms: 0.26825
+  type: 'test'
+  ...
+# Subtest: nextTouch: priority leads can move to voice after a soft touch
+ok 225 - nextTouch: priority leads can move to voice after a soft touch
+  ---
+  duration_ms: 0.564292
+  type: 'test'
+  ...
+# Subtest: nextTouch: voice skipped outside call window
+ok 226 - nextTouch: voice skipped outside call window
+  ---
+  duration_ms: 0.614792
+  type: 'test'
+  ...
+# Subtest: nextTouch: respects sms opt-out, falls to email
+ok 227 - nextTouch: respects sms opt-out, falls to email
+  ---
+  duration_ms: 0.241625
+  type: 'test'
+  ...
+# Subtest: leadIdentity: prefers normalized phone, then email, then name
+ok 228 - leadIdentity: prefers normalized phone, then email, then name
+  ---
+  duration_ms: 11.769875
+  type: 'test'
+  ...
+# Subtest: planCadenceQueue: queues SMS, email, voice, WhatsApp, Messenger, Instagram, and manual human tasks
+ok 229 - planCadenceQueue: queues SMS, email, voice, WhatsApp, Messenger, Instagram, and manual human tasks
+  ---
+  duration_ms: 616.426458
+  type: 'test'
+  ...
+# Subtest: planCadenceQueue: task IDs are deterministic by lead identity, channel, and local due date
+ok 230 - planCadenceQueue: task IDs are deterministic by lead identity, channel, and local due date
+  ---
+  duration_ms: 57.837167
+  type: 'test'
+  ...
+# Subtest: planCadenceQueue: keeps stop-on-reply and wait decisions as skip reasons
+ok 231 - planCadenceQueue: keeps stop-on-reply and wait decisions as skip reasons
+  ---
+  duration_ms: 0.685292
+  type: 'test'
+  ...
+# Subtest: planCadenceQueue: blocks unsafe reserved/test numbers before queueing
+ok 232 - planCadenceQueue: blocks unsafe reserved/test numbers before queueing
+  ---
+  duration_ms: 8.191875
+  type: 'test'
+  ...
+# Subtest: planCadenceQueue: defers automated touches outside the contact window
+ok 233 - planCadenceQueue: defers automated touches outside the contact window
+  ---
+  duration_ms: 2.139916
+  type: 'test'
+  ...
+# Subtest: planCadenceForLead produces durable speed-to-lead task from lead state
+ok 234 - planCadenceForLead produces durable speed-to-lead task from lead state
+  ---
+  duration_ms: 1202.060625
+  type: 'test'
+  ...
+# Subtest: planCadenceForLead holds when lead replied after outbound
+ok 235 - planCadenceForLead holds when lead replied after outbound
+  ---
+  duration_ms: 0.883667
+  type: 'test'
+  ...
+# Subtest: buildIcsInvite: valid VCALENDAR with start/end/summary
+ok 236 - buildIcsInvite: valid VCALENDAR with start/end/summary
+  ---
+  duration_ms: 6.601083
+  type: 'test'
+  ...
+# Subtest: scheduleShowing: upserts contact, books, returns ics + spoken
+ok 237 - scheduleShowing: upserts contact, books, returns ics + spoken
+  ---
+  duration_ms: 235.145459
+  type: 'test'
+  ...
+# Subtest: upcomingShowings: filters past + cancelled, sorts soonest
+ok 238 - upcomingShowings: filters past + cancelled, sorts soonest
+  ---
+  duration_ms: 2.674833
+  type: 'test'
+  ...
+# Subtest: cancelShowing: cancels next upcoming
+ok 239 - cancelShowing: cancels next upcoming
+  ---
+  duration_ms: 1.16375
+  type: 'test'
+  ...
+# Subtest: cancelShowing: no contact -> asks to confirm
+ok 240 - cancelShowing: no contact -> asks to confirm
+  ---
+  duration_ms: 0.660917
+  type: 'test'
+  ...
+# Subtest: rescheduleShowing: updates next upcoming to new time
+ok 241 - rescheduleShowing: updates next upcoming to new time
+  ---
+  duration_ms: 0.940959
+  type: 'test'
+  ...
+# Subtest: rescheduleShowing: no upcoming -> graceful
+ok 242 - rescheduleShowing: no upcoming -> graceful
+  ---
+  duration_ms: 0.145708
+  type: 'test'
+  ...
+# Subtest: generateAvailabilitySlots skips busy ranges with buffers
+ok 243 - generateAvailabilitySlots skips busy ranges with buffers
+  ---
+  duration_ms: 720.567959
+  type: 'test'
+  ...
+# Subtest: generateAvailabilitySlots honors minimum notice and max range
+ok 244 - generateAvailabilitySlots honors minimum notice and max range
+  ---
+  duration_ms: 0.498583
+  type: 'test'
+  ...
+# Subtest: detectCalendarConflicts returns slot/block pairs
+ok 245 - detectCalendarConflicts returns slot/block pairs
+  ---
+  duration_ms: 0.113917
+  type: 'test'
+  ...
+# Subtest: rangesOverlap treats canceled-adjacent boundaries correctly
+ok 246 - rangesOverlap treats canceled-adjacent boundaries correctly
+  ---
+  duration_ms: 0.07625
+  type: 'test'
+  ...
+# Subtest: listBusyRanges queries appointments and booking holds only
+ok 247 - listBusyRanges queries appointments and booking holds only
+  ---
+  duration_ms: 15.525792
+  type: 'test'
+  ...
+# Subtest: findCalendarConflicts expands lookup by buffer
+ok 248 - findCalendarConflicts expands lookup by buffer
+  ---
+  duration_ms: 0.207833
+  type: 'test'
+  ...
+# Subtest: normalizeContactInput and contactDedupeKeys build canonical identities
+ok 249 - normalizeContactInput and contactDedupeKeys build canonical identities
+  ---
+  duration_ms: 0.5705
+  type: 'test'
+  ...
+# Subtest: mergeContactInputs preserves unique channels and conservative do-not-contact
+ok 250 - mergeContactInputs preserves unique channels and conservative do-not-contact
+  ---
+  duration_ms: 4.336083
+  type: 'test'
+  ...
+# Subtest: resolver: defaults to neon when no provider configured
+ok 251 - resolver: defaults to neon when no provider configured
+  ---
+  duration_ms: 71735.64175
+  type: 'test'
+  ...
+# Subtest: resolver: picks google when CALENDAR_PROVIDER=google
+ok 252 - resolver: picks google when CALENDAR_PROVIDER=google
+  ---
+  duration_ms: 101.835334
+  type: 'test'
+  ...
+# Subtest: resolver: picks outlook when CALENDAR_PROVIDER=outlook
+ok 253 - resolver: picks outlook when CALENDAR_PROVIDER=outlook
+  ---
+  duration_ms: 250.908417
+  type: 'test'
+  ...
+# Subtest: google adapter: queryAvailability returns [] without auth (no throw)
+ok 254 - google adapter: queryAvailability returns [] without auth (no throw)
+  ---
+  duration_ms: 332.340875
+  type: 'test'
+  ...
+# Subtest: google adapter: bookAppointment returns {success:false} without auth (no throw)
+ok 255 - google adapter: bookAppointment returns {success:false} without auth (no throw)
+  ---
+  duration_ms: 12.704792
+  type: 'test'
+  ...
+# Subtest: slot generation: correctly excludes busy ranges
+ok 256 - slot generation: correctly excludes busy ranges
+  ---
+  duration_ms: 0.311708
+  type: 'test'
+  ...
+# Subtest: checkAvailability tool: calls queryAvailability dep and returns slots
+ok 257 - checkAvailability tool: calls queryAvailability dep and returns slots
+  ---
+  duration_ms: 37734.270625
+  type: 'test'
+  ...
+# Subtest: checkAvailability tool: returns helpful message when no slots
+ok 258 - checkAvailability tool: returns helpful message when no slots
+  ---
+  duration_ms: 28.358083
+  type: 'test'
+  ...
+# Subtest: checkAvailability tool: degrades gracefully on provider error
+ok 259 - checkAvailability tool: degrades gracefully on provider error
+  ---
+  duration_ms: 6.303459
+  type: 'test'
+  ...
+# Subtest: crm resolver: resolves kvcore adapter when KVCORE_API_KEY set
+ok 260 - crm resolver: resolves kvcore adapter when KVCORE_API_KEY set
+  ---
+  duration_ms: 41.597125
+  type: 'test'
+  ...
+# Subtest: crm resolver: resolves fub adapter when FUB_API_KEY set
+ok 261 - crm resolver: resolves fub adapter when FUB_API_KEY set
+  ---
+  duration_ms: 279.936917
+  type: 'test'
+  ...
+# Subtest: crm resolver: returns null when kvcore key missing
+ok 262 - crm resolver: returns null when kvcore key missing
+  ---
+  duration_ms: 16.141167
+  type: 'test'
+  ...
+# Subtest: cloneCartesiaVoice sends Cartesia clone multipart contract
+ok 263 - cloneCartesiaVoice sends Cartesia clone multipart contract
+  ---
+  duration_ms: 262.358584
+  type: 'test'
+  ...
+# Subtest: social connection display prefers newest connected account over setup fallback
+ok 264 - social connection display prefers newest connected account over setup fallback
+  ---
+  duration_ms: 1.705667
+  type: 'test'
+  ...
+# Subtest: social connection display prefers direct Meta Instagram over Composio fallback
+ok 265 - social connection display prefers direct Meta Instagram over Composio fallback
+  ---
+  duration_ms: 0.227542
+  type: 'test'
+  ...
+# Subtest: social connection display prefers direct Meta Messenger over Composio fallback
+ok 266 - social connection display prefers direct Meta Messenger over Composio fallback
+  ---
+  duration_ms: 0.145458
+  type: 'test'
+  ...
+# Subtest: social connection display exposes avatar and subtitle metadata
+ok 267 - social connection display exposes avatar and subtitle metadata
+  ---
+  duration_ms: 0.417375
+  type: 'test'
+  ...
+# Subtest: social connection display does not use static fallback identity when setup is missing
+ok 268 - social connection display does not use static fallback identity when setup is missing
+  ---
+  duration_ms: 0.260125
+  type: 'test'
+  ...
+# Subtest: social connection display marks connected account setup-needed when outbound send is incomplete
+ok 269 - social connection display marks connected account setup-needed when outbound send is incomplete
+  ---
+  duration_ms: 0.127083
+  type: 'test'
+  ...
+# Subtest: social connection display ignores non-Composio WhatsApp fallback rows
+ok 270 - social connection display ignores non-Composio WhatsApp fallback rows
+  ---
+  duration_ms: 0.176167
+  type: 'test'
+  ...
+# Subtest: social connection display does not expose opaque Composio account ids
+ok 271 - social connection display does not expose opaque Composio account ids
+  ---
+  duration_ms: 0.074833
+  type: 'test'
+  ...
+# Subtest: direct Meta mode ignores connected Composio rows for Instagram readiness
+ok 272 - direct Meta mode ignores connected Composio rows for Instagram readiness
+  ---
+  duration_ms: 0.301958
+  type: 'test'
+  ...
+# Subtest: direct Meta mode requires a page token before Messenger is ready
+ok 273 - direct Meta mode requires a page token before Messenger is ready
+  ---
+  duration_ms: 1.276333
+  type: 'test'
+  ...
+# Subtest: direct Meta mode marks Messenger ready when a page token is stored
+ok 274 - direct Meta mode marks Messenger ready when a page token is stored
+  ---
+  duration_ms: 0.136208
+  type: 'test'
+  ...
+# Subtest: normalizeChannelConnectionInput matches registry defaults
+ok 275 - normalizeChannelConnectionInput matches registry defaults
+  ---
+  duration_ms: 77.104541
+  type: 'test'
+  ...
+# Subtest: in-memory store upserts by client/channel/provider/selected asset and scopes clients
+ok 276 - in-memory store upserts by client/channel/provider/selected asset and scopes clients
+  ---
+  duration_ms: 20.565125
+  type: 'test'
+  ...
+# Subtest: env fallback reports configured direct channels without exposing secrets
+ok 277 - env fallback reports configured direct channels without exposing secrets
+  ---
+  duration_ms: 47.771083
+  type: 'test'
+  ...
+# Subtest: dashboard status falls back when database is unavailable
+ok 278 - dashboard status falls back when database is unavailable
+  ---
+  duration_ms: 6.348167
+  type: 'test'
+  ...
+# Subtest: saved connection status still includes env auth-ready channels
+ok 279 - saved connection status still includes env auth-ready channels
+  ---
+  duration_ms: 9.285041
+  type: 'test'
+  ...
+# Subtest: inferPreferredChannelFromText: detects explicit channel preference
+ok 280 - inferPreferredChannelFromText: detects explicit channel preference
+  ---
+  duration_ms: 17.945958
+  type: 'test'
+  ...
+# Subtest: twilioSmsIngestInput: stores preferred channel from SMS wording
+ok 281 - twilioSmsIngestInput: stores preferred channel from SMS wording
+  ---
+  duration_ms: 7.464875
+  type: 'test'
+  ...
+# Subtest: twilioSmsIngestInput: preserves inbound MMS media for the dashboard
+ok 282 - twilioSmsIngestInput: preserves inbound MMS media for the dashboard
+  ---
+  duration_ms: 1.189875
+  type: 'test'
+  ...
+# Subtest: vapiVoiceIngestInput: unwraps Vapi message envelope
+ok 283 - vapiVoiceIngestInput: unwraps Vapi message envelope
+  ---
+  duration_ms: 0.384625
+  type: 'test'
+  ...
+# Subtest: vapiVoiceIngestInput: detects preferred channel from transcript
+ok 284 - vapiVoiceIngestInput: detects preferred channel from transcript
+  ---
+  duration_ms: 0.096625
+  type: 'test'
+  ...
+# Subtest: resolveClientConfig: defaults when env empty
+ok 285 - resolveClientConfig: defaults when env empty
+  ---
+  duration_ms: 2.229417
+  type: 'test'
+  ...
+# Subtest: resolveClientConfig: overrides from env
+ok 286 - resolveClientConfig: overrides from env
+  ---
+  duration_ms: 0.215167
+  type: 'test'
+  ...
+# Subtest: resolveClientConfig: brand voice falls back to team name
+ok 287 - resolveClientConfig: brand voice falls back to team name
+  ---
+  duration_ms: 0.168208
+  type: 'test'
+  ...
+# Subtest: resolveClientConfig: bad numbers fall back to defaults
+ok 288 - resolveClientConfig: bad numbers fall back to defaults
+  ---
+  duration_ms: 0.191375
+  type: 'test'
+  ...
+# Subtest: resolveClientConfig: invalid notify channel falls back to sms
+ok 289 - resolveClientConfig: invalid notify channel falls back to sms
+  ---
+  duration_ms: 0.127333
+  type: 'test'
+  ...
+# Subtest: a fully configured client passes
+ok 290 - a fully configured client passes
+  ---
+  duration_ms: 6.802584
+  type: 'test'
+  ...
+# Subtest: a missing required variable blocks provisioning
+ok 291 - a missing required variable blocks provisioning
+  ---
+  duration_ms: 0.647709
+  type: 'test'
+  ...
+# Subtest: a database URL copied from another client is caught
+ok 292 - a database URL copied from another client is caught
+  ---
+  duration_ms: 0.59875
+  type: 'test'
+  ...
+# Subtest: a shared-scope variable may legitimately be identical across clients
+ok 293 - a shared-scope variable may legitimately be identical across clients
+  ---
+  duration_ms: 3.315625
+  type: 'test'
+  ...
+# Subtest: turning a channel on makes its variables required
+ok 294 - turning a channel on makes its variables required
+  ---
+  duration_ms: 0.930375
+  type: 'test'
+  ...
+# Subtest: enabling SMS without a number blocks provisioning
+ok 295 - enabling SMS without a number blocks provisioning
+  ---
+  duration_ms: 0.402417
+  type: 'test'
+  ...
+# Subtest: formatEnvCheck never prints a value
+ok 296 - formatEnvCheck never prints a value
+  ---
+  duration_ms: 0.728333
+  type: 'test'
+  ...
+# Subtest: every tenant-identity variable is marked required
+ok 297 - every tenant-identity variable is marked required
+  ---
+  duration_ms: 0.406584
+  type: 'test'
+  ...
+# Subtest: no manifest entry is listed twice
+ok 298 - no manifest entry is listed twice
+  ---
+  duration_ms: 0.8755
+  type: 'test'
+  ...
+# Subtest: buildComposioSocialSendArguments overwrites stale social recipient and body
+ok 299 - buildComposioSocialSendArguments overwrites stale social recipient and body
+  ---
+  duration_ms: 4.351667
+  type: 'test'
+  ...
+# Subtest: composioSocialSendHealth treats recipient and body as runtime fields
+ok 300 - composioSocialSendHealth treats recipient and body as runtime fields
+  ---
+  duration_ms: 2.353791
+  type: 'test'
+  ...
+# Subtest: composioSocialSendHealth lets saved selected asset args override env defaults
+ok 301 - composioSocialSendHealth lets saved selected asset args override env defaults
+  ---
+  duration_ms: 0.507625
+  type: 'test'
+  ...
+# Subtest: buildComposioSocialSendArguments strips Instagram audio from the text tool payload
+ok 302 - buildComposioSocialSendArguments strips Instagram audio from the text tool payload
+  ---
+  duration_ms: 1.310292
+  type: 'test'
+  ...
+# Subtest: social poll retry is not suppressed by owner/manual outbound
+ok 303 - social poll retry is not suppressed by owner/manual outbound
+  ---
+  duration_ms: 0.582833
+  type: 'test'
+  ...
+# Subtest: extractComposioMessageMediaForTest finds nested Instagram and Messenger attachments
+ok 304 - extractComposioMessageMediaForTest finds nested Instagram and Messenger attachments
+  ---
+  duration_ms: 0.733542
+  type: 'test'
+  ...
+# Subtest: a lead who texted STOP is blocked on every automated channel
+ok 305 - a lead who texted STOP is blocked on every automated channel
+  ---
+  duration_ms: 14.920291
+  type: 'test'
+  ...
+# Subtest: the exact metadata the webhooks attach must not read as consent
+ok 306 - the exact metadata the webhooks attach must not read as consent
+  ---
+  duration_ms: 6.721375
+  type: 'test'
+  ...
+# Subtest: an SMS opt-out also stops the calling cadence
+ok 307 - an SMS opt-out also stops the calling cadence
+  ---
+  duration_ms: 4.828542
+  type: 'test'
+  ...
+# Subtest: legacy rows that encoded the opt-out in free text still suppress
+ok 308 - legacy rows that encoded the opt-out in free text still suppress
+  ---
+  duration_ms: 4.923083
+  type: 'test'
+  ...
+# Subtest: the next inbound message cannot silently clear an opt-out
+ok 309 - the next inbound message cannot silently clear an opt-out
+  ---
+  duration_ms: 0.446458
+  type: 'test'
+  ...
+# Subtest: an explicit START lifts the opt-out
+ok 310 - an explicit START lifts the opt-out
+  ---
+  duration_ms: 1.358083
+  type: 'test'
+  ...
+# Subtest: suppression does not fire for a lead who never opted out
+ok 311 - suppression does not fire for a lead who never opted out
+  ---
+  duration_ms: 1.032959
+  type: 'test'
+  ...
+# Subtest: an email unsubscribe blocks email but not an unrelated channel
+ok 312 - an email unsubscribe blocks email but not an unrelated channel
+  ---
+  duration_ms: 0.10225
+  type: 'test'
+  ...
+# Subtest: every automated send path checks suppression at send time
+ok 313 - every automated send path checks suppression at send time
+  ---
+  duration_ms: 131.448125
+  type: 'test'
+  ...
+# Subtest: provider tokens are never duplicated in plaintext metadata
+ok 314 - provider tokens are never duplicated in plaintext metadata
+  ---
+  duration_ms: 162.6565
+  type: 'test'
+  ...
+# Subtest: detectConversationScenario: seller valuation with photo requires AVM and calendar context
+ok 315 - detectConversationScenario: seller valuation with photo requires AVM and calendar context
+  ---
+  duration_ms: 20.472875
+  type: 'test'
+  ...
+# Subtest: detectConversationScenario: shared reel/photo maps to media reference search
+ok 316 - detectConversationScenario: shared reel/photo maps to media reference search
+  ---
+  duration_ms: 9.694917
+  type: 'test'
+  ...
+# Subtest: sharedBrainInstruction: channel-specific concise social guidance
+ok 317 - sharedBrainInstruction: channel-specific concise social guidance
+  ---
+  duration_ms: 1.236083
+  type: 'test'
+  ...
+# Subtest: buildConversationSummary: summarizes cross-channel buyer/showing lead
+ok 318 - buildConversationSummary: summarizes cross-channel buyer/showing lead
+  ---
+  duration_ms: 2.437167
+  type: 'test'
+  ...
+# Subtest: buildConversationSummary: scheduled appointment wins over request wording
+ok 319 - buildConversationSummary: scheduled appointment wins over request wording
+  ---
+  duration_ms: 0.502375
+  type: 'test'
+  ...
+# Subtest: customFieldFromConversationSummary: prefers field id over field key
+ok 320 - customFieldFromConversationSummary: prefers field id over field key
+  ---
+  duration_ms: 0.554542
+  type: 'test'
+  ...
+# Subtest: crm providers: includes Structurely CRM dropdown options
+ok 321 - crm providers: includes Structurely CRM dropdown options
+  ---
+  duration_ms: 20.612667
+  type: 'test'
+  ...
+# Subtest: crm providers: normalizes common aliases
+ok 322 - crm providers: normalizes common aliases
+  ---
+  duration_ms: 0.523625
+  type: 'test'
+  ...
+# Subtest: crm providers: direct adapter aliases route to existing adapters
+ok 323 - crm providers: direct adapter aliases route to existing adapters
+  ---
+  duration_ms: 0.268667
+  type: 'test'
+  ...
+# Subtest: crm providers: client config aliases activate direct adapter
+ok 324 - crm providers: client config aliases activate direct adapter
+  ---
+  duration_ms: 5.560917
+  type: 'test'
+  ...
+# Subtest: Twilio: a message to another tenant's number is rejected
+ok 325 - Twilio: a message to another tenant's number is rejected
+  ---
+  duration_ms: 174.786667
+  type: 'test'
+  ...
+# Subtest: Twilio: a callback missing its provider-owned To number is rejected
+ok 326 - Twilio: a callback missing its provider-owned To number is rejected
+  ---
+  duration_ms: 0.5305
+  type: 'test'
+  ...
+# Subtest: Twilio: our own number is accepted in any common format
+ok 327 - Twilio: our own number is accepted in any common format
+  ---
+  duration_ms: 0.376458
+  type: 'test'
+  ...
+# Subtest: Twilio: a Messaging Service sender pool is honored, and only that pool
+ok 328 - Twilio: a Messaging Service sender pool is honored, and only that pool
+  ---
+  duration_ms: 0.992666
+  type: 'test'
+  ...
+# Subtest: Twilio: a signature minted by another tenant's auth token does not validate
+ok 329 - Twilio: a signature minted by another tenant's auth token does not validate
+  ---
+  duration_ms: 1.249583
+  type: 'test'
+  ...
+# Subtest: Twilio: a tampered body invalidates a genuine signature
+ok 330 - Twilio: a tampered body invalidates a genuine signature
+  ---
+  duration_ms: 0.321291
+  type: 'test'
+  ...
+# Subtest: Twilio: an unconfigured auth token fails closed in production
+ok 331 - Twilio: an unconfigured auth token fails closed in production
+  ---
+  duration_ms: 1.379666
+  type: 'test'
+  ...
+# Subtest: Vapi: a call for another tenant's assistant is rejected
+ok 332 - Vapi: a call for another tenant's assistant is rejected
+  ---
+  duration_ms: 0.2655
+  type: 'test'
+  ...
+# Subtest: Vapi: a call on another tenant's phone number id is rejected
+ok 333 - Vapi: a call on another tenant's phone number id is rejected
+  ---
+  duration_ms: 2.349125
+  type: 'test'
+  ...
+# Subtest: Vapi: our own assistant and number pass
+ok 334 - Vapi: our own assistant and number pass
+  ---
+  duration_ms: 3.398666
+  type: 'test'
+  ...
+# Subtest: Vapi: configured identities cannot be bypassed by omitting them
+ok 335 - Vapi: configured identities cannot be bypassed by omitting them
+  ---
+  duration_ms: 0.831292
+  type: 'test'
+  ...
+# Subtest: Vapi: parseCallMeta reads the identifiers from both payload shapes
+ok 336 - Vapi: parseCallMeta reads the identifiers from both payload shapes
+  ---
+  duration_ms: 0.507
+  type: 'test'
+  ...
+# Subtest: Gmail: a push about another tenant's mailbox is rejected
+ok 337 - Gmail: a push about another tenant's mailbox is rejected
+  ---
+  duration_ms: 0.1005
+  type: 'test'
+  ...
+# Subtest: Gmail: an expected mailbox cannot be bypassed by omitting the pushed address
+ok 338 - Gmail: an expected mailbox cannot be bypassed by omitting the pushed address
+  ---
+  duration_ms: 0.183125
+  type: 'test'
+  ...
+# Subtest: Gmail: the live push handler does not bypass tenant matching when the pushed address is absent
+ok 339 - Gmail: the live push handler does not bypass tenant matching when the pushed address is absent
+  ---
+  duration_ms: 15.841125
+  type: 'test'
+  ...
+# Subtest: OAuth state: a hand-rolled unsigned state is refused
+ok 340 - OAuth state: a hand-rolled unsigned state is refused
+  ---
+  duration_ms: 3.906667
+  type: 'test'
+  ...
+# Subtest: OAuth state: a state signed by another deployment's secret is refused
+ok 341 - OAuth state: a state signed by another deployment's secret is refused
+  ---
+  duration_ms: 1.023417
+  type: 'test'
+  ...
+# Subtest: OAuth state: flipping the tenant inside a signed payload breaks the signature
+ok 342 - OAuth state: flipping the tenant inside a signed payload breaks the signature
+  ---
+  duration_ms: 1.554875
+  type: 'test'
+  ...
+# Subtest: OAuth state: an expired state is refused
+ok 343 - OAuth state: an expired state is refused
+  ---
+  duration_ms: 0.326416
+  type: 'test'
+  ...
+# Subtest: Inngest: two clients never share an app id
+ok 344 - Inngest: two clients never share an app id
+  ---
+  duration_ms: 117.318083
+  type: 'test'
+  ...
+# Subtest: Inngest: the original single-tenant deployment keeps its historical app id
+ok 345 - Inngest: the original single-tenant deployment keeps its historical app id
+  ---
+  duration_ms: 65.749042
+  type: 'test'
+  ...
+# Subtest: Inngest: an explicit app id always wins
+ok 346 - Inngest: an explicit app id always wins
+  ---
+  duration_ms: 4.694834
+  type: 'test'
+  ...
+# Subtest: deploymentClientId falls back to 'default' but never to another tenant
+ok 347 - deploymentClientId falls back to 'default' but never to another tenant
+  ---
+  duration_ms: 6.885792
+  type: 'test'
+  ...
+# Subtest: phone identity normalization cannot collapse two different numbers
+ok 348 - phone identity normalization cannot collapse two different numbers
+  ---
+  duration_ms: 0.176792
+  type: 'test'
+  ...
+# Subtest: Media: a token signed for one tenant does not verify for another
+ok 349 - Media: a token signed for one tenant does not verify for another
+  ---
+  duration_ms: 79.870666
+  type: 'test'
+  ...
+# Subtest: Media: an empty or garbage token never verifies
+ok 350 - Media: an empty or garbage token never verifies
+  ---
+  duration_ms: 0.243041
+  type: 'test'
+  ...
+# Subtest: Inngest: the sync script derives the same app id as the runtime
+ok 351 - Inngest: the sync script derives the same app id as the runtime
+  ---
+  duration_ms: 33.546667
+  type: 'test'
+  ...
+# Subtest: email OAuth buttons use provider-specific routes
+ok 352 - email OAuth buttons use provider-specific routes
+  ---
+  duration_ms: 1.317042
+  type: 'test'
+  ...
+# Subtest: paired dangerous elements are removed
+ok 353 - paired dangerous elements are removed
+  ---
+  duration_ms: 139.97725
+  type: 'test'
+  ...
+# Subtest: unclosed script and iframe tags cannot survive
+ok 354 - unclosed script and iframe tags cannot survive
+  ---
+  duration_ms: 0.755375
+  type: 'test'
+  ...
+# Subtest: entity-encoded javascript URLs are stripped
+ok 355 - entity-encoded javascript URLs are stripped
+  ---
+  duration_ms: 1.530208
+  type: 'test'
+  ...
+# Subtest: inline event handlers and script-capable containers are stripped
+ok 356 - inline event handlers and script-capable containers are stripped
+  ---
+  duration_ms: 0.734792
+  type: 'test'
+  ...
+# Subtest: non-image data URLs are stripped and image data URLs survive
+ok 357 - non-image data URLs are stripped and image data URLs survive
+  ---
+  duration_ms: 0.558875
+  type: 'test'
+  ...
+# Subtest: ordinary marketing email markup is preserved
+ok 358 - ordinary marketing email markup is preserved
+  ---
+  duration_ms: 0.157833
+  type: 'test'
+  ...
+# Subtest: findContactByPhone: hits duplicate search with number
+ok 359 - findContactByPhone: hits duplicate search with number
+  ---
+  duration_ms: 8.723167
+  type: 'test'
+  ...
+# Subtest: findContactByEmail: null when no contact
+ok 360 - findContactByEmail: null when no contact
+  ---
+  duration_ms: 2.13025
+  type: 'test'
+  ...
+# Subtest: upsertContact: splits name, applies tag, returns id
+ok 361 - upsertContact: splits name, applies tag, returns id
+  ---
+  duration_ms: 33.337167
+  type: 'test'
+  ...
+# Subtest: createAppointment: posts required fields
+ok 362 - createAppointment: posts required fields
+  ---
+  duration_ms: 3.864791
+  type: 'test'
+  ...
+# Subtest: updateAppointment: PUT to appointments/{id}
+ok 363 - updateAppointment: PUT to appointments/{id}
+  ---
+  duration_ms: 10.620333
+  type: 'test'
+  ...
+# Subtest: cancelAppointment: DELETE to events/{id}
+ok 364 - cancelAppointment: DELETE to events/{id}
+  ---
+  duration_ms: 0.221792
+  type: 'test'
+  ...
+# Subtest: listAppointments: maps events array
+ok 365 - listAppointments: maps events array
+  ---
+  duration_ms: 0.142875
+  type: 'test'
+  ...
+# Subtest: logActivity: posts InternalComment by default
+ok 366 - logActivity: posts InternalComment by default
+  ---
+  duration_ms: 0.244292
+  type: 'test'
+  ...
+# Subtest: listImportableLeads: maps GHL contacts into import leads
+ok 367 - listImportableLeads: maps GHL contacts into import leads
+  ---
+  duration_ms: 5.167167
+  type: 'test'
+  ...
+# Subtest: updateContactCustomFields: PUTs GHL customFields payload
+ok 368 - updateContactCustomFields: PUTs GHL customFields payload
+  ---
+  duration_ms: 1.493625
+  type: 'test'
+  ...
+# Subtest: buildGhlCustomFieldsPayload: supports ids and drops empty values
+ok 369 - buildGhlCustomFieldsPayload: supports ids and drops empty values
+  ---
+  duration_ms: 0.118875
+  type: 'test'
+  ...
+# Subtest: replaceGmailThreadLabels atomically swaps managed workflow labels on the thread
+ok 370 - replaceGmailThreadLabels atomically swaps managed workflow labels on the thread
+  ---
+  duration_ms: 114.787542
+  type: 'test'
+  ...
+# Subtest: needs-human Gmail label uses a supported Gmail palette color
+ok 371 - needs-human Gmail label uses a supported Gmail palette color
+  ---
+  duration_ms: 0.756167
+  type: 'test'
+  ...
+# Subtest: gmail oauth state is signed and carries client/operator
+ok 372 - gmail oauth state is signed and carries client/operator
+  ---
+  duration_ms: 1.0575
+  type: 'test'
+  ...
+# Subtest: gmail scopes are tiered and draft-first by default
+ok 373 - gmail scopes are tiered and draft-first by default
+  ---
+  duration_ms: 0.238417
+  type: 'test'
+  ...
+# Subtest: sendGmailReply sends threaded raw message
+ok 374 - sendGmailReply sends threaded raw message
+  ---
+  duration_ms: 205.25625
+  type: 'test'
+  ...
+# Subtest: sendGmailReply retries fresh when thread is missing in active mailbox
+ok 375 - sendGmailReply retries fresh when thread is missing in active mailbox
+  ---
+  duration_ms: 76.393666
+  type: 'test'
+  ...
+# Subtest: sendGmailReply does not retry on auth or scope errors
+ok 376 - sendGmailReply does not retry on auth or scope errors
+  ---
+  duration_ms: 10.875375
+  type: 'test'
+  ...
+# Subtest: summarizeChannels: distinct, most-used first
+ok 377 - summarizeChannels: distinct, most-used first
+  ---
+  duration_ms: 1.983208
+  type: 'test'
+  ...
+# Subtest: lastTouchAt: returns latest timestamp
+ok 378 - lastTouchAt: returns latest timestamp
+  ---
+  duration_ms: 0.440833
+  type: 'test'
+  ...
+# Subtest: buildConfirmation: picks first available safe detail
+ok 379 - buildConfirmation: picks first available safe detail
+  ---
+  duration_ms: 1.267959
+  type: 'test'
+  ...
+# Subtest: confirmationMatches: fuzzy substring both directions
+ok 380 - confirmationMatches: fuzzy substring both directions
+  ---
+  duration_ms: 0.702792
+  type: 'test'
+  ...
+# Subtest: chooseStitchCandidate: email beats name beats first
+ok 381 - chooseStitchCandidate: email beats name beats first
+  ---
+  duration_ms: 0.779209
+  type: 'test'
+  ...
+# Subtest: resolveCaller: phone match returns cross-channel history
+ok 382 - resolveCaller: phone match returns cross-channel history
+  ---
+  duration_ms: 0.8695
+  type: 'test'
+  ...
+# Subtest: resolveCaller: cold phone needs stitch
+ok 383 - resolveCaller: cold phone needs stitch
+  ---
+  duration_ms: 0.446125
+  type: 'test'
+  ...
+# Subtest: resolveCaller: empty phone does not query
+ok 384 - resolveCaller: empty phone does not query
+  ---
+  duration_ms: 0.133542
+  type: 'test'
+  ...
+# Subtest: stitchByEmailOrName: finds by email and returns confirmation
+ok 385 - stitchByEmailOrName: finds by email and returns confirmation
+  ---
+  duration_ms: 0.7845
+  type: 'test'
+  ...
+# Subtest: stitchByEmailOrName: falls back to name when no email hit
+ok 386 - stitchByEmailOrName: falls back to name when no email hit
+  ---
+  duration_ms: 0.574208
+  type: 'test'
+  ...
+# Subtest: stitchByEmailOrName: no match returns null lead and confirm
+ok 387 - stitchByEmailOrName: no match returns null lead and confirm
+  ---
+  duration_ms: 0.105792
+  type: 'test'
+  ...
+# Subtest: bulk Zillow importer keeps the existing properties schema
+ok 388 - bulk Zillow importer keeps the existing properties schema
+  ---
+  duration_ms: 288.113125
+  type: 'test'
+  ...
+# Subtest: buildSearchSlices spreads Austin imports across diverse segments
+ok 389 - buildSearchSlices spreads Austin imports across diverse segments
+  ---
+  duration_ms: 5.3505
+  type: 'test'
+  ...
+# Subtest: buildActorPayload uses location search and bounded max results
+ok 390 - buildActorPayload uses location search and bounded max results
+  ---
+  duration_ms: 8.458542
+  type: 'test'
+  ...
+# Subtest: normalizeApifyItem maps truefetch and Zillow-shaped fields to sheet rows
+ok 391 - normalizeApifyItem maps truefetch and Zillow-shaped fields to sheet rows
+  ---
+  duration_ms: 3.886
+  type: 'test'
+  ...
+# Subtest: normalizeApifyItem maps current truefetch structured output
+ok 392 - normalizeApifyItem maps current truefetch structured output
+  ---
+  duration_ms: 0.302334
+  type: 'test'
+  ...
+# Subtest: dedupeRows blocks existing addresses and duplicate Zillow ids
+ok 393 - dedupeRows blocks existing addresses and duplicate Zillow ids
+  ---
+  duration_ms: 1.298459
+  type: 'test'
+  ...
+# Subtest: rowsFromExistingZillowCsv contributes prior scrape rows to dedupe index
+ok 394 - rowsFromExistingZillowCsv contributes prior scrape rows to dedupe index
+  ---
+  duration_ms: 1.347875
+  type: 'test'
+  ...
+# Subtest: dedupeRows ignores generic Zillow homepage URLs as listing keys
+ok 395 - dedupeRows ignores generic Zillow homepage URLs as listing keys
+  ---
+  duration_ms: 0.265333
+  type: 'test'
+  ...
+# Subtest: composeInboxData hides reserved SMS smoke-test numbers
+ok 396 - composeInboxData hides reserved SMS smoke-test numbers
+  ---
+  duration_ms: 120.170875
+  type: 'test'
+  ...
+# Subtest: composeInboxData hides raw voice tool events and counts voice calls
+ok 397 - composeInboxData hides raw voice tool events and counts voice calls
+  ---
+  duration_ms: 17.554042
+  type: 'test'
+  ...
+# Subtest: parseVoiceTranscript: parses Vapi AI/User colon lines
+ok 398 - parseVoiceTranscript: parses Vapi AI/User colon lines
+  ---
+  duration_ms: 3.651458
+  type: 'test'
+  ...
+# Subtest: parseVoiceTranscript: supports speaker label on its own line
+ok 399 - parseVoiceTranscript: supports speaker label on its own line
+  ---
+  duration_ms: 0.991917
+  type: 'test'
+  ...
+# Subtest: parseVoiceTranscript: parses JSON message arrays
+ok 400 - parseVoiceTranscript: parses JSON message arrays
+  ---
+  duration_ms: 10.183542
+  type: 'test'
+  ...
+# Subtest: voiceCallTranscriptSource: ignores object stringification junk
+ok 401 - voiceCallTranscriptSource: ignores object stringification junk
+  ---
+  duration_ms: 0.108709
+  type: 'test'
+  ...
+# Subtest: adaptInboxData keeps received email subject and body separate
+ok 402 - adaptInboxData keeps received email subject and body separate
+  ---
+  duration_ms: 21.376083
+  type: 'test'
+  ...
+# Subtest: adaptInboxData renders email HTML through the inbox image proxy
+ok 403 - adaptInboxData renders email HTML through the inbox image proxy
+  ---
+  duration_ms: 9.39475
+  type: 'test'
+  ...
+# Subtest: adaptInboxData splits SMS MMS image logs from visible body and preserves spacing
+ok 404 - adaptInboxData splits SMS MMS image logs from visible body and preserves spacing
+  ---
+  duration_ms: 4.64975
+  type: 'test'
+  ...
+# Subtest: adaptInboxData removes duplicated SMS property detail address lines
+ok 405 - adaptInboxData removes duplicated SMS property detail address lines
+  ---
+  duration_ms: 305.043083
+  type: 'test'
+  ...
+# Subtest: adaptInboxData aligns activity event ids with rendered message ids
+ok 406 - adaptInboxData aligns activity event ids with rendered message ids
+  ---
+  duration_ms: 16.886542
+  type: 'test'
+  ...
+# Subtest: adaptInboxData shows Instagram contact name but preserves platform recipient id for replies
+ok 407 - adaptInboxData shows Instagram contact name but preserves platform recipient id for replies
+  ---
+  duration_ms: 5.776167
+  type: 'test'
+  ...
+# Subtest: adaptInboxData hides opaque Instagram ids when no profile name is available
+ok 408 - adaptInboxData hides opaque Instagram ids when no profile name is available
+  ---
+  duration_ms: 342.311125
+  type: 'test'
+  ...
+# Subtest: adaptInboxData can read social profile identity from provider metadata
+ok 409 - adaptInboxData can read social profile identity from provider metadata
+  ---
+  duration_ms: 10.355416
+  type: 'test'
+  ...
+# Subtest: adaptInboxData does not use browser-imported Instagram ids as Meta reply targets
+ok 410 - adaptInboxData does not use browser-imported Instagram ids as Meta reply targets
+  ---
+  duration_ms: 43.8785
+  type: 'test'
+  ...
+# Subtest: adaptInboxData marks browser-synced inbound Instagram leads as needs human
+ok 411 - adaptInboxData marks browser-synced inbound Instagram leads as needs human
+  ---
+  duration_ms: 4.101791
+  type: 'test'
+  ...
+# Subtest: adaptInboxData does not use authenticated browser Instagram ids as Meta reply targets
+ok 412 - adaptInboxData does not use authenticated browser Instagram ids as Meta reply targets
+  ---
+  duration_ms: 13.800667
+  type: 'test'
+  ...
+# Subtest: adaptInboxData unlocks browser-merged Instagram thread after Meta webhook event
+ok 413 - adaptInboxData unlocks browser-merged Instagram thread after Meta webhook event
+  ---
+  duration_ms: 2.77625
+  type: 'test'
+  ...
+# Subtest: adaptInboxData ignores stale outbound social phone values when resolving reply target
+ok 414 - adaptInboxData ignores stale outbound social phone values when resolving reply target
+  ---
+  duration_ms: 9.089125
+  type: 'test'
+  ...
+# Subtest: adaptInboxData keeps social owner replies in the same sender thread
+ok 415 - adaptInboxData keeps social owner replies in the same sender thread
+  ---
+  duration_ms: 5.621833
+  type: 'test'
+  ...
+# Subtest: adaptInboxData merges Meta webhook rows into canonical Instagram browser thread
+ok 416 - adaptInboxData merges Meta webhook rows into canonical Instagram browser thread
+  ---
+  duration_ms: 3.8735
+  type: 'test'
+  ...
+# Subtest: adaptInboxData resolves social reply target from earlier thread events
+ok 417 - adaptInboxData resolves social reply target from earlier thread events
+  ---
+  duration_ms: 1.996708
+  type: 'test'
+  ...
+# Subtest: adaptInboxData keeps social threads unread until manually marked seen
+ok 418 - adaptInboxData keeps social threads unread until manually marked seen
+  ---
+  duration_ms: 0.976792
+  type: 'test'
+  ...
+# Subtest: adaptInboxData folds social reactions onto the target message
+ok 419 - adaptInboxData folds social reactions onto the target message
+  ---
+  duration_ms: 35.742083
+  type: 'test'
+  ...
+# Subtest: adaptInboxData renders social media from media_json even when the text body only logs send status
+ok 420 - adaptInboxData renders social media from media_json even when the text body only logs send status
+  ---
+  duration_ms: 23.769417
+  type: 'test'
+  ...
+# Subtest: adaptInboxData labels Instagram shared posts from media metadata
+ok 421 - adaptInboxData labels Instagram shared posts from media metadata
+  ---
+  duration_ms: 2.754625
+  type: 'test'
+  ...
+# Subtest: adaptInboxData turns Meta URL-only Instagram shares into preview cards
+ok 422 - adaptInboxData turns Meta URL-only Instagram shares into preview cards
+  ---
+  duration_ms: 14.51725
+  type: 'test'
+  ...
+# Subtest: adaptInboxData renders Instagram shared reel thumbnails as preview cards
+ok 423 - adaptInboxData renders Instagram shared reel thumbnails as preview cards
+  ---
+  duration_ms: 39.574584
+  type: 'test'
+  ...
+# Subtest: adaptInboxData renders native social videos as videos instead of audio bubbles
+ok 424 - adaptInboxData renders native social videos as videos instead of audio bubbles
+  ---
+  duration_ms: 3.957875
+  type: 'test'
+  ...
+# Subtest: adaptInboxData preserves email voice note attachments and transcript previews from media_json
+ok 425 - adaptInboxData preserves email voice note attachments and transcript previews from media_json
+  ---
+  duration_ms: 5.601583
+  type: 'test'
+  ...
+# Subtest: adaptInboxData sorts voice contacts and calls by actual call time
+ok 426 - adaptInboxData sorts voice contacts and calls by actual call time
+  ---
+  duration_ms: 135.146583
+  type: 'test'
+  ...
+# Subtest: adaptInboxData merges recent voice calls into activity feed
+ok 427 - adaptInboxData merges recent voice calls into activity feed
+  ---
+  duration_ms: 35.830292
+  type: 'test'
+  ...
+# Subtest: adaptInboxData calculates today's average response time from actual thread replies
+ok 428 - adaptInboxData calculates today's average response time from actual thread replies
+  ---
+  duration_ms: 1.420834
+  type: 'test'
+  ...
+# Subtest: adaptInboxData exposes pipeline, channel quality, and media-understanding metrics
+ok 429 - adaptInboxData exposes pipeline, channel quality, and media-understanding metrics
+  ---
+  duration_ms: 10.931917
+  type: 'test'
+  ...
+# Subtest: adaptInboxData counts only actual qualified appointments and transfers
+ok 430 - adaptInboxData counts only actual qualified appointments and transfers
+  ---
+  duration_ms: 7.351458
+  type: 'test'
+  ...
+# Subtest: the shipped label names are exactly Needs Human and Auto Replied, with no prefix
+ok 431 - the shipped label names are exactly Needs Human and Auto Replied, with no prefix
+  ---
+  duration_ms: 22.902334
+  type: 'test'
+  ...
+# Subtest: by default Iris manages only those two labels and touches nothing else
+ok 432 - by default Iris manages only those two labels and touches nothing else
+  ---
+  duration_ms: 16.61575
+  type: 'test'
+  ...
+# Subtest: internal workflow slugs are never eligible for a mailbox
+ok 433 - internal workflow slugs are never eligible for a mailbox
+  ---
+  duration_ms: 9.017959
+  type: 'test'
+  ...
+# Subtest: a user's own organization is never in the managed set, so it can never be removed
+ok 434 - a user's own organization is never in the managed set, so it can never be removed
+  ---
+  duration_ms: 167.864625
+  type: 'test'
+  ...
+# Subtest: Auto Replied appears only after a confirmed send
+ok 435 - Auto Replied appears only after a confirmed send
+  ---
+  duration_ms: 37.371625
+  type: 'test'
+  ...
+# Subtest: Needs Human appears only when Iris stopped for review
+ok 436 - Needs Human appears only when Iris stopped for review
+  ---
+  duration_ms: 0.322667
+  type: 'test'
+  ...
+# Subtest: no category can hand itself a send permission through auto_rules
+ok 437 - no category can hand itself a send permission through auto_rules
+  ---
+  duration_ms: 0.693083
+  type: 'test'
+  ...
+# Subtest: a caller cannot promote an internal-only category into the mailbox
+ok 438 - a caller cannot promote an internal-only category into the mailbox
+  ---
+  duration_ms: 1.6555
+  type: 'test'
+  ...
+# Subtest: a pile the user invented is allowed to be a real label
+ok 439 - a pile the user invented is allowed to be a real label
+  ---
+  duration_ms: 20.367083
+  type: 'test'
+  ...
+# Subtest: categorization stays inert until the user both opts in and presses start
+ok 440 - categorization stays inert until the user both opts in and presses start
+  ---
+  duration_ms: 277.034875
+  type: 'test'
+  ...
+# Subtest: an opted-in but never started mailbox is left alone, and says so
+ok 441 - an opted-in but never started mailbox is left alone, and says so
+  ---
+  duration_ms: 2.023625
+  type: 'test'
+  ...
+# Subtest: a garbage start timestamp reads as never started
+ok 442 - a garbage start timestamp reads as never started
+  ---
+  duration_ms: 0.593958
+  type: 'test'
+  ...
+# Subtest: a keep-in-inbox pile is labeled without being moved out
+ok 443 - a keep-in-inbox pile is labeled without being moved out
+  ---
+  duration_ms: 8.816583
+  type: 'test'
+  ...
+# Subtest: a file-away pile is labeled and moved out of the inbox
+ok 444 - a file-away pile is labeled and moved out of the inbox
+  ---
+  duration_ms: 7.301875
+  type: 'test'
+  ...
+# Subtest: archive-after-send only fires on a confirmed send
+ok 445 - archive-after-send only fires on a confirmed send
+  ---
+  duration_ms: 26.675917
+  type: 'test'
+  ...
+# Subtest: a thread waiting on a person is never archived, whatever else is configured
+ok 446 - a thread waiting on a person is never archived, whatever else is configured
+  ---
+  duration_ms: 1.109917
+  type: 'test'
+  ...
+# Subtest: respect_existing_labels leaves a thread the user already filed alone
+ok 447 - respect_existing_labels leaves a thread the user already filed alone
+  ---
+  duration_ms: 0.898125
+  type: 'test'
+  ...
+# Subtest: turning respect_existing_labels off lets Iris sort an already-filed thread
+ok 448 - turning respect_existing_labels off lets Iris sort an already-filed thread
+  ---
+  duration_ms: 0.266
+  type: 'test'
+  ...
+# Subtest: provider plumbing labels do not count as the user having organized a thread
+ok 449 - provider plumbing labels do not count as the user having organized a thread
+  ---
+  duration_ms: 0.129959
+  type: 'test'
+  ...
+# Subtest: marketing strictness off never matches anything
+ok 450 - marketing strictness off never matches anything
+  ---
+  duration_ms: 0.255291
+  type: 'test'
+  ...
+# Subtest: each marketing strictness level is a superset of the one below it
+ok 451 - each marketing strictness level is a superset of the one below it
+  ---
+  duration_ms: 3.176875
+  type: 'test'
+  ...
+# Subtest: a known lead is never cold mail at any strictness
+ok 452 - a known lead is never cold mail at any strictness
+  ---
+  duration_ms: 42.179084
+  type: 'test'
+  ...
+# Subtest: bulk mail is filed into Bulk Promotions once that pile is switched on
+ok 453 - bulk mail is filed into Bulk Promotions once that pile is switched on
+  ---
+  duration_ms: 11.375541
+  type: 'test'
+  ...
+# Subtest: bulk mail is left where it is when the user did not enable that pile
+ok 454 - bulk mail is left where it is when the user did not enable that pile
+  ---
+  duration_ms: 2.853042
+  type: 'test'
+  ...
+# Subtest: an exact sender rule beats a domain rule, which beats a subject rule
+ok 455 - an exact sender rule beats a domain rule, which beats a subject rule
+  ---
+  duration_ms: 4.475834
+  type: 'test'
+  ...
+# Subtest: a rule pointing at a pile the user has not enabled does nothing
+ok 456 - a rule pointing at a pile the user has not enabled does nothing
+  ---
+  duration_ms: 259.125375
+  type: 'test'
+  ...
+# Subtest: a rule wins over the marketing heuristic
+ok 457 - a rule wins over the marketing heuristic
+  ---
+  duration_ms: 1.204625
+  type: 'test'
+  ...
+# Subtest: rules cannot target the two managed system labels
+ok 458 - rules cannot target the two managed system labels
+  ---
+  duration_ms: 5.026208
+  type: 'test'
+  ...
+# Subtest: unparseable settings degrade to the untouched-inbox defaults
+ok 459 - unparseable settings degrade to the untouched-inbox defaults
+  ---
+  duration_ms: 0.193875
+  type: 'test'
+  ...
+# Subtest: saving one settings card cannot switch another card's choices back off
+ok 460 - saving one settings card cannot switch another card's choices back off
+  ---
+  duration_ms: 0.41875
+  type: 'test'
+  ...
+# Subtest: an explicit false in a patch still turns a setting off
+ok 461 - an explicit false in a patch still turns a setting off
+  ---
+  duration_ms: 0.093458
+  type: 'test'
+  ...
+# Subtest: an undefined key in a patch is not a value and leaves stored state alone
+ok 462 - an undefined key in a patch is not a value and leaves stored state alone
+  ---
+  duration_ms: 0.06325
+  type: 'test'
+  ...
+# Subtest: the three onboarding choices are offered, with leave-unchanged recommended
+ok 463 - the three onboarding choices are offered, with leave-unchanged recommended
+  ---
+  duration_ms: 4.084166
+  type: 'test'
+  ...
+# Subtest: picking a shape records the choice but never starts anything
+ok 464 - picking a shape records the choice but never starts anything
+  ---
+  duration_ms: 0.564166
+  type: 'test'
+  ...
+# Subtest: the recommended choice enables no piles at all
+ok 465 - the recommended choice enables no piles at all
+  ---
+  duration_ms: 0.151417
+  type: 'test'
+  ...
+# Subtest: attention-only enables two piles and keeps both in the inbox
+ok 466 - attention-only enables two piles and keeps both in the inbox
+  ---
+  duration_ms: 12.999
+  type: 'test'
+  ...
+# Subtest: the customized choice enables every pile and can be re-picked without losing edits
+ok 467 - the customized choice enables every pile and can be re-picked without losing edits
+  ---
+  duration_ms: 0.414166
+  type: 'test'
+  ...
+# Subtest: a renamed pile is written under its new name and stays managed
+ok 468 - a renamed pile is written under its new name and stays managed
+  ---
+  duration_ms: 0.725208
+  type: 'test'
+  ...
+# Subtest: display order follows sort_order, with the system labels first
+ok 469 - display order follows sort_order, with the system labels first
+  ---
+  duration_ms: 0.254083
+  type: 'test'
+  ...
+# Subtest: the dry-run preview reports what would change without implying a send
+ok 470 - the dry-run preview reports what would change without implying a send
+  ---
+  duration_ms: 29.492291
+  type: 'test'
+  ...
+# Subtest: the preview only ever proposes removing labels Iris owns
+ok 471 - the preview only ever proposes removing labels Iris owns
+  ---
+  duration_ms: 0.894791
+  type: 'test'
+  ...
+# Subtest: the preview is inert while categorization is off
+ok 472 - the preview is inert while categorization is off
+  ---
+  duration_ms: 0.315209
+  type: 'test'
+  ...
+# Subtest: review resolution clears stale needs-human state until a newer inbound arrives
+ok 473 - review resolution clears stale needs-human state until a newer inbound arrives
+  ---
+  duration_ms: 10.421292
+  type: 'test'
+  ...
+# Subtest: new inbound after review resolution can flag needs-human again
+ok 474 - new inbound after review resolution can flag needs-human again
+  ---
+  duration_ms: 25.983709
+  type: 'test'
+  ...
+# Subtest: outbound AI reply after latest inbound clears stale needs-human category text
+ok 475 - outbound AI reply after latest inbound clears stale needs-human category text
+  ---
+  duration_ms: 0.571167
+  type: 'test'
+  ...
+# Subtest: austin Google Voice fixture: transcript extraction is stable
+ok 476 - austin Google Voice fixture: transcript extraction is stable
+  ---
+  duration_ms: 9.779083
+  type: 'test'
+  ...
+# Subtest: austin Google Voice fixture: listing links preserve Austin search config
+ok 477 - austin Google Voice fixture: listing links preserve Austin search config
+  ---
+  duration_ms: 1.275083
+  type: 'test'
+  ...
+# Subtest: austin Google Voice fixture: Phase 5 classification expectations are covered
+ok 478 - austin Google Voice fixture: Phase 5 classification expectations are covered
+  ---
+  duration_ms: 12.967
+  type: 'test'
+  ...
+# Subtest: austin Google Voice fixture: observed Remi misses stay visible
+ok 479 - austin Google Voice fixture: observed Remi misses stay visible
+  ---
+  duration_ms: 0.326916
+  type: 'test'
+  ...
+# (node:89591) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+# In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+# To prepare for this change:
+# - If you want the current behavior, explicitly use 'sslmode=verify-full'
+# - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+# See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: sendSms: passes body through untouched (generalized, not property-details-shaped)
+ok 480 - sendSms: passes body through untouched (generalized, not property-details-shaped)
+  ---
+  duration_ms: 1125.151167
+  type: 'test'
+  ...
+# Subtest: triggerOutboundCall: builds config from env and reports missing Vapi config as a clean error, not a throw
+ok 481 - triggerOutboundCall: builds config from env and reports missing Vapi config as a clean error, not a throw
+  ---
+  duration_ms: 0.786208
+  type: 'test'
+  ...
+# Subtest: triggerOutboundCall: rejects a call with no customer number before ever reaching Vapi
+ok 482 - triggerOutboundCall: rejects a call with no customer number before ever reaching Vapi
+  ---
+  duration_ms: 1.86325
+  type: 'test'
+  ...
+# (node:90232) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+# In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+# To prepare for this change:
+# - If you want the current behavior, explicitly use 'sslmode=verify-full'
+# - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+# See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: adversarial: suffixless Austin property addresses stay exact
+ok 483 - adversarial: suffixless Austin property addresses stay exact
+  ---
+  duration_ms: 235.738417
+  type: 'test'
+  ...
+# Subtest: public-data fallback answers with dated sources and does not call ZIP rent a property estimate
+ok 484 - public-data fallback answers with dated sources and does not call ZIP rent a property estimate
+  ---
+  duration_ms: 14.942917
+  type: 'test'
+  ...
+# Subtest: adversarial: buyer property details never receive seller valuation copy or CTA
+ok 485 - adversarial: buyer property details never receive seller valuation copy or CTA
+  ---
+  duration_ms: 16.948208
+  type: 'test'
+  ...
+# Subtest: exact-address guard accepts suffix expansion but rejects other units and properties
+ok 486 - exact-address guard accepts suffix expansion but rejects other units and properties
+  ---
+  duration_ms: 55.122166
+  type: 'test'
+  ...
+# Subtest: adversarial: vague property ask and conflicting showings require human review
+ok 487 - adversarial: vague property ask and conflicting showings require human review
+  ---
+  duration_ms: 143.883667
+  type: 'test'
+  ...
+# Subtest: plain-text email puts every URL in its own blank-line-delimited paragraph
+ok 488 - plain-text email puts every URL in its own blank-line-delimited paragraph
+  ---
+  duration_ms: 0.213875
+  type: 'test'
+  ...
+# Subtest: parseEmailContact: extracts name and lowercase email
+ok 489 - parseEmailContact: extracts name and lowercase email
+  ---
+  duration_ms: 4.503709
+  type: 'test'
+  ...
+# Subtest: irisGmailMessageDirection: recognizes sent mailbox messages separately from inbound mail
+ok 490 - irisGmailMessageDirection: recognizes sent mailbox messages separately from inbound mail
+  ---
+  duration_ms: 0.489209
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: detects showing request and lead fields
+ok 491 - classifyIrisEmailText: detects showing request and lead fields
+  ---
+  duration_ms: 4.497584
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: treats explicit looking-to-buy requests as buyer leads
+ok 492 - classifyIrisEmailText: treats explicit looking-to-buy requests as buyer leads
+  ---
+  duration_ms: 38.409208
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: detects a second-time buyer and opens the valuation path
+ok 493 - classifyIrisEmailText: detects a second-time buyer and opens the valuation path
+  ---
+  duration_ms: 42.696916
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: keeps realistic sell-before-buy context and CTA
+ok 494 - classifyIrisEmailText: keeps realistic sell-before-buy context and CTA
+  ---
+  duration_ms: 1.644708
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: the word evaluation does not create seller valuation intent
+ok 495 - classifyIrisEmailText: the word evaluation does not create seller valuation intent
+  ---
+  duration_ms: 0.474083
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: valuation acceptance sends booking path
+ok 496 - classifyIrisEmailText: valuation acceptance sends booking path
+  ---
+  duration_ms: 0.588166
+  type: 'test'
+  ...
+# Subtest: generateIrisEmailReply: second-time buyer gets valuation booking link
+ok 497 - generateIrisEmailReply: second-time buyer gets valuation booking link
+  ---
+  duration_ms: 125.716833
+  type: 'test'
+  ...
+# Subtest: generateIrisEmailReply: a second-time buyer can advance to a showing
+ok 498 - generateIrisEmailReply: a second-time buyer can advance to a showing
+  ---
+  duration_ms: 7.137208
+  type: 'test'
+  ...
+# Subtest: coalesceIrisEmailThreadFollowUps: keeps one latest message and combines quick follow-up context
+ok 499 - coalesceIrisEmailThreadFollowUps: keeps one latest message and combines quick follow-up context
+  ---
+  duration_ms: 29.598834
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: carries forward area and beds from thread context (no re-ask)
+ok 500 - classifyIrisEmailText: carries forward area and beds from thread context (no re-ask)
+  ---
+  duration_ms: 4.621667
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: routes compliance-sensitive questions to human
+ok 501 - classifyIrisEmailText: routes compliance-sensitive questions to human
+  ---
+  duration_ms: 13.847625
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: routes offer pricing and negotiation strategy to human
+ok 502 - classifyIrisEmailText: routes offer pricing and negotiation strategy to human
+  ---
+  duration_ms: 0.740042
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: routes conflicting scheduling changes to human
+ok 503 - classifyIrisEmailText: routes conflicting scheduling changes to human
+  ---
+  duration_ms: 0.20075
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: ignores unrelated marketing that explicitly disclaims real estate
+ok 504 - classifyIrisEmailText: ignores unrelated marketing that explicitly disclaims real estate
+  ---
+  duration_ms: 0.813541
+  type: 'test'
+  ...
+# Subtest: buildIrisEmailLeadMemoryRow: carries structured email qualification fields
+ok 505 - buildIrisEmailLeadMemoryRow: carries structured email qualification fields
+  ---
+  duration_ms: 15.568334
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: dry run avoids labels, sends, and database writes
+ok 506 - processIrisEmailPoll: dry run avoids labels, sends, and database writes
+  ---
+  duration_ms: 4150.869042
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: opt-out closes without sending or drafting
+ok 507 - processIrisEmailPoll: opt-out closes without sending or drafting
+  ---
+  duration_ms: 3643.309291
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: human-only turn creates a proactive review draft
+ok 508 - processIrisEmailPoll: human-only turn creates a proactive review draft
+  ---
+  duration_ms: 1664.44025
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: a later safe turn auto-sends and clears the old review draft
+ok 509 - processIrisEmailPoll: a later safe turn auto-sends and clears the old review draft
+  ---
+  duration_ms: 1542.869875
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: a human-sent Gmail review draft resolves without another Iris reply
+ok 510 - processIrisEmailPoll: a human-sent Gmail review draft resolves without another Iris reply
+  ---
+  duration_ms: 1238.215792
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: repeated human-only turns update one Gmail draft
+ok 511 - processIrisEmailPoll: repeated human-only turns update one Gmail draft
+  ---
+  duration_ms: 1253.576708
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: spam closes without a review draft
+ok 512 - processIrisEmailPoll: spam closes without a review draft
+  ---
+  duration_ms: 1277.849458
+  type: 'test'
+  ...
+# Subtest: iris email cron: live env sends by default unless explicitly overridden
+ok 513 - iris email cron: live env sends by default unless explicitly overridden
+  ---
+  duration_ms: 0.991417
+  type: 'test'
+  ...
+# Subtest: irisEmailPollQuery: scopes default Gmail polling to configured inbound address
+ok 514 - irisEmailPollQuery: scopes default Gmail polling to configured inbound address
+  ---
+  duration_ms: 0.407166
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: treats listing links as property inquiries
+ok 515 - classifyIrisEmailText: treats listing links as property inquiries
+  ---
+  duration_ms: 0.234875
+  type: 'test'
+  ...
+# Subtest: processIrisEmailPoll: duplicate unread messages are labeled but not recorded or sent
+ok 516 - processIrisEmailPoll: duplicate unread messages are labeled but not recorded or sent
+  ---
+  duration_ms: 1915.795875
+  type: 'test'
+  ...
+# Subtest: a duplicate re-asserts an Auto Replied label it already carries instead of stripping it
+ok 517 - a duplicate re-asserts an Auto Replied label it already carries instead of stripping it
+  ---
+  duration_ms: 2753.280167
+  type: 'test'
+  ...
+# Subtest: isIrisEligibleEmail: blocks system and no-reply senders before auto-send
+ok 518 - isIrisEligibleEmail: blocks system and no-reply senders before auto-send
+  ---
+  duration_ms: 74.351584
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: proxies usable photos and avoids duplicate property copy
+ok 519 - buildHtmlEmailReply: proxies usable photos and avoids duplicate property copy
+  ---
+  duration_ms: 123.344084
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: listing facts are source-backed and missing facts are explicit
+ok 520 - buildHtmlEmailReply: listing facts are source-backed and missing facts are explicit
+  ---
+  duration_ms: 10.239875
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: showing requests focus on the selected property instead of similar options
+ok 521 - buildHtmlEmailReply: showing requests focus on the selected property instead of similar options
+  ---
+  duration_ms: 2.085459
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: showing flow includes a Gmail-compatible schedule button
+ok 522 - buildHtmlEmailReply: showing flow includes a Gmail-compatible schedule button
+  ---
+  duration_ms: 4.704417
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: seller flow includes a Gmail-compatible free valuation button
+ok 523 - buildHtmlEmailReply: seller flow includes a Gmail-compatible free valuation button
+  ---
+  duration_ms: 3.203542
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: selected showing reply does not re-ask which property
+ok 524 - buildHtmlEmailReply: selected showing reply does not re-ask which property
+  ---
+  duration_ms: 1.4035
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: pivots away from prior selected property when lead asks for other options
+ok 525 - classifyIrisEmailText: pivots away from prior selected property when lead asks for other options
+  ---
+  duration_ms: 0.98275
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: uses prior selected property for scheduling follow-up only
+ok 526 - classifyIrisEmailText: uses prior selected property for scheduling follow-up only
+  ---
+  duration_ms: 0.183291
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: does not re-ask for showing time when day and time are supplied
+ok 527 - classifyIrisEmailText: does not re-ask for showing time when day and time are supplied
+  ---
+  duration_ms: 0.202
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: resolves first property in prior email cards
+ok 528 - classifyIrisEmailText: resolves first property in prior email cards
+  ---
+  duration_ms: 0.238584
+  type: 'test'
+  ...
+# Subtest: buildHtmlEmailReply: renders Street View photos in outbound email cards
+ok 529 - buildHtmlEmailReply: renders Street View photos in outbound email cards
+  ---
+  duration_ms: 1.084667
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: blocks account activation emails from auto-reply
+ok 530 - classifyIrisEmailText: blocks account activation emails from auto-reply
+  ---
+  duration_ms: 2.944542
+  type: 'test'
+  ...
+# Subtest: classifyIrisEmailText: blocks non-real-estate founder outreach from auto-reply
+ok 531 - classifyIrisEmailText: blocks non-real-estate founder outreach from auto-reply
+  ---
+  duration_ms: 3.745958
+  type: 'test'
+  ...
+# Subtest: cold outbound sales email is never auto-replied to and never gets a property pitch
+ok 532 - cold outbound sales email is never auto-replied to and never gets a property pitch
+  ---
+  duration_ms: 2.399334
+  type: 'test'
+  ...
+# Subtest: the autonomy floor requires affirmative real-estate evidence
+ok 533 - the autonomy floor requires affirmative real-estate evidence
+  ---
+  duration_ms: 0.29625
+  type: 'test'
+  ...
+# Subtest: ambiguous mail from a possible lead drafts for a human instead of going silent
+ok 534 - ambiguous mail from a possible lead drafts for a human instead of going silent
+  ---
+  duration_ms: 0.126833
+  type: 'test'
+  ...
+# Subtest: email auto-send is off by default and draft_first stays a global switch
+ok 535 - email auto-send is off by default and draft_first stays a global switch
+  ---
+  duration_ms: 0.068667
+  type: 'test'
+  ...
+# Subtest: unrelated mail gets no property card, listing, price or real-estate pitch in the draft
+ok 536 - unrelated mail gets no property card, listing, price or real-estate pitch in the draft
+  ---
+  duration_ms: 6.185542
+  type: 'test'
+  ...
+# Subtest: only two labels are managed in the user's mailbox, with no Iris/ prefix anywhere
+ok 537 - only two labels are managed in the user's mailbox, with no Iris/ prefix anywhere
+  ---
+  duration_ms: 0.425791
+  type: 'test'
+  ...
+# Subtest: no label or rule can authorize an auto-send
+ok 538 - no label or rule can authorize an auto-send
+  ---
+  duration_ms: 0.171375
+  type: 'test'
+  ...
+# Subtest: defaults respect the user's existing inbox
+ok 539 - defaults respect the user's existing inbox
+  ---
+  duration_ms: 0.080208
+  type: 'test'
+  ...
+# Subtest: an absent respect_existing_labels is never read as permission to re-sort
+ok 540 - an absent respect_existing_labels is never read as permission to re-sort
+  ---
+  duration_ms: 0.243542
+  type: 'test'
+  ...
+# Subtest: lifecycle gauntlet: table-driven intent and send-safety matrix
+ok 541 - lifecycle gauntlet: table-driven intent and send-safety matrix
+  ---
+  duration_ms: 365.752917
+  type: 'test'
+  ...
+# Subtest: lifecycle gauntlet: eight-turn buyer thread carries facts and never pivots to valuation
+ok 542 - lifecycle gauntlet: eight-turn buyer thread carries facts and never pivots to valuation
+  ---
+  duration_ms: 1.885459
+  type: 'test'
+  ...
+# Subtest: lifecycle gauntlet: simultaneous threads keep property identity isolated
+ok 543 - lifecycle gauntlet: simultaneous threads keep property identity isolated
+  ---
+  duration_ms: 0.206292
+  type: 'test'
+  ...
+# Subtest: lifecycle gauntlet: stale context cannot resolve a bare pronoun in a new thread
+ok 544 - lifecycle gauntlet: stale context cannot resolve a bare pronoun in a new thread
+  ---
+  duration_ms: 0.116333
+  type: 'test'
+  ...
+# Subtest: reply delivery maps all channels into guarded shared actions
+ok 545 - reply delivery maps all channels into guarded shared actions
+  ---
+  duration_ms: 42.594917
+  type: 'test'
+  ...
+# Subtest: only failed reply jobs can be manually replayed
+ok 546 - only failed reply jobs can be manually replayed
+  ---
+  duration_ms: 0.218833
+  type: 'test'
+  ...
+# Subtest: failed provider sends throw so Inngest runs configured retries
+ok 547 - failed provider sends throw so Inngest runs configured retries
+  ---
+  duration_ms: 0.485334
+  type: 'test'
+  ...
+# Subtest: reply send event carries the originating workspace tenant
+ok 548 - reply send event carries the originating workspace tenant
+  ---
+  duration_ms: 4.359792
+  type: 'test'
+  ...
+# Subtest: reply send event omits an empty workspace instead of inventing a tenant
+ok 549 - reply send event omits an empty workspace instead of inventing a tenant
+  ---
+  duration_ms: 0.186042
+  type: 'test'
+  ...
+# Subtest: shared Iris text brain handles every text reply channel
+ok 550 - shared Iris text brain handles every text reply channel
+  ---
+  duration_ms: 358.767625
+  type: 'test'
+  ...
+# Subtest: lead capture dedupe key is stable and accepts explicit idempotency
+ok 551 - lead capture dedupe key is stable and accepts explicit idempotency
+  ---
+  duration_ms: 2.6565
+  type: 'test'
+  ...
+# Subtest: context envelope merges durable lead and raw acquisition context
+ok 552 - context envelope merges durable lead and raw acquisition context
+  ---
+  duration_ms: 36.793958
+  type: 'test'
+  ...
+# Subtest: shared brain stops opt-outs and never drafts a reply
+ok 553 - shared brain stops opt-outs and never drafts a reply
+  ---
+  duration_ms: 16.971667
+  type: 'test'
+  ...
+# Subtest: shared brain gives safe help but alerts human for sensitive requests
+ok 554 - shared brain gives safe help but alerts human for sensitive requests
+  ---
+  duration_ms: 1.419708
+  type: 'test'
+  ...
+# Subtest: captured property context produces a contextual safe first reply
+ok 555 - captured property context produces a contextual safe first reply
+  ---
+  duration_ms: 0.73375
+  type: 'test'
+  ...
+# Subtest: channel renderer enforces SMS and DM bounds
+ok 556 - channel renderer enforces SMS and DM bounds
+  ---
+  duration_ms: 0.522542
+  type: 'test'
+  ...
+# Subtest: CSV import maps common CRM export fields and reports unmapped columns
+ok 557 - CSV import maps common CRM export fields and reports unmapped columns
+  ---
+  duration_ms: 12.240292
+  type: 'test'
+  ...
+# Subtest: duplicate rows in the same import do not become duplicate candidates
+ok 558 - duplicate rows in the same import do not become duplicate candidates
+  ---
+  duration_ms: 33.103375
+  type: 'test'
+  ...
+# Subtest: consent and do-not-contact fields block campaign eligibility
+ok 559 - consent and do-not-contact fields block campaign eligibility
+  ---
+  duration_ms: 1.33425
+  type: 'test'
+  ...
+# Subtest: missing contact info is segmented and blocked
+ok 560 - missing contact info is segmented and blocked
+  ---
+  duration_ms: 0.216292
+  type: 'test'
+  ...
+# Subtest: Composio-supported rows ingest into the normalized lead shape
+ok 561 - Composio-supported rows ingest into the normalized lead shape
+  ---
+  duration_ms: 0.743458
+  type: 'test'
+  ...
+# Subtest: Composio import config and result path normalize CRM rows
+ok 562 - Composio import config and result path normalize CRM rows
+  ---
+  duration_ms: 0.813542
+  type: 'test'
+  ...
+# Subtest: extractLeadProfileDetails: captures email phone and stated name
+ok 563 - extractLeadProfileDetails: captures email phone and stated name
+  ---
+  duration_ms: 8.882125
+  type: 'test'
+  ...
+# Subtest: extractLeadProfileDetails: ignores false name from buyer phrasing
+ok 564 - extractLeadProfileDetails: ignores false name from buyer phrasing
+  ---
+  duration_ms: 1.511458
+  type: 'test'
+  ...
+# Subtest: decideLeadProfileCapture: social asks optional text copy for high intent missing phone
+ok 565 - decideLeadProfileCapture: social asks optional text copy for high intent missing phone
+  ---
+  duration_ms: 1.034958
+  type: 'test'
+  ...
+# Subtest: decideLeadProfileCapture: SMS asks name only for high intent when phone is known
+ok 566 - decideLeadProfileCapture: SMS asks name only for high intent when phone is known
+  ---
+  duration_ms: 0.451625
+  type: 'test'
+  ...
+# Subtest: appendLeadProfileCaptureAsk: does not add a second question
+ok 567 - appendLeadProfileCaptureAsk: does not add a second question
+  ---
+  duration_ms: 23.675292
+  type: 'test'
+  ...
+# Subtest: leadProfileMemoryPatch: stores extracted contact fields without overwriting channel usefulness
+ok 568 - leadProfileMemoryPatch: stores extracted contact fields without overwriting channel usefulness
+  ---
+  duration_ms: 13.963125
+  type: 'test'
+  ...
+# Subtest: load-test guard identifies marked requests
+ok 569 - load-test guard identifies marked requests
+  ---
+  duration_ms: 1.655083
+  type: 'test'
+  ...
+# Subtest: load-test guard blocks marked mutations only
+ok 570 - load-test guard blocks marked mutations only
+  ---
+  duration_ms: 3.694833
+  type: 'test'
+  ...
+# Subtest: provider dry-run env parser accepts true-ish values
+ok 571 - provider dry-run env parser accepts true-ish values
+  ---
+  duration_ms: 0.194958
+  type: 'test'
+  ...
+# Subtest: manual Instagram direct send requires a stored Meta page token
+ok 572 - manual Instagram direct send requires a stored Meta page token
+  ---
+  duration_ms: 59.914875
+  type: 'test'
+  ...
+# Subtest: resourceNames: reads ManyChat name/title fields
+ok 573 - resourceNames: reads ManyChat name/title fields
+  ---
+  duration_ms: 1.179875
+  type: 'test'
+  ...
+# Subtest: missingManyChatResources: compares case-insensitively
+ok 574 - missingManyChatResources: compares case-insensitively
+  ---
+  duration_ms: 0.141666
+  type: 'test'
+  ...
+# Subtest: normalizeManyChatPayload: maps common ManyChat fields
+ok 575 - normalizeManyChatPayload: maps common ManyChat fields
+  ---
+  duration_ms: 17.323208
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleSocialDm: allows routed real estate messages
+ok 576 - shouldTheoHandleSocialDm: allows routed real estate messages
+  ---
+  duration_ms: 115.609208
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleSocialDm: abstains on personal social chatter instead of replying
+ok 577 - shouldTheoHandleSocialDm: abstains on personal social chatter instead of replying
+  ---
+  duration_ms: 51.42375
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleSocialDm: engages a typed inventory question
+ok 578 - shouldTheoHandleSocialDm: engages a typed inventory question
+  ---
+  duration_ms: 0.717208
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleDirectMetaDm: engages the same typed question on the direct channel
+ok 579 - shouldTheoHandleDirectMetaDm: engages the same typed question on the direct channel
+  ---
+  duration_ms: 0.435959
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleDirectMetaDm: still blocks clearly human-required messages
+ok 580 - shouldTheoHandleDirectMetaDm: still blocks clearly human-required messages
+  ---
+  duration_ms: 0.095875
+  type: 'test'
+  ...
+# Subtest: socialDmIngestInput: stores separate social channel thread refs
+ok 581 - socialDmIngestInput: stores separate social channel thread refs
+  ---
+  duration_ms: 0.759167
+  type: 'test'
+  ...
+# Subtest: formatManyChatDynamicBlock: formats Messenger text plus image
+ok 582 - formatManyChatDynamicBlock: formats Messenger text plus image
+  ---
+  duration_ms: 9.351667
+  type: 'test'
+  ...
+# Subtest: buildSocialRouterResult: safe needs-human replies stay sendable and flagged
+ok 583 - buildSocialRouterResult: safe needs-human replies stay sendable and flagged
+  ---
+  duration_ms: 0.668083
+  type: 'test'
+  ...
+# Subtest: formatManyChatDynamicBlock: marks Instagram content type
+ok 584 - formatManyChatDynamicBlock: marks Instagram content type
+  ---
+  duration_ms: 0.790125
+  type: 'test'
+  ...
+# Subtest: socialMediaUrls: caps image URLs and returns direct URLs
+ok 585 - socialMediaUrls: caps image URLs and returns direct URLs
+  ---
+  duration_ms: 0.297542
+  type: 'test'
+  ...
+# Subtest: shouldTheoHandleDirectMetaDm: a shared non-property reel abstains and sends nothing
+ok 586 - shouldTheoHandleDirectMetaDm: a shared non-property reel abstains and sends nothing
+  ---
+  duration_ms: 1.704875
+  type: 'test'
+  ...
+# Subtest: isGoogleStreetViewUrl detects Google Street View URLs
+ok 587 - isGoogleStreetViewUrl detects Google Street View URLs
+  ---
+  duration_ms: 3.613875
+  type: 'test'
+  ...
+# Subtest: mediaProxyPath returns Zillow URLs directly (no proxy)
+ok 588 - mediaProxyPath returns Zillow URLs directly (no proxy)
+  ---
+  duration_ms: 0.4295
+  type: 'test'
+  ...
+# Subtest: mediaProxyUrl returns direct URL (no proxy)
+ok 589 - mediaProxyUrl returns direct URL (no proxy)
+  ---
+  duration_ms: 0.135
+  type: 'test'
+  ...
+# Subtest: rewriteEmailHtmlForInbox replaces Street View with sheet photo and serves directly
+ok 590 - rewriteEmailHtmlForInbox replaces Street View with sheet photo and serves directly
+  ---
+  duration_ms: 3.320167
+  type: 'test'
+  ...
+# Subtest: rewriteEmailHtmlForInbox shows placeholder when only Street View is available
+ok 591 - rewriteEmailHtmlForInbox shows placeholder when only Street View is available
+  ---
+  duration_ms: 1.224209
+  type: 'test'
+  ...
+# Subtest: rewriteEmailHtmlForInbox serves Zillow images directly
+ok 592 - rewriteEmailHtmlForInbox serves Zillow images directly
+  ---
+  duration_ms: 0.20275
+  type: 'test'
+  ...
+# Subtest: extractPropertyAddressFromEmailHtml reads h2 address headings
+ok 593 - extractPropertyAddressFromEmailHtml reads h2 address headings
+  ---
+  duration_ms: 0.161459
+  type: 'test'
+  ...
+# Subtest: resolvePropertyPhotoFromSheet ignores Street View sheet photos
+ok 594 - resolvePropertyPhotoFromSheet ignores Street View sheet photos
+  ---
+  duration_ms: 0.175167
+  type: 'test'
+  ...
+# Subtest: usableInboxPhotoUrl and inboxImagePreviewUrl skip Street View
+ok 595 - usableInboxPhotoUrl and inboxImagePreviewUrl skip Street View
+  ---
+  duration_ms: 0.301792
+  type: 'test'
+  ...
+# Subtest: understandMediaItems summarizes shared real estate reels for similar-property requests
+ok 596 - understandMediaItems summarizes shared real estate reels for similar-property requests
+  ---
+  duration_ms: 1.62475
+  type: 'test'
+  ...
+# Subtest: understandMediaItems keeps voice note transcripts available to the agent
+ok 597 - understandMediaItems keeps voice note transcripts available to the agent
+  ---
+  duration_ms: 0.2795
+  type: 'test'
+  ...
+# Subtest: understandMediaItems gives images usable context even without paid vision enabled
+ok 598 - understandMediaItems gives images usable context even without paid vision enabled
+  ---
+  duration_ms: 0.230708
+  type: 'test'
+  ...
+# Subtest: understandMediaItems supports general media vision flag and strips private vision bytes
+ok 599 - understandMediaItems supports general media vision flag and strips private vision bytes
+  ---
+  duration_ms: 31.769375
+  type: 'test'
+  ...
+# Subtest: a text-channel body keeps every intentional newline and blank line
+ok 600 - a text-channel body keeps every intentional newline and blank line
+  ---
+  duration_ms: 3.310042
+  type: 'test'
+  ...
+# Subtest: a URL keeps a blank line before and after it, and prose after a link starts a new line
+ok 601 - a URL keeps a blank line before and after it, and prose after a link starts a new line
+  ---
+  duration_ms: 1.212375
+  type: 'test'
+  ...
+# Subtest: horizontal runs still collapse inside a line, but never across lines
+ok 602 - horizontal runs still collapse inside a line, but never across lines
+  ---
+  duration_ms: 0.105792
+  type: 'test'
+  ...
+# Subtest: a numbered list renders one item per line instead of one run-on paragraph
+ok 603 - a numbered list renders one item per line instead of one run-on paragraph
+  ---
+  duration_ms: 1.992208
+  type: 'test'
+  ...
+# Subtest: markup in a plain-text body becomes text, never markup
+ok 604 - markup in a plain-text body becomes text, never markup
+  ---
+  duration_ms: 0.324125
+  type: 'test'
+  ...
+# Subtest: previews collapse to one line, because a thread row is one line tall
+ok 605 - previews collapse to one line, because a thread row is one line tall
+  ---
+  duration_ms: 0.149083
+  type: 'test'
+  ...
+# Subtest: the plain-text bubble carries the pre-wrap class and the HTML bubble does not
+ok 606 - the plain-text bubble carries the pre-wrap class and the HTML bubble does not
+  ---
+  duration_ms: 0.206291
+  type: 'test'
+  ...
+# Subtest: the CSS for that class actually preserves newlines, and email HTML is left alone
+ok 607 - the CSS for that class actually preserves newlines, and email HTML is left alone
+  ---
+  duration_ms: 4.260916
+  type: 'test'
+  ...
+# Subtest: the live message timeline renders through the display helper, not a collapsing one
+ok 608 - the live message timeline renders through the display helper, not a collapsing one
+  ---
+  duration_ms: 11.887375
+  type: 'test'
+  ...
+# Subtest: every text channel is covered, and email/voice are not
+ok 609 - every text channel is covered, and email/voice are not
+  ---
+  duration_ms: 0.619583
+  type: 'test'
+  ...
+# Subtest: what the serializer produced is exactly what the bubble renders
+ok 610 - what the serializer produced is exactly what the bubble renders
+  ---
+  duration_ms: 4.267583
+  type: 'test'
+  ...
+# meta_callback_invalid_state Invalid provider OAuth state
+# Subtest: Meta connect uses configured Business Login config by default
+ok 611 - Meta connect uses configured Business Login config by default
+  ---
+  duration_ms: 8.445708
+  type: 'test'
+  ...
+# Subtest: Meta callback subscribes connected Pages to message webhook fields
+ok 612 - Meta callback subscribes connected Pages to message webhook fields
+  ---
+  duration_ms: 49.790958
+  type: 'test'
+  ...
+# Subtest: Meta callback uses default Page message webhook fields
+ok 613 - Meta callback uses default Page message webhook fields
+  ---
+  duration_ms: 0.237583
+  type: 'test'
+  ...
+# Subtest: Meta callback chooses channel-specific configured Page ID fallback
+ok 614 - Meta callback chooses channel-specific configured Page ID fallback
+  ---
+  duration_ms: 0.2205
+  type: 'test'
+  ...
+# Subtest: Meta callback falls back to shared configured Page ID
+ok 615 - Meta callback falls back to shared configured Page ID
+  ---
+  duration_ms: 2.761834
+  type: 'test'
+  ...
+# Subtest: Meta connect can opt out of Business Login config for direct OAuth scopes
+ok 616 - Meta connect can opt out of Business Login config for direct OAuth scopes
+  ---
+  duration_ms: 31.054208
+  type: 'test'
+  ...
+# Subtest: Meta connect does not use shared Business Login config for Messenger
+ok 617 - Meta connect does not use shared Business Login config for Messenger
+  ---
+  duration_ms: 14.876041
+  type: 'test'
+  ...
+# Subtest: Meta connect ignores an attacker-supplied client_id and signs the session tenant
+ok 618 - Meta connect ignores an attacker-supplied client_id and signs the session tenant
+  ---
+  duration_ms: 1.667042
+  type: 'test'
+  ...
+# Subtest: Meta callback refuses a forged state
+ok 619 - Meta callback refuses a forged state
+  ---
+  duration_ms: 7.697417
+  type: 'test'
+  ...
+# Subtest: Meta connect allows explicit config_id override
+ok 620 - Meta connect allows explicit config_id override
+  ---
+  duration_ms: 9.029541
+  type: 'test'
+  ...
+# Subtest: Meta connect can render dashboard setup page
+ok 621 - Meta connect can render dashboard setup page
+  ---
+  duration_ms: 1.52175
+  type: 'test'
+  ...
+# Subtest: Meta callback redirects cancelled auth back to the app
+ok 622 - Meta callback redirects cancelled auth back to the app
+  ---
+  duration_ms: 7.520959
+  type: 'test'
+  ...
+# Subtest: Meta callback maps Instagram pages to Instagram business account assets
+ok 623 - Meta callback maps Instagram pages to Instagram business account assets
+  ---
+  duration_ms: 54.542417
+  type: 'test'
+  ...
+# Subtest: Meta callback skips Instagram pages with no linked business account
+ok 624 - Meta callback skips Instagram pages with no linked business account
+  ---
+  duration_ms: 0.098958
+  type: 'test'
+  ...
+# Subtest: Meta callback maps Messenger pages to Page assets
+ok 625 - Meta callback maps Messenger pages to Page assets
+  ---
+  duration_ms: 0.094667
+  type: 'test'
+  ...
+# Subtest: normalizeMetaLeadgenLead extracts contact, criteria, consent, and channel
+ok 626 - normalizeMetaLeadgenLead extracts contact, criteria, consent, and channel
+  ---
+  duration_ms: 3.081334
+  type: 'test'
+  ...
+# Subtest: metaLeadgenIngestInput creates a speed-to-lead SMS thread event
+ok 627 - metaLeadgenIngestInput creates a speed-to-lead SMS thread event
+  ---
+  duration_ms: 1.356625
+  type: 'test'
+  ...
+# Subtest: initialLeadgenReply uses Austin Realty and criteria
+ok 628 - initialLeadgenReply uses Austin Realty and criteria
+  ---
+  duration_ms: 228.258458
+  type: 'test'
+  ...
+# Subtest: extractLeadgenIds supports Meta webhook changes and direct debug payloads
+ok 629 - extractLeadgenIds supports Meta webhook changes and direct debug payloads
+  ---
+  duration_ms: 0.622625
+  type: 'test'
+  ...
+# Subtest: autoCallEnabled: dark-launched, defaults to false with no env var set
+ok 630 - autoCallEnabled: dark-launched, defaults to false with no env var set
+  ---
+  duration_ms: 4.983
+  type: 'test'
+  ...
+# Subtest: autoCallEnabled: only true for the exact string 'true', not any truthy value
+ok 631 - autoCallEnabled: only true for the exact string 'true', not any truthy value
+  ---
+  duration_ms: 0.23025
+  type: 'test'
+  ...
+# Subtest: extractMetaSocialMessages parses Messenger-style messaging webhook payloads
+ok 632 - extractMetaSocialMessages parses Messenger-style messaging webhook payloads
+  ---
+  duration_ms: 21.153125
+  type: 'test'
+  ...
+# Subtest: extractMetaSocialMessages infers Instagram when the recipient matches a saved Instagram asset id
+ok 633 - extractMetaSocialMessages infers Instagram when the recipient matches a saved Instagram asset id
+  ---
+  duration_ms: 12.909041
+  type: 'test'
+  ...
+# Subtest: extractMetaSocialMessages preserves Instagram shared post attachments
+ok 634 - extractMetaSocialMessages preserves Instagram shared post attachments
+  ---
+  duration_ms: 0.549875
+  type: 'test'
+  ...
+# Subtest: extractMetaSocialMessages uses shared reel thumbnails as preview cards when Meta provides them
+ok 635 - extractMetaSocialMessages uses shared reel thumbnails as preview cards when Meta provides them
+  ---
+  duration_ms: 0.779875
+  type: 'test'
+  ...
+# Subtest: extractMetaSocialMessages preserves platform-sent echo messages
+ok 636 - extractMetaSocialMessages preserves platform-sent echo messages
+  ---
+  duration_ms: 7.093084
+  type: 'test'
+  ...
+# Subtest: fetchMetaSocialSenderProfile reads Instagram username from Graph profile
+ok 637 - fetchMetaSocialSenderProfile reads Instagram username from Graph profile
+  ---
+  duration_ms: 124.800541
+  type: 'test'
+  ...
+# Subtest: metaSocialDirectEnabled respects global and per-channel flags
+ok 638 - metaSocialDirectEnabled respects global and per-channel flags
+  ---
+  duration_ms: 0.893083
+  type: 'test'
+  ...
+# Subtest: extractMetaWhatsAppMessages maps Meta text payloads to Theo input
+ok 639 - extractMetaWhatsAppMessages maps Meta text payloads to Theo input
+  ---
+  duration_ms: 6.061833
+  type: 'test'
+  ...
+# Subtest: extractMetaWhatsAppMessages keeps image captions as message text
+ok 640 - extractMetaWhatsAppMessages keeps image captions as message text
+  ---
+  duration_ms: 0.51225
+  type: 'test'
+  ...
+# Subtest: sendMetaWhatsApp does not call Meta when the WhatsApp agent is disabled
+ok 641 - sendMetaWhatsApp does not call Meta when the WhatsApp agent is disabled
+  ---
+  duration_ms: 17.08075
+  type: 'test'
+  ...
+# Subtest: verifyMetaSignature allows unsigned payloads unless META_APP_SECRET is set
+ok 642 - verifyMetaSignature allows unsigned payloads unless META_APP_SECRET is set
+  ---
+  duration_ms: 19.929292
+  type: 'test'
+  ...
+# Subtest: modelRoutingProfile defaults to legacy when MODEL_ROUTING_PROFILE is unset
+ok 643 - modelRoutingProfile defaults to legacy when MODEL_ROUTING_PROFILE is unset
+  ---
+  duration_ms: 6.571833
+  type: 'test'
+  ...
+# Subtest: modelRoutingProfile accepts canary and candidate
+ok 644 - modelRoutingProfile accepts canary and candidate
+  ---
+  duration_ms: 0.427291
+  type: 'test'
+  ...
+# Subtest: modelRoutingProfile falls back to legacy on an invalid value (fail-safe, not fail-open)
+ok 645 - modelRoutingProfile falls back to legacy on an invalid value (fail-safe, not fail-open)
+  ---
+  duration_ms: 0.105542
+  type: 'test'
+  ...
+# Subtest: corpus directory contains all required task-class files at minimum sizes
+ok 646 - corpus directory contains all required task-class files at minimum sizes
+  ---
+  duration_ms: 5.196
+  type: 'test'
+  ...
+# Subtest: no corpus file contains PII per the frozen regex set
+ok 647 - no corpus file contains PII per the frozen regex set
+  ---
+  duration_ms: 21.631709
+  type: 'test'
+  ...
+# Subtest: every corpus record has a unique, deterministic id and the required fields
+ok 648 - every corpus record has a unique, deterministic id and the required fields
+  ---
+  duration_ms: 9.242792
+  type: 'test'
+  ...
+# Subtest: AgentInboxData type in lib/inboxData.ts still declares every required key
+ok 649 - AgentInboxData type in lib/inboxData.ts still declares every required key
+  ---
+  duration_ms: 2.648834
+  type: 'test'
+  ...
+# Subtest: channel/direction enum values referenced by this audit's docs match the repo's actual literals
+ok 650 - channel/direction enum values referenced by this audit's docs match the repo's actual literals
+  ---
+  duration_ms: 0.212292
+  type: 'test'
+  ...
+# Subtest: default managed labels are exactly Auto Replied and Needs Human
+ok 651 - default managed labels are exactly Auto Replied and Needs Human
+  ---
+  duration_ms: 17.826083
+  type: 'test'
+  ...
+# Subtest: every row in DEFAULT_INBOX_CATEGORIES is pinned mailbox:false
+ok 652 - every row in DEFAULT_INBOX_CATEGORIES is pinned mailbox:false
+  ---
+  duration_ms: 0.223625
+  type: 'test'
+  ...
+# Subtest: normalizeInboxCategory cannot be used to promote an internal-only workflow category (e.g. 'nurture') to mailbox:true
+ok 653 - normalizeInboxCategory cannot be used to promote an internal-only workflow category (e.g. 'nurture') to mailbox:true
+  ---
+  duration_ms: 0.246709
+  type: 'test'
+  ...
+# Subtest: this audit's own new files never import or modify lib/inboxLabelPlan.ts or lib/inboxSettings.ts
+ok 654 - this audit's own new files never import or modify lib/inboxLabelPlan.ts or lib/inboxSettings.ts
+  ---
+  duration_ms: 0.656958
+  type: 'test'
+  ...
+# Subtest: redactForTelemetry never returns the raw prompt text
+ok 655 - redactForTelemetry never returns the raw prompt text
+  ---
+  duration_ms: 67.120167
+  type: 'test'
+  ...
+# Subtest: redactForTelemetry is deterministic (same input -> same hash)
+ok 656 - redactForTelemetry is deterministic (same input -> same hash)
+  ---
+  duration_ms: 1.293042
+  type: 'test'
+  ...
+# Subtest: redactForTelemetry produces different hashes for different inputs
+ok 657 - redactForTelemetry produces different hashes for different inputs
+  ---
+  duration_ms: 0.268833
+  type: 'test'
+  ...
+# Subtest: recordModelAttempt no-ops (returns false, never throws) when DATABASE_URL is unset
+ok 658 - recordModelAttempt no-ops (returns false, never throws) when DATABASE_URL is unset
+  ---
+  duration_ms: 0.260958
+  type: 'test'
+  ...
+# Subtest: recordModelAttempt no-ops (never throws) when DATABASE_URL is set but unreachable
+ok 659 - recordModelAttempt no-ops (never throws) when DATABASE_URL is set but unreachable
+  ---
+  duration_ms: 348.405333
+  type: 'test'
+  ...
+# Subtest: attemptCostUsd matches hand-computed fixture for claude-haiku-4-5
+ok 660 - attemptCostUsd matches hand-computed fixture for claude-haiku-4-5
+  ---
+  duration_ms: 0.798708
+  type: 'test'
+  ...
+# Subtest: attemptCostUsd matches hand-computed fixture for claude-sonnet-4-6
+ok 661 - attemptCostUsd matches hand-computed fixture for claude-sonnet-4-6
+  ---
+  duration_ms: 0.185875
+  type: 'test'
+  ...
+# Subtest: attemptCostUsd includes cached input and reasoning tokens
+ok 662 - attemptCostUsd includes cached input and reasoning tokens
+  ---
+  duration_ms: 0.620542
+  type: 'test'
+  ...
+# Subtest: costPerAcceptedResult sums ALL attempts (retries + fallback hops), not just the winner
+ok 663 - costPerAcceptedResult sums ALL attempts (retries + fallback hops), not just the winner
+  ---
+  duration_ms: 3.040125
+  type: 'test'
+  ...
+# Subtest: costPerAcceptedResult divides by ACCEPTED outputs, never by total attempt count
+ok 664 - costPerAcceptedResult divides by ACCEPTED outputs, never by total attempt count
+  ---
+  duration_ms: 1.090208
+  type: 'test'
+  ...
+# Subtest: costBand reports low/mid/high at +-15% token counts and mid equals unscaled cost
+ok 665 - costBand reports low/mid/high at +-15% token counts and mid equals unscaled cost
+  ---
+  duration_ms: 0.666166
+  type: 'test'
+  ...
+# Subtest: newCandidateEligibility refuses unverified prices for NEW candidate traffic
+ok 666 - newCandidateEligibility refuses unverified prices for NEW candidate traffic
+  ---
+  duration_ms: 0.365125
+  type: 'test'
+  ...
+# Subtest: every entry in MODEL_PRICING carries a non-empty provenance note
+ok 667 - every entry in MODEL_PRICING carries a non-empty provenance note
+  ---
+  duration_ms: 0.365792
+  type: 'test'
+  ...
+# Subtest: legacy profile always returns the legacy tier regardless of task class, and never routes
+ok 668 - legacy profile always returns the legacy tier regardless of task class, and never routes
+  ---
+  duration_ms: 6.959666
+  type: 'test'
+  ...
+# Subtest: candidate profile routes classification and voice tasks to the low-effort tier
+ok 669 - candidate profile routes classification and voice tasks to the low-effort tier
+  ---
+  duration_ms: 0.236375
+  type: 'test'
+  ...
+# Subtest: candidate profile routes routine email/sms replies to the medium tier
+ok 670 - candidate profile routes routine email/sms replies to the medium tier
+  ---
+  duration_ms: 0.160833
+  type: 'test'
+  ...
+# Subtest: sensitive-category text is ALWAYS routed to human_review=true, for every profile
+ok 671 - sensitive-category text is ALWAYS routed to human_review=true, for every profile
+  ---
+  duration_ms: 0.214667
+  type: 'test'
+  ...
+# Subtest: sensitive routing is a deterministic RULE, not a model decision — it cannot be disabled by clientProfile
+ok 672 - sensitive routing is a deterministic RULE, not a model decision — it cannot be disabled by clientProfile
+  ---
+  duration_ms: 0.076583
+  type: 'test'
+  ...
+# Subtest: prompt injection instructions cannot flip human_review to false
+ok 673 - prompt injection instructions cannot flip human_review to false
+  ---
+  duration_ms: 0.081291
+  type: 'test'
+  ...
+# Subtest: route never contains a field that could be read as send/injection compliance
+ok 674 - route never contains a field that could be read as send/injection compliance
+  ---
+  duration_ms: 0.182833
+  type: 'test'
+  ...
+# Subtest: candidate route exposes a fallback chain that never contains a cycle back to its own tier
+ok 675 - candidate route exposes a fallback chain that never contains a cycle back to its own tier
+  ---
+  duration_ms: 0.090042
+  type: 'test'
+  ...
+# Subtest: hard tier (sensitive/human_review) has an empty fallback chain — no model retries a compliance stop
+ok 676 - hard tier (sensitive/human_review) has an empty fallback chain — no model retries a compliance stop
+  ---
+  duration_ms: 30.33075
+  type: 'test'
+  ...
+# Subtest: voice-turn tier downgrades to legacy-equivalent latency-safe tier when the latency budget is tight
+ok 677 - voice-turn tier downgrades to legacy-equivalent latency-safe tier when the latency budget is tight
+  ---
+  duration_ms: 1.085375
+  type: 'test'
+  ...
+# Subtest: every non-legacy, non-human-review tier resolves to a model present in the pricing registry
+ok 678 - every non-legacy, non-human-review tier resolves to a model present in the pricing registry
+  ---
+  duration_ms: 1.304791
+  type: 'test'
+  ...
+# Subtest: router refuses to route to a model absent from the pricing registry
+ok 679 - router refuses to route to a model absent from the pricing registry
+  ---
+  duration_ms: 6.074292
+  type: 'test'
+  ...
+# Subtest: lib/modelRouting.ts source does not import decideIrisEmailExecution or any send-authorizing function
+ok 680 - lib/modelRouting.ts source does not import decideIrisEmailExecution or any send-authorizing function
+  ---
+  duration_ms: 0.522375
+  type: 'test'
+  ...
+# Subtest: identical input at temperature 0 (default) yields identical tier on repeated calls
+ok 681 - identical input at temperature 0 (default) yields identical tier on repeated calls
+  ---
+  duration_ms: 10.866291
+  type: 'test'
+  ...
+# Subtest: removeEmDashes replaces em dash with plain hyphen spacing
+ok 682 - removeEmDashes replaces em dash with plain hyphen spacing
+  ---
+  duration_ms: 5.824625
+  type: 'test'
+  ...
+# Subtest: removeEmDashesFromRecord cleans selected text fields only
+ok 683 - removeEmDashesFromRecord cleans selected text fields only
+  ---
+  duration_ms: 0.345042
+  type: 'test'
+  ...
+# Subtest: composio social sends are off unless explicit env flag enables them
+ok 684 - composio social sends are off unless explicit env flag enables them
+  ---
+  duration_ms: 4.988625
+  type: 'test'
+  ...
+# Subtest: classifyUrgency: tiers
+ok 685 - classifyUrgency: tiers
+  ---
+  duration_ms: 0.844167
+  type: 'test'
+  ...
+# Subtest: inQuietHours: wraps midnight (21 -> 8)
+ok 686 - inQuietHours: wraps midnight (21 -> 8)
+  ---
+  duration_ms: 0.133292
+  type: 'test'
+  ...
+# Subtest: decideNotification: interrupt during day -> sms
+ok 687 - decideNotification: interrupt during day -> sms
+  ---
+  duration_ms: 0.127666
+  type: 'test'
+  ...
+# Subtest: decideNotification: interrupt during quiet hours -> dashboard
+ok 688 - decideNotification: interrupt during quiet hours -> dashboard
+  ---
+  duration_ms: 0.144375
+  type: 'test'
+  ...
+# Subtest: decideNotification: digest -> dashboard
+ok 689 - decideNotification: digest -> dashboard
+  ---
+  duration_ms: 0.071458
+  type: 'test'
+  ...
+# Subtest: decideNotification: non-notifiable -> no deliver
+ok 690 - decideNotification: non-notifiable -> no deliver
+  ---
+  duration_ms: 0.05175
+  type: 'test'
+  ...
+# Subtest: decideNotification: dedupes within recentKeys
+ok 691 - decideNotification: dedupes within recentKeys
+  ---
+  duration_ms: 0.142375
+  type: 'test'
+  ...
+# Subtest: notifyAgent: interrupt sends via injected sender; digest records
+ok 692 - notifyAgent: interrupt sends via injected sender; digest records
+  ---
+  duration_ms: 45.926666
+  type: 'test'
+  ...
+# Subtest: normalizedDedupeKey uses provider-specific stable prefixes
+ok 693 - normalizedDedupeKey uses provider-specific stable prefixes
+  ---
+  duration_ms: 13.669209
+  type: 'test'
+  ...
+# Subtest: normalizedMessageText includes audio and video transcripts
+ok 694 - normalizedMessageText includes audio and video transcripts
+  ---
+  duration_ms: 7.078458
+  type: 'test'
+  ...
+# Subtest: media transcription and logs recognize iPhone-playable audio formats
+ok 695 - media transcription and logs recognize iPhone-playable audio formats
+  ---
+  duration_ms: 23.973417
+  type: 'test'
+  ...
+# Subtest: normalizes Typeform refs into the durable onboarding record
+ok 696 - normalizes Typeform refs into the durable onboarding record
+  ---
+  duration_ms: 2.496125
+  type: 'test'
+  ...
+# Subtest: missing required values block provisioning
+ok 697 - missing required values block provisioning
+  ---
+  duration_ms: 0.209709
+  type: 'test'
+  ...
+# Subtest: verifies Typeform HMAC signatures
+ok 698 - verifies Typeform HMAC signatures
+  ---
+  duration_ms: 0.388542
+  type: 'test'
+  ...
+# Subtest: verifies Stripe signatures and rejects stale signatures
+ok 699 - verifies Stripe signatures and rejects stale signatures
+  ---
+  duration_ms: 1.186959
+  type: 'test'
+  ...
+# Subtest: extracts only paid checkout customers
+ok 700 - extracts only paid checkout customers
+  ---
+  duration_ms: 0.927792
+  type: 'test'
+  ...
+# Subtest: kickoff email includes intake, scheduling, and secure-access guidance
+ok 701 - kickoff email includes intake, scheduling, and secure-access guidance
+  ---
+  duration_ms: 0.276167
+  type: 'test'
+  ...
+# Subtest: selectVoiceFollowups: only voice-due leads with a phone
+ok 702 - selectVoiceFollowups: only voice-due leads with a phone
+  ---
+  duration_ms: 160.999083
+  type: 'test'
+  ...
+# Subtest: evaluateFollowups: returns a decision per lead
+ok 703 - evaluateFollowups: returns a decision per lead
+  ---
+  duration_ms: 0.559208
+  type: 'test'
+  ...
+# Subtest: placeOutboundCall: posts assistant + customer + outbound overrides
+ok 704 - placeOutboundCall: posts assistant + customer + outbound overrides
+  ---
+  duration_ms: 5.584417
+  type: 'test'
+  ...
+# Subtest: placeOutboundCall: missing config fails fast
+ok 705 - placeOutboundCall: missing config fails fast
+  ---
+  duration_ms: 1.160916
+  type: 'test'
+  ...
+# Subtest: placeOutboundCall: missing number fails
+ok 706 - placeOutboundCall: missing number fails
+  ---
+  duration_ms: 0.296208
+  type: 'test'
+  ...
+# Subtest: outboundFirstMessage: named and unknown lead openers
+ok 707 - outboundFirstMessage: named and unknown lead openers
+  ---
+  duration_ms: 0.290084
+  type: 'test'
+  ...
+# Subtest: outboundFirstMessage: never uses phone-like leadName or long context as opener
+ok 708 - outboundFirstMessage: never uses phone-like leadName or long context as opener
+  ---
+  duration_ms: 0.811666
+  type: 'test'
+  ...
+# Subtest: outboundFirstMessage: defaults voice company to team name before client name
+ok 709 - outboundFirstMessage: defaults voice company to team name before client name
+  ---
+  duration_ms: 0.937916
+  type: 'test'
+  ...
+# Subtest: outboundFirstMessage: ARIA_CLIENT_NAME overrides team name
+ok 710 - outboundFirstMessage: ARIA_CLIENT_NAME overrides team name
+  ---
+  duration_ms: 139.9665
+  type: 'test'
+  ...
+# Subtest: outboundAttemptSmsBody: covers the text follow-up channel
+ok 711 - outboundAttemptSmsBody: covers the text follow-up channel
+  ---
+  duration_ms: 0.997375
+  type: 'test'
+  ...
+# Subtest: sendOutboundAttemptSms: uses injected sender
+ok 712 - sendOutboundAttemptSms: uses injected sender
+  ---
+  duration_ms: 0.524084
+  type: 'test'
+  ...
+# Subtest: the shared finalizer isolates URLs and keeps prose after a link on its own line
+ok 713 - the shared finalizer isolates URLs and keeps prose after a link on its own line
+  ---
+  duration_ms: 35.123708
+  type: 'test'
+  ...
+# Subtest: the finalizer preserves intentional blank lines and never collapses newlines into spaces
+ok 714 - the finalizer preserves intentional blank lines and never collapses newlines into spaces
+  ---
+  duration_ms: 4.907
+  type: 'test'
+  ...
+# Subtest: a numbered roundup becomes one item per line, not a run-on paragraph
+ok 715 - a numbered roundup becomes one item per line, not a run-on paragraph
+  ---
+  duration_ms: 12.78625
+  type: 'test'
+  ...
+# Subtest: media URLs attach as their own paragraphs with no label sharing the line
+ok 716 - media URLs attach as their own paragraphs with no label sharing the line
+  ---
+  duration_ms: 3.117208
+  type: 'test'
+  ...
+# Subtest: SMS and WhatsApp media logs produce the identical shape for identical input
+ok 717 - SMS and WhatsApp media logs produce the identical shape for identical input
+  ---
+  duration_ms: 0.509666
+  type: 'test'
+  ...
+# Subtest: the social DM argument builder ships the finalized body on every text key
+ok 718 - the social DM argument builder ships the finalized body on every text key
+  ---
+  duration_ms: 1.083083
+  type: 'test'
+  ...
+# Subtest: every text transport applies the same contract, so no channel drifts
+ok 719 - every text transport applies the same contract, so no channel drifts
+  ---
+  duration_ms: 3.231417
+  type: 'test'
+  ...
+# Subtest: the contract is tenant-independent: no client id or env changes the output
+ok 720 - the contract is tenant-independent: no client id or env changes the output
+  ---
+  duration_ms: 11.881083
+  type: 'test'
+  ...
+# Subtest: the finalizer is idempotent, so passing through two layers cannot drift spacing
+ok 721 - the finalizer is idempotent, so passing through two layers cannot drift spacing
+  ---
+  duration_ms: 108.81575
+  type: 'test'
+  ...
+# Subtest: every screenshot payload comes out of the final outbound serializer with isolated URLs
+ok 722 - every screenshot payload comes out of the final outbound serializer with isolated URLs
+  ---
+  duration_ms: 4.834042
+  type: 'test'
+  ...
+# Subtest: the three-listing screenshot becomes one readable block per listing
+ok 723 - the three-listing screenshot becomes one readable block per listing
+  ---
+  duration_ms: 0.318166
+  type: 'test'
+  ...
+# Subtest: a long wrapped Zillow URL is never split across lines
+ok 724 - a long wrapped Zillow URL is never split across lines
+  ---
+  duration_ms: 0.150167
+  type: 'test'
+  ...
+# Subtest: media URLs on the outbound payload are their own paragraphs too
+ok 725 - media URLs on the outbound payload are their own paragraphs too
+  ---
+  duration_ms: 0.49325
+  type: 'test'
+  ...
+# Subtest: the final serializer is idempotent, so double-normalizing cannot drift spacing
+ok 726 - the final serializer is idempotent, so double-normalizing cannot drift spacing
+  ---
+  duration_ms: 0.909667
+  type: 'test'
+  ...
+# Subtest: the checker flags each screenshot payload as received and clears it once serialized
+ok 727 - the checker flags each screenshot payload as received and clears it once serialized
+  ---
+  duration_ms: 230.371917
+  type: 'test'
+  ...
+# property_apify_fallback_complete {
+#   channel: 'email',
+#   count: 1,
+#   payload: {
+#     addresses: [ '2400 E Cesar Chavez St, Austin, TX 78702' ],
+#     propertyStatus: 'FOR_SALE',
+#     extractBuildingUnits: 'disabled'
+#   }
+# }
+# property_apify_fallback_complete {
+#   channel: 'email',
+#   count: 1,
+#   payload: {
+#     addresses: [ '2400 E Cesar Chavez St, Austin, TX 78702' ],
+#     propertyStatus: 'FOR_SALE',
+#     extractBuildingUnits: 'disabled'
+#   }
+# }
+# property_apify_fallback_complete {
+#   channel: 'instagram',
+#   count: 1,
+#   payload: {
+#     country: 'United States',
+#     location: 'Austin, TX',
+#     listing_type: 'for_sale',
+#     max_results: 3,
+#     property_type: 'house'
+#   }
+# }
+# Subtest: buildApifySearchPayloadFromCriteria: maps buyer criteria to guarded Zillow actor payload
+ok 728 - buildApifySearchPayloadFromCriteria: maps buyer criteria to guarded Zillow actor payload
+  ---
+  duration_ms: 8.983541
+  type: 'test'
+  ...
+# Subtest: propertyApifyFallbackEnabled: requires explicit env flag and token
+ok 729 - propertyApifyFallbackEnabled: requires explicit env flag and token
+  ---
+  duration_ms: 0.96725
+  type: 'test'
+  ...
+# Subtest: normalizeApifyItemToProperty: preserves Zillow listing keys and media
+ok 730 - normalizeApifyItemToProperty: preserves Zillow listing keys and media
+  ---
+  duration_ms: 1.34975
+  type: 'test'
+  ...
+# Subtest: buildApifyAddressPayload: looks an exact street address up by address, not by area
+ok 731 - buildApifyAddressPayload: looks an exact street address up by address, not by area
+  ---
+  duration_ms: 0.14275
+  type: 'test'
+  ...
+# Subtest: normalizeApifyItemToProperty: reads the nested address object detail actors return
+ok 732 - normalizeApifyItemToProperty: reads the nested address object detail actors return
+  ---
+  duration_ms: 1.895583
+  type: 'test'
+  ...
+# Subtest: searchAndImportMissingProperties: address lookups keep the home the buyer named
+ok 733 - searchAndImportMissingProperties: address lookups keep the home the buyer named
+  ---
+  duration_ms: 3.272583
+  type: 'test'
+  ...
+# Subtest: searchAndImportMissingProperties: repeated address lookups do not duplicate a home
+ok 734 - searchAndImportMissingProperties: repeated address lookups do not duplicate a home
+  ---
+  duration_ms: 41.194
+  type: 'test'
+  ...
+# Subtest: searchAndImportMissingProperties: runs actor, filters criteria, upserts, and optionally appends sheets
+ok 735 - searchAndImportMissingProperties: runs actor, filters criteria, upserts, and optionally appends sheets
+  ---
+  duration_ms: 257.146292
+  type: 'test'
+  ...
+# Subtest: propertyEmbeddingText: combines structured and descriptive property facts
+ok 736 - propertyEmbeddingText: combines structured and descriptive property facts
+  ---
+  duration_ms: 0.964416
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: falls back to structured order when RAG is disabled
+ok 737 - retrievePropertiesForAgent: falls back to structured order when RAG is disabled
+  ---
+  duration_ms: 0.821458
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: reranks within the structured candidate pool
+ok 738 - retrievePropertiesForAgent: reranks within the structured candidate pool
+  ---
+  duration_ms: 0.340666
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: voice channel skips RAG unless explicitly enabled
+ok 739 - retrievePropertiesForAgent: voice channel skips RAG unless explicitly enabled
+  ---
+  duration_ms: 0.208334
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: imports missing properties when structured search is empty
+ok 740 - retrievePropertiesForAgent: imports missing properties when structured search is empty
+  ---
+  duration_ms: 0.18425
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: does not import missing properties for voice by default
+ok 741 - retrievePropertiesForAgent: does not import missing properties for voice by default
+  ---
+  duration_ms: 80.914125
+  type: 'test'
+  ...
+# Subtest: retrievePropertiesForAgent: does not import when structured results exist
+ok 742 - retrievePropertiesForAgent: does not import when structured results exist
+  ---
+  duration_ms: 1.786709
+  type: 'test'
+  ...
+# Subtest: normalizeEmailAddress and normalizePhoneNumber are stable
+ok 743 - normalizeEmailAddress and normalizePhoneNumber are stable
+  ---
+  duration_ms: 0.719166
+  type: 'test'
+  ...
+# Subtest: calendar event normalization creates provider-scoped idempotent ids
+ok 744 - calendar event normalization creates provider-scoped idempotent ids
+  ---
+  duration_ms: 6.862333
+  type: 'test'
+  ...
+# Subtest: calendar idempotency falls back to deterministic event content
+ok 745 - calendar idempotency falls back to deterministic event content
+  ---
+  duration_ms: 12.700167
+  type: 'test'
+  ...
+# Subtest: contact normalization dedupes emails and phones
+ok 746 - contact normalization dedupes emails and phones
+  ---
+  duration_ms: 97.975791
+  type: 'test'
+  ...
+# Subtest: contact idempotency prefers source id, then email, then phone
+ok 747 - contact idempotency prefers source id, then email, then phone
+  ---
+  duration_ms: 0.427292
+  type: 'test'
+  ...
+# Subtest: conflict resolver is idempotent for matching etags and updates newer records
+ok 748 - conflict resolver is idempotent for matching etags and updates newer records
+  ---
+  duration_ms: 1.154417
+  type: 'test'
+  ...
+# Subtest: contact conflict resolver skips older incoming records
+ok 749 - contact conflict resolver skips older incoming records
+  ---
+  duration_ms: 0.205833
+  type: 'test'
+  ...
+# Subtest: provider action hash is stable across object key order
+ok 750 - provider action hash is stable across object key order
+  ---
+  duration_ms: 57.571333
+  type: 'test'
+  ...
+# Subtest: provider idempotency key prefers explicit header key
+ok 751 - provider idempotency key prefers explicit header key
+  ---
+  duration_ms: 0.276834
+  type: 'test'
+  ...
+# Subtest: provider send safety replays completed duplicate action
+ok 752 - provider send safety replays completed duplicate action
+  ---
+  duration_ms: 3.969
+  type: 'test'
+  ...
+# Subtest: provider send safety rate limits repeated target sends
+ok 753 - provider send safety rate limits repeated target sends
+  ---
+  duration_ms: 0.740333
+  type: 'test'
+  ...
+# provider_token_decrypt_failed {
+#   reason: 'encryption_key_mismatch_or_corrupt_ciphertext',
+#   hint: 'Check EMAIL_ACCOUNT_ENCRYPTION_KEY / AUTH_SECRET; the connection must be reconnected if the key is gone.'
+# }
+# Subtest: provider token round-trips, is idempotent, and tolerates legacy plaintext
+ok 754 - provider token round-trips, is idempotent, and tolerates legacy plaintext
+  ---
+  duration_ms: 39.779041
+  type: 'test'
+  ...
+# Subtest: a token encrypted under a different secret decrypts to empty, not garbage
+ok 755 - a token encrypted under a different secret decrypts to empty, not garbage
+  ---
+  duration_ms: 113.0895
+  type: 'test'
+  ...
+# Subtest: fetchSocrataPublicRecords: defaults Austin properties to Austin issued permits dataset
+ok 756 - fetchSocrataPublicRecords: defaults Austin properties to Austin issued permits dataset
+  ---
+  duration_ms: 145.775625
+  type: 'test'
+  ...
+# Subtest: fetchPublicPropertyContext: uses FRED, Census, and Socrata without RentCast
+ok 757 - fetchPublicPropertyContext: uses FRED, Census, and Socrata without RentCast
+  ---
+  duration_ms: 119.389042
+  type: 'test'
+  ...
+# Subtest: qualificationScenarioHint detects dual sell and buy move
+ok 758 - qualificationScenarioHint detects dual sell and buy move
+  ---
+  duration_ms: 0.922166
+  type: 'test'
+  ...
+# Subtest: detectConversationScenario: dual move keeps seller buyer tracks active
+ok 759 - detectConversationScenario: dual move keeps seller buyer tracks active
+  ---
+  duration_ms: 1.103542
+  type: 'test'
+  ...
+# Subtest: detectConversationScenario: represented seller guard wins
+ok 760 - detectConversationScenario: represented seller guard wins
+  ---
+  duration_ms: 0.505417
+  type: 'test'
+  ...
+# Subtest: advancedQualificationPlaybook covers seller, buyer, appointment, compliance boundaries
+ok 761 - advancedQualificationPlaybook covers seller, buyer, appointment, compliance boundaries
+  ---
+  duration_ms: 0.468875
+  type: 'test'
+  ...
+# Subtest: sharedBrainInstruction injects advanced qualification into every channel
+ok 762 - sharedBrainInstruction injects advanced qualification into every channel
+  ---
+  duration_ms: 0.3645
+  type: 'test'
+  ...
+# Subtest: redactAuditMetadata: strips secrets and signed URL query strings
+ok 763 - redactAuditMetadata: strips secrets and signed URL query strings
+  ---
+  duration_ms: 73.112209
+  type: 'test'
+  ...
+# Subtest: redactAuditMetadata: truncates long strings and arrays
+ok 764 - redactAuditMetadata: truncates long strings and arrays
+  ---
+  duration_ms: 29.58
+  type: 'test'
+  ...
+# Subtest: summarizeRequestAuditCosts: totals billed rows by service
+ok 765 - summarizeRequestAuditCosts: totals billed rows by service
+  ---
+  duration_ms: 39.322583
+  type: 'test'
+  ...
+# Subtest: auth routes allow at most five attempts per fifteen minutes
+ok 766 - auth routes allow at most five attempts per fifteen minutes
+  ---
+  duration_ms: 1.258625
+  type: 'test'
+  ...
+# Subtest: rate limits are isolated by client and reset after their window
+ok 767 - rate limits are isolated by client and reset after their window
+  ---
+  duration_ms: 0.406708
+  type: 'test'
+  ...
+# Subtest: client key uses the first forwarded address and never trusts arbitrary text
+ok 768 - client key uses the first forwarded address and never trusts arbitrary text
+  ---
+  duration_ms: 54.671917
+  type: 'test'
+  ...
+# Subtest: payload limits stay small by default and permit bounded media uploads
+ok 769 - payload limits stay small by default and permit bounded media uploads
+  ---
+  duration_ms: 0.15775
+  type: 'test'
+  ...
+# Subtest: cross-origin mutations are rejected and same-origin ones pass
+ok 770 - cross-origin mutations are rejected and same-origin ones pass
+  ---
+  duration_ms: 3.30475
+  type: 'test'
+  ...
+# Subtest: the forwarded host decides same-origin, not the internal proxy URL
+ok 771 - the forwarded host decides same-origin, not the internal proxy URL
+  ---
+  duration_ms: 0.461709
+  type: 'test'
+  ...
+# Subtest: configured origins are allowed even when the host differs
+ok 772 - configured origins are allowed even when the host differs
+  ---
+  duration_ms: 0.196708
+  type: 'test'
+  ...
+# Subtest: provider callbacks are exempt from the cross-origin check
+ok 773 - provider callbacks are exempt from the cross-origin check
+  ---
+  duration_ms: 12.561375
+  type: 'test'
+  ...
+# Subtest: a chunked or missing Content-Length cannot slip past the payload cap
+ok 774 - a chunked or missing Content-Length cannot slip past the payload cap
+  ---
+  duration_ms: 4.972417
+  type: 'test'
+  ...
+# Subtest: only empty out-of-band Inngest PUT syncs bypass the generic body-size verdict
+ok 775 - only empty out-of-band Inngest PUT syncs bypass the generic body-size verdict
+  ---
+  duration_ms: 0.94625
+  type: 'test'
+  ...
+# Subtest: secret comparison rejects mismatches and empty expectations
+ok 776 - secret comparison rejects mismatches and empty expectations
+  ---
+  duration_ms: 0.212541
+  type: 'test'
+  ...
+# Subtest: without a shared store the limiter reports unconfigured and returns null
+ok 777 - without a shared store the limiter reports unconfigured and returns null
+  ---
+  duration_ms: 3.43
+  type: 'test'
+  ...
+# Subtest: the shared counter blocks once the policy limit is exceeded
+ok 778 - the shared counter blocks once the policy limit is exceeded
+  ---
+  duration_ms: 190.631583
+  type: 'test'
+  ...
+# Subtest: counters are shared across callers but isolated per key and window
+ok 779 - counters are shared across callers but isolated per key and window
+  ---
+  duration_ms: 1.319125
+  type: 'test'
+  ...
+# Subtest: a store outage degrades to null instead of failing the request
+ok 780 - a store outage degrades to null instead of failing the request
+  ---
+  duration_ms: 53.338583
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply preserves intentional blank lines
+ok 781 - normalizeMessagesReply preserves intentional blank lines
+  ---
+  duration_ms: 2.877792
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply does not collapse newlines into spaces
+ok 782 - normalizeMessagesReply does not collapse newlines into spaces
+  ---
+  duration_ms: 0.570458
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply strips markdown that Messages cannot render
+ok 783 - normalizeMessagesReply strips markdown that Messages cannot render
+  ---
+  duration_ms: 0.534042
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply removes em dashes and placeholder characters
+ok 784 - normalizeMessagesReply removes em dashes and placeholder characters
+  ---
+  duration_ms: 0.530333
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply collapses 3+ newlines and trims edges
+ok 785 - normalizeMessagesReply collapses 3+ newlines and trims edges
+  ---
+  duration_ms: 0.19775
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply separates a numbered list from its intro but keeps items tight
+ok 786 - normalizeMessagesReply separates a numbered list from its intro but keeps items tight
+  ---
+  duration_ms: 0.121083
+  type: 'test'
+  ...
+# Subtest: normalizeMessagesReply keeps a bare link label out of the way
+ok 787 - normalizeMessagesReply keeps a bare link label out of the way
+  ---
+  duration_ms: 0.323541
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags every markdown artifact
+ok 788 - checkMessagesFormatting flags every markdown artifact
+  ---
+  duration_ms: 3.572917
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags em dashes via the shared noEmDash rule
+ok 789 - checkMessagesFormatting flags em dashes via the shared noEmDash rule
+  ---
+  duration_ms: 1.671041
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags emoji and placeholder characters
+ok 790 - checkMessagesFormatting flags emoji and placeholder characters
+  ---
+  duration_ms: 137.552708
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags robotic label prefixes
+ok 791 - checkMessagesFormatting flags robotic label prefixes
+  ---
+  duration_ms: 11.075875
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting accepts a natural address line that is not a label
+ok 792 - checkMessagesFormatting accepts a natural address line that is not a label
+  ---
+  duration_ms: 1.480042
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags 3 or more consecutive newlines
+ok 793 - checkMessagesFormatting flags 3 or more consecutive newlines
+  ---
+  duration_ms: 0.322292
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags leading and trailing blank lines
+ok 794 - checkMessagesFormatting flags leading and trailing blank lines
+  ---
+  duration_ms: 0.243667
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags a single-line wall
+ok 795 - checkMessagesFormatting flags a single-line wall
+  ---
+  duration_ms: 1.069084
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting does not call a long bare URL a wall
+ok 796 - checkMessagesFormatting does not call a long bare URL a wall
+  ---
+  duration_ms: 0.335125
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags a verbatim repeated line
+ok 797 - checkMessagesFormatting flags a verbatim repeated line
+  ---
+  duration_ms: 0.194833
+  type: 'test'
+  ...
+# Subtest: a short acknowledgment must not be a 300 character reply
+ok 798 - a short acknowledgment must not be a 300 character reply
+  ---
+  duration_ms: 1.114917
+  type: 'test'
+  ...
+# Subtest: a short acknowledgment must stay one block
+ok 799 - a short acknowledgment must stay one block
+  ---
+  duration_ms: 0.328792
+  type: 'test'
+  ...
+# Subtest: budgets grow with the shape of the answer
+ok 800 - budgets grow with the shape of the answer
+  ---
+  duration_ms: 0.574458
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags more than one question
+ok 801 - checkMessagesFormatting flags more than one question
+  ---
+  duration_ms: 0.399708
+  type: 'test'
+  ...
+# Subtest: checkMessagesFormatting flags too many blocks and lines
+ok 802 - checkMessagesFormatting flags too many blocks and lines
+  ---
+  duration_ms: 0.458167
+  type: 'test'
+  ...
+# Subtest: a list needs 2 or more parallel items to be a list
+ok 803 - a list needs 2 or more parallel items to be a list
+  ---
+  duration_ms: 0.264458
+  type: 'test'
+  ...
+# Subtest: messagesBlocks joins non-empty parts with exactly one blank line
+ok 804 - messagesBlocks joins non-empty parts with exactly one blank line
+  ---
+  duration_ms: 0.186916
+  type: 'test'
+  ...
+# Subtest: messagesLines drops blank lines
+ok 805 - messagesLines drops blank lines
+  ---
+  duration_ms: 0.405667
+  type: 'test'
+  ...
+# Subtest: pickVariant is deterministic and stays in range
+ok 806 - pickVariant is deterministic and stays in range
+  ---
+  duration_ms: 1.164583
+  type: 'test'
+  ...
+# Subtest: fitMessagesReply drops whole trailing blocks before cutting a sentence
+ok 807 - fitMessagesReply drops whole trailing blocks before cutting a sentence
+  ---
+  duration_ms: 0.857041
+  type: 'test'
+  ...
+# Subtest: fitMessagesReply leaves a within-budget reply untouched
+ok 808 - fitMessagesReply leaves a within-budget reply untouched
+  ---
+  duration_ms: 0.144583
+  type: 'test'
+  ...
+# Subtest: repeatsRecentReply catches an exact and a near repeat
+ok 809 - repeatsRecentReply catches an exact and a near repeat
+  ---
+  duration_ms: 1.48175
+  type: 'test'
+  ...
+# Subtest: replyFingerprint ignores urls and punctuation
+ok 810 - replyFingerprint ignores urls and punctuation
+  ---
+  duration_ms: 0.1
+  type: 'test'
+  ...
+# Subtest: appendLeadProfileCaptureAsk keeps the reply's blank lines intact
+ok 811 - appendLeadProfileCaptureAsk keeps the reply's blank lines intact
+  ---
+  duration_ms: 2.633042
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: short ack
+ok 812 - generated reply is Messages-clean: short ack
+  ---
+  duration_ms: 8.461958
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: greeting
+ok 813 - generated reply is Messages-clean: greeting
+  ---
+  duration_ms: 11.184
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: single property
+ok 814 - generated reply is Messages-clean: single property
+  ---
+  duration_ms: 297.786417
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: multi listing
+ok 815 - generated reply is Messages-clean: multi listing
+  ---
+  duration_ms: 9.032083
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: missing details
+ok 816 - generated reply is Messages-clean: missing details
+  ---
+  duration_ms: 3.078834
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: availability follow-up
+ok 817 - generated reply is Messages-clean: availability follow-up
+  ---
+  duration_ms: 16.877583
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: scheduling
+ok 818 - generated reply is Messages-clean: scheduling
+  ---
+  duration_ms: 17.272375
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: amenities with shared context
+ok 819 - generated reply is Messages-clean: amenities with shared context
+  ---
+  duration_ms: 10.029042
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: comparison
+ok 820 - generated reply is Messages-clean: comparison
+  ---
+  duration_ms: 4.087708
+  type: 'test'
+  ...
+# Subtest: generated reply is Messages-clean: fair housing handoff
+ok 821 - generated reply is Messages-clean: fair housing handoff
+  ---
+  duration_ms: 0.582
+  type: 'test'
+  ...
+# Subtest: generated replies do not all share one canned closing question
+ok 822 - generated replies do not all share one canned closing question
+  ---
+  duration_ms: 34.249292
+  type: 'test'
+  ...
+# Subtest: a details follow-up right after the same details advances instead of repeating
+ok 823 - a details follow-up right after the same details advances instead of repeating
+  ---
+  duration_ms: 8.178083
+  type: 'test'
+  ...
+# Subtest: the corpus fixture stays in sync with the families the checker knows
+ok 824 - the corpus fixture stays in sync with the families the checker knows
+  ---
+  duration_ms: 78.614083
+  type: 'test'
+  ...
+# Subtest: an over-long single-line reply is broken into blocks at sentence boundaries
+ok 825 - an over-long single-line reply is broken into blocks at sentence boundaries
+  ---
+  duration_ms: 0.947375
+  type: 'test'
+  ...
+# Subtest: a long URL is never broken and a single long sentence is left intact
+ok 826 - a long URL is never broken and a single long sentence is left intact
+  ---
+  duration_ms: 0.346375
+  type: 'test'
+  ...
+# Subtest: wall splitting never breaks a URL apart
+ok 827 - wall splitting never breaks a URL apart
+  ---
+  duration_ms: 1.195375
+  type: 'test'
+  ...
+# Subtest: a collapsed one-line copy of a reply still fingerprints as the same reply
+ok 828 - a collapsed one-line copy of a reply still fingerprints as the same reply
+  ---
+  duration_ms: 0.633541
+  type: 'test'
+  ...
+# Subtest: every messaging URL is isolated on its own line as its own paragraph
+ok 829 - every messaging URL is isolated on its own line as its own paragraph
+  ---
+  duration_ms: 1.07925
+  type: 'test'
+  ...
+# Subtest: the checker reports a URL that shares a line with prose
+ok 830 - the checker reports a URL that shares a line with prose
+  ---
+  duration_ms: 0.272375
+  type: 'test'
+  ...
+# Subtest: a label that existed only to introduce the link is dropped, not stranded
+ok 831 - a label that existed only to introduce the link is dropped, not stranded
+  ---
+  duration_ms: 0.233959
+  type: 'test'
+  ...
+# Subtest: a compliance handoff never gets a contact-capture ask appended
+ok 832 - a compliance handoff never gets a contact-capture ask appended
+  ---
+  duration_ms: 3.705375
+  type: 'test'
+  ...
+# Subtest: buildStyleFewShot: formats approved excerpts, empty when none
+ok 833 - buildStyleFewShot: formats approved excerpts, empty when none
+  ---
+  duration_ms: 1.717334
+  type: 'test'
+  ...
+# Subtest: buildStyleFewShot: respects limit
+ok 834 - buildStyleFewShot: respects limit
+  ---
+  duration_ms: 0.284583
+  type: 'test'
+  ...
+# Subtest: fetchStyleContext: empty string when disabled
+ok 835 - fetchStyleContext: empty string when disabled
+  ---
+  duration_ms: 0.248166
+  type: 'test'
+  ...
+# Subtest: fetchStyleContext: builds block when enabled
+ok 836 - fetchStyleContext: builds block when enabled
+  ---
+  duration_ms: 2.975958
+  type: 'test'
+  ...
+# Subtest: fetchStyleContext: read failure degrades to empty
+ok 837 - fetchStyleContext: read failure degrades to empty
+  ---
+  duration_ms: 1.632667
+  type: 'test'
+  ...
+# Subtest: redactEmailStyleExample: preserves voice while removing lead-specific facts
+ok 838 - redactEmailStyleExample: preserves voice while removing lead-specific facts
+  ---
+  duration_ms: 2.434875
+  type: 'test'
+  ...
+# Subtest: parseLocalDateTime preserves tenant timezone across daylight saving time
+ok 839 - parseLocalDateTime preserves tenant timezone across daylight saving time
+  ---
+  duration_ms: 528.979709
+  type: 'test'
+  ...
+# Subtest: parseLocalDateTime rejects nonexistent DST wall-clock time
+ok 840 - parseLocalDateTime rejects nonexistent DST wall-clock time
+  ---
+  duration_ms: 11.325292
+  type: 'test'
+  ...
+# Subtest: tenant business windows use the tenant timezone rather than UTC
+ok 841 - tenant business windows use the tenant timezone rather than UTC
+  ---
+  duration_ms: 35.893458
+  type: 'test'
+  ...
+# Subtest: external busy events and buffers remove conflicting slots
+ok 842 - external busy events and buffers remove conflicting slots
+  ---
+  duration_ms: 10.831208
+  type: 'test'
+  ...
+# Subtest: cancelled external events do not block availability
+ok 843 - cancelled external events do not block availability
+  ---
+  duration_ms: 8.371292
+  type: 'test'
+  ...
+# Subtest: before and after buffers are applied independently
+ok 844 - before and after buffers are applied independently
+  ---
+  duration_ms: 5.302709
+  type: 'test'
+  ...
+# Subtest: internal pending or confirmed reservations block shared availability
+ok 845 - internal pending or confirmed reservations block shared availability
+  ---
+  duration_ms: 6.718917
+  type: 'test'
+  ...
+# Subtest: property query ignores conversational requests for more options
+ok 846 - property query ignores conversational requests for more options
+  ---
+  duration_ms: 42.109084
+  type: 'test'
+  ...
+# Subtest: property query still extracts a real address
+ok 847 - property query still extracts a real address
+  ---
+  duration_ms: 7.472667
+  type: 'test'
+  ...
+# Subtest: property criteria parse number words as hard bed and bath minimums
+ok 848 - property criteria parse number words as hard bed and bath minimums
+  ---
+  duration_ms: 95.529333
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: ordinal property detail follow-up does not hand off
+ok 849 - generateTheoReply: ordinal property detail follow-up does not hand off
+  ---
+  duration_ms: 366.850209
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: typo similar options stays deterministic
+ok 850 - generateTheoReply: typo similar options stays deterministic
+  ---
+  duration_ms: 58.91175
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: no matches asks for the first missing criterion instead of handoff
+ok 851 - generateTheoReply: no matches asks for the first missing criterion instead of handoff
+  ---
+  duration_ms: 1.400917
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: no matches on a fully known lead offers to widen
+ok 852 - generateTheoReply: no matches on a fully known lead offers to widen
+  ---
+  duration_ms: 0.886583
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: rejected property pivots to different saved options
+ok 853 - generateTheoReply: rejected property pivots to different saved options
+  ---
+  duration_ms: 2.145
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: adult off-topic request redirects without listings
+ok 854 - generateTheoReply: adult off-topic request redirects without listings
+  ---
+  duration_ms: 0.621792
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: exotic animal use redirects without property cards
+ok 855 - generateTheoReply: exotic animal use redirects without property cards
+  ---
+  duration_ms: 1.207791
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: photo follow-up sends media when enabled
+ok 856 - generateTheoReply: photo follow-up sends media when enabled
+  ---
+  duration_ms: 3.926833
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: ordinal photo follow-up sends media for the selected listing
+ok 857 - generateTheoReply: ordinal photo follow-up sends media for the selected listing
+  ---
+  duration_ms: 2.462916
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: availability question answers from listing context instead of handoff
+ok 858 - generateTheoReply: availability question answers from listing context instead of handoff
+  ---
+  duration_ms: 1.901917
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: amenity question answers known and unknown listing fields
+ok 859 - generateTheoReply: amenity question answers known and unknown listing fields
+  ---
+  duration_ms: 3.646875
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: generic amenity follow-up stays on the current listing
+ok 860 - generateTheoReply: generic amenity follow-up stays on the current listing
+  ---
+  duration_ms: 61.717334
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: bare ordinal reply resolves to selected listing
+ok 861 - generateTheoReply: bare ordinal reply resolves to selected listing
+  ---
+  duration_ms: 3.63525
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: showing request asks for timing instead of human handoff
+ok 862 - generateTheoReply: showing request asks for timing instead of human handoff
+  ---
+  duration_ms: 66.097209
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: comparison question ranks saved listings
+ok 863 - generateTheoReply: comparison question ranks saved listings
+  ---
+  duration_ms: 88.733959
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: fair housing sensitive property question still hands off
+ok 864 - generateTheoReply: fair housing sensitive property question still hands off
+  ---
+  duration_ms: 13.374958
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: greeting does not hand off when LLM is unavailable
+ok 865 - generateTheoReply: greeting does not hand off when LLM is unavailable
+  ---
+  duration_ms: 16.371583
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: conversational greeting skips the model
+ok 866 - generateTheoReply: conversational greeting skips the model
+  ---
+  duration_ms: 3.708416
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: an unknown shared listing link asks for the address instead of another listing
+ok 867 - generateTheoReply: an unknown shared listing link asks for the address instead of another listing
+  ---
+  duration_ms: 0.929667
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: a shared link that matches a saved listing still answers about it
+ok 868 - generateTheoReply: a shared link that matches a saved listing still answers about it
+  ---
+  duration_ms: 1.768417
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: an unrelated request declines before steering back
+ok 869 - generateTheoReply: an unrelated request declines before steering back
+  ---
+  duration_ms: 0.415666
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: an emoji-only or punctuation-only message gets a single-block ack
+ok 870 - generateTheoReply: an emoji-only or punctuation-only message gets a single-block ack
+  ---
+  duration_ms: 16.103125
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: explicit protected-class steering hands off instead of answering
+ok 871 - generateTheoReply: explicit protected-class steering hands off instead of answering
+  ---
+  duration_ms: 2.765292
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: a street name containing a protected-class word is not treated as steering
+ok 872 - generateTheoReply: a street name containing a protected-class word is not treated as steering
+  ---
+  duration_ms: 3.514333
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: credential and third-party PII asks are refused outright
+ok 873 - generateTheoReply: credential and third-party PII asks are refused outright
+  ---
+  duration_ms: 1.944917
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: prompt injection is refused without echoing or leaking
+ok 874 - generateTheoReply: prompt injection is refused without echoing or leaking
+  ---
+  duration_ms: 0.620292
+  type: 'test'
+  ...
+# Subtest: generateTheoReply: a sexual request wrapped in hostility is declined
+ok 875 - generateTheoReply: a sexual request wrapped in hostility is declined
+  ---
+  duration_ms: 0.400959
+  type: 'test'
+  ...
+# Subtest: handleTheoAppointmentMessage asks for showing time in Iris voice
+ok 876 - handleTheoAppointmentMessage asks for showing time in Iris voice
+  ---
+  duration_ms: 4.828417
+  type: 'test'
+  ...
+# Subtest: handleTheoAppointmentMessage names the in-context listing when the lead has no saved interest
+ok 877 - handleTheoAppointmentMessage names the in-context listing when the lead has no saved interest
+  ---
+  duration_ms: 1.245041
+  type: 'test'
+  ...
+# Subtest: handleTheoAppointmentMessage still asks for timing with no property context
+ok 878 - handleTheoAppointmentMessage still asks for timing with no property context
+  ---
+  duration_ms: 0.183833
+  type: 'test'
+  ...
+# Subtest: detectAppointmentIntent does not treat move-in urgency as rescheduling
+ok 879 - detectAppointmentIntent does not treat move-in urgency as rescheduling
+  ---
+  duration_ms: 0.327333
+  type: 'test'
+  ...
+# Subtest: polishTheoSmsCopy removes third-person showing confirmation copy
+ok 880 - polishTheoSmsCopy removes third-person showing confirmation copy
+  ---
+  duration_ms: 28.923666
+  type: 'test'
+  ...
+# [Theo Social] webhook error {
+#   error: 'Invalid webhook secret',
+#   totalMs: 4,
+#   sessionCost: '$0.00000'
+# }
+# (node:92022) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+# In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+# To prepare for this change:
+# - If you want the current behavior, explicitly use 'sslmode=verify-full'
+# - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+# See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: theo social router: rejects invalid secret
+ok 881 - theo social router: rejects invalid secret
+  ---
+  duration_ms: 931.101917
+  type: 'test'
+  ...
+# [Theo Social] inbound received {
+#   channel: 'messenger',
+#   threadRef: 'messenger:2',
+#   routeReason: 'listing_question',
+#   bodyPreview: 'Is it available?'
+# }
+# Subtest: theo social router: disabled mode skips without DB writes
+ok 882 - theo social router: disabled mode skips without DB writes
+  ---
+  duration_ms: 179.966333
+  type: 'test'
+  ...
+# [Theo Social] inbound received {
+#   channel: 'instagram',
+#   threadRef: 'instagram:3',
+#   routeReason: 'listing_question',
+#   bodyPreview: 'Can you send photos?'
+# }
+# Subtest: theo social router: disabled ManyChat format returns empty messages
+ok 883 - theo social router: disabled ManyChat format returns empty messages
+  ---
+  duration_ms: 149.056541
+  type: 'test'
+  ...
+# Subtest: a correctly signed Twilio request is accepted
+ok 884 - a correctly signed Twilio request is accepted
+  ---
+  duration_ms: 1.175334
+  type: 'test'
+  ...
+# Subtest: a forged From value invalidates the signature
+ok 885 - a forged From value invalidates the signature
+  ---
+  duration_ms: 0.1895
+  type: 'test'
+  ...
+# Subtest: missing signature or auth token never validates
+ok 886 - missing signature or auth token never validates
+  ---
+  duration_ms: 0.103709
+  type: 'test'
+  ...
+# Subtest: the signed URL uses the public origin when configured
+ok 887 - the signed URL uses the public origin when configured
+  ---
+  duration_ms: 0.179583
+  type: 'test'
+  ...
+# Subtest: isUnsafeSmsRecipient: blocks reserved NANP smoke-test numbers
+ok 888 - isUnsafeSmsRecipient: blocks reserved NANP smoke-test numbers
+  ---
+  duration_ms: 1.452542
+  type: 'test'
+  ...
+# (node:92096) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+# In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+# To prepare for this change:
+# - If you want the current behavior, explicitly use 'sslmode=verify-full'
+# - If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+# See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: sendTheoSms: strips rcs: prefix and prefers the Messaging Service
+ok 889 - sendTheoSms: strips rcs: prefix and prefers the Messaging Service
+  ---
+  duration_ms: 1893.343958
+  type: 'test'
+  ...
+# Subtest: sendTheoSms: falls back to TWILIO_FROM when no Messaging Service is set
+ok 890 - sendTheoSms: falls back to TWILIO_FROM when no Messaging Service is set
+  ---
+  duration_ms: 169.81975
+  type: 'test'
+  ...
+# Subtest: sendTheoSms: attaches a delivery status callback when a public base URL exists
+ok 891 - sendTheoSms: attaches a delivery status callback when a public base URL exists
+  ---
+  duration_ms: 78.6435
+  type: 'test'
+  ...
+# Subtest: sendTheoSms: does not call Twilio for reserved test numbers
+ok 892 - sendTheoSms: does not call Twilio for reserved test numbers
+  ---
+  duration_ms: 6.390917
+  type: 'test'
+  ...
+# Subtest: sendTheoSms: an opted-out lead is blocked at the transport boundary
+ok 893 - sendTheoSms: an opted-out lead is blocked at the transport boundary
+  ---
+  duration_ms: 4.119291
+  type: 'test'
+  ...
+# Subtest: sendTheoSms: operatorInitiated is the only way past the suppression gate
+ok 894 - sendTheoSms: operatorInitiated is the only way past the suppression gate
+  ---
+  duration_ms: 8.667291
+  type: 'test'
+  ...
+# Subtest: no cap configured means uncapped, not blocked
+ok 895 - no cap configured means uncapped, not blocked
+  ---
+  duration_ms: 7.769333
+  type: 'test'
+  ...
+# Subtest: a zero or negative cap is treated as uncapped
+ok 896 - a zero or negative cap is treated as uncapped
+  ---
+  duration_ms: 1.168125
+  type: 'test'
+  ...
+# Subtest: configured caps fail closed when the database is unreachable
+ok 897 - configured caps fail closed when the database is unreachable
+  ---
+  duration_ms: 394.313417
+  type: 'test'
+  ...
+# Subtest: an explicit availability-first override may fail open
+ok 898 - an explicit availability-first override may fail open
+  ---
+  duration_ms: 21.833375
+  type: 'test'
+  ...
+# Subtest: usageCaps reports each configured limit
+ok 899 - usageCaps reports each configured limit
+  ---
+  duration_ms: 1.39525
+  type: 'test'
+  ...
+# Subtest: with no database the usage read is zero, so a cap cannot spuriously trip
+ok 900 - with no database the usage read is zero, so a cap cannot spuriously trip
+  ---
+  duration_ms: 0.308625
+  type: 'test'
+  ...
+# Subtest: the SMS cap counts provider sends, not every audit row marked "sent"
+ok 901 - the SMS cap counts provider sends, not every audit row marked "sent"
+  ---
+  duration_ms: 1.368625
+  type: 'test'
+  ...
+# Subtest: every send path that a cap counts writes the row the cap reads
+ok 902 - every send path that a cap counts writes the row the cap reads
+  ---
+  duration_ms: 44.408291
+  type: 'test'
+  ...
+# Subtest: parseToolCalls: new tool-calls shape with JSON-string arguments
+ok 903 - parseToolCalls: new tool-calls shape with JSON-string arguments
+  ---
+  duration_ms: 1.0485
+  type: 'test'
+  ...
+# Subtest: parseToolCalls: object arguments and toolCalls alias
+ok 904 - parseToolCalls: object arguments and toolCalls alias
+  ---
+  duration_ms: 0.243
+  type: 'test'
+  ...
+# Subtest: parseToolCalls: singular Vapi toolCall shape
+ok 905 - parseToolCalls: singular Vapi toolCall shape
+  ---
+  duration_ms: 0.113208
+  type: 'test'
+  ...
+# Subtest: parseToolCalls: legacy function-call shape
+ok 906 - parseToolCalls: legacy function-call shape
+  ---
+  duration_ms: 0.114041
+  type: 'test'
+  ...
+# Subtest: parseToolCalls: empty when no calls
+ok 907 - parseToolCalls: empty when no calls
+  ---
+  duration_ms: 0.56175
+  type: 'test'
+  ...
+# Subtest: messageType: reads message.type then top-level
+ok 908 - messageType: reads message.type then top-level
+  ---
+  duration_ms: 0.134
+  type: 'test'
+  ...
+# Subtest: parseCallMeta: phone + thread ref
+ok 909 - parseCallMeta: phone + thread ref
+  ---
+  duration_ms: 0.13925
+  type: 'test'
+  ...
+# Subtest: parseEndOfCallReport: builds transcript from artifact messages
+ok 910 - parseEndOfCallReport: builds transcript from artifact messages
+  ---
+  duration_ms: 0.265708
+  type: 'test'
+  ...
+# Subtest: parseEndOfCallReport: computes duration from timestamps
+ok 911 - parseEndOfCallReport: computes duration from timestamps
+  ---
+  duration_ms: 0.256542
+  type: 'test'
+  ...
+# Subtest: parseEndOfCallReport: detects outbound from call type
+ok 912 - parseEndOfCallReport: detects outbound from call type
+  ---
+  duration_ms: 0.369291
+  type: 'test'
+  ...
+# Subtest: parseEndOfCallReport: detects outbound from metadata fallback
+ok 913 - parseEndOfCallReport: detects outbound from metadata fallback
+  ---
+  duration_ms: 0.073334
+  type: 'test'
+  ...
+# Subtest: parseEndOfCallReport: prefers explicit duration
+ok 914 - parseEndOfCallReport: prefers explicit duration
+  ---
+  duration_ms: 0.061959
+  type: 'test'
+  ...
+# Subtest: formatToolResults: maps id to toolCallId
+ok 915 - formatToolResults: maps id to toolCallId
+  ---
+  duration_ms: 0.142667
+  type: 'test'
+  ...
+# Subtest: a matching header secret is accepted
+ok 916 - a matching header secret is accepted
+  ---
+  duration_ms: 16.236792
+  type: 'test'
+  ...
+# Subtest: a wrong or absent secret is rejected
+ok 917 - a wrong or absent secret is rejected
+  ---
+  duration_ms: 3.227083
+  type: 'test'
+  ...
+# Subtest: an unconfigured secret fails closed in production
+ok 918 - an unconfigured secret fails closed in production
+  ---
+  duration_ms: 0.454667
+  type: 'test'
+  ...
+# Subtest: an unconfigured secret stays permissive outside production
+ok 919 - an unconfigured secret stays permissive outside production
+  ---
+  duration_ms: 84.783667
+  type: 'test'
+  ...
+# Subtest: secret comparison is length-safe and rejects empty expectations
+ok 920 - secret comparison is length-safe and rejects empty expectations
+  ---
+  duration_ms: 0.690083
+  type: 'test'
+  ...
+# Subtest: workspace map isolates Realty ATX from Austin Realty
+ok 921 - workspace map isolates Realty ATX from Austin Realty
+  ---
+  duration_ms: 2.541333
+  type: 'test'
+  ...
+# Subtest: workspace config rejects duplicate tenant ids
+ok 922 - workspace config rejects duplicate tenant ids
+  ---
+  duration_ms: 2.7755
+  type: 'test'
+  ...
+# Subtest: workspace config rejects invalid client slugs instead of silently dropping them
+ok 923 - workspace config rejects invalid client slugs instead of silently dropping them
+  ---
+  duration_ms: 0.612334
+  type: 'test'
+  ...
+# Subtest: shared provider credentials require an explicit tenant allowlist
+ok 924 - shared provider credentials require an explicit tenant allowlist
+  ---
+  duration_ms: 2.429625
+  type: 'test'
+  ...
+# Subtest: workspace context survives awaited work inside its tenant scope
+ok 925 - workspace context survives awaited work inside its tenant scope
+  ---
+  duration_ms: 1.274875
+  type: 'test'
+  ...
+# Subtest: workspace context is restored after tenant-scoped work
+ok 926 - workspace context is restored after tenant-scoped work
+  ---
+  duration_ms: 0.1375
+  type: 'test'
+  ...
+# Subtest: concurrent tenant scopes cannot observe each other
+ok 927 - concurrent tenant scopes cannot observe each other
+  ---
+  duration_ms: 2.760041
+  type: 'test'
+  ...
+1..927
+# tests 927
+# suites 0
+# pass 927
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 188421.614042
+EXIT=0

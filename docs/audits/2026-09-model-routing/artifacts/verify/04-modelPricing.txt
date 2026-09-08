@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: attemptCostUsd matches hand-computed fixture for claude-haiku-4-5
+ok 1 - attemptCostUsd matches hand-computed fixture for claude-haiku-4-5
+  ---
+  duration_ms: 2.080375
+  type: 'test'
+  ...
+# Subtest: attemptCostUsd matches hand-computed fixture for claude-sonnet-4-6
+ok 2 - attemptCostUsd matches hand-computed fixture for claude-sonnet-4-6
+  ---
+  duration_ms: 0.157625
+  type: 'test'
+  ...
+# Subtest: attemptCostUsd includes cached input and reasoning tokens
+ok 3 - attemptCostUsd includes cached input and reasoning tokens
+  ---
+  duration_ms: 0.101125
+  type: 'test'
+  ...
+# Subtest: costPerAcceptedResult sums ALL attempts (retries + fallback hops), not just the winner
+ok 4 - costPerAcceptedResult sums ALL attempts (retries + fallback hops), not just the winner
+  ---
+  duration_ms: 0.115791
+  type: 'test'
+  ...
+# Subtest: costPerAcceptedResult divides by ACCEPTED outputs, never by total attempt count
+ok 5 - costPerAcceptedResult divides by ACCEPTED outputs, never by total attempt count
+  ---
+  duration_ms: 0.083333
+  type: 'test'
+  ...
+# Subtest: costBand reports low/mid/high at +-15% token counts and mid equals unscaled cost
+ok 6 - costBand reports low/mid/high at +-15% token counts and mid equals unscaled cost
+  ---
+  duration_ms: 0.268541
+  type: 'test'
+  ...
+# Subtest: newCandidateEligibility refuses unverified prices for NEW candidate traffic
+ok 7 - newCandidateEligibility refuses unverified prices for NEW candidate traffic
+  ---
+  duration_ms: 0.148083
+  type: 'test'
+  ...
+# Subtest: every entry in MODEL_PRICING carries a non-empty provenance note
+ok 8 - every entry in MODEL_PRICING carries a non-empty provenance note
+  ---
+  duration_ms: 0.121875
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 817.397666

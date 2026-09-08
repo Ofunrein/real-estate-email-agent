@@ -1,3 +1,5 @@
+import { legacyAttemptCostUsd } from "@/lib/modelPricing";
+
 export type TheoMetric = {
   service: string;
   label: string;
@@ -7,10 +9,9 @@ export type TheoMetric = {
   detail?: string;
 };
 
-const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
-  "claude-haiku-4-5": { input: 0.80, output: 4.00 },
-  "claude-sonnet-4-6": { input: 3.00, output: 15.00 },
-};
+// Pricing now lives in lib/modelPricing.ts (single source of truth — the duplicated table that
+// used to live here and in lib/irisEmail.ts was removed; see
+// docs/audits/2026-09-model-routing/00-evidence-ledger.md §0.5).
 
 let sessionCostUsd = 0;
 
@@ -23,8 +24,7 @@ export function elapsedMs(startMs: number): number {
 }
 
 export function claudeCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = CLAUDE_PRICING[model] || { input: 3.00, output: 15.00 };
-  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
+  return legacyAttemptCostUsd(model, { inputTokens, outputTokens });
 }
 
 export function addTheoSessionCost(costUsd = 0): number {
