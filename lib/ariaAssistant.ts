@@ -13,6 +13,7 @@
 import type { ClientConfig } from "@/lib/clientConfig";
 import { centralTexasServiceAreaText } from "@/lib/serviceAreas";
 import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
+import { sharedPlatformPolicyPrompt } from "@/lib/sharedIntelligence";
 
 export type AriaAssistantOptions = {
   publicUrl: string; // e.g. https://app.example.com
@@ -21,6 +22,22 @@ export type AriaAssistantOptions = {
   respondProvider?: string;
   styleContext?: string; // optional few-shot brand-voice block
 };
+
+/** Config-as-code voice stacks. The premium canary is deliberately inert. */
+export const ARIA_VOICE_STACKS = {
+  default: {
+    enabled: true,
+    model: "gpt-4.1-mini-2025-04-14",
+    transcriber: { provider: "deepgram", model: "flux-general-en", language: "en" },
+    voice: { provider: "11labs", model: "eleven_flash_v2_5" },
+  },
+  premiumCanary: {
+    enabled: false,
+    model: "gpt-4.1-2025-04-14",
+    transcriber: { provider: "deepgram", model: "flux-general-en", language: "en" },
+    voice: { provider: "11labs", model: "eleven_multilingual_v2" },
+  },
+} as const;
 
 function ariaVoiceWebhookUrl(publicUrl: string, secret = "") {
   const url = new URL("/api/webhooks/aria-voice", publicUrl);
@@ -85,7 +102,7 @@ ${advancedQualificationPlaybook()}
 - After reading matching options out loud, offer to text links/photos/full details. If the caller asks for photos, links, listing details, "send it to me," or agrees after you offer, immediately call sendPropertyDetailsSms. Do not say someone will text it later unless the tool fails. IMPORTANT: Before calling sendPropertyDetailsSms, you must have a phone number to send to. If caller ID is not available or uncertain, ask "What number should I text the details to?" and confirm the number before calling the tool. Pass callerPhone in the tool args so the tool can send to the right number.
 - Never use SMS or email as the substitute for answering the caller's property question during the call. Answer out loud first, then use sendPropertyDetailsSms for the follow-up package.
 - For general buying, selling, or service-area questions that are not asking for listings, answer from the provided business/service-area knowledge.
-- To book a tour or consultation, use an assumptive close - "What works better, [day] morning or [day] afternoon?" not "Would you like to schedule?" First use checkAvailability for the requested date or date range. After the caller confirms a slot, use bookConsultation, then call sendBookingSmsConfirmation so the caller gets an Iris SMS confirmation and the agent gets an SMS alert.
+- To request a tour or consultation, use an assumptive close - "What works better, [day] morning or [day] afternoon?" not "Would you like to schedule?" First use checkAvailability for the requested date or date range. After the caller confirms a slot, use bookConsultation. The request remains confirmation pending unless the tool returns receiptVerified=true plus a non-empty appointmentId and provider receipt. Never say booked, confirmed, reserved, or calendar invite sent before that receipt. Only after verified confirmation may you call sendBookingSmsConfirmation with the appointmentId.
 - Critical-info confirmation: before booking, texting, emailing, transferring a detailed lead packet, or saving a record, confirm every field that could break follow-up or expose personal info: full name, email, phone number, property address, preferred contact method, appointment date/time/time zone, and consent to text/call/email. Never rush this part.
 - Names: ask for spelling when the name is uncommon, noisy, accented, hyphenated, or you are not certain. Say it back normally, then spell it back letter by letter. For ambiguous letters use phonetic words: "B as in Bravo, D as in Delta, M as in Mike, N as in November." If the caller corrects you, apologize briefly, update it, and confirm again.
 - Emails: always ask the caller to spell the full email. Repeat it back slowly as spoken text, then spell the local part and domain using phonetic words for ambiguous letters. Confirm symbols explicitly: "dot", "dash", "underscore", "plus", and "at". Do not send a confirmation until the caller says it is correct.
@@ -109,6 +126,8 @@ ${advancedQualificationPlaybook()}
 - Fallback rule for anything outside your other tools and not one of the specific sensitive categories above (a caller asks you to email or text something unrelated to a listing, asks for help with something none of your tools cover, or asks for a task like a favor or an unrelated errand): never just decline and never reach for transferToHuman as the default move. First try sendMessage or sendEmail if the caller has given you enough to send something directly and confirmed it back to you. If you cannot complete the request directly, confirm their name, best callback number, and a one-sentence summary of what they need, then call scheduleCallback and tell them it is logged for the team — do not end the call with nothing captured, and do not initiate a live transfer for this category.
 - Never explain your internal limitations, content rules, or why a channel is or is not allowed for a given topic. Speak only in terms of what you can do next ("I can log that for the team" / "I can text you that now"), never in terms of policy ("that's not real-estate related so I can't text it").
 - When the conversation is complete, thank them and use endCall.
+
+${sharedPlatformPolicyPrompt(config.intelligence)}
 
 Keep replies short and human. One question at a time.`;
 }
@@ -184,7 +203,7 @@ function buildVoiceConfig(config: ClientConfig): Record<string, unknown> | undef
     fallbackPlan: { voices: [buildFallbackVoice(provider, config.voiceId)] },
   };
 
-  const model = process.env.ARIA_VOICE_MODEL || (provider === "11labs" ? "eleven_flash_v2_5" : "");
+  const model = process.env.ARIA_VOICE_MODEL || (provider === "11labs" ? ARIA_VOICE_STACKS.default.voice.model : "");
   if (model) voice.model = model;
 
   const optimizeStreamingLatency = optionalNumber(process.env.ARIA_VOICE_OPTIMIZE_STREAMING_LATENCY, 0, 4);
@@ -224,7 +243,7 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
   const voiceName = config.agentNames.voice;
   const companyName = config.voiceClientName || config.clientName;
   const system = opts.styleContext ? `${systemPrompt(config)}\n\n${opts.styleContext}` : systemPrompt(config);
-  const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || "gpt-4.1-mini";
+  const modelName = opts.respondModel || process.env.ARIA_MODEL || process.env.ARIA_RESPOND_MODEL || ARIA_VOICE_STACKS.default.model;
 
   const tools: Record<string, unknown>[] = [
     {
@@ -272,6 +291,7 @@ export function buildAriaAssistant(config: ClientConfig, opts: AriaAssistantOpti
       "How can I help?",
     ].filter(Boolean).join(" "),
     firstMessageMode: "assistant-speaks-first",
+    transcriber: ARIA_VOICE_STACKS.default.transcriber,
     // No voice block on purpose. Omitting it means a PATCH leaves the deployed voice alone,
     // which is what keeps provisioning from stomping a voice chosen in the dashboard. See
     // the "no voice block when voiceId unset" test. scripts/vapi-live-audit.mjs reports the

@@ -277,12 +277,49 @@ async function createTenantCalendarEvent(input: BookingInput): Promise<BookingRe
           .update(`${clientId()}:${input.start}:${input.end}:${input.attendeeEmail || input.attendeePhone || input.title}`)
           .digest("hex"),
       });
-      return { success: true, eventId: event.id, htmlLink: event.htmlLink, confirmedStart: event.startTime, confirmedEnd: event.endTime || input.end };
+      const readBack = await connection.provider.listEvents({
+        calendarId: input.calendarId,
+        timeMin: new Date(Date.parse(input.start) - 60_000).toISOString(),
+        timeMax: new Date(Date.parse(input.end) + 60_000).toISOString(),
+      });
+      const verified = readBack.events.find((candidate) =>
+        candidate.id === event.id
+        && Date.parse(candidate.startTime) === Date.parse(input.start)
+        && Date.parse(candidate.endTime || input.end) === Date.parse(input.end));
+      if (!event.id || !verified) {
+        return {
+          success: false,
+          pending: true,
+          eventId: event.id,
+          htmlLink: event.htmlLink,
+          confirmedStart: event.startTime,
+          confirmedEnd: event.endTime || input.end,
+          receiptVerified: false,
+          error: "Provider event was created but its receipt could not be verified by read-back",
+        };
+      }
+      return {
+        success: true,
+        eventId: event.id,
+        htmlLink: event.htmlLink,
+        confirmedStart: verified.startTime,
+        confirmedEnd: verified.endTime || input.end,
+        receiptVerified: true,
+        providerReceipt: {
+          eventId: verified.id,
+          startTime: verified.startTime,
+          endTime: verified.endTime || input.end,
+          provider: connection.row.provider,
+        },
+      };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
-  return resolveCalendarProvider().bookAppointment(input);
+  const legacy = await resolveCalendarProvider().bookAppointment(input);
+  return legacy.success
+    ? { ...legacy, success: false, pending: true, receiptVerified: false, error: "Legacy provider receipt cannot be verified by read-back" }
+    : legacy;
 }
 
 export async function bookTenantCalendarEvent(input: BookingInput): Promise<BookingResult> {

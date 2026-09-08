@@ -1,5 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { normalizeCrmProvider } from "@/lib/crm/providers";
+import { resolveTenantIntelligenceConfig, type TenantIntelligenceConfig } from "@/lib/sharedIntelligence";
 
 // Per-client customization layer. Resolved by client_id from env today;
 // a DB/file source can back this later without changing consumers.
@@ -44,6 +45,8 @@ export type ClientConfig = {
   cadence: CadenceConfig;
   notify: NotifyConfig;
   styleTraining: StyleTrainingConfig;
+  /** Shared policy/state/playbook configuration used by every channel. */
+  intelligence: TenantIntelligenceConfig;
   /**
    * Rollout gate for docs/audits/2026-09-model-routing (lib/modelRouting.ts). Defaults to
    * "legacy" so a deploy that never sets MODEL_ROUTING_PROFILE changes NOTHING in production —
@@ -115,6 +118,7 @@ export function resolveClientConfig(env: Env = process.env): ClientConfig {
       enabled: bool(env, "ENABLE_STYLE_TRAINING", false),
       limit: int(env, "STYLE_TRAINING_EXAMPLES_LIMIT", 3),
     },
+    intelligence: resolveTenantIntelligenceConfig(env),
     modelRoutingProfile: modelRoutingProfile(str(env, "MODEL_ROUTING_PROFILE", "legacy")),
   };
 }

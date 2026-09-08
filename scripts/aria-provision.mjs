@@ -278,7 +278,7 @@ function buildVapiPlatformTools(publicUrl, secret) {
       type: "function",
       function: {
         name: "bookConsultation",
-        description: "Book a real estate consultation through Iris' server-side appointment stack after the caller confirms a specific slot.",
+        description: "Submit a consultation through the server-side pending-only scheduling stack after the caller confirms a slot. It is confirmed only when the result contains receiptVerified=true and a provider receipt.",
         parameters: {
           type: "object",
           properties: {
@@ -437,10 +437,14 @@ function buildVapiPlatformTools(publicUrl, secret) {
       type: "function",
       function: {
         name: "sendBookingSmsConfirmation",
-        description: "Send a booking confirmation SMS to the caller and an agent booking alert SMS. Use immediately after bookConsultation succeeds.",
+        description: "Send a booking confirmation SMS only for an appointment whose verified provider receipt is stored. Pass the appointmentId returned by bookConsultation.",
         parameters: {
           type: "object",
           properties: {
+            appointmentId: {
+              type: "string",
+              description: "Confirmed appointment ID returned with receiptVerified=true by bookConsultation.",
+            },
             callerPhone: {
               type: "string",
               description: "Caller phone number in E.164 format when available.",
@@ -466,7 +470,7 @@ function buildVapiPlatformTools(publicUrl, secret) {
               description: "One-line booking context for the agent.",
             },
           },
-          required: ["appointmentTime"],
+          required: ["appointmentId", "appointmentTime"],
         },
       },
       // Server webhook, NOT a Vapi-hosted code tool. The previous `type: "code"`

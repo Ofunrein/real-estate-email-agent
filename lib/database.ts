@@ -30,6 +30,7 @@ import type { ChannelConnectionInput, ChannelConnectionRecord } from "@/lib/chan
 import { requestWorkspaceId } from "@/lib/workspaceContext";
 import { preserveSuppression } from "@/lib/contactSuppression";
 import { decryptProviderTokenAtRest, encryptProviderTokenAtRest } from "@/lib/emailAccountCrypto";
+import { attachPropertyFactEvidence, recordPropertyFactsFromRow } from "@/lib/propertyFacts";
 
 let pool: Pool | null = null;
 const tableColumnCache = new Map<string, Set<string>>();
@@ -2038,9 +2039,10 @@ export async function findCandidatePropertiesFromDatabase(query: string | Proper
     const terms = areaTerms(criteria);
     return terms.length ? matchesArea(property, terms) : true;
   });
-  return candidates
+  const selected = candidates
     .sort((a, b) => scorePropertyCandidate(a, criteria) - scorePropertyCandidate(b, criteria) || a.address.localeCompare(b.address))
     .slice(0, limit);
+  return attachPropertyFactEvidence(selected);
 }
 
 function propertyAddressStem(address: string): string {
@@ -2083,7 +2085,7 @@ export async function findPropertiesByAddressesFromDatabase(addresses: string[],
       rows.push(mapped);
     }
   }
-  return rows;
+  return attachPropertyFactEvidence(rows);
 }
 
 export async function conversationEventExistsByGmailMessageId(gmailMessageId: string): Promise<boolean> {
@@ -2200,6 +2202,7 @@ export async function upsertPropertyToDatabase(incoming: Partial<SheetRow>, sour
        updated_at = now()`,
     [clientId(), ...PROPERTIES_HEADERS.map((header) => cleaned[header]), source],
   );
+  await recordPropertyFactsFromRow(incoming, source);
   return cleaned;
 }
 

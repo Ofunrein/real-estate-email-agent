@@ -26,6 +26,11 @@ export type BookingResult = {
   htmlLink?: string;
   confirmedStart?: string;
   confirmedEnd?: string;
+  /** True only after the provider event was read back and matched. */
+  receiptVerified?: boolean;
+  /** Provider-generated receipt safe to persist for confirmation gating. */
+  providerReceipt?: Record<string, unknown>;
+  pending?: boolean;
   error?: string;
 };
 

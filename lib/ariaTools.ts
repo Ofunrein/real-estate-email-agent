@@ -23,7 +23,6 @@ import { usableInboxPhotoUrl } from "@/lib/mediaProxy";
 import {
   cancelShowing,
   rescheduleShowing,
-  scheduleShowing,
   type ShowingContact,
 } from "@/lib/calendar";
 import { resolveCrmAdapter } from "@/lib/crm";
@@ -49,8 +48,10 @@ import { notifySlackOnBooking, notifySlackOnTransfer } from "@/lib/ariaSlack";
 import { sendTheoSms, smsMessageWithMediaLog } from "@/lib/twilioSms";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { queryAvailability as queryCalendarAvailability, type AvailabilitySlot } from "@/lib/calendarOs";
-import { queryTenantAvailability } from "@/lib/tenantCalendar";
+import { queryTenantAvailability, type TenantAvailabilityResult } from "@/lib/tenantCalendar";
 import { sendEmail as irisSendEmail, scheduleCallback as irisScheduleCallback } from "@/lib/irisCapabilities";
+import { pendingSchedulingReply, validateToolRequest } from "@/lib/sharedIntelligence";
+import { verifiedSchedulingReceiptForEvent, type ProviderReceipt } from "@/lib/schedulingState";
 
 export type AriaToolName =
   | "getCallerContext"
@@ -67,6 +68,7 @@ export type AriaToolName =
   | "cancelAppointment"
   | "rescheduleAppointment"
   | "syncToCrm"
+  | "sendBookingSmsConfirmation"
   | "qualifyLead";
 
 export type AriaToolContext = {
@@ -83,8 +85,8 @@ export type AriaToolDeps = {
   getCrm: () => CrmAdapter | null;
   calendarId: string;
   timezone: string;
-  queryAvailability: (input: { calendarId?: string; from: string; to: string; durationMinutes?: number; timezone?: string; limit?: number }) => Promise<AvailabilitySlot[]>;
-  bookAppointment: (input: AppointmentInput) => Promise<{ success: boolean; appointment_id?: string; neon_id?: string; confirmed_time?: string; error?: string }>;
+  queryAvailability: (input: { calendarId?: string; from: string; to: string; durationMinutes?: number; timezone?: string; limit?: number }) => Promise<AvailabilitySlot[] | TenantAvailabilityResult>;
+  bookAppointment: (input: AppointmentInput) => Promise<{ success: boolean; pending?: boolean; receipt_verified?: boolean; provider_receipt?: ProviderReceipt; appointment_id?: string; neon_id?: string; confirmed_time?: string; scheduling_request_id?: string; availability_status?: "available" | "empty" | "provider_unavailable"; error?: string }>;
   findUpcomingAppointmentByPhone: (phone: string) => Promise<AppointmentRecord | null>;
   findAppointmentById: (id: string) => Promise<AppointmentRecord | null>;
   cancelAppointmentById: (id: string) => Promise<boolean>;
@@ -105,6 +107,7 @@ export type AriaToolDeps = {
   recordSms?: (input: ChannelIngestInput) => Promise<unknown>;
   notifyBooking: typeof notifySlackOnBooking;
   notifyTransfer: typeof notifySlackOnTransfer;
+  verifySchedulingReceipt?: (providerEventId: string) => Promise<ProviderReceipt | null>;
 };
 
 const defaultDeps: AriaToolDeps = {
@@ -114,10 +117,7 @@ const defaultDeps: AriaToolDeps = {
   getCrm: () => resolveCrmAdapter(),
   calendarId: process.env.GHL_CALENDAR_ID || "",
   timezone: process.env.CALENDAR_TIMEZONE || "America/Chicago",
-  queryAvailability: async (input) => {
-    const result = await queryTenantAvailability(input);
-    return result.ok ? result.slots : [];
-  },
+  queryAvailability: queryTenantAvailability,
   bookAppointment: bookSharedAppointment,
   findUpcomingAppointmentByPhone,
   findAppointmentById,
@@ -131,6 +131,7 @@ const defaultDeps: AriaToolDeps = {
   recordSms: recordChannelInteraction,
   notifyBooking: notifySlackOnBooking,
   notifyTransfer: notifySlackOnTransfer,
+  verifySchedulingReceipt: verifiedSchedulingReceiptForEvent,
 };
 
 export type AriaToolOutcome = {
@@ -372,7 +373,7 @@ async function checkAvailabilityTool(ctx: AriaToolContext, args: Record<string, 
   }
 
   try {
-    const slots = await deps.queryAvailability({
+    const availability = await deps.queryAvailability({
       calendarId: deps.calendarId || undefined,
       from: window.from,
       to: window.to,
@@ -380,6 +381,13 @@ async function checkAvailabilityTool(ctx: AriaToolContext, args: Record<string, 
       timezone: deps.timezone,
       limit: 5,
     });
+    if (!Array.isArray(availability) && !availability.ok) {
+      return {
+        result: "I cannot read live calendar availability right now. That is a calendar connection failure, not a sign that there are no openings. I will flag it for the team.",
+        ingest: { ...ingestBase, aiAction: "availability_failed", status: "error", summary: `Availability provider failed: ${availability.reason || availability.error || "unknown error"}.` },
+      };
+    }
+    const slots: AvailabilitySlot[] = Array.isArray(availability) ? availability : availability.slots;
     if (!slots.length) {
       return {
         result: `I do not see an open ${durationMinutes}-minute slot for ${window.label} on ${window.date}. Want me to check another time that day?`,
@@ -719,13 +727,6 @@ async function scheduleShowingTool(ctx: AriaToolContext, args: Record<string, un
   const adapter = deps.getCrm();
   const ingestBase = { ...baseIngest(ctx), eventType: "voice_schedule_showing" };
 
-  if (!adapter || !deps.calendarId) {
-    return {
-      result: "Scheduling isn't connected yet, but I'll have a team member set that up and follow up with you.",
-      ingest: { ...ingestBase, aiAction: "scheduling_unavailable", summary: "Scheduling requested but CRM/calendar not configured." },
-    };
-  }
-
   const contact = contactFromCtx(ctx, args);
   if (!contact.phone && !contact.email) {
     return {
@@ -735,22 +736,24 @@ async function scheduleShowingTool(ctx: AriaToolContext, args: Record<string, un
   }
 
   if (action === "cancel") {
+    if (!adapter) return { result: "I cannot reach the scheduling provider right now. I will flag the cancellation request for the team.", ingest: { ...ingestBase, aiAction: "showing_cancel_pending", status: "pending" } };
     const result = await cancelShowing(adapter, { contact });
     return {
-      result: result.spoken,
-      ingest: { ...ingestBase, aiAction: result.ok ? "showing_cancelled" : "showing_cancel_failed", summary: result.spoken },
+      result: result.ok ? "The cancellation request was accepted by the provider and is pending final verification." : result.spoken,
+      ingest: { ...ingestBase, aiAction: result.ok ? "showing_cancel_pending" : "showing_cancel_failed", status: result.ok ? "pending" : "error", summary: result.spoken },
     };
   }
 
   if (action === "reschedule") {
+    if (!adapter) return { result: "I cannot reach the scheduling provider right now. I will flag the reschedule request for the team.", ingest: { ...ingestBase, aiAction: "showing_reschedule_pending", status: "pending" } };
     const newStart = str(args.newStartTime || args.new_start_time || args.startTime || args.start_time);
     if (!newStart) {
       return { result: "What new day and time works for the showing?", ingest: { ...ingestBase, aiAction: "showing_reschedule_needs_time", summary: "Reschedule requested without a new time." } };
     }
     const result = await rescheduleShowing(adapter, { contact, newStartTime: newStart, timezone: deps.timezone });
     return {
-      result: result.spoken,
-      ingest: { ...ingestBase, aiAction: result.ok ? "showing_rescheduled" : "showing_reschedule_failed", summary: result.spoken },
+      result: result.ok ? "The reschedule request was accepted by the provider and is pending final verification." : result.spoken,
+      ingest: { ...ingestBase, aiAction: result.ok ? "showing_reschedule_pending" : "showing_reschedule_failed", status: result.ok ? "pending" : "error", summary: result.spoken },
     };
   }
 
@@ -759,26 +762,15 @@ async function scheduleShowingTool(ctx: AriaToolContext, args: Record<string, un
     return { result: "What day and time would you like to tour it?", ingest: { ...ingestBase, aiAction: "showing_needs_time", summary: "Booking requested without a time." } };
   }
   const address = str(args.address || args.property || ctx.lead?.property_interest);
-  const result = await scheduleShowing(adapter, {
-    calendarId: deps.calendarId,
-    contact,
-    startTime,
-    endTime: str(args.endTime || args.end_time) || undefined,
-    timezone: deps.timezone,
-    address: address || undefined,
-  });
-  return {
-    result: result.spoken,
-    ingest: {
-      ...ingestBase,
-      fullName: contact.fullName || "",
-      email: contact.email || "",
-      propertyInterest: address,
-      aiAction: "showing_booked",
-      nextAction: "showing_scheduled",
-      summary: result.spoken,
-    },
-  };
+  return bookAppointmentTool(ctx, {
+    appointmentTime: startTime,
+    callerName: contact.fullName,
+    callerPhone: contact.phone,
+    callerEmail: contact.email,
+    propertyAddress: address,
+    appointmentType: "showing",
+    notes: args.notes,
+  }, deps);
 }
 
 function appointmentType(value: unknown): AppointmentInput["appointment_type"] {
@@ -803,7 +795,7 @@ async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, un
   const callerEmail = str(args.caller_email || args.callerEmail || args.email) || str(ctx.lead?.email);
   const propertyAddress = str(args.property_address || args.propertyAddress || args.address || args.property) || str(ctx.lead?.property_interest);
   const appointmentKind = appointmentType(args.appointment_type || args.appointmentType || "consultation");
-  const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_booked" };
+  const ingestBase = { ...baseIngest(ctx), eventType: "voice_appointment_requested" };
 
   if (!date || !time || !callerPhone) {
     return {
@@ -827,10 +819,22 @@ async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, un
     call_id: ctx.callId,
   });
 
-  if (!result.success) {
+  if (!result.success || !result.receipt_verified || !result.provider_receipt?.eventId) {
+    const availabilityFailure = result.availability_status === "provider_unavailable";
+    const noSlot = result.availability_status === "empty";
     return {
-      result: "I couldn't lock that in right now. I'll flag it so the team can confirm with you directly.",
-      ingest: { ...ingestBase, aiAction: "appointment_booking_failed", status: "error", summary: `Booking failed: ${result.error || "unknown error"}` },
+      result: noSlot
+        ? "That time is no longer available. I can check another time for you."
+        : availabilityFailure
+          ? "I cannot verify live calendar availability right now. That is a provider failure, not an empty calendar. I will flag it for the team."
+          : pendingSchedulingReply(),
+      ingest: {
+        ...ingestBase,
+        aiAction: result.pending ? "appointment_confirmation_pending" : "appointment_booking_failed",
+        status: result.pending ? "pending" : "not_found",
+        appointmentId: result.scheduling_request_id || "",
+        summary: `Booking not confirmed: ${result.error || "provider receipt not verified"}`,
+      },
     };
   }
 
@@ -846,9 +850,10 @@ async function bookAppointmentTool(ctx: AriaToolContext, args: Record<string, un
   }).catch(() => null);
 
   return {
-    result: `Booked - ${result.confirmed_time || `${date} at ${time}`}. Confirmation text coming now.`,
+    result: `Confirmed by the calendar provider for ${result.confirmed_time || `${date} at ${time}`}. appointmentId: ${result.neon_id || result.appointment_id}.`,
     ingest: {
       ...ingestBase,
+      eventType: "voice_appointment_confirmed",
       fullName: callerName,
       email: callerEmail,
       propertyInterest: propertyAddress,
@@ -882,17 +887,20 @@ async function cancelAppointmentTool(ctx: AriaToolContext, args: Record<string, 
     };
   }
 
-  await deps.cancelAppointmentById(appt.id);
-  if (appt.ghl_event_id) await deps.cancelGHLEvent(appt.ghl_event_id).catch(() => false);
+  const providerAccepted = appt.ghl_event_id
+    ? await deps.cancelGHLEvent(appt.ghl_event_id).catch(() => false)
+    : false;
 
   return {
-    result: "Done - your appointment has been cancelled. Anything else I can help with?",
+    result: providerAccepted
+      ? "The cancellation request was accepted by the provider and is pending final verification."
+      : "I could not verify the cancellation with the provider. I will flag it for the team.",
     ingest: {
       ...ingestBase,
-      aiAction: "appointment_cancelled",
+      aiAction: providerAccepted ? "appointment_cancel_pending" : "appointment_cancel_failed",
       appointmentId: appt.id,
-      status: "cancelled",
-      summary: `Cancelled ${appt.scheduled_at_local || appt.scheduled_at}${str(args.reason) ? ` - ${str(args.reason)}` : ""}.`,
+      status: providerAccepted ? "pending" : "error",
+      summary: `Cancellation requested for ${appt.scheduled_at_local || appt.scheduled_at}${str(args.reason) ? ` - ${str(args.reason)}` : ""}.`,
     },
   };
 }
@@ -917,29 +925,17 @@ async function rescheduleAppointmentTool(ctx: AriaToolContext, args: Record<stri
 
   const ghlResult = appt.ghl_event_id
     ? await deps.rescheduleGHLEvent(appt.ghl_event_id, newDate, newTime, deps.timezone)
-    : { success: true, confirmed_time: `${newDate} at ${newTime}` };
-  if (ghlResult.success) {
-    await deps.rescheduleAppointmentById(
-      appt.id,
-      parseLocalDateTime(newDate, newTime, deps.timezone),
-      ghlResult.confirmed_time || `${newDate} at ${newTime}`,
-      appt.ghl_event_id,
-    );
-    if (process.env.SEND_BOOKING_CONFIRMATION_SMS === "true") {
-      await deps.sendSms(ctx.phone, `Rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}. Questions? Reply here.`).catch(() => null);
-    }
-  }
-
+    : { success: false, error: "No provider event is attached to this appointment" };
   return {
     result: ghlResult.success
-      ? `Done - rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}. Another confirmation is coming now.`
+      ? `The reschedule request for ${ghlResult.confirmed_time || `${newDate} at ${newTime}`} was accepted by the provider and is pending final verification.`
       : "I had trouble updating that. I'll flag it for the team.",
     ingest: {
       ...ingestBase,
-      aiAction: ghlResult.success ? "appointment_rescheduled" : "appointment_reschedule_failed",
+      aiAction: ghlResult.success ? "appointment_reschedule_pending" : "appointment_reschedule_failed",
       appointmentId: appt.id,
-      status: ghlResult.success ? "rescheduled" : "error",
-      summary: ghlResult.success ? `Rescheduled to ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}.` : `Reschedule failed: ${ghlResult.error || "unknown error"}`,
+      status: ghlResult.success ? "pending" : "error",
+      summary: ghlResult.success ? `Reschedule pending for ${ghlResult.confirmed_time || `${newDate} at ${newTime}`}.` : `Reschedule failed: ${ghlResult.error || "unknown error"}`,
     },
   };
 }
@@ -1053,6 +1049,7 @@ async function sendBookingSmsConfirmationTool(
   deps: AriaToolDeps,
 ): Promise<AriaToolOutcome> {
   const hydrated = await hydrateContext(ctx, deps);
+  const appointmentId = str(args.appointmentId || args.appointment_id);
   const callerPhone = str(args.callerPhone || args.phone) || hydrated.phone;
   const callerName = str(args.callerName || args.name) || "there";
   const appointmentTime = str(args.appointmentTime || args.appointment_time);
@@ -1061,10 +1058,22 @@ async function sendBookingSmsConfirmationTool(
   const summary = str(args.summary);
   const ingestBase = { ...baseIngest(hydrated), eventType: "voice_booking_confirmation_sms" };
 
-  if (!appointmentTime) {
+  if (!appointmentId || !appointmentTime) {
     return {
-      result: "What time should I confirm for the appointment?",
-      ingest: { ...ingestBase, aiAction: "booking_sms_needs_time", status: "awaiting_response", summary: "Booking confirmation SMS requested without an appointment time." },
+      result: "The request is still pending provider confirmation, so I will not send a confirmation text yet.",
+      ingest: { ...ingestBase, aiAction: "booking_sms_receipt_missing", status: "pending", summary: "Booking confirmation SMS blocked without appointment ID and time." },
+    };
+  }
+
+  const appointment = await deps.findAppointmentById(appointmentId).catch(() => null);
+  const verifyReceipt = deps.verifySchedulingReceipt || verifiedSchedulingReceiptForEvent;
+  const receipt = appointment?.ghl_event_id
+    ? await verifyReceipt(appointment.ghl_event_id).catch(() => null)
+    : null;
+  if (!appointment || appointment.status !== "confirmed" || !receipt?.readBackVerified) {
+    return {
+      result: "The request is still pending provider confirmation, so I will not send a confirmation text yet.",
+      ingest: { ...ingestBase, aiAction: "booking_sms_receipt_unverified", status: "pending", appointmentId, summary: "Booking confirmation SMS blocked because no verified provider receipt was stored." },
     };
   }
 
@@ -1147,6 +1156,26 @@ export async function runAriaTool(
   ctx: AriaToolContext,
   deps: AriaToolDeps = defaultDeps,
 ): Promise<AriaToolOutcome> {
+  if (name !== "getCallerContext" && name !== "sendBookingSmsConfirmation") {
+    const hydrated = await hydrateContext(ctx, deps);
+    const validation = validateToolRequest(
+      name,
+      { ...args, callerPhone: str(args.callerPhone || args.caller_phone || args.phone) || hydrated.phone },
+      { doNotContact: isDoNotContact(hydrated.lead || undefined) },
+    );
+    if (!validation.ok) {
+      return {
+        result: validation.safeMessage,
+        ingest: {
+          ...baseIngest(hydrated),
+          eventType: "voice_tool_rejected",
+          aiAction: validation.code,
+          status: "blocked",
+          summary: `Deterministic tool validation rejected ${name}: ${validation.code}.`,
+        },
+      };
+    }
+  }
   switch (name) {
     case "getCallerContext": {
       const identity = await deps.resolveCaller(ctx.phone);

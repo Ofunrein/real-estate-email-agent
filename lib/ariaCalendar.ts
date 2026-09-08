@@ -4,6 +4,12 @@ import { resolveCrmAdapter } from "@/lib/crm";
 import { sendTheoSms } from "@/lib/twilioSms";
 import { activeCalendarProviderName } from "@/lib/calendar/resolver";
 import { bookTenantCalendarEvent, requestedSlotIsAvailable, tenantCalendarConnectionStatus } from "@/lib/tenantCalendar";
+import {
+  advanceSchedulingRequest,
+  beginSchedulingRequest,
+  markSchedulingPending,
+  type ProviderReceipt,
+} from "@/lib/schedulingState";
 
 export type AppointmentInput = {
   date: string;
@@ -27,6 +33,11 @@ export type AppointmentResult = {
   confirmed_time?: string;
   calendar_url?: string;
   provider_used?: string;
+  pending?: boolean;
+  receipt_verified?: boolean;
+  provider_receipt?: ProviderReceipt;
+  scheduling_request_id?: string;
+  availability_status?: "available" | "empty" | "provider_unavailable";
   error?: string;
 };
 
@@ -141,6 +152,78 @@ export async function bookAppointment(input: AppointmentInput): Promise<Appointm
   const timezone = input.timezone || process.env.CALENDAR_TIMEZONE || "America/Chicago";
   const scheduledAt = parseLocalDateTime(input.date, input.time, timezone);
   const endAt = addMinutes(scheduledAt, input.duration_minutes ?? 30);
+  let requestResult;
+  try {
+    requestResult = await beginSchedulingRequest({
+      channel: input.booked_via_channel || "unknown",
+      threadRef: input.call_id ? `voice:${input.call_id}` : `${input.booked_via_channel || "unknown"}:${input.caller_phone}`,
+      requestedStart: scheduledAt,
+      requestedEnd: endAt,
+      timezone,
+      contact: input.caller_email || input.caller_phone,
+      propertyAddress: input.property_address,
+      appointmentType: input.appointment_type,
+    });
+  } catch (error) {
+    return {
+      success: false,
+      pending: true,
+      receipt_verified: false,
+      error: `Scheduling state is unavailable; no provider mutation was attempted: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  let schedulingRequest = requestResult.request;
+  if (!requestResult.created) {
+    if (schedulingRequest.status === "confirmed" && schedulingRequest.providerReceipt?.readBackVerified) {
+      return {
+        success: true,
+        appointment_id: schedulingRequest.providerEventId,
+        confirmed_time: new Date(schedulingRequest.requestedStart).toLocaleString("en-US", { timeZone: timezone }),
+        provider_used: schedulingRequest.provider,
+        receipt_verified: true,
+        provider_receipt: schedulingRequest.providerReceipt,
+        scheduling_request_id: schedulingRequest.id,
+        availability_status: "available",
+      };
+    }
+    return {
+      success: false,
+      pending: true,
+      appointment_id: schedulingRequest.providerEventId || undefined,
+      provider_used: schedulingRequest.provider,
+      receipt_verified: false,
+      scheduling_request_id: schedulingRequest.id,
+      error: "An identical request is already pending provider confirmation",
+    };
+  }
+
+  const availability = await requestedSlotIsAvailable({ start: scheduledAt, end: endAt, timezone });
+  if (!availability.ok) {
+    schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "submitted");
+    schedulingRequest = await markSchedulingPending(schedulingRequest, availability.provider, "availability_provider_unavailable");
+    return {
+      success: false,
+      pending: true,
+      receipt_verified: false,
+      scheduling_request_id: schedulingRequest.id,
+      availability_status: "provider_unavailable",
+      error: "Calendar availability could not be verified",
+    };
+  }
+  if (!availability.available) {
+    schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "provider_declined", { errorCode: "slot_unavailable" });
+    return {
+      success: false,
+      pending: false,
+      receipt_verified: false,
+      scheduling_request_id: schedulingRequest.id,
+      availability_status: "empty",
+      error: "Requested time is no longer available",
+    };
+  }
+  schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "availability_found");
+  schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "slot_selected");
+  schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "submitted");
   const connection = await tenantCalendarConnectionStatus();
   const providerName = connection.connected && connection.provider !== "legacy_env"
     ? connection.provider
@@ -164,13 +247,31 @@ export async function bookAppointment(input: AppointmentInput): Promise<Appointm
       propertyAddress: input.property_address,
     });
     result = {
-      success: booked.success,
+      success: booked.success && booked.receiptVerified === true && Boolean(booked.eventId),
+      pending: booked.pending || !booked.receiptVerified,
       appointment_id: booked.eventId,
       confirmed_time: booked.confirmedStart ? new Date(booked.confirmedStart).toLocaleString("en-US", { timeZone: timezone }) : `${input.date} at ${input.time}`,
       calendar_url: booked.htmlLink,
       provider_used: providerName,
+      receipt_verified: booked.receiptVerified === true,
       error: booked.error,
     };
+    if (booked.receiptVerified && booked.eventId) {
+      const receipt: ProviderReceipt = {
+        provider: providerName,
+        eventId: booked.eventId,
+        start: booked.confirmedStart || scheduledAt,
+        end: booked.confirmedEnd || endAt,
+        readBackVerified: true,
+        readBackAt: new Date().toISOString(),
+      };
+      schedulingRequest = await advanceSchedulingRequest(schedulingRequest, "provider_verified", { provider: providerName, receipt });
+      result.provider_receipt = receipt;
+      result.scheduling_request_id = schedulingRequest.id;
+    } else {
+      schedulingRequest = await markSchedulingPending(schedulingRequest, providerName, booked.error || "provider_receipt_unverified");
+      result.scheduling_request_id = schedulingRequest.id;
+    }
   } else {
     // Fail closed: creating a GHL event without first reading the authoritative
     // calendar could double-book the tenant. Legacy behavior is an explicit,
@@ -178,6 +279,15 @@ export async function bookAppointment(input: AppointmentInput): Promise<Appointm
     result = process.env.ALLOW_UNVERIFIED_GHL_BOOKING === "true"
       ? await bookGHL(input)
       : { success: false, provider_used: "none", error: "A conflict-aware calendar connection is required" };
+    result = {
+      ...result,
+      success: false,
+      pending: true,
+      receipt_verified: false,
+      scheduling_request_id: schedulingRequest.id,
+      error: result.error || "Provider receipt cannot be verified by read-back",
+    };
+    schedulingRequest = await markSchedulingPending(schedulingRequest, result.provider_used || "none", result.error);
   }
 
   if (!result.success) return result;

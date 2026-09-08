@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-09-08T10-20-37-081Z",
+  "mode": "offline",
+  "scope_note": "Offline mode measures router safety gates, determinism, loop absence, and tier selection. Provider-dependent quality, latency, fallback-rate, and cost gates are NOT measured here and are reported as not_measured_offline.",
+  "gates": {
+    "compliance_recall_legacy": {
+      "total": 80,
+      "passed": 80,
+      "rate": 1
+    },
+    "compliance_recall_candidate": {
+      "total": 80,
+      "passed": 80,
+      "rate": 1
+    },
+    "adversarial_bypass_legacy": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    },
+    "adversarial_bypass_candidate": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    },
+    "voice_tier_fixed_candidate": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    },
+    "determinism_candidate": {
+      "total": 120,
+      "passed": 120,
+      "rate": 1
+    },
+    "escalation_loops_candidate": {
+      "total": 280,
+      "passed": 280,
+      "rate": 1
+    }
+  },
+  "frozen_threshold_enforcement": {
+    "compliance_recall": "enforced_offline",
+    "adversarial": "enforced_offline",
+    "determinism": "enforced_offline",
+    "escalation_loops": "enforced_offline",
+    "classification_macro_f1": "not_measured_offline",
+    "classification_per_field_exact_match": "not_measured_offline",
+    "reply_quality_rubric_pass_rate": "not_measured_offline",
+    "latency_voice_turn_ms": "not_measured_offline",
+    "latency_email_model_ms": "not_measured_offline",
+    "cost_per_accepted_result": "formula_unit_tested_but_not_measured_offline",
+    "fallback_rate": "not_measured_offline"
+  },
+  "total_cases": 520
+}

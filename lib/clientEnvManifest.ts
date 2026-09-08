@@ -74,6 +74,9 @@ export const CLIENT_ENV_MANIFEST: readonly EnvRequirement[] = [
   { name: "HUMAN_TRANSFER_NUMBER", scope: "isolated", required: false, channel: "voice", why: "Live transfer destination. A wrong value routes callers to another business." },
   { name: "ARIA_AGENT_CONFIRMATION_PHONE", scope: "isolated", required: false, channel: "voice", why: "Booking alerts. Unset skips the alert rather than defaulting to someone else's phone." },
   { name: "ARIA_RECORDING_DISCLOSURE", scope: "shared", required: false, channel: "voice", why: "Override the recorded-call disclosure wording; 'off' only when recording is disabled in Vapi." },
+  { name: "PROPERTY_FACT_FRESHNESS_HOURS", scope: "shared", required: false, why: "Tenant policy for when changing listing facts must be treated as stale and reverified." },
+  { name: "CONVERSATION_MEMORY_TURNS", scope: "shared", required: false, why: "Tenant policy for shared reduced memory; clamped to a safe 40-400 turn range." },
+  { name: "REAL_ESTATE_JOURNEYS", scope: "shared", required: false, why: "Optional tenant subset of the platform journey library; all supported journeys are active by default." },
 
   // ---- calendar / CRM -----------------------------------------------------
   { name: "CALENDAR_PROVIDER", scope: "shared", required: false, channel: "calendar", why: "Legacy env adapter only; tenant OAuth connections take precedence." },
