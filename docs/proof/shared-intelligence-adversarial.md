@@ -1,6 +1,4 @@
-# Shared intelligence adversarial evaluation
-
-Generated: 2026-09-08T10:39:53.139Z
+# Shared intelligence reducer policy checks
 
 Execution: `npm run eval:shared-intelligence:proof`
 
@@ -8,70 +6,70 @@ Manifest: `evals/shared-intelligence.manifest.json`
 
 Result: 88/88 passed, 0 failed.
 
-This is deterministic local evidence. It did not provision Vapi, place calls, send messages, mutate calendars, deploy, or access customer data.
+This is deterministic local component evidence for reducers and policy helpers. It does not invoke Iris email or Aria voice entrypoints, prove either demo journey end to end, provision Vapi, place calls, send messages, mutate calendars, deploy, or access customer data.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
 | manifest-all-journeys | PASS | 14 journeys declared |
-| manifest-source-known-demos | PASS | both source-known demo surfaces resolve to repository files |
+| manifest-reference-surfaces | PASS | email and voice source paths exist; entrypoints are not invoked by this reducer check |
 | manifest-all-categories | PASS | 17 adversarial categories declared |
-| manifest-all-cases-cover-both-demos | PASS | 33 cases cover email and voice |
-| austin-realty/email:buyer:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:buyer:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:seller:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:seller:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:dual_move:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:dual_move:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:renter:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:renter:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:landlord:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:landlord:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:investor:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:investor:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:valuation:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:valuation:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:property_management:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:property_management:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:showing:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:showing:state | PASS | reduced 40 turns; phase=qualify |
-| austin-realty/email:represented_party:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:represented_party:state | PASS | reduced 40 turns; phase=handoff |
-| austin-realty/email:opt_out:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:opt_out:state | PASS | reduced 40 turns; phase=closed |
-| austin-realty/email:complaint:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:complaint:state | PASS | reduced 40 turns; phase=handoff |
-| austin-realty/email:single_property:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:single_property:state | PASS | reduced 40 turns; phase=ground |
-| austin-realty/email:multi_property:manifest | PASS | 40-turn journey declared |
-| austin-realty/email:multi_property:state | PASS | reduced 40 turns; phase=ground |
-| vapi-voice-chat/voice:buyer:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:buyer:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:seller:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:seller:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:dual_move:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:dual_move:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:renter:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:renter:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:landlord:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:landlord:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:investor:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:investor:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:valuation:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:valuation:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:property_management:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:property_management:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:showing:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:showing:state | PASS | reduced 40 turns; phase=qualify |
-| vapi-voice-chat/voice:represented_party:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:represented_party:state | PASS | reduced 40 turns; phase=handoff |
-| vapi-voice-chat/voice:opt_out:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:opt_out:state | PASS | reduced 40 turns; phase=closed |
-| vapi-voice-chat/voice:complaint:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:complaint:state | PASS | reduced 40 turns; phase=handoff |
-| vapi-voice-chat/voice:single_property:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:single_property:state | PASS | reduced 40 turns; phase=ground |
-| vapi-voice-chat/voice:multi_property:manifest | PASS | 40-turn journey declared |
-| vapi-voice-chat/voice:multi_property:state | PASS | reduced 40 turns; phase=ground |
+| manifest-declared-applicability | PASS | 33 cases declare intended email and voice applicability; not runtime coverage |
+| reducer:email:buyer:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:buyer:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:seller:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:seller:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:dual_move:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:dual_move:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:renter:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:renter:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:landlord:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:landlord:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:investor:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:investor:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:valuation:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:valuation:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:property_management:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:property_management:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:showing:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:showing:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:email:represented_party:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:represented_party:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=handoff |
+| reducer:email:opt_out:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:opt_out:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=closed |
+| reducer:email:complaint:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:complaint:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=handoff |
+| reducer:email:single_property:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:single_property:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=ground |
+| reducer:email:multi_property:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:email:multi_property:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=ground |
+| reducer:voice:buyer:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:buyer:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:seller:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:seller:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:dual_move:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:dual_move:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:renter:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:renter:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:landlord:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:landlord:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:investor:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:investor:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:valuation:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:valuation:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:property_management:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:property_management:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:showing:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:showing:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=qualify |
+| reducer:voice:represented_party:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:represented_party:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=handoff |
+| reducer:voice:opt_out:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:opt_out:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=closed |
+| reducer:voice:complaint:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:complaint:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=handoff |
+| reducer:voice:single_property:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:single_property:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=ground |
+| reducer:voice:multi_property:shape | PASS | 40 synthetic reducer turns declared |
+| reducer:voice:multi_property:state | PASS | in-memory reducer accepted 40 synthetic turns; phase=ground |
 | journey-detection-dual | PASS | dual-move detected without collapsing tracks |
 | journey-detection-multi-property | PASS | multiple addresses detected |
 | prompt-injection-flag | PASS | injection classified |
