@@ -15,6 +15,24 @@ type MetricAuditBase = {
   providerMessageId?: string;
 };
 
+/**
+ * `TheoMetric.status` is an open string, not a boolean. Producers emit at least
+ * `"ok"` (lib/theoLlm.ts), `"found" | "no_data"` (lib/theoData.ts,
+ * lib/publicPropertyData.ts) and `"failed" | "timeout"` on a genuinely broken
+ * call. Treating everything that is not `"ok"` as a failure recorded every
+ * successful lookup that simply matched no rows as `failed`, permanently
+ * inflating `failed` / deflating `successRate` in the append-only
+ * `usage_cost_ledger` (see docs/audits/2026-09-model-routing/07-gauntlet-round1-partial.md D2).
+ *
+ * Only an explicit failure vocabulary counts as a failure. Anything else —
+ * including a successful "no data" outcome — is a succeeded attempt.
+ */
+const METRIC_FAILURE_STATUSES = new Set(["failed", "error", "timeout", "rejected"]);
+
+export function metricStatusIsFailure(status: string | null | undefined): boolean {
+  return METRIC_FAILURE_STATUSES.has(String(status || "").trim().toLowerCase());
+}
+
 function metricCostUnits(metric: TheoMetric): Record<string, unknown> {
   const match = String(metric.detail || "").match(/^(.+?)\s+(\d+)in\/(\d+)out$/);
   if (!match) return { detail: metric.detail || "" };
@@ -30,6 +48,7 @@ export async function writeTheoMetricAuditEvents(metrics: TheoMetric[], base: Me
   await Promise.allSettled(
     metrics.flatMap((metric, index) => {
       const units = metricCostUnits(metric);
+      const failed = metricStatusIsFailure(metric.status);
       const audit = Number(metric.costUsd || 0) > 0
         ? writeRequestAuditEvent({
             requestId: correlationId,
@@ -41,9 +60,9 @@ export async function writeTheoMetricAuditEvents(metrics: TheoMetric[], base: Me
             contactRef: base.contactRef || "",
             providerMessageId: base.providerMessageId || "",
             stage: metric.label || "agent_metric",
-            outcome: metric.status === "ok" ? "sent" : "failed",
+            outcome: failed ? "failed" : "sent",
             durationMs: metric.elapsedMs,
-            errorCode: metric.status === "ok" ? "" : metric.status,
+            errorCode: failed ? metric.status : "",
             costUsd: metric.costUsd || 0,
             costService: metric.service || "unknown",
             costUnits: units,
@@ -59,7 +78,7 @@ export async function writeTheoMetricAuditEvents(metrics: TheoMetric[], base: Me
         operation: metric.label || "agent_metric",
         provider: base.provider || metric.service,
         model: String(units.model || ""),
-        status: metric.status === "ok" ? "succeeded" : "failed",
+        status: failed ? "failed" : "succeeded",
         latencyMs: metric.elapsedMs,
         inputUnits: Number(units.input_tokens || 0),
         outputUnits: Number(units.output_tokens || 0),
