@@ -150,8 +150,6 @@ if (outIndex >= 0) {
   const lines = [
     "# Shared intelligence adversarial evaluation",
     "",
-    `Generated: ${summary.generatedAt}`,
-    "",
     "Execution: `npm run eval:shared-intelligence:proof`",
     "",
     `Manifest: \`${summary.manifest}\``,

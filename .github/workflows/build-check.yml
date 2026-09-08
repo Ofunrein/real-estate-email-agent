@@ -54,8 +54,17 @@ jobs:
       - name: Model routing frozen-threshold eval
         run: npm run eval:routing -- --offline
 
+      - name: Shared-intelligence 40-turn adversarial journeys
+        run: npm run eval:shared-intelligence:proof
+
+      - name: Fail if shared-intelligence proof output is stale
+        run: git diff --exit-code -- docs/proof/shared-intelligence-adversarial.md
+
       - name: Python tests
         run: npm run test:py
+
+      - name: Typecheck production paths
+        run: npm run typecheck
 
       - name: Proof run (Iris email scenarios)
         run: npm run proof
