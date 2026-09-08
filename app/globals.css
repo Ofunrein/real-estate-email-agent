@@ -5679,3 +5679,23 @@ html:not(.dark) .MuiTypography-overline { color: #1A1A2E !important; }
 @media (prefers-reduced-motion:reduce){
   .admin-shell *{transition:none!important}
 }
+
+/* Demo-room management panel (platform_admin only). */
+.admin-panel__head{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between}
+.admin-panel__sub{margin:6px 0 0;max-width:60ch;color:var(--admin-muted,#6b7280);font-size:14px;line-height:1.5}
+.admin-panel__back{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid rgba(0,0,0,.15);border-radius:10px;font-size:14px;font-weight:600;text-decoration:none}
+.admin-notice{margin-top:20px;padding:20px;border:1px solid rgba(0,0,0,.12);border-radius:12px;background:rgba(0,0,0,.02)}
+.admin-notice p{margin:8px 0 0;max-width:70ch;font-size:14px;line-height:1.55}
+.admin-notice__foot{color:var(--admin-muted,#6b7280);font-size:13px}
+.admin-table{width:100%;margin-top:20px;border-collapse:collapse;font-size:14px}
+.admin-table th,.admin-table td{padding:12px 10px;border-bottom:1px solid rgba(0,0,0,.08);text-align:left;vertical-align:top}
+.admin-table th{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--admin-muted,#6b7280)}
+.admin-table__meta{display:block;margin-top:2px;color:var(--admin-muted,#6b7280);font-size:13px}
+.admin-badge{display:inline-block;padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.06);font-size:12px;font-weight:600}
+.admin-badge--approved,.admin-badge--sent{background:rgba(16,133,72,.12);color:#0f7a43}
+.admin-badge--draft{background:rgba(180,120,0,.12);color:#8a5b00}
+@media (max-width:640px){
+  .admin-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .admin-table tr{display:block;margin-bottom:12px;border:1px solid rgba(0,0,0,.1);border-radius:10px;padding:8px}
+  .admin-table td{display:block;border:0;padding:6px 8px}
+}
