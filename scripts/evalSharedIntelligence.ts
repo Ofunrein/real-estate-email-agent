@@ -45,15 +45,15 @@ const journeyText: Record<RealEstateJourney, string> = {
 
 const manifestJourneys = new Set(manifest.journeys);
 check("manifest-all-journeys", REAL_ESTATE_JOURNEYS.every((journey) => manifestJourneys.has(journey)), `${manifestJourneys.size} journeys declared`);
-check("manifest-source-known-demos", manifest.sourceKnownDemos.length === 2 && manifest.sourceKnownDemos.every((demo: { source: string }) => fs.existsSync(path.join(root, demo.source))), "both source-known demo surfaces resolve to repository files");
+check("manifest-reference-surfaces", manifest.sourceKnownDemos.length === 2 && manifest.sourceKnownDemos.every((demo: { source: string }) => fs.existsSync(path.join(root, demo.source))), "email and voice source paths exist; entrypoints are not invoked by this reducer check");
 const categories = new Set(manifest.cases.map((entry: { category: string }) => entry.category));
 check("manifest-all-categories", manifest.requiredCategories.every((category: string) => categories.has(category)), `${categories.size} adversarial categories declared`);
-check("manifest-all-cases-cover-both-demos", manifest.cases.every((entry: { appliesTo: string[] }) => entry.appliesTo.length === 2), `${manifest.cases.length} cases cover email and voice`);
+check("manifest-declared-applicability", manifest.cases.every((entry: { appliesTo: string[] }) => entry.appliesTo.length === 2), `${manifest.cases.length} cases declare intended email and voice applicability; not runtime coverage`);
 
 for (const demo of manifest.sourceKnownDemos as Array<{ id: string; channel: string; tenant: string }>) {
   for (const journey of REAL_ESTATE_JOURNEYS) {
     const manifestCase = manifest.cases.find((entry: { journey?: string }) => entry.journey === journey);
-    check(`${demo.id}:${journey}:manifest`, manifestCase?.turns === 40, "40-turn journey declared");
+    check(`reducer:${demo.channel}:${journey}:shape`, manifestCase?.turns === 40, "40 synthetic reducer turns declared");
     let state = emptyConversationState(demo.tenant, `${demo.id}:${journey}`);
     for (let turn = 1; turn <= 40; turn += 1) {
       state = reduceConversationState(state, {
@@ -65,7 +65,7 @@ for (const demo of manifest.sourceKnownDemos as Array<{ id: string; channel: str
         intent: journey,
       });
     }
-    check(`${demo.id}:${journey}:state`, state.turnCount === 40 && state.activeJourneys.includes(journey), `reduced 40 turns; phase=${state.phase}`);
+    check(`reducer:${demo.channel}:${journey}:state`, state.turnCount === 40 && state.activeJourneys.includes(journey), `in-memory reducer accepted 40 synthetic turns; phase=${state.phase}`);
   }
 }
 
@@ -148,7 +148,7 @@ const outIndex = process.argv.indexOf("--out");
 if (outIndex >= 0) {
   const outPath = path.resolve(root, process.argv[outIndex + 1]);
   const lines = [
-    "# Shared intelligence adversarial evaluation",
+    "# Shared intelligence reducer policy checks",
     "",
     "Execution: `npm run eval:shared-intelligence:proof`",
     "",
@@ -156,7 +156,7 @@ if (outIndex >= 0) {
     "",
     `Result: ${passed}/${results.length} passed, ${failed} failed.`,
     "",
-    "This is deterministic local evidence. It did not provision Vapi, place calls, send messages, mutate calendars, deploy, or access customer data.",
+    "This is deterministic local component evidence for reducers and policy helpers. It does not invoke Iris email or Aria voice entrypoints, prove either demo journey end to end, provision Vapi, place calls, send messages, mutate calendars, deploy, or access customer data.",
     "",
     "| Check | Result | Evidence |",
     "| --- | --- | --- |",

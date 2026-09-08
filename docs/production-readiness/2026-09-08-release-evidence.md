@@ -10,10 +10,11 @@ Policy: unknown or externally controlled state is never PASS.
 |---|---|---|
 | Canonical checkout and branch isolation | PASS | Clean worktree created from fetched `origin/main`; unrelated `audit/model-routing-evidence-20260907` checkout left untouched. |
 | Open-PR collision | PASS | `gh pr list --state open` returned none before branch creation. |
-| TypeScript regression | PASS | `node --import tsx --test --test-concurrency=1 "tests/ts/**/*.test.ts"`: 1,075 passed, 0 failed/skipped. |
+| TypeScript regression | PASS locally after review fixes | `node --import tsx --test --test-concurrency=1 "tests/ts/**/*.test.ts"`: 1,085 passed, 0 failed/skipped. Remote CI remains required. |
 | Python regression | PASS | `npm run test:py`: 96 passed. |
 | PostgreSQL integration | PASS | Both demo-ownership and shared-intelligence scripts passed against disposable PostgreSQL. |
-| Shared-intelligence adversarial journeys | PASS | `npm run eval:shared-intelligence:proof`: 88/88 checks passed, including configured 40-turn journeys, tenant isolation, booking receipt gate, default voice stack, and inert premium canary. |
+| Shared-intelligence reducer/policy helpers | PASS, component only | `npm run eval:shared-intelligence:proof`: 88/88 deterministic checks passed for synthetic reducer inputs, tenant isolation, booking receipt gate, default voice stack, and inert premium canary. This does not invoke Iris email or Aria voice entrypoints and is not end-to-end demo coverage. |
+| Human-call evaluator harness | PASS, harness only | 10 regression tests cover fail-closed phone mode, manifest-only preservation, canonical regex assertions, real combinatorial overlays, all-turn/blank/leak checks, action receipts, dedicated account identity, and cleanup failure. Current manifest is unexecuted; historical Vapi Chat output remains labeled against its superseded manifest. |
 | Routing safety evaluation | PARTIAL | 520 offline cases passed all offline-enforced gates. Provider-dependent quality, latency, and cost remain unmeasured. |
 | Production-path typecheck | PASS | `npm run lint` passed. This PR adds an explicit identical `npm run typecheck` gate. Full-repository `tsc --noEmit` is not the repository contract and currently includes test-fixture typing errors; this is not relabeled PASS. |
 | CI serial execution | PASS in code | `npm test` now pins `--test-concurrency=1`; CI now runs shared-intelligence proof and production-path typecheck. Remote CI required before merge. |

@@ -54,10 +54,10 @@ jobs:
       - name: Model routing frozen-threshold eval
         run: npm run eval:routing -- --offline
 
-      - name: Shared-intelligence 40-turn adversarial journeys
+      - name: Shared-intelligence reducer and policy checks
         run: npm run eval:shared-intelligence:proof
 
-      - name: Fail if shared-intelligence proof output is stale
+      - name: Fail if shared-intelligence component proof output is stale
         run: git diff --exit-code -- docs/proof/shared-intelligence-adversarial.md
 
       - name: Python tests
