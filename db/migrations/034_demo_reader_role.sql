@@ -1,109 +1,186 @@
--- Least-privilege database roles for lumenosis-site.
+-- Least-privilege database API for lumenosis-site.
 --
--- The architectural point of this file: the public site reads shared demo data DIRECTLY
--- from Neon instead of calling this app on every public page view, and it does so
--- without ever holding the application DATABASE_URL. Two narrow roles, no more:
+-- The public site connects directly to Neon, removing the per-page app-to-app request,
+-- but neither site role can enumerate a table. Both roles receive EXECUTE on a minimal
+-- SECURITY DEFINER function and no table or sequence privileges:
 --
---   demo_public_reader  SELECT on exactly the five demo tables, nothing else, no DML,
---                       no DDL, no sequence access, no other schema. This is what
---                       /demo/[token] uses.
+--   demo_public_reader      lookup one room by an opaque SHA-256 token hash
+--   demo_engagement_writer  append one validated event or atomically reserve one paid
+--                           email generation, also by token hash
 --
---   demo_engagement_writer
---                       SELECT on demo_rooms only (to resolve a token) plus INSERT on
---                       demo_engagement_events only. No UPDATE, no DELETE, no SELECT on
---                       prospects/listings/outreach. This is the "narrowly scoped writer
---                       path" for engagement writes: the public site can append an
---                       engagement event but cannot read a prospect mailbox, cannot
---                       approve a room, cannot send outreach, and cannot alter or erase
---                       an event it already wrote.
---
--- Passwords are NOT set here. This migration creates the roles and grants with `nologin`
--- and no password; the release runbook (scripts/release-demo-ownership.mjs) sets a
--- password out of band and prints nothing. A migration file is committed to git, so it
--- can never be where a credential lives.
---
--- Additive and idempotent: re-running changes nothing. NOT applied to any remote
--- database by this PR.
---
--- Revocation is one statement per role and is the rollback lever for the read path:
---   revoke all privileges on all tables in schema public from demo_public_reader;
--- Documented in docs/architecture/2026-09-08-demo-data-ownership.md §Rollback.
+-- The lookup returns only the three fields already consumed by lumenosis-site's public
+-- route. It never returns access_token, token_hash, prospect email, outreach recipient,
+-- draft body, provider id, or another room. Passwords remain out of git; the release
+-- command attaches LOGIN credentials separately.
+
+create schema if not exists demo_public_api;
+revoke all privileges on schema demo_public_api from public;
+
+create or replace function demo_public_api.lookup_room(p_token_hash text)
+returns table (id text, config_json text, expires_at text)
+language sql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+  select r.id, r.config_json, r.expires_at
+    from public.demo_rooms r
+   where r.token_hash = p_token_hash
+     and r.status = 'approved'
+   limit 1
+$$;
+
+create or replace function demo_public_api.record_engagement(
+  p_token_hash text,
+  p_event text,
+  p_duration_seconds integer default null
+)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_room_id text;
+  v_client_id text;
+begin
+  if p_event not in (
+    'viewed',
+    'email_completed',
+    'voice_started',
+    'voice_completed',
+    'repeat_visit',
+    'booking_clicked'
+  ) then
+    raise exception 'invalid demo engagement event' using errcode = '22023';
+  end if;
+  if p_duration_seconds is not null
+     and (p_duration_seconds < 0 or p_duration_seconds > 180) then
+    raise exception 'invalid demo engagement duration' using errcode = '22023';
+  end if;
+
+  select r.id, r.client_id
+    into v_room_id, v_client_id
+    from public.demo_rooms r
+   where r.token_hash = p_token_hash
+     and r.status = 'approved'
+   limit 1;
+  if not found then return false; end if;
+
+  insert into public.demo_engagement_events
+    (client_id, demo_room_id, event, duration_seconds, created_at)
+  values
+    (v_client_id, v_room_id, p_event, p_duration_seconds,
+     to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS'));
+  return true;
+end
+$$;
+
+create or replace function demo_public_api.reserve_email_generation(p_token_hash text)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_room_id text;
+  v_client_id text;
+  v_now text := to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS');
+begin
+  select r.id, r.client_id
+    into v_room_id, v_client_id
+    from public.demo_rooms r
+   where r.token_hash = p_token_hash
+     and r.status = 'approved'
+   limit 1
+   for update;
+  if not found then return false; end if;
+
+  -- The room lock serializes concurrent reservations for one room. A transaction-level
+  -- advisory lock also serializes the corpus-wide daily cap across different rooms.
+  perform pg_catalog.pg_advisory_xact_lock(706774879, 1);
+  if (
+    select count(*)
+      from public.demo_engagement_events e
+     where e.client_id = v_client_id
+       and e.demo_room_id = v_room_id
+       and e.event = 'email_generation_started'
+       and e.created_at >= to_char(
+         (now() at time zone 'utc') - interval '1 hour',
+         'YYYY-MM-DD HH24:MI:SS'
+       )
+  ) >= 12 then return false; end if;
+
+  if (
+    select count(*)
+      from public.demo_engagement_events e
+     where e.client_id = v_client_id
+       and e.event = 'email_generation_started'
+       and e.created_at >= to_char(
+         (now() at time zone 'utc') - interval '1 day',
+         'YYYY-MM-DD HH24:MI:SS'
+       )
+  ) >= 100 then return false; end if;
+
+  insert into public.demo_engagement_events
+    (client_id, demo_room_id, event, created_at)
+  values (v_client_id, v_room_id, 'email_generation_started', v_now);
+  return true;
+end
+$$;
 
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'demo_public_reader') then
-    -- nologin until the runbook sets a password; a role that cannot log in cannot be
-    -- used even if this migration is applied ahead of the rest of the rollout.
     create role demo_public_reader nologin;
   end if;
-
   if not exists (select 1 from pg_roles where rolname = 'demo_engagement_writer') then
     create role demo_engagement_writer nologin;
   end if;
 end
 $$;
 
--- Connect + schema visibility only. No CREATE on the schema: neither role may add a
--- table, function, or type.
-grant usage on schema public to demo_public_reader, demo_engagement_writer;
-revoke create on schema public from demo_public_reader, demo_engagement_writer;
+-- Re-applying the migration reasserts the whole boundary, including attributes and any
+-- accidental grants added later. NOINHERIT prevents either role from gaining privileges
+-- through role membership.
+alter role demo_public_reader
+  nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls;
+alter role demo_engagement_writer
+  nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls;
 
--- Reader: SELECT on exactly the demo tables. Enumerated explicitly rather than via
--- ALL TABLES IN SCHEMA, so a future unrelated table is not silently exposed.
-grant select on demo_prospects to demo_public_reader;
-grant select on demo_listings to demo_public_reader;
-grant select on demo_rooms to demo_public_reader;
-grant select on demo_outreach_drafts to demo_public_reader;
-grant select on demo_engagement_events to demo_public_reader;
-
--- And nothing else, ever. Explicit revokes so the grant set is provable by inspection
--- and not merely "we never granted it".
-revoke insert, update, delete, truncate, references, trigger
-  on demo_prospects, demo_listings, demo_rooms, demo_outreach_drafts, demo_engagement_events
-  from demo_public_reader;
-
--- Writer: resolve a token, append an event. That is the whole capability.
---
--- Deliberate consequence, verified against a real Postgres: with INSERT but no SELECT on
--- demo_engagement_events, this role CANNOT use `INSERT ... RETURNING` and CANNOT use
--- `INSERT ... ON CONFLICT`, because both read the table. The public engagement write path
--- in lumenosis-site must therefore issue a bare INSERT and treat it as fire-and-forget.
--- That is the correct trade: an append-only event writer that cannot read back what it
--- wrote also cannot be used to enumerate engagement history. Idempotent imports are the
--- migrator's job, and the migrator connects as the owner, not as this role.
-grant select on demo_rooms to demo_engagement_writer;
-grant insert on demo_engagement_events to demo_engagement_writer;
-grant usage on sequence demo_engagement_events_id_seq to demo_engagement_writer;
-
-revoke update, delete, truncate, references, trigger
-  on demo_engagement_events
-  from demo_engagement_writer;
-revoke insert, update, delete, truncate, references, trigger
-  on demo_rooms
-  from demo_engagement_writer;
-revoke all privileges
-  on demo_prospects, demo_listings, demo_outreach_drafts
-  from demo_engagement_writer;
-
--- Deny both roles everything else that currently exists in the schema, including the
--- ~45 tenant tables, the append-only usage ledger, and the migration checkpoints. These
--- are no-op revokes on a fresh database (a new role starts with no table privileges);
--- they are stated so the privilege set is provable by inspection rather than resting on
--- "we never granted it", and so re-running this file re-asserts the denial if someone
--- granted something by hand in between.
-revoke all privileges on demo_migration_checkpoints
+revoke all privileges on all tables in schema public
   from demo_public_reader, demo_engagement_writer;
-revoke all privileges on clients
+revoke all privileges on all sequences in schema public
   from demo_public_reader, demo_engagement_writer;
-revoke all privileges on usage_cost_ledger
+revoke all privileges on schema public
   from demo_public_reader, demo_engagement_writer;
+revoke all privileges on all functions in schema demo_public_api
+  from public, demo_public_reader, demo_engagement_writer;
 
--- Future tables default to no access for these roles.
+grant usage on schema demo_public_api
+  to demo_public_reader, demo_engagement_writer;
+grant execute on function demo_public_api.lookup_room(text)
+  to demo_public_reader;
+grant execute on function demo_public_api.record_engagement(text, text, integer)
+  to demo_engagement_writer;
+grant execute on function demo_public_api.reserve_email_generation(text)
+  to demo_engagement_writer;
+
+-- Read connections are additionally read-only by default. The lookup function remains
+-- callable because it performs no write. Both roles have bounded statements and sessions.
+alter role demo_public_reader set default_transaction_read_only = on;
+alter role demo_public_reader set statement_timeout = '3s';
+alter role demo_engagement_writer set statement_timeout = '3s';
+alter role demo_public_reader set idle_in_transaction_session_timeout = '5s';
+alter role demo_engagement_writer set idle_in_transaction_session_timeout = '5s';
+
+-- Future objects stay private. These defaults apply to objects created by the migration
+-- owner, and the explicit blanket revokes above protect every re-application.
 alter default privileges in schema public
-  revoke all on tables from demo_public_reader;
+  revoke all on tables from demo_public_reader, demo_engagement_writer;
 alter default privileges in schema public
-  revoke all on tables from demo_engagement_writer;
-alter default privileges in schema public
-  revoke all on sequences from demo_public_reader;
-alter default privileges in schema public
-  revoke all on sequences from demo_engagement_writer;
+  revoke all on sequences from demo_public_reader, demo_engagement_writer;
+alter default privileges in schema demo_public_api
+  revoke execute on functions from public, demo_public_reader, demo_engagement_writer;

@@ -154,6 +154,7 @@ const TABLES = [
       "verified_at",
     ],
     conflict: "(id)",
+    numericColumns: ["price", "beds", "baths", "square_feet", "acreage"],
   },
   {
     name: "demo_rooms",
@@ -233,6 +234,7 @@ const TABLES = [
     digest: ["id", "demo_room_id", "event", "duration_seconds", "created_at"],
     conflict: "(client_id, source_rowid)",
     numericKey: true,
+    numericColumns: ["id", "duration_seconds"],
   },
 ];
 
@@ -240,7 +242,12 @@ const TABLES = [
 
 const TRANSIENT = /ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNREFUSED|EPIPE|socket hang up|timeout|too many connections|503|502|504|429/i;
 
-async function withRetry(label, fn, attempts = 5) {
+async function withRetry(
+  label,
+  fn,
+  attempts = 5,
+  sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay)),
+) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -254,7 +261,7 @@ async function withRetry(label, fn, attempts = 5) {
       const delay = Math.min(200 * 2 ** (attempt - 1), 5_000);
       // Label only. The message may embed a connection string, so it is never printed.
       process.stderr.write(`retry ${label} attempt ${attempt}/${attempts} in ${delay}ms\n`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await sleep(delay);
     }
   }
   throw lastError;
@@ -265,27 +272,34 @@ async function withRetry(label, fn, attempts = 5) {
  * they hand back numbers and nulls, so everything is normalized to a tagged string
  * before hashing; otherwise a float returned as 3 vs "3.0" would look like drift.
  */
-function canonical(value) {
+function canonical(value, numeric = false) {
   if (value === null || value === undefined) return "\u0000null";
   if (typeof value === "boolean") return `\u0000bool:${value ? 1 : 0}`;
-  if (typeof value === "number") return `\u0000num:${normalizeNumber(value)}`;
-  if (typeof value === "bigint") return `\u0000num:${value.toString()}`;
-  const text = String(value);
-  // A Postgres numeric arrives as a string; normalize it the same way so 3 == 3.0.
-  if (/^-?\d+(?:\.\d+)?$/.test(text)) return `\u0000num:${normalizeNumber(Number(text))}`;
-  return `\u0000str:${text}`;
+  if (numeric) return `\u0000num:${normalizeNumber(value)}`;
+  // Text remains text even when it looks numeric. IDs, tokens and timestamp strings are
+  // preservation fields: "001" must never compare equal to "1".
+  return `\u0000str:${String(value)}`;
 }
 
 function normalizeNumber(value) {
-  if (!Number.isFinite(value)) return "nan";
-  if (Number.isInteger(value)) return value.toFixed(0);
+  const text = String(value);
+  if (/^[+-]?\d+$/.test(text)) return BigInt(text).toString();
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "nan";
+  if (Number.isInteger(number)) return number.toFixed(0);
   // Fixed precision so 0.1+0.2 style representation differences cannot diverge.
-  return value.toPrecision(15).replace(/0+$/, "").replace(/\.$/, "");
+  return number.toPrecision(15).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function rowDigest(row, columns) {
+function rowDigest(row, columns, numericColumns = []) {
   const hash = createHash("sha256");
-  for (const column of columns) hash.update(canonical(row[column]));
+  const numeric = new Set(numericColumns);
+  for (const column of columns) {
+    const encoded = canonical(row[column], numeric.has(column));
+    // Length-prefix every field so adjacent values cannot be shifted into a collision.
+    hash.update(`${Buffer.byteLength(encoded, "utf8")}:`);
+    hash.update(encoded);
+  }
   return hash.digest("hex");
 }
 
@@ -367,35 +381,40 @@ async function sourceTableExists(config, table) {
 
 /* ------------------------------------------------------------------ checkpoints ---- */
 
-async function ensureCheckpointTable(client) {
-  // The migration file creates this, but --verify may run against a database where only
-  // 033 landed partially. Creating it here keeps the tool usable without weakening the
-  // ledger, and matches the shape in 033 exactly.
-  await client.query(`
-    create table if not exists demo_migration_checkpoints (
-      client_id text not null,
-      table_name text not null,
-      last_source_key text not null default '',
-      rows_copied bigint not null default 0,
-      running_checksum text not null default '',
-      completed_at timestamptz,
-      updated_at timestamptz not null default now(),
-      primary key (client_id, table_name)
-    )
-  `);
+async function assertTargetSchema(client) {
+  const required = [...TABLES.map((table) => table.target), "demo_migration_checkpoints"];
+  const result = await withRetry("neon schema check", () =>
+    client.query(
+      `select name, to_regclass('public.' || name) is not null as present
+         from unnest($1::text[]) as names(name)`,
+      [required],
+    ),
+  );
+  const missing = result.rows.filter((row) => !row.present).map((row) => String(row.name));
+  if (missing.length) throw new Error("TARGET_SCHEMA_MISSING");
 }
 
 async function readCheckpoints(client, clientId) {
-  const result = await client.query(
-    "select table_name, last_source_key, rows_copied, completed_at from demo_migration_checkpoints where client_id = $1",
-    [clientId],
+  const result = await withRetry("neon checkpoints", () =>
+    client.query(
+      "select table_name, last_source_key, rows_scanned, completed_at from demo_migration_checkpoints where client_id = $1",
+      [clientId],
+    ),
   );
   return new Map(result.rows.map((row) => [String(row.table_name), row]));
 }
 
 /* ------------------------------------------------------------------ copy ----------- */
 
-async function copyTable({ table, source, client, clientId, checkpoint, batchSize }) {
+async function copyTable({
+  table,
+  source,
+  client,
+  clientId,
+  checkpoint,
+  batchSize,
+  sourceQuery = tursoSql,
+}) {
   const targetColumns = table.targetColumns ?? table.columns;
   let lastKey = checkpoint ? String(checkpoint.last_source_key ?? "") : "";
   let copied = 0;
@@ -406,7 +425,7 @@ async function copyTable({ table, source, client, clientId, checkpoint, batchSiz
     // is never re-read and no row between it and the next batch can be skipped.
     const where = lastKey === "" ? "" : `where ${table.key} > ?`;
     const args = lastKey === "" ? [] : [table.numericKey ? Number(lastKey) : lastKey];
-    const rows = await tursoSql(
+    const rows = await sourceQuery(
       source,
       `select ${table.columns.join(", ")} from ${table.source} ${where} order by ${table.key} asc limit ${batchSize}`,
       args,
@@ -415,43 +434,55 @@ async function copyTable({ table, source, client, clientId, checkpoint, batchSiz
 
     // One transaction per batch. A failure rolls the batch back whole and leaves the
     // checkpoint pointing at the last row that actually committed.
-    await client.query("begin");
-    try {
-      for (const row of rows) {
-        const values = [clientId, ...table.columns.map((column) => row[column])];
-        const placeholders = targetColumns.map((_column, index) => `$${index + 2}`);
+    const batchResult = await withRetry(`neon ${table.name} batch`, async () => {
+      await client.query("begin");
+      try {
+        let inserted = 0;
+        for (const row of rows) {
+          const values = [clientId, ...table.columns.map((column) => row[column])];
+          const placeholders = targetColumns.map((_column, index) => `$${index + 2}`);
+          const result = await client.query(
+            `insert into ${table.target} (client_id, ${targetColumns.join(", ")})
+               values ($1, ${placeholders.join(", ")})
+               on conflict ${table.conflict} do nothing`,
+            values,
+          );
+          inserted += Number(result.rowCount ?? 0);
+        }
+        const batchLastKey = String(rows[rows.length - 1][table.key]);
         await client.query(
-          `insert into ${table.target} (client_id, ${targetColumns.join(", ")})
-             values ($1, ${placeholders.join(", ")})
-             on conflict ${table.conflict} do nothing`,
-          values,
+          `insert into demo_migration_checkpoints (client_id, table_name, last_source_key, rows_scanned, updated_at)
+             values ($1, $2, $3, $4, now())
+             on conflict (client_id, table_name) do update
+               set last_source_key = excluded.last_source_key,
+                   rows_scanned = demo_migration_checkpoints.rows_scanned + excluded.rows_scanned,
+                   completed_at = null,
+                   updated_at = now()`,
+          [clientId, table.name, batchLastKey, rows.length],
         );
-        scanned += 1;
+        await client.query("commit");
+        return { inserted, batchLastKey };
+      } catch (error) {
+        await client.query("rollback").catch(() => undefined);
+        throw error;
       }
-      lastKey = String(rows[rows.length - 1][table.key]);
-      await client.query(
-        `insert into demo_migration_checkpoints (client_id, table_name, last_source_key, rows_copied, updated_at)
-           values ($1, $2, $3, $4, now())
-           on conflict (client_id, table_name) do update
-             set last_source_key = excluded.last_source_key,
-                 rows_copied = demo_migration_checkpoints.rows_copied + excluded.rows_copied,
-                 updated_at = now()`,
-        [clientId, table.name, lastKey, rows.length],
-      );
-      await client.query("commit");
-      copied += rows.length;
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    }
+    });
+    lastKey = batchResult.batchLastKey;
+    copied += batchResult.inserted;
+    scanned += rows.length;
 
     if (rows.length < batchSize) break;
   }
 
-  await client.query(
-    `update demo_migration_checkpoints set completed_at = now(), updated_at = now()
-      where client_id = $1 and table_name = $2`,
-    [clientId, table.name],
+  await withRetry("neon checkpoint completion", () =>
+    client.query(
+      `insert into demo_migration_checkpoints
+         (client_id, table_name, last_source_key, rows_scanned, completed_at, updated_at)
+       values ($1, $2, $3, 0, now(), now())
+       on conflict (client_id, table_name) do update
+         set completed_at = now(), updated_at = now()`,
+      [clientId, table.name, lastKey],
+    ),
   );
 
   return { copied, scanned, lastKey };
@@ -471,7 +502,9 @@ async function sourceParity(source, table) {
       args,
     );
     if (!rows.length) break;
-    for (const row of rows) digests.push(rowDigest(row, table.digest));
+    for (const row of rows) {
+      digests.push(rowDigest(row, table.digest, table.numericColumns));
+    }
     lastKey = String(rows[rows.length - 1][table.key]);
     if (rows.length < 500) break;
   }
@@ -489,12 +522,37 @@ async function targetParity(client, table, clientId) {
       return targetColumn === column ? column : `${targetColumn} as ${column}`;
     })
     .join(", ");
-  const result = await client.query(
-    `select ${select} from ${table.target} where client_id = $1`,
-    [clientId],
+  const result = await withRetry(`neon ${table.name} parity`, () =>
+    client.query(
+      `select ${select} from ${table.target} where client_id = $1`,
+      [clientId],
+    ),
   );
-  const digests = result.rows.map((row) => rowDigest(row, table.digest));
+  const digests = result.rows.map((row) =>
+    rowDigest(row, table.digest, table.numericColumns),
+  );
   return { count: digests.length, checksum: tableChecksum(digests) };
+}
+
+async function verifyParity(client, source, clientId) {
+  const tables = [];
+  for (const table of TABLES) {
+    const sourcePresent = await sourceTableExists(source, table.source);
+    const sourceResult = sourcePresent
+      ? await sourceParity(source, table)
+      : { count: 0, checksum: tableChecksum([]) };
+    const targetResult = await targetParity(client, table, clientId);
+    tables.push({
+      table: table.name,
+      source_present: sourcePresent,
+      source: sourceResult,
+      target: targetResult,
+      match:
+        sourceResult.count === targetResult.count &&
+        sourceResult.checksum === targetResult.checksum,
+    });
+  }
+  return { tables, parity: tables.every((entry) => entry.match) ? "match" : "mismatch" };
 }
 
 /* ------------------------------------------------------------------ main ---------- */
@@ -527,52 +585,79 @@ function printUsage() {
   );
 }
 
+function parseOptions(argv = process.argv.slice(2), env = process.env) {
+  const allowed = new Set(["--dry-run", "--verify", "--reset", "--json", "--help", "-h"]);
+  const unknown = argv.filter((argument) => !allowed.has(argument));
+  if (unknown.length) throw new Error("INVALID_ARGUMENT");
+  const dryRun = argv.includes("--dry-run");
+  const verifyOnly = argv.includes("--verify");
+  const reset = argv.includes("--reset");
+  if ([dryRun, verifyOnly, reset].filter(Boolean).length > 1) {
+    throw new Error("INCOMPATIBLE_ARGUMENTS");
+  }
+  const clientId = (env.DEMO_CLIENT_ID || env.CLIENT_ID || "default").trim();
+  if (!clientId || clientId.length > 256) throw new Error("INVALID_CLIENT_ID");
+  const batchSize = Number(env.DEMO_MIGRATION_BATCH || 200);
+  if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 10_000) {
+    throw new Error("INVALID_BATCH_SIZE");
+  }
+  return {
+    dryRun,
+    verifyOnly,
+    reset,
+    asJson: argv.includes("--json"),
+    help: argv.includes("--help") || argv.includes("-h"),
+    clientId,
+    batchSize,
+  };
+}
+
+function failureCode(error) {
+  const message = error instanceof Error ? error.message : "";
+  if (/^(INVALID_|INCOMPATIBLE_|TARGET_SCHEMA_MISSING)/.test(message)) return message;
+  if (TRANSIENT.test(message)) return "TRANSIENT_DEPENDENCY_FAILURE";
+  return "MIGRATION_FAILED";
+}
+
 async function main() {
   loadDotEnv();
-  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  const options = parseOptions();
+  if (options.help) {
     printUsage();
-    return;
+    return 0;
   }
-  const dryRun = process.argv.includes("--dry-run");
-  const verifyOnly = process.argv.includes("--verify");
-  const reset = process.argv.includes("--reset");
-  const asJson = process.argv.includes("--json");
-  const clientId = (process.env.DEMO_CLIENT_ID || process.env.CLIENT_ID || "default").trim();
-  const batchSize = Math.max(1, Number(process.env.DEMO_MIGRATION_BATCH || 200));
+  const { dryRun, verifyOnly, reset, asJson, clientId, batchSize } = options;
 
   if (!process.env.DATABASE_URL) {
-    console.error("DATABASE_URL is required (migration target).");
-    process.exit(1);
+    throw new Error("TARGET_DATABASE_URL_REQUIRED");
   }
   const source = tursoConfig();
   if (!source) {
-    console.error(
-      "LUMENOSIS_TURSO_DATABASE_URL and LUMENOSIS_TURSO_AUTH_TOKEN are required (migration source).",
-    );
-    process.exit(1);
+    throw new Error("SOURCE_DATABASE_CONFIG_REQUIRED");
   }
 
   const client = new pg.Client({
     connectionString: process.env.DATABASE_URL,
-    // Same Neon TLS convention as every other store in this repo; see
-    // lib/demoOwnershipStore.ts for why this is not tightened in isolation.
-    ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+    ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: true },
   });
   await withRetry("connect", () => client.connect());
 
   const report = {
     mode: dryRun ? "dry-run" : verifyOnly ? "verify" : "migrate",
-    client_id: clientId,
+    client_fingerprint: createHash("sha256").update(clientId).digest("hex").slice(0, 12),
     batch_size: batchSize,
     tables: [],
     parity: "unknown",
   };
+  let exitCode = 0;
 
   try {
-    await ensureCheckpointTable(client);
+    await assertTargetSchema(client);
 
     if (reset && !dryRun && !verifyOnly) {
-      await client.query("delete from demo_migration_checkpoints where client_id = $1", [clientId]);
+      await withRetry("neon checkpoint reset", () =>
+        client.query("delete from demo_migration_checkpoints where client_id = $1", [clientId]),
+      );
     }
 
     const checkpoints = await readCheckpoints(client, clientId);
@@ -582,9 +667,7 @@ async function main() {
         table: table.name,
         target: table.target,
         source_present: await sourceTableExists(source, table.source),
-        resumed_from: checkpoints.get(table.name)
-          ? String(checkpoints.get(table.name).last_source_key ?? "")
-          : "",
+        resumed: Boolean(checkpoints.get(table.name)?.last_source_key),
         copied: 0,
       };
 
@@ -592,6 +675,18 @@ async function main() {
         // A source table absent in Turso is not an error: there is nothing to move. It is
         // reported explicitly so the operator sees it rather than inferring it from a zero.
         entry.note = "source table absent — nothing to migrate";
+        if (!dryRun && !verifyOnly) {
+          await withRetry("neon checkpoint completion", () =>
+            client.query(
+              `insert into demo_migration_checkpoints
+                 (client_id, table_name, last_source_key, rows_scanned, completed_at, updated_at)
+               values ($1, $2, '', 0, now(), now())
+               on conflict (client_id, table_name) do update
+                 set completed_at = now(), updated_at = now()`,
+              [clientId, table.name],
+            ),
+          );
+        }
         entry.source = { count: 0, checksum: tableChecksum([]) };
         entry.target = await targetParity(client, table, clientId);
         entry.match = entry.target.count === 0;
@@ -623,7 +718,7 @@ async function main() {
     if (asJson) {
       console.log(JSON.stringify(report, null, 2));
     } else {
-      console.log(`mode: ${report.mode}   client: ${report.client_id}`);
+      console.log(`mode: ${report.mode}   client: ${report.client_fingerprint}`);
       for (const entry of report.tables) {
         const flag = entry.match ? "OK  " : "DIFF";
         console.log(
@@ -632,17 +727,18 @@ async function main() {
         console.log(`       source checksum ${entry.source.checksum}`);
         console.log(`       target checksum ${entry.target.checksum}`);
         if (entry.note) console.log(`       note: ${entry.note}`);
-        if (entry.resumed_from) console.log(`       resumed after key ${entry.resumed_from}`);
+        if (entry.resumed) console.log("       resumed from checkpoint");
       }
       console.log(`parity: ${report.parity}`);
     }
 
     // A mismatch is a failure exit even in dry-run: it is the signal the cutover gate
     // reads, and a green exit on unequal data would be the worst possible outcome.
-    if (report.parity !== "match") process.exit(2);
+    if (report.parity !== "match") exitCode = 2;
   } finally {
     await client.end();
   }
+  return exitCode;
 }
 
 // Only run when invoked as a command. Importing the module (as the tests do) must not
@@ -651,13 +747,28 @@ const invokedDirectly =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (invokedDirectly) {
-  main().catch((error) => {
-    // Message only, never the stack or the connection string.
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  main()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((error) => {
+      // Fixed classifications only: provider errors can contain source URLs or tokens.
+      console.error(`demo migration failed: ${failureCode(error)}`);
+      process.exitCode = 1;
+    });
 }
 
 // Exported for tests/ts/demoDataMigration.test.ts. These are the pure pieces the parity
 // guarantee rests on, so they are asserted directly rather than only through a live run.
-export { TABLES, canonical, normalizeNumber, rowDigest, tableChecksum, tursoConfig };
+export {
+  TABLES,
+  canonical,
+  copyTable,
+  normalizeNumber,
+  parseOptions,
+  rowDigest,
+  tableChecksum,
+  tursoConfig,
+  verifyParity,
+  withRetry,
+};

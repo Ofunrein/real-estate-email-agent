@@ -20,13 +20,15 @@ No remote database was touched. No production data was read. No email was sent.
 
 - `033` and `034` applied cleanly, and applied **twice** cleanly — every object is
   guarded, so re-running is safe.
-- Role boundaries were tested by connecting **as each role** and attempting forbidden
-  statements, not by reading the grant table:
-  - `demo_public_reader`: `SELECT` succeeded on all five demo tables; `INSERT`, `UPDATE`,
-    `DELETE` were denied; `SELECT` on `clients` was denied; `CREATE TABLE` was denied.
-  - `demo_engagement_writer`: `INSERT` into `demo_engagement_events` succeeded;
-    `SELECT` on that same table was denied; `UPDATE`/`DELETE` denied; `SELECT` on
-    `demo_prospects` and `demo_outreach_drafts` denied.
+- Role boundaries are now exercised on every run of `npm run test:demo-postgres`. The test
+  creates a disposable cluster, applies `033`/`034` through the real release CLI twice,
+  attaches generated role credentials, and connects **as each role**:
+  - `demo_public_reader`: opaque-hash lookup succeeded through
+    `demo_public_api.lookup_room`; direct `SELECT` from `demo_rooms` was denied.
+  - `demo_engagement_writer`: validated append and atomic cap reservation succeeded through
+    their two functions; direct `SELECT` and direct `INSERT` were denied.
+  - a room referencing another tenant's parent was rejected by the composite foreign key.
+  - applying the release twice recorded both migrations once and skipped both on replay.
 
 ## Three defects found by execution
 
@@ -41,10 +43,10 @@ now has a regression test in `tests/ts/demoOwnershipSchema.test.ts`.
    insert infers `(client_id, source_rowid)`; with a `WHERE` clause on the index Postgres
    raised `no unique or exclusion constraint matching the ON CONFLICT specification`. The
    index is now non-partial.
-3. **The writer role could not use `RETURNING` or `ON CONFLICT`.** Both need `SELECT` on
-   the target table, which the writer deliberately lacks —
-   `permission denied for table demo_engagement_events`. The engagement write is a plain
-   `INSERT`. This constrains PR #8 and is documented in `034`.
+3. **Direct table grants exposed too much data even when read-only.** A reader of all five
+   tables could enumerate access tokens, recipient mailboxes and draft bodies. `034` now
+   grants no table privilege at all. Three fixed-shape `SECURITY DEFINER` functions expose
+   only one opaque-hash lookup and two validated append operations.
 
 ## Migration behaviour
 
@@ -70,12 +72,16 @@ access token, prospect mailbox, recipient or draft body, appeared in stdout or s
 
 `npm test` — 989 pre-existing tests pass with these changes in place. The new files add:
 
-- `tests/ts/demoOwnershipStore.test.ts` — 18 tests. Drives the real SQL through an injected
-  query function: tenant scoping on every read, claim-before-send ordering, claim release
-  on provider failure / network throw / missing key, replay safety, and verbatim token
-  handling.
+- `tests/ts/demoOwnershipStore.test.ts` — drives the real SQL through an injected query
+  function: tenant scoping, claim-before-send ordering, release after an explicit provider
+  rejection, retained claim after ambiguous transport failure, replay safety, and verbatim
+  token handling.
 - `tests/ts/demoOwnershipSchema.test.ts` — 19 tests. Freezes the preservation contract and
   the privilege boundary, including the three defects above.
 - `tests/ts/demoOwnershipCutover.test.ts` — 4 tests. Mixed-version safety: the flag must be
   exactly `postgres`, and once it is, no outbound request is made even when the platform
   API is fully configured.
+- `npm run test:demo-postgres` — disposable real-Postgres integration covering ledgered
+  release replay, credential attachment, tenant foreign keys, function-only role access,
+  forbidden operations, and atomic budget reservation. It refuses caller database URLs and
+  cannot target a remote or production database.

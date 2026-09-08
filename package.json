@@ -53,6 +53,7 @@
     "provision:client": "node --import tsx scripts/provision-client.mjs",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
     "test:py": "node scripts/run-python-tests.mjs",
+    "test:demo-postgres": "node scripts/test-demo-ownership-postgres.mjs",
     "eval:routing": "node --import tsx scripts/evalModelRouting.ts",
     "sync:instagram-browser-thread": "node scripts/sync-instagram-browser-thread.mjs"
   },

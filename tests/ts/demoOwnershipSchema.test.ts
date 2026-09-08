@@ -139,6 +139,10 @@ test("the UTC views expose timestamptz without mutating the preserved columns", 
 
 test("status domains are preserved exactly as Turso had them, not widened", () => {
   assert.match(
+    tableBody(ownership, "demo_prospects"),
+    /check \(status in \('draft', 'contacted'\)\)/i,
+  );
+  assert.match(
     tableBody(ownership, "demo_rooms"),
     /check \(status in \('draft', 'approved'\)\)/i,
   );
@@ -157,6 +161,7 @@ test("the engagement event vocabulary is closed", () => {
     "voice_completed",
     "repeat_visit",
     "booking_clicked",
+    "email_generation_started",
   ]) {
     assert.ok(events.includes(`'${name}'`), `missing event ${name}`);
   }
@@ -183,22 +188,22 @@ test("engagement dedupe key is a plain unique index so ON CONFLICT can infer it"
   assert.doesNotMatch(match, /where/i);
 });
 
-test("referential cascade behavior matches what Turso declared", () => {
+test("referential cascades are tenant-bound, preventing cross-tenant references", () => {
   assert.match(
     tableBody(ownership, "demo_listings"),
-    /prospect_id text not null references demo_prospects\(id\) on delete cascade/i,
+    /foreign key \(client_id, prospect_id\)\s+references demo_prospects\(client_id, id\) on delete cascade/i,
   );
   assert.match(
     tableBody(ownership, "demo_rooms"),
-    /listing_id text not null references demo_listings\(id\) on delete cascade/i,
+    /foreign key \(client_id, listing_id\)\s+references demo_listings\(client_id, id\) on delete cascade/i,
   );
   assert.match(
     tableBody(ownership, "demo_outreach_drafts"),
-    /demo_room_id text not null unique references demo_rooms\(id\) on delete cascade/i,
+    /foreign key \(client_id, demo_room_id\)\s+references demo_rooms\(client_id, id\) on delete cascade/i,
   );
   assert.match(
     tableBody(ownership, "demo_engagement_events"),
-    /demo_room_id text not null references demo_rooms\(id\) on delete cascade/i,
+    /foreign key \(client_id, demo_room_id\)\s+references demo_rooms\(client_id, id\) on delete cascade/i,
   );
 });
 
@@ -236,79 +241,52 @@ test("migration numbers stay unique and sequential after 032", () => {
 
 /* ---------------------------------------------------------------- 034: roles ----- */
 
-test("the reader role gets SELECT on exactly the five demo tables", () => {
-  for (const table of DEMO_TABLES) {
-    assert.match(
-      roles,
-      new RegExp(`grant select on ${table} to demo_public_reader;`, "i"),
-      `reader missing select on ${table}`,
-    );
-  }
-  // Never a blanket grant: a future unrelated table must not be exposed by default.
-  assert.doesNotMatch(
-    rolesSql,
-    /grant[\s\S]*?on all tables in schema public to demo_public_reader/i,
+test("site roles have no table access and only the minimal function API", () => {
+  assert.match(
+    roles,
+    /revoke all privileges on all tables in schema public\s+from demo_public_reader, demo_engagement_writer;/i,
   );
+  assert.match(
+    roles,
+    /grant execute on function demo_public_api\.lookup_room\(text\)\s+to demo_public_reader;/i,
+  );
+  assert.match(
+    roles,
+    /grant execute on function demo_public_api\.record_engagement\(text, text, integer\)\s+to demo_engagement_writer;/i,
+  );
+  assert.match(
+    roles,
+    /grant execute on function demo_public_api\.reserve_email_generation\(text\)\s+to demo_engagement_writer;/i,
+  );
+  assert.doesNotMatch(rolesSql, /grant (select|insert|update|delete) on demo_/i);
 });
 
-test("the reader role can never write", () => {
-  assert.match(
-    roles,
-    /revoke insert, update, delete, truncate, references, trigger[\s\S]*?from demo_public_reader;/i,
-  );
-  assert.doesNotMatch(
-    rolesSql,
-    /grant (insert|update|delete)[^;]*to demo_public_reader/i,
-  );
+test("lookup cannot enumerate rooms or expose tokens, mailboxes, or drafts", () => {
+  assert.match(roles, /where r\.token_hash = p_token_hash/i);
+  assert.match(roles, /and r\.status = 'approved'/i);
+  assert.match(roles, /returns table \(id text, config_json text, expires_at text\)/i);
+  const body = /create or replace function demo_public_api\.lookup_room[\s\S]*?\$\$;/i.exec(roles)![0];
+  assert.doesNotMatch(body, /access_token|prospect|outreach|recipient|sender_inbox/i);
 });
 
-test("the engagement writer can append an event and nothing else", () => {
-  assert.match(roles, /grant select on demo_rooms to demo_engagement_writer;/i);
-  assert.match(
-    roles,
-    /grant insert on demo_engagement_events to demo_engagement_writer;/i,
-  );
-  // No read of prospect/listing/outreach data: the mailbox stays out of reach.
-  assert.match(
-    roles,
-    /revoke all privileges\s*\n?\s*on demo_prospects, demo_listings, demo_outreach_drafts\s*\n?\s*from demo_engagement_writer;/i,
-  );
-  // Append-only: it cannot alter or erase an event it already wrote.
-  assert.match(
-    roles,
-    /revoke update, delete, truncate, references, trigger\s*\n?\s*on demo_engagement_events\s*\n?\s*from demo_engagement_writer;/i,
-  );
-  assert.doesNotMatch(
-    rolesSql,
-    /grant select on demo_engagement_events to demo_engagement_writer/i,
-  );
-});
-
-test("neither role may create objects or log in from the migration alone", () => {
+test("neither role may create objects or become privileged from the migration", () => {
   assert.match(roles, /create role demo_public_reader nologin;/i);
   assert.match(roles, /create role demo_engagement_writer nologin;/i);
   assert.match(
     roles,
-    /revoke create on schema public from demo_public_reader, demo_engagement_writer;/i,
+    /revoke all privileges on schema public\s+from demo_public_reader, demo_engagement_writer;/i,
   );
-  assert.doesNotMatch(
-    rolesSql,
-    /\b(superuser|createdb|createrole|bypassrls)\b/i,
-  );
+  assert.match(roles, /nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls/i);
 });
 
 test("future tables and sequences default to no access for either role", () => {
   assert.match(
     roles,
-    /alter default privileges in schema public\s*\n?\s*revoke all on tables from demo_public_reader;/i,
+    /alter default privileges in schema public\s+revoke all on tables from demo_public_reader, demo_engagement_writer;/i,
   );
   assert.match(
     roles,
-    /alter default privileges in schema public\s*\n?\s*revoke all on tables from demo_engagement_writer;/i,
-  );
-  assert.match(
-    roles,
-    /alter default privileges in schema public\s*\n?\s*revoke all on sequences from demo_public_reader;/i,
+    /alter default privileges in schema public\s+revoke all on sequences from demo_public_reader, demo_engagement_writer;/i,
   );
 });
 

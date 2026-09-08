@@ -5,10 +5,12 @@ import { readFileSync } from "node:fs";
 import {
   TABLES,
   canonical,
+  parseOptions,
   normalizeNumber,
   rowDigest,
   tableChecksum,
   tursoConfig,
+  withRetry,
   // @ts-expect-error - the migrator is plain ESM JavaScript with no type declarations.
 } from "../../scripts/migrate-demo-data.mjs";
 
@@ -130,13 +132,14 @@ test("null and undefined canonicalise identically and distinctly from empty text
   assert.notEqual(canonical(null), canonical(""));
 });
 
-test("engine representation differences do not read as drift", () => {
+test("declared numeric columns normalize engine representation differences", () => {
   // SQLite hands back a number; Postgres hands the same numeric back as a string.
-  assert.equal(canonical(3), canonical("3"));
-  assert.equal(canonical(3), canonical(3.0));
-  assert.equal(canonical(3), canonical("3.0"));
-  assert.equal(canonical(2.5), canonical("2.5"));
-  assert.equal(canonical(BigInt(10)), canonical("10"));
+  assert.equal(canonical(3, true), canonical("3", true));
+  assert.equal(canonical(3, true), canonical(3.0, true));
+  assert.equal(canonical(3, true), canonical("3.0", true));
+  assert.equal(canonical(2.5, true), canonical("2.5", true));
+  assert.equal(canonical(BigInt(10), true), canonical("10", true));
+  assert.notEqual(canonical("001"), canonical("1"), "preserved text cannot be numeric-normalized");
 });
 
 test("a numeric-looking string is not confused with a different number", () => {
@@ -256,17 +259,56 @@ test("a dry run cannot reach the copy path", () => {
 });
 
 test("a parity mismatch is a non-zero exit even in dry-run", () => {
-  assert.match(script, /if \(report\.parity !== "match"\) process\.exit\(2\);/);
+  assert.match(script, /if \(report\.parity !== "match"\) exitCode = 2;/);
 });
 
 test("only transient failures retry", () => {
   assert.match(script, /if \(!TRANSIENT\.test\(message\) \|\| attempt === attempts\) throw error;/);
 });
 
+test("transient retry is bounded and non-transient failure is immediate", async () => {
+  let attempts = 0;
+  const sleeps: number[] = [];
+  const result = await withRetry(
+    "test",
+    async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("ETIMEDOUT");
+      return "ok";
+    },
+    5,
+    async (delay: number) => {
+      sleeps.push(delay);
+    },
+  );
+  assert.equal(result, "ok");
+  assert.equal(attempts, 3);
+  assert.deepEqual(sleeps, [200, 400]);
+
+  attempts = 0;
+  await assert.rejects(
+    withRetry("test", async () => {
+      attempts += 1;
+      throw new Error("constraint violation");
+    }),
+  );
+  assert.equal(attempts, 1);
+});
+
+test("CLI rejects unsafe combinations and invalid batch values", () => {
+  assert.throws(() => parseOptions(["--verify", "--reset"], {}), /INCOMPATIBLE_ARGUMENTS/);
+  assert.throws(() => parseOptions(["--unknown"], {}), /INVALID_ARGUMENT/);
+  assert.throws(
+    () => parseOptions([], { DEMO_MIGRATION_BATCH: "1.5" }),
+    /INVALID_BATCH_SIZE/,
+  );
+});
+
 test("nothing sensitive is printed: no row bodies, tokens, or connection strings", () => {
-  // Logged row identity is the checkpoint key and counts only.
+  // Logs contain aggregate counts and a one-way client fingerprint, never row identity.
   assert.doesNotMatch(script, /console\.log\([^)]*\brow\b[^)]*\)/);
   assert.doesNotMatch(script, /console\.log\([^)]*access_token/);
   assert.doesNotMatch(script, /console\.error\(error\.stack/);
-  assert.match(script, /error instanceof Error \? error\.message : String\(error\)/);
+  assert.doesNotMatch(script, /resumed after key/);
+  assert.match(script, /demo migration failed: \$\{failureCode\(error\)\}/);
 });

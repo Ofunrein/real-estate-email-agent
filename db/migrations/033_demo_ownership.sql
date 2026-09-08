@@ -1,8 +1,8 @@
 -- Demo/prospect/listing/outreach/engagement data ownership moves from Turso (SQLite,
 -- owned by lumenosis-site) into this app's Neon/Postgres database. This app becomes the
 -- sole writer and admin owner; lumenosis-site reads the same rows directly through a
--- dedicated least-privilege read-only role (see 034_demo_reader_role.sql) and never
--- receives the application DATABASE_URL.
+-- dedicated least-privilege lookup functions (see 034_demo_reader_role.sql) and never
+-- receives the application DATABASE_URL or direct table access.
 --
 -- Additive only. NOT applied to any remote database by this PR — see
 -- docs/architecture/2026-09-08-demo-data-ownership.md and scripts/release-demo-ownership.mjs.
@@ -53,13 +53,15 @@ create table if not exists demo_prospects (
   check (id <> ''),
   check (full_name <> ''),
   check (email <> ''),
-  check (created_at <> '')
+  check (created_at <> ''),
+  check (status in ('draft', 'contacted')),
+  unique (client_id, id)
 );
 
 create table if not exists demo_listings (
   id text primary key,
   client_id text not null references clients(id) on delete restrict,
-  prospect_id text not null references demo_prospects(id) on delete cascade,
+  prospect_id text not null,
   address text not null,
   source_url text not null,
   status text not null,
@@ -76,14 +78,17 @@ create table if not exists demo_listings (
   verified_at text not null,
   imported_at timestamptz not null default now(),
   check (id <> ''),
-  check (address <> '')
+  check (address <> ''),
+  unique (client_id, id),
+  foreign key (client_id, prospect_id)
+    references demo_prospects(client_id, id) on delete cascade
 );
 
 create table if not exists demo_rooms (
   id text primary key,
   client_id text not null references clients(id) on delete restrict,
-  prospect_id text not null references demo_prospects(id) on delete cascade,
-  listing_id text not null references demo_listings(id) on delete cascade,
+  prospect_id text not null,
+  listing_id text not null,
   slug text not null,
   -- Copied verbatim. The public site resolves a visitor's token by hashing it and
   -- matching token_hash; access_token is what the admin app renders as a sent link.
@@ -102,7 +107,12 @@ create table if not exists demo_rooms (
   check (created_at <> ''),
   check (expires_at <> ''),
   -- Turso allowed only these two values; preserved, not widened.
-  check (status in ('draft', 'approved'))
+  check (status in ('draft', 'approved')),
+  unique (client_id, id),
+  foreign key (client_id, prospect_id)
+    references demo_prospects(client_id, id) on delete cascade,
+  foreign key (client_id, listing_id)
+    references demo_listings(client_id, id) on delete cascade
 );
 
 -- Turso declared slug and token_hash globally UNIQUE. Preserved as global uniqueness
@@ -114,7 +124,7 @@ create unique index if not exists demo_rooms_token_hash_key on demo_rooms (token
 create table if not exists demo_outreach_drafts (
   id text primary key,
   client_id text not null references clients(id) on delete restrict,
-  demo_room_id text not null unique references demo_rooms(id) on delete cascade,
+  demo_room_id text not null unique,
   sender_name text not null,
   sender_inbox text not null,
   recipient text not null,
@@ -128,7 +138,10 @@ create table if not exists demo_outreach_drafts (
   imported_at timestamptz not null default now(),
   check (id <> ''),
   check (recipient <> ''),
-  check (status in ('draft', 'sent'))
+  check (status in ('draft', 'sent')),
+  unique (client_id, id),
+  foreign key (client_id, demo_room_id)
+    references demo_rooms(client_id, id) on delete cascade
 );
 
 create unique index if not exists demo_outreach_drafts_idempotency_key
@@ -143,7 +156,7 @@ create unique index if not exists demo_outreach_drafts_idempotency_key
 create table if not exists demo_engagement_events (
   id bigserial primary key,
   client_id text not null references clients(id) on delete restrict,
-  demo_room_id text not null references demo_rooms(id) on delete cascade,
+  demo_room_id text not null,
   event text not null,
   duration_seconds integer,
   created_at text not null,
@@ -160,8 +173,14 @@ create table if not exists demo_engagement_events (
     'voice_started',
     'voice_completed',
     'repeat_visit',
-    'booking_clicked'
-  ))
+    'booking_clicked',
+    -- Internal paid-generation reservation written by lumenosis-site's existing
+    -- demo budget gate. It exists in the source corpus even though visitors cannot
+    -- submit it through the public event route.
+    'email_generation_started'
+  )),
+  foreign key (client_id, demo_room_id)
+    references demo_rooms(client_id, id) on delete cascade
 );
 
 -- NOT partial. A partial unique index (`where source_rowid is not null`) cannot be used
@@ -192,15 +211,14 @@ create table if not exists demo_migration_checkpoints (
   -- Last source key copied, in the deterministic order the migrator walks. Resume
   -- restarts strictly after this value.
   last_source_key text not null default '',
-  rows_copied bigint not null default 0,
-  -- sha256 over the deterministic per-row digest stream; the parity report compares
-  -- this against a recomputation from the source.
-  running_checksum text not null default '',
+  -- Source rows durably scanned through this checkpoint. This is intentionally not
+  -- named rows_copied: ON CONFLICT may skip an already-present target row on a reset.
+  rows_scanned bigint not null default 0,
   completed_at timestamptz,
   updated_at timestamptz not null default now(),
   primary key (client_id, table_name),
   check (table_name <> ''),
-  check (rows_copied >= 0)
+  check (rows_scanned >= 0)
 );
 
 -- Timestamptz companions for range queries, without mutating the preserved text.

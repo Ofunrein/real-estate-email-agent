@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Pool } from "pg";
 
 import { emailHtml, emailText } from "@/lib/demoOutreachEmail";
@@ -31,12 +33,9 @@ function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      // Neon terminates TLS with a certificate chain the bundled Node CA store does not
-      // include, so `rejectUnauthorized: false` is the setting every existing store in
-      // this repo uses (lib/database.ts, lib/commandCenterStore.ts, lib/contactOs.ts).
-      // Changing it here alone would break the pool while leaving the rest unchanged;
-      // it is tracked as one repo-wide change, not a drive-by in this PR.
-      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+      // Neon presents a publicly trusted certificate; verify it by default. Local
+      // Postgres remains an explicit DATABASE_SSL=false opt-out.
+      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: true },
       max: Number(process.env.DEMO_STORE_POOL_MAX || 2),
     });
   }
@@ -168,7 +167,10 @@ export async function approveDemo(
 
 export type SendResult =
   | { ok: true; alreadySent: boolean }
-  | { ok: false; reason: "not_found" | "not_configured" | "provider_failed" };
+  | {
+      ok: false;
+      reason: "not_found" | "not_configured" | "provider_failed" | "delivery_uncertain";
+    };
 
 /**
  * Idempotent send, and the send is ordered so a crash cannot double-send:
@@ -176,8 +178,9 @@ export type SendResult =
  *   1. Claim the draft with a conditional UPDATE to status = 'sending'. Only one caller
  *      can win that row, so two concurrent sends cannot both reach the provider.
  *   2. Call the provider.
- *   3. On success mark 'sent'. On failure release the claim back to 'draft' so a retry
- *      is possible — a provider failure never leaves a draft looking sent.
+ *   3. On success mark 'sent'. A confirmed provider rejection releases the claim. An
+ *      ambiguous transport failure keeps the claim, because the provider may have sent
+ *      the email before the connection failed; an automatic retry could duplicate it.
  *
  * The status check constraint in 033 allows only 'draft'/'sent', so the transient claim
  * is held in `idempotency_key` rather than by widening the status domain: the key is
@@ -189,8 +192,11 @@ export async function sendDemoOutreach(
   clientId: string = demoClientId(),
   query: DemoQuery = defaultQuery(),
   fetchImpl: typeof fetch = fetch,
-  claimToken: string = `send-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+  claimToken: string = `send-${randomUUID()}`,
 ): Promise<SendResult> {
+  const apiKey = process.env.AGENTMAIL_API_KEY;
+  if (!apiKey) return { ok: false, reason: "not_configured" };
+
   const claimed = await query(
     `update demo_outreach_drafts o
        set idempotency_key = $3
@@ -209,11 +215,14 @@ export async function sendDemoOutreach(
   const draft = claimed.rows[0];
   if (!draft) {
     const existing = await query(
-      "select status from demo_outreach_drafts where demo_room_id = $1 and client_id = $2 limit 1",
+      "select status, idempotency_key from demo_outreach_drafts where demo_room_id = $1 and client_id = $2 limit 1",
       [id, clientId],
     );
     const status = existing.rows[0] ? String(existing.rows[0].status) : "";
     if (status === "sent") return { ok: true, alreadySent: true };
+    if (existing.rows[0]?.idempotency_key) {
+      return { ok: false, reason: "delivery_uncertain" };
+    }
     return { ok: false, reason: "not_found" };
   }
 
@@ -224,12 +233,6 @@ export async function sendDemoOutreach(
     );
   };
 
-  const apiKey = process.env.AGENTMAIL_API_KEY;
-  if (!apiKey) {
-    await release();
-    return { ok: false, reason: "not_configured" };
-  }
-
   const inbox = String(draft.sender_inbox);
   let response: Response;
   try {
@@ -237,7 +240,11 @@ export async function sendDemoOutreach(
       `https://api.agentmail.to/v0/inboxes/${encodeURIComponent(inbox)}/messages/send`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          Authorization: ["Bearer", apiKey].join(" "),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           to: String(draft.recipient),
           subject: String(draft.subject),
@@ -249,8 +256,9 @@ export async function sendDemoOutreach(
       },
     );
   } catch {
-    await release();
-    return { ok: false, reason: "provider_failed" };
+    // The request may have reached the provider. Retain the claim so a retry cannot
+    // duplicate a real send; an operator must reconcile this uncommon state.
+    return { ok: false, reason: "delivery_uncertain" };
   }
 
   if (!response.ok) {
@@ -267,15 +275,17 @@ export async function sendDemoOutreach(
     // without a provider id rather than releasing the claim and risking a second send.
   }
 
-  await query(
+  const marked = await query(
     `update demo_outreach_drafts
        set status = 'sent',
            sent_at = to_char(now() at time zone 'utc', 'YYYY-MM-DD HH24:MI:SS'),
            provider_message_id = $3,
            idempotency_key = null
-     where id = $1 and client_id = $2`,
-    [String(draft.id), clientId, messageId],
+     where id = $1 and client_id = $2 and idempotency_key = $4
+     returning id`,
+    [String(draft.id), clientId, messageId, claimToken],
   );
+  if (!marked.rows.length) return { ok: false, reason: "delivery_uncertain" };
   await query(
     `update demo_prospects
        set status = 'contacted'

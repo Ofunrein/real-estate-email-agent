@@ -184,7 +184,9 @@ export async function sendDemoOutreach(
           detail:
             result.reason === "not_found"
               ? "No approved draft to send"
-              : "Email provider rejected the send; the draft is still sendable",
+              : result.reason === "delivery_uncertain"
+                ? "Email delivery is uncertain; the claim is retained to prevent a duplicate send"
+                : "Email provider rejected the send; the draft is still sendable",
         };
       }
       return { ok: true, data: { ok: true, alreadySent: result.alreadySent } };

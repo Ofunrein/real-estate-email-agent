@@ -149,7 +149,7 @@ const DRAFT = {
 };
 
 test("send claims the draft before contacting the provider, so concurrent sends cannot both win", async () => {
-  const { calls, query } = recorder([[DRAFT], [], []]);
+  const { calls, query } = recorder([[DRAFT], [{ id: "o1" }], []]);
   const fetchImpl = (async () =>
     new Response(JSON.stringify({ message_id: "m1" }), { status: 200 })) as unknown as typeof fetch;
 
@@ -186,8 +186,8 @@ test("a provider failure releases the claim so the draft stays sendable", async 
   );
 });
 
-test("a network throw is caught and also releases the claim", async () => {
-  const { calls, query } = recorder([[DRAFT], []]);
+test("an ambiguous network failure retains the claim so a retry cannot duplicate delivery", async () => {
+  const { calls, query } = recorder([[DRAFT]]);
   const fetchImpl = (async () => {
     throw new Error("ECONNREFUSED 10.0.0.1:443");
   }) as unknown as typeof fetch;
@@ -196,12 +196,34 @@ test("a network throw is caught and also releases the claim", async () => {
   const result = await sendDemoOutreach("d1", "tenant-a", query, fetchImpl, "claim-1");
   delete process.env.AGENTMAIL_API_KEY;
 
-  assert.deepEqual(result, { ok: false, reason: "provider_failed" });
-  assert.match(calls[1].text, /set idempotency_key = null/);
+  assert.deepEqual(result, { ok: false, reason: "delivery_uncertain" });
+  assert.equal(calls.length, 1, "an ambiguous delivery must retain its claim");
 });
 
-test("a missing provider key releases the claim and never reaches the network", async () => {
-  const { calls, query } = recorder([[DRAFT], []]);
+test("retry after an ambiguous delivery does not make a second provider request", async () => {
+  const { query } = recorder([
+    [DRAFT],
+    [],
+    [{ status: "draft", idempotency_key: "claim-1" }],
+  ]);
+  let providerCalls = 0;
+  const fetchImpl = (async () => {
+    providerCalls += 1;
+    throw new Error("ETIMEDOUT");
+  }) as unknown as typeof fetch;
+
+  process.env.AGENTMAIL_API_KEY = "example-not-a-real-key-placeholder";
+  const first = await sendDemoOutreach("d1", "tenant-a", query, fetchImpl, "claim-1");
+  const retry = await sendDemoOutreach("d1", "tenant-a", query, fetchImpl, "claim-2");
+  delete process.env.AGENTMAIL_API_KEY;
+
+  assert.deepEqual(first, { ok: false, reason: "delivery_uncertain" });
+  assert.deepEqual(retry, { ok: false, reason: "delivery_uncertain" });
+  assert.equal(providerCalls, 1);
+});
+
+test("a missing provider key performs no claim and never reaches the network", async () => {
+  const { calls, query } = recorder([]);
   let called = false;
   const fetchImpl = (async () => {
     called = true;
@@ -213,7 +235,7 @@ test("a missing provider key releases the claim and never reaches the network", 
 
   assert.deepEqual(result, { ok: false, reason: "not_configured" });
   assert.equal(called, false);
-  assert.match(calls[1].text, /set idempotency_key = null/);
+  assert.equal(calls.length, 0);
 });
 
 test("an already-sent draft reports alreadySent instead of sending twice", async () => {
@@ -245,7 +267,7 @@ test("an unapproved room cannot be sent", async () => {
 });
 
 test("a malformed provider response still marks the send complete", async () => {
-  const { calls, query } = recorder([[DRAFT], [], []]);
+  const { calls, query } = recorder([[DRAFT], [{ id: "o1" }], []]);
   const fetchImpl = (async () => new Response("not json", { status: 200 })) as unknown as typeof fetch;
 
   process.env.AGENTMAIL_API_KEY = "example-not-a-real-key-placeholder";
@@ -259,7 +281,7 @@ test("a malformed provider response still marks the send complete", async () => 
 });
 
 test("a successful send marks sent and advances the prospect, both tenant-scoped", async () => {
-  const { calls, query } = recorder([[DRAFT], [], []]);
+  const { calls, query } = recorder([[DRAFT], [{ id: "o1" }], []]);
   const fetchImpl = (async () =>
     new Response(JSON.stringify({ message_id: "m1" }), { status: 200 })) as unknown as typeof fetch;
 
@@ -278,7 +300,7 @@ test("a successful send marks sent and advances the prospect, both tenant-scoped
 });
 
 test("the outbound send body carries the rendered email and an unsubscribe header", async () => {
-  const { query } = recorder([[DRAFT], [], []]);
+  const { query } = recorder([[DRAFT], [{ id: "o1" }], []]);
   let sent: { body: string } | null = null;
   const fetchImpl = (async (_url: string, init: RequestInit) => {
     sent = { body: String(init.body) };
