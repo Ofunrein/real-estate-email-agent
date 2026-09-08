@@ -6,6 +6,8 @@ import { cancelQueuedCadenceForLeadInDatabase } from "@/lib/database";
 import type { Channel } from "@/lib/inboxData";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { optInPatch, optOutPatch } from "@/lib/contactSuppression";
+import { redactSensitivePii } from "@/lib/sharedIntelligence";
+import { rememberConversationTurn } from "@/lib/sharedIntelligenceStore";
 
 export type ChannelIngestInput = {
   channel: Channel;
@@ -111,6 +113,8 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
   const eventAt = input.eventAt || isoNow();
   const threadRef = input.threadRef || input.email || input.phone || `${input.channel}:unknown`;
   const hasLeadIdentity = Boolean(input.email || input.phone || input.fullName);
+  const safeMessageText = redactSensitivePii(input.messageText || "");
+  const safeSummary = redactSensitivePii(input.summary || "");
 
   const lead = hasLeadIdentity
     ? await upsertLeadMemoryToDatabase({
@@ -137,7 +141,7 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
         handoff_status: input.handoffStatus || "",
         handoff_reason: input.handoffReason || "",
         next_action: input.nextAction || "",
-        summary: input.summary || input.messageText || "",
+        summary: safeSummary || safeMessageText,
         ...(input.consentPatch || {}),
       })
     : ({} as SheetRow);
@@ -153,8 +157,8 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     thread_ref: threadRef,
     agent_name: input.agentName,
     event_type: input.eventType || "message",
-    message_text: input.messageText || "",
-    summary: input.summary || "",
+    message_text: safeMessageText,
+    summary: safeSummary,
     transcript_url: input.transcriptUrl || "",
     recording_url: input.recordingUrl || "",
     ai_action: input.aiAction || "",
@@ -172,6 +176,21 @@ export async function recordChannelInteraction(input: ChannelIngestInput): Promi
     media_json: input.mediaJson ? JSON.stringify(input.mediaJson) : "",
     provider_metadata: input.providerMetadata ? JSON.stringify(input.providerMetadata) : "",
     reply_job_id: input.replyJobId || "",
+  });
+
+  await rememberConversationTurn({
+    channel: input.channel,
+    email: input.email,
+    phone: input.phone,
+    fullName: input.fullName,
+    threadRef,
+    message: safeMessageText,
+    propertyInterest: input.propertyInterest,
+    intent: input.intent,
+    leadRole: input.leadRole,
+    doNotContact: input.consentPatch?.do_not_contact === "true",
+  }).catch((error) => {
+    console.warn("Shared conversation memory update failed", error instanceof Error ? error.message : "unknown_error");
   });
 
   if ((input.direction || "inbound") === "inbound" && hasLeadIdentity) {

@@ -229,7 +229,7 @@ test("buildAriaAssistant: defaults to matching OpenAI provider for GPT models", 
   const assistant = buildAriaAssistant(config(), { publicUrl: "https://app.example.com" });
   const model = assistant.model as Record<string, unknown>;
   assert.equal(model.provider, "openai");
-  assert.equal(model.model, "gpt-4.1-mini");
+  assert.equal(model.model, "gpt-4.1-mini-2025-04-14");
 });
 
 test("buildAriaAssistant: allows explicit Anthropic model/provider override", () => {

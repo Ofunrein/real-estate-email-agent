@@ -25,12 +25,14 @@ function deps(overrides: Partial<AriaToolDeps> = {}): AriaToolDeps {
     searchProperties: async () => ({
       properties: [{ address: "1 A St", price: "400000", beds: "3", baths: "2", photo_url: "https://photos.zillowstatic.com/fp/two.jpg", listing_url: "https://example.com/1-a" } as never],
       spoken: "I found one option: 1. 1 A St, $400,000, 3 bed, 2 bath. Want details on any of these?",
+      timedOut: false,
+      fromCache: false,
     }),
     getCrm: () => null,
     calendarId: "cal_1",
     timezone: "America/Chicago",
     queryAvailability: async () => [],
-    bookAppointment: async () => ({ success: true, appointment_id: "appt_vapi", neon_id: "neon_vapi", confirmed_time: "Friday, Jun 26 at 2:00 PM" }),
+    bookAppointment: async () => ({ success: true, receipt_verified: true, provider_receipt: { provider: "google", eventId: "appt_vapi", start: "2026-06-26T19:00:00.000Z", end: "2026-06-26T19:30:00.000Z", readBackVerified: true, readBackAt: "2026-06-26T18:59:00.000Z" }, appointment_id: "appt_vapi", neon_id: "neon_vapi", confirmed_time: "Friday, Jun 26 at 2:00 PM" }),
     findUpcomingAppointmentByPhone: async () => null,
     findAppointmentById: async () => null,
     cancelAppointmentById: async () => false,
@@ -141,7 +143,7 @@ test("searchProperties: relays matches + results action", async () => {
 
 test("searchProperties: empty result action", async () => {
   const out = await runAriaTool("searchProperties", { area: "Nowhere" }, ctx, deps({
-    searchProperties: async () => ({ properties: [], spoken: "I don't see matching listings right now." }),
+    searchProperties: async () => ({ properties: [], spoken: "I don't see matching listings right now.", timedOut: false, fromCache: false }),
   }));
   assert.equal(out.ingest.aiAction, "property_search_empty");
 });
@@ -172,6 +174,15 @@ test("checkAvailability: no slots asks for another time", async () => {
   assert.match(out.result, /another time/);
 });
 
+test("checkAvailability: provider failure is not reported as no availability", async () => {
+  const out = await runAriaTool("checkAvailability", { date: "2026-06-26" }, ctx, deps({
+    queryAvailability: async () => ({ ok: false, slots: [], provider: "google", reason: "provider_unavailable" as const }),
+  }));
+  assert.equal(out.ingest.aiAction, "availability_failed");
+  assert.equal(out.ingest.status, "error");
+  assert.doesNotMatch(out.result, /no open times/i);
+});
+
 test("bookConsultation: maps Vapi appointment shape into server appointment booking", async () => {
   let booked: { date?: string; time?: string; appointment_type?: string } | null = null;
   const out = await runAriaTool("bookConsultation", {
@@ -183,7 +194,7 @@ test("bookConsultation: maps Vapi appointment shape into server appointment book
   }, ctx, deps({
     bookAppointment: async (input) => {
       booked = input;
-      return { success: true, appointment_id: "appt_1", neon_id: "neon_1", confirmed_time: "Friday, Jun 26 at 2:00 PM" };
+      return { success: true, receipt_verified: true, provider_receipt: { provider: "google", eventId: "appt_1", start: "2026-06-26T19:00:00.000Z", end: "2026-06-26T19:30:00.000Z", readBackVerified: true, readBackAt: "2026-06-26T18:59:00.000Z" }, appointment_id: "appt_1", neon_id: "neon_1", confirmed_time: "Friday, Jun 26 at 2:00 PM" };
     },
   }));
   assert.equal(booked!.date, "2026-06-26");
@@ -191,6 +202,19 @@ test("bookConsultation: maps Vapi appointment shape into server appointment book
   assert.equal(booked!.appointment_type, "consultation");
   assert.equal(out.ingest.aiAction, "appointment_booked");
   assert.equal(out.ingest.appointmentId, "neon_1");
+});
+
+test("bookConsultation: unverified provider result stays pending", async () => {
+  const out = await runAriaTool("bookConsultation", {
+    appointmentTime: "2026-06-26T19:00:00.000Z",
+    callerName: "Sam Lee",
+    callerPhone: "+151****0000",
+  }, ctx, deps({
+    bookAppointment: async () => ({ success: true, appointment_id: "unverified", pending: true }),
+  }));
+  assert.equal(out.ingest.aiAction, "appointment_confirmation_pending");
+  assert.equal(out.ingest.status, "pending");
+  assert.doesNotMatch(out.result, /confirmed|booked|reserved/i);
 });
 
 test("sendPropertyDetailsSms: sends listing details and photo media", async () => {
@@ -302,23 +326,20 @@ function fakeAdapter(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-test("scheduleShowing: unavailable when no CRM", async () => {
+test("scheduleShowing: uses shared scheduling even when no CRM", async () => {
   const out = await runAriaTool("scheduleShowing", { startTime: "2026-06-12T19:00:00Z" }, ctx, deps({ getCrm: () => null }));
-  assert.equal(out.ingest.aiAction, "scheduling_unavailable");
+  assert.equal(out.ingest.aiAction, "appointment_booked");
 });
 
-test("scheduleShowing: books with CRM + calendar", async () => {
-  let created: { calendarId?: string; contactId?: string } | null = null;
+test("scheduleShowing: routes booking through verified shared calendar state", async () => {
   const out = await runAriaTool(
     "scheduleShowing",
     { startTime: "2026-06-12T19:00:00Z", address: "123 Main St", name: "Sam" },
     ctx,
-    deps({ getCrm: () => fakeAdapter({ createAppointment: async (input: { calendarId: string; contactId: string; startTime: string }) => { created = input; return { id: "appt1", contactId: input.contactId, startTime: input.startTime }; } }) }),
+    deps({ getCrm: () => fakeAdapter() }),
   );
-  assert.equal(out.ingest.aiAction, "showing_booked");
-  assert.equal(created!.calendarId, "cal_1");
-  assert.equal(created!.contactId, "c1");
-  assert.match(out.result, /booked/i);
+  assert.equal(out.ingest.aiAction, "appointment_booked");
+  assert.match(out.result, /Confirmed by the calendar provider/i);
 });
 
 test("scheduleShowing: book without time asks for one", async () => {
@@ -339,7 +360,7 @@ test("scheduleShowing: cancel uses next upcoming", async () => {
     }) }),
   );
   assert.equal(cancelled, "appt9");
-  assert.equal(out.ingest.aiAction, "showing_cancelled");
+  assert.equal(out.ingest.aiAction, "showing_cancel_pending");
 });
 
 test("scheduleShowing: needs identity when phone + email missing", async () => {

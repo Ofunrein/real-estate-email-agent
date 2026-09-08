@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-09-07T21-24-02-099Z",
+  "mode": "offline",
+  "scope_note": "Offline mode measures router safety-gate behavior only. classification_macro_f1 and reply_quality_rubric_pass_rate are NOT measured here (require a live model call, not run in this session) and are reported as not_measured_offline in the decision doc.",
+  "gates": {
+    "compliance_recall_legacy": {
+      "total": 80,
+      "passed": 80,
+      "rate": 1
+    },
+    "compliance_recall_candidate": {
+      "total": 80,
+      "passed": 80,
+      "rate": 1
+    },
+    "adversarial_bypass_legacy": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    },
+    "adversarial_bypass_candidate": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    },
+    "voice_latency_tier_candidate": {
+      "total": 40,
+      "passed": 40,
+      "rate": 1
+    }
+  },
+  "total_cases": 520
+}

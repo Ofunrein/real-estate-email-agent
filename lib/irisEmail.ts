@@ -1,5 +1,6 @@
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
 import { removeEmDashes } from "@/lib/noEmDash";
+import { getLegacyModelPrice, legacyAttemptCostUsd } from "@/lib/modelPricing";
 import {
   appendConversationEventToDatabase,
   databaseEnabled,
@@ -56,6 +57,13 @@ import { advancedQualificationPlaybook } from "@/lib/qualificationPlaybooks";
 import { normalizedMessageText, type OmnichannelMedia } from "@/lib/omnichannelEvents";
 import type { SheetRow } from "@/lib/sheetSchema";
 import { fetchStyleContext, redactEmailStyleExample } from "@/lib/styleTraining";
+import {
+  redactSensitivePii,
+  resolveTenantIntelligenceConfig,
+  sharedPlatformPolicyPrompt,
+  validateSchedulingClaimLanguage,
+} from "@/lib/sharedIntelligence";
+import { rememberConversationTurn } from "@/lib/sharedIntelligenceStore";
 
 export type IrisEmailIntent =
   | "property_search"
@@ -1296,14 +1304,11 @@ function anthropicApiKey(): string {
   return process.env.ANTHROPIC_API_KEY || "";
 }
 
-const CLAUDE_PRICING_PER_MILLION: Record<string, { input: number; output: number }> = {
-  "claude-haiku-4-5": { input: 0.8, output: 4 },
-  "claude-sonnet-4-6": { input: 3, output: 15 },
-};
-
+// Pricing now lives in lib/modelPricing.ts (single source of truth — see
+// docs/audits/2026-09-model-routing/00-evidence-ledger.md §0.5 for why the old duplicated table
+// here and in lib/theoTelemetry.ts was removed).
 function claudeTokenCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = CLAUDE_PRICING_PER_MILLION[model] || { input: 3, output: 15 };
-  return ((inputTokens * pricing.input) + (outputTokens * pricing.output)) / 1_000_000;
+  return legacyAttemptCostUsd(model, { inputTokens, outputTokens });
 }
 
 async function generateClaudeIrisEmailReplyText(
@@ -1326,6 +1331,7 @@ async function generateClaudeIrisEmailReplyText(
     status: property.status,
     features: property.features,
     listing_url: property.listing_url,
+    fact_evidence: property.fact_evidence,
   }));
   const reviewDraft = !decideIrisEmailExecution(classification).canReply;
   const system = `You are ${IRIS_AGENT_NAME}, the real estate email assistant. Claude is the reasoning brain for this email agent.
@@ -1347,6 +1353,7 @@ ${advancedQualificationPlaybook()}
 - ${reviewDraft
     ? `End with:\nBest,\n${IRIS_AGENT_NAME}\nthen the single "${IRIS_REVIEW_MARKER} ...]" review line and nothing after it.`
     : `End exactly with:\nBest,\n${IRIS_AGENT_NAME}`}
+${sharedPlatformPolicyPrompt(resolveTenantIntelligenceConfig(process.env))}
 ${styleContext ? `\nTenant and mailbox voice profile:\n${styleContext}` : ""}`;
   const latestBody = cleanBody(latestEmailBody(message.body));
   const contextBody = cleanBody(threadContextBody(message.body));
@@ -1409,8 +1416,8 @@ ${publicDataContext || "(none)"}`;
       model,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
-      price_per_million_input: CLAUDE_PRICING_PER_MILLION[model]?.input || 3,
-      price_per_million_output: CLAUDE_PRICING_PER_MILLION[model]?.output || 15,
+      price_per_million_input: getLegacyModelPrice(model).inputPerMillion,
+      price_per_million_output: getLegacyModelPrice(model).outputPerMillion,
     },
     metadata: {
       intent: classification.intent,
@@ -1419,7 +1426,8 @@ ${publicDataContext || "(none)"}`;
   }).catch(() => null);
   const content = Array.isArray(payload.content) ? payload.content as Array<{ type?: string; text?: string }> : [];
   const text = content.find((block) => block.type === "text")?.text?.trim() || "";
-  return text && /Best,\s*\n\s*Iris\s*$/i.test(text) ? text : null;
+  if (!text || !/Best,\s*\n\s*Iris\s*$/i.test(text)) return null;
+  return validateSchedulingClaimLanguage(text, false).ok ? text : null;
 }
 
 export function generateIrisPublicDataReply(publicDataContext: string): string | null {
@@ -1590,8 +1598,8 @@ export function buildIrisEmailConversationEventRow(
     thread_ref: message.threadId,
     agent_name: IRIS_AGENT_NAME,
     event_type: execution.eventType,
-    message_text: cleanBody(message.body),
-    summary: handoffSummary(message, classification, execution),
+    message_text: redactSensitivePii(cleanBody(message.body)),
+    summary: redactSensitivePii(handoffSummary(message, classification, execution)),
     ai_action: execution.aiAction,
     handoff_reason: execution.handoffReason,
     status: execution.status,
@@ -1621,7 +1629,7 @@ export function buildIrisEmailOutboundEventRow(
     thread_ref: (gmailResult as GmailReplyResult).threadId || message.threadId,
     agent_name: IRIS_AGENT_NAME,
     event_type: "email_ai_reply",
-    message_text: replyDraft.html || replyDraft.text,
+    message_text: redactSensitivePii(replyDraft.html || replyDraft.text),
     summary: `Iris replied to ${contact.name || contact.email || "the lead"} about ${classification.address || classification.intent}.`,
     ai_action: "auto_reply_sent",
     status: "sent",
@@ -1642,6 +1650,18 @@ export async function recordIrisEmailInteraction(
   }
   await upsertLeadMemoryToDatabase(buildIrisEmailLeadMemoryRow(message, classification, execution));
   await appendConversationEventToDatabase(buildIrisEmailConversationEventRow(message, classification, execution));
+  const contact = parseEmailContact(message.from);
+  await rememberConversationTurn({
+    channel: "email",
+    threadRef: message.threadId,
+    message: redactSensitivePii(cleanBody(message.body)),
+    email: contact.email,
+    fullName: contact.name,
+    propertyInterest: classification.addresses.join("; "),
+    intent: classification.intent,
+    leadRole: classification.primary_lead_role,
+    doNotContact: classification.opportunity_tags.includes("opt_out"),
+  });
   await upsertThreadLinkInDatabase({
     threadRef: message.threadId,
     channel: "email",

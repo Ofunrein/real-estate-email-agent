@@ -1,0 +1,140 @@
+
+> lumenosis-real-estate-agent-inbox@0.1.0 prebuild
+> npm run security:scan && npm run lint
+
+
+> lumenosis-real-estate-agent-inbox@0.1.0 security:scan
+> python3 scripts/scan-secrets.py
+
+Secret scan passed: 771 tracked files checked
+
+> lumenosis-real-estate-agent-inbox@0.1.0 lint
+> tsc --project tsconfig.lint.json --pretty false
+
+
+> lumenosis-real-estate-agent-inbox@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.23
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 36.7s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/11) ...
+   Generating static pages (2/11) 
+   Generating static pages (5/11) 
+   Generating static pages (8/11) 
+ ✓ Generating static pages (11/11)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                         Size  First Load JS
+┌ ƒ /                                             135 kB         238 kB
+├ ○ /_not-found                                    998 B         104 kB
+├ ƒ /api/actions/summarize-conversation            346 B         103 kB
+├ ƒ /api/agent/actions                             346 B         103 kB
+├ ƒ /api/aria/outbound                             346 B         103 kB
+├ ƒ /api/auth/[...nextauth]                        346 B         103 kB
+├ ƒ /api/auth/tiktok/callback                      346 B         103 kB
+├ ƒ /api/auth/tiktok/connect                       346 B         103 kB
+├ ƒ /api/calendar/appointments                     346 B         103 kB
+├ ƒ /api/calendar/availability/query               346 B         103 kB
+├ ƒ /api/calendar/bookings                         346 B         103 kB
+├ ƒ /api/calendar/calendars                        346 B         103 kB
+├ ƒ /api/calendar/calendars/[id]                   346 B         103 kB
+├ ƒ /api/calendar/connect/[provider]               346 B         103 kB
+├ ƒ /api/calendar/connections                      346 B         103 kB
+├ ƒ /api/calendar/events                           346 B         103 kB
+├ ƒ /api/calendar/events/[id]                      346 B         103 kB
+├ ƒ /api/calendar/settings                         346 B         103 kB
+├ ƒ /api/calendar/settings/[calendarId]            346 B         103 kB
+├ ƒ /api/calendar/sync/full                        346 B         103 kB
+├ ƒ /api/calendar/sync/incremental                 346 B         103 kB
+├ ƒ /api/channels/meta/callback                    346 B         103 kB
+├ ƒ /api/channels/meta/connect                     346 B         103 kB
+├ ƒ /api/contacts                                  346 B         103 kB
+├ ƒ /api/contacts/[id]                             346 B         103 kB
+├ ƒ /api/contacts/[id]/merge                       346 B         103 kB
+├ ƒ /api/contacts/[id]/notes                       346 B         103 kB
+├ ƒ /api/contacts/connect/[provider]               346 B         103 kB
+├ ƒ /api/contacts/import                           346 B         103 kB
+├ ƒ /api/contacts/sync/full                        346 B         103 kB
+├ ƒ /api/contacts/sync/incremental                 346 B         103 kB
+├ ƒ /api/conversations                             346 B         103 kB
+├ ƒ /api/cron/iris-cadence                         346 B         103 kB
+├ ƒ /api/cron/iris-email                           346 B         103 kB
+├ ƒ /api/cron/sync-sheets                          346 B         103 kB
+├ ƒ /api/data                                      346 B         103 kB
+├ ƒ /api/diagnostics/inbox                         346 B         103 kB
+├ ƒ /api/health                                    346 B         103 kB
+├ ƒ /api/inngest                                   346 B         103 kB
+├ ƒ /api/leads                                     346 B         103 kB
+├ ƒ /api/leads/import                              346 B         103 kB
+├ ƒ /api/media/audio                               346 B         103 kB
+├ ƒ /api/media/instagram-preview                   346 B         103 kB
+├ ƒ /api/media/proxy                               346 B         103 kB
+├ ƒ /api/media/transcribe                          346 B         103 kB
+├ ƒ /api/media/uploads/[id]/[filename]             346 B         103 kB
+├ ƒ /api/media/voice-clone                         346 B         103 kB
+├ ƒ /api/media/voice-note                          346 B         103 kB
+├ ƒ /api/metrics                                   346 B         103 kB
+├ ƒ /api/ops/audit                                 346 B         103 kB
+├ ƒ /api/ops/reply-jobs/retry                      346 B         103 kB
+├ ƒ /api/properties                                346 B         103 kB
+├ ƒ /api/settings/channel-connections              346 B         103 kB
+├ ƒ /api/settings/email-account                    346 B         103 kB
+├ ƒ /api/settings/email-account/callback           346 B         103 kB
+├ ƒ /api/settings/email-account/connect            346 B         103 kB
+├ ƒ /api/settings/email-account/outlook-connect    346 B         103 kB
+├ ƒ /api/settings/email-account/reconnect          346 B         103 kB
+├ ƒ /api/settings/inbox                            346 B         103 kB
+├ ƒ /api/takeover/handback                         346 B         103 kB
+├ ƒ /api/takeover/send                             346 B         103 kB
+├ ƒ /api/threads/[threadRef]/category              346 B         103 kB
+├ ƒ /api/threads/[threadRef]/draft                 346 B         103 kB
+├ ƒ /api/threads/[threadRef]/draft/action          346 B         103 kB
+├ ƒ /api/threads/[threadRef]/reaction              346 B         103 kB
+├ ƒ /api/threads/[threadRef]/reply                 346 B         103 kB
+├ ƒ /api/threads/[threadRef]/review/resolve        346 B         103 kB
+├ ƒ /api/threads/[threadRef]/seen                  346 B         103 kB
+├ ƒ /api/threads/[threadRef]/takeover              346 B         103 kB
+├ ƒ /api/threads/[threadRef]/upload                346 B         103 kB
+├ ƒ /api/voice/call                                346 B         103 kB
+├ ƒ /api/voice/hangup                              346 B         103 kB
+├ ƒ /api/voice/live                                346 B         103 kB
+├ ƒ /api/webhooks/aria-sms-control                 346 B         103 kB
+├ ƒ /api/webhooks/aria-tools/[tool]                346 B         103 kB
+├ ƒ /api/webhooks/aria-voice                       346 B         103 kB
+├ ƒ /api/webhooks/google-drive-sheets              346 B         103 kB
+├ ƒ /api/webhooks/iris-book-appointment            346 B         103 kB
+├ ƒ /api/webhooks/iris-gmail-push                  346 B         103 kB
+├ ƒ /api/webhooks/lead-capture                     346 B         103 kB
+├ ƒ /api/webhooks/meta-leadgen                     346 B         103 kB
+├ ƒ /api/webhooks/olivia-website                   346 B         103 kB
+├ ƒ /api/webhooks/stripe-onboarding                346 B         103 kB
+├ ƒ /api/webhooks/theo-meta-social                 346 B         103 kB
+├ ƒ /api/webhooks/theo-sms                         346 B         103 kB
+├ ƒ /api/webhooks/theo-social-router               346 B         103 kB
+├ ƒ /api/webhooks/theo-whatsapp                    346 B         103 kB
+├ ƒ /api/webhooks/twilio-status                    346 B         103 kB
+├ ƒ /api/webhooks/typeform-onboarding              346 B         103 kB
+├ ○ /icon.svg                                        0 B            0 B
+├ ƒ /login                                         346 B         103 kB
+├ ○ /onboarding/agreement                          346 B         103 kB
+├ ○ /onboarding/payment-complete                 3.46 kB         106 kB
+└ ƒ /reset-password                                346 B         103 kB
++ First Load JS shared by all                     103 kB
+  ├ chunks/1255-a20f6c5e797a687b.js              46.4 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js          54.2 kB
+  └ other shared chunks (total)                  1.93 kB
+
+
+ƒ Middleware                                       34 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+EXIT=0

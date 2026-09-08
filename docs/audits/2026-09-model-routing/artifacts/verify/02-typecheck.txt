@@ -1,0 +1,120 @@
+tests/ts/ariaTools.test.ts(25,5): error TS2322: Type '() => Promise<{ properties: never[]; spoken: string; }>' is not assignable to type '(input: { query?: string | undefined; area?: string | undefined; beds?: number | undefined; baths?: number | undefined; minPrice?: number | undefined; maxPrice?: number | undefined; phone?: string | undefined; lead?: Partial<...> | undefined; }) => Promise<...>'.
+  Type 'Promise<{ properties: never[]; spoken: string; }>' is not assignable to type 'Promise<VoiceSearchResult>'.
+    Type '{ properties: never[]; spoken: string; }' is missing the following properties from type 'VoiceSearchResult': timedOut, fromCache
+tests/ts/ariaTools.test.ts(144,5): error TS2322: Type '() => Promise<{ properties: never[]; spoken: string; }>' is not assignable to type '(input: { query?: string | undefined; area?: string | undefined; beds?: number | undefined; baths?: number | undefined; minPrice?: number | undefined; maxPrice?: number | undefined; phone?: string | undefined; lead?: Partial<...> | undefined; }) => Promise<...>'.
+  Type 'Promise<{ properties: never[]; spoken: string; }>' is not assignable to type 'Promise<VoiceSearchResult>'.
+    Type '{ properties: never[]; spoken: string; }' is missing the following properties from type 'VoiceSearchResult': timedOut, fromCache
+tests/ts/calendarProvider.test.ts(119,5): error TS2345: Argument of type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<{ start: string; end: string; durationMinutes: number; }[]>; calendarId: string; }' is not assignable to parameter of type 'AriaToolDeps'.
+  Type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<{ start: string; end: string; durationMinutes: number; }[]>; calendarId: string; }' is missing the following properties from type 'AriaToolDeps': lookupProperty, searchProperties, getCrm, timezone, and 12 more.
+tests/ts/calendarProvider.test.ts(138,5): error TS2345: Argument of type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<never[]>; calendarId: string; }' is not assignable to parameter of type 'AriaToolDeps'.
+  Type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<never[]>; calendarId: string; }' is missing the following properties from type 'AriaToolDeps': lookupProperty, searchProperties, getCrm, timezone, and 12 more.
+tests/ts/calendarProvider.test.ts(156,5): error TS2345: Argument of type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<never>; calendarId: string; }' is not assignable to parameter of type 'AriaToolDeps'.
+  Type '{ resolveCaller: () => Promise<{ matched: false; lead: null; events: never[]; channelsSeen: never[]; lastTouchAt: string; needsStitch: false; }>; queryAvailability: () => Promise<never>; calendarId: string; }' is missing the following properties from type 'AriaToolDeps': lookupProperty, searchProperties, getCrm, timezone, and 12 more.
+tests/ts/conversationSummary.test.ts(77,22): error TS2339: Property 'id' does not exist on type '{ fieldValue: string; id: string; } | { fieldValue: string; key: string; }'.
+  Property 'id' does not exist on type '{ fieldValue: string; key: string; }'.
+tests/ts/crossTenantIsolation.test.ts(72,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(81,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(87,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(95,11): error TS2345: Argument of type '{ TWILIO_INBOUND_NUMBERS: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ TWILIO_INBOUND_NUMBERS: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(106,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(120,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(142,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(150,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(159,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(168,11): error TS2345: Argument of type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(209,11): error TS2345: Argument of type '{ AUTH_SECRET: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(216,26): error TS2345: Argument of type '{ AUTH_SECRET: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(219,11): error TS2345: Argument of type '{ AUTH_SECRET: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(225,11): error TS2345: Argument of type '{ AUTH_SECRET: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(236,11): error TS2345: Argument of type '{ AUTH_SECRET: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(247,21): error TS2345: Argument of type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(248,21): error TS2345: Argument of type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(257,26): error TS2345: Argument of type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(262,28): error TS2345: Argument of type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(269,24): error TS2345: Argument of type '{ CLIENT_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(270,24): error TS2345: Argument of type '{ CLIENT_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(285,29): error TS2345: Argument of type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(288,11): error TS2345: Argument of type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(297,26): error TS2345: Argument of type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(299,11): error TS2345: Argument of type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(305,11): error TS2345: Argument of type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ AUTH_SECRET: string; CLIENT_ID: string; TWILIO_FROM: string; TWILIO_AUTH_TOKEN: string; VAPI_ASSISTANT_ID: string; VAPI_PHONE_NUMBER_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/crossTenantIsolation.test.ts(319,30): error TS2345: Argument of type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_ID: string; INNGEST_APP_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/importZillowApifyProperties.test.ts(15,8): error TS7016: Could not find a declaration file for module '../../scripts/import-zillow-apify-properties.mjs'. '/Users/martinofunrein/Downloads/atlas/projects/real-estate-email-agent/scripts/import-zillow-apify-properties.mjs' implicitly has an 'any' type.
+tests/ts/importZillowApifyProperties.test.ts(24,44): error TS7006: Parameter 'slice' implicitly has an 'any' type.
+tests/ts/importZillowApifyProperties.test.ts(25,45): error TS7006: Parameter 'slice' implicitly has an 'any' type.
+tests/ts/importZillowApifyProperties.test.ts(26,36): error TS7006: Parameter 'slice' implicitly has an 'any' type.
+tests/ts/irisEmail.test.ts(583,39): error TS2345: Argument of type '"Closed No Reply"' is not assignable to parameter of type 'never'.
+tests/ts/irisEmail.test.ts(584,39): error TS2345: Argument of type '"NEEDS_HUMAN"' is not assignable to parameter of type 'never'.
+tests/ts/irisEmail.test.ts(1034,92): error TS2353: Object literal may only specify known properties, and 'from' does not exist in type 'Pick<IrisEmailMessage, "body" | "subject">'.
+tests/ts/irisEmail.test.ts(1066,5): error TS2353: Object literal may only specify known properties, and 'from' does not exist in type 'Pick<IrisEmailMessage, "body" | "subject">'.
+tests/ts/irisEmail.test.ts(1074,5): error TS2353: Object literal may only specify known properties, and 'from' does not exist in type 'Pick<IrisEmailMessage, "body" | "subject">'.
+tests/ts/irisEmail.test.ts(1082,96): error TS2353: Object literal may only specify known properties, and 'from' does not exist in type 'Pick<IrisEmailMessage, "body" | "subject">'.
+tests/ts/irisEmail.test.ts(1112,67): error TS2554: Expected 2 arguments, but got 3.
+tests/ts/manychatSocial.test.ts(186,45): error TS2339: Property 'text' does not exist on type 'ManyChatMessage'.
+  Property 'text' does not exist on type '{ type: "image"; url: string; }'.
+tests/ts/manychatSocial.test.ts(240,25): error TS2322: Type '"general_question"' is not assignable to type 'TheoIntent'.
+tests/ts/metaConnect.test.ts(53,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_BUSINESS_LOGIN_CONFIG_ID: string; META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: string; META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: string; META_USE_BUSINESS_LOGIN_CONFIG: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_BUSINESS_LOGIN_CONFIG_ID: string; META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: string; META_MESSENGER_BUSINESS_LOGIN_CONFIG_ID: string; META_USE_BUSINESS_LOGIN_CONFIG: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(81,28): error TS2345: Argument of type '{ META_GRAPH_VERSION: string; META_PAGE_SUBSCRIBED_FIELDS: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_GRAPH_VERSION: string; META_PAGE_SUBSCRIBED_FIELDS: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(112,22): error TS2345: Argument of type '{ META_PAGE_SUBSCRIBED_FIELDS: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_PAGE_SUBSCRIBED_FIELDS: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(120,28): error TS2345: Argument of type '{ META_FACEBOOK_PAGE_ID: string; META_MESSENGER_PAGE_ID: string; META_INSTAGRAM_PAGE_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_FACEBOOK_PAGE_ID: string; META_MESSENGER_PAGE_ID: string; META_INSTAGRAM_PAGE_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(131,28): error TS2345: Argument of type '{ META_FACEBOOK_PAGE_ID: string; META_MESSENGER_PAGE_ID: string; META_INSTAGRAM_PAGE_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_FACEBOOK_PAGE_ID: string; META_MESSENGER_PAGE_ID: string; META_INSTAGRAM_PAGE_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(142,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: string; META_USE_BUSINESS_LOGIN_CONFIG: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_INSTAGRAM_BUSINESS_LOGIN_CONFIG_ID: string; META_USE_BUSINESS_LOGIN_CONFIG: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(159,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_BUSINESS_LOGIN_CONFIG_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; META_BUSINESS_LOGIN_CONFIG_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(178,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; CLIENT_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; CLIENT_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(195,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; CLIENT_ID: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; CLIENT_ID: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(212,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(230,28): error TS2345: Argument of type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ META_APP_ID: string; PUBLIC_BASE_URL: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaConnect.test.ts(246,28): error TS2345: Argument of type '{ PUBLIC_BASE_URL: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ PUBLIC_BASE_URL: string; }' but required in type 'ProcessEnv'.
+tests/ts/metaWhatsapp.test.ts(61,16): error TS2532: Object is possibly 'undefined'.
+tests/ts/usageCaps.test.ts(40,38): error TS2345: Argument of type '{}' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{}' but required in type 'ProcessEnv'.
+tests/ts/usageCaps.test.ts(48,40): error TS2345: Argument of type '{ CLIENT_DAILY_SMS_CAP: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_DAILY_SMS_CAP: string; }' but required in type 'ProcessEnv'.
+tests/ts/usageCaps.test.ts(55,5): error TS2345: Argument of type '{ CLIENT_DAILY_SMS_CAP: string; DATABASE_URL: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_DAILY_SMS_CAP: string; DATABASE_URL: string; }' but required in type 'ProcessEnv'.
+tests/ts/usageCaps.test.ts(64,5): error TS2345: Argument of type '{ CLIENT_DAILY_SMS_CAP: string; DATABASE_URL: string; USAGE_CAP_FAILURE_MODE: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_DAILY_SMS_CAP: string; DATABASE_URL: string; USAGE_CAP_FAILURE_MODE: string; }' but required in type 'ProcessEnv'.
+tests/ts/usageCaps.test.ts(77,5): error TS2345: Argument of type '{ CLIENT_DAILY_AI_COST_USD_CAP: string; CLIENT_DAILY_SMS_CAP: string; CLIENT_DAILY_VOICE_CALL_CAP: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_DAILY_AI_COST_USD_CAP: string; CLIENT_DAILY_SMS_CAP: string; CLIENT_DAILY_VOICE_CALL_CAP: string; }' but required in type 'ProcessEnv'.
+tests/ts/usageCaps.test.ts(84,38): error TS2345: Argument of type '{ CLIENT_DAILY_AI_COST_USD_CAP: string; }' is not assignable to parameter of type 'ProcessEnv'.
+  Property 'NODE_ENV' is missing in type '{ CLIENT_DAILY_AI_COST_USD_CAP: string; }' but required in type 'ProcessEnv'.
+EXIT=2

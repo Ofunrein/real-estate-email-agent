@@ -53,6 +53,10 @@
     "provision:client": "node --import tsx scripts/provision-client.mjs",
     "test": "node --import tsx --test \"tests/ts/**/*.test.ts\"",
     "test:py": "node scripts/run-python-tests.mjs",
+    "test:demo-postgres": "node scripts/test-demo-ownership-postgres.mjs && node scripts/test-shared-intelligence-postgres.mjs",
+    "eval:routing": "node --import tsx scripts/evalModelRouting.ts",
+    "eval:shared-intelligence": "node --import tsx scripts/evalSharedIntelligence.ts",
+    "eval:shared-intelligence:proof": "node --import tsx scripts/evalSharedIntelligence.ts --out docs/proof/shared-intelligence-adversarial.md",
     "sync:instagram-browser-thread": "node scripts/sync-instagram-browser-thread.mjs"
   },
   "dependencies": {
@@ -78,6 +82,8 @@
     "next": "^15.3.4",
     "next-auth": "^5.0.0-beta.31",
     "pg": "^8.21.0",
+    "posthog-js": "^1.428.3",
+    "posthog-node": "^5.51.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.8.1",

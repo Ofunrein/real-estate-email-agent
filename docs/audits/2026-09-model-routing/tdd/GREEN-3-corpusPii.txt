@@ -1,0 +1,28 @@
+TAP version 13
+# Subtest: corpus directory contains all required task-class files at minimum sizes
+ok 1 - corpus directory contains all required task-class files at minimum sizes
+  ---
+  duration_ms: 3.402167
+  type: 'test'
+  ...
+# Subtest: no corpus file contains PII per the frozen regex set
+ok 2 - no corpus file contains PII per the frozen regex set
+  ---
+  duration_ms: 3.584958
+  type: 'test'
+  ...
+# Subtest: every corpus record has a unique, deterministic id and the required fields
+ok 3 - every corpus record has a unique, deterministic id and the required fields
+  ---
+  duration_ms: 1.980458
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 262.197708

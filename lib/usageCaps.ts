@@ -1,8 +1,8 @@
 /**
  * Per-client usage caps.
  *
- * The audit trail already records cost_usd per request (migration 022) but
- * nothing ever read it back, so a runaway loop or an abusive inbound flood
+ * The immutable usage ledger records cost_usd per provider attempt, so a
+ * runaway loop or an abusive inbound flood
  * spent until the provider's own limit stopped it — on the operator's card,
  * with no per-client attribution.
  *
@@ -70,16 +70,16 @@ function failOpenOnUnavailable(): boolean {
   return String(process.env.USAGE_CAP_FAILURE_MODE || "closed").trim().toLowerCase() === "open";
 }
 
-/** Rolling 24h usage for this client, from the audit trail. */
+/** Rolling 24h usage for this client. AI spend comes from the immutable ledger. */
 export async function usageInLastDay(kind: UsageKind, clientId = activeClientId()): Promise<number> {
   if (!databaseEnabled()) return 0;
 
   if (kind === "ai") {
     const result = await getPool().query<{ total: string }>(
       `select coalesce(sum(cost_usd), 0)::text as total
-         from request_audit_events
+         from usage_cost_ledger
         where client_id = $1
-          and created_at > now() - interval '24 hours'`,
+          and occurred_at > now() - interval '24 hours'`,
       [clientId],
     );
     return Number(result.rows[0]?.total || 0);

@@ -48,6 +48,12 @@ jobs:
       - name: TypeScript tests
         run: npm test
 
+      - name: Demo ownership Postgres integration
+        run: npm run test:demo-postgres
+
+      - name: Model routing frozen-threshold eval
+        run: npm run eval:routing -- --offline
+
       - name: Python tests
         run: npm run test:py
 

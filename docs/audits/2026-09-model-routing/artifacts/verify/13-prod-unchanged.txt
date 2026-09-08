@@ -1,0 +1,49 @@
+PROD_MAIN_SHA_BEFORE (recorded step 0) = 3bd232f3e6530fa3ceb2c65aee5deccea31c9aec
+git rev-parse origin/main (now) = 3bd232f3e6530fa3ceb2c65aee5deccea31c9aec
+MATCH: YES
+---diff stat vs origin/main---
+ db/migrations/031_model_attempt_telemetry.sql      |  47 ++
+ .../2026-09-model-routing/00-evidence-ledger.md    | 154 ++++++
+ docs/audits/2026-09-model-routing/01-risks.md      |  16 +
+ docs/audits/2026-09-model-routing/02-decision.md   |  67 +++
+ .../tdd/GREEN-1-modelPricing.txt                   |  58 +++
+ .../tdd/GREEN-2-modelRouting.txt                   |  94 ++++
+ .../tdd/GREEN-3-corpusPii.txt                      |  28 ++
+ .../tdd/GREEN-4-modelAttemptTelemetry.txt          |  40 ++
+ .../tdd/RED-1-modelPricing.txt                     |  44 ++
+ .../tdd/RED-2-modelRouting.txt                     |  44 ++
+ .../tdd/RED-4-modelAttemptTelemetry.txt            |  44 ++
+ evals/model-routing/corpus/SANITIZATION.md         |  19 +
+ evals/model-routing/corpus/adversarial.jsonl       |  40 ++
+ .../corpus/email-classification.jsonl              | 120 +++++
+ evals/model-routing/corpus/email-reply.jsonl       |  60 +++
+ evals/model-routing/corpus/sensitive-routing.jsonl |  80 ++++
+ evals/model-routing/corpus/sms-reply.jsonl         |  40 ++
+ evals/model-routing/corpus/voice-turn.jsonl        |  40 ++
+ .../2026-09-07T21-24-02-099Z/per-case.jsonl        | 520 +++++++++++++++++++++
+ .../results/2026-09-07T21-24-02-099Z/summary.json  |  33 ++
+ .../results/2026-09-07T21-24-02-099Z/summary.md    |  13 +
+ evals/model-routing/rubrics/reply-quality-v1.md    |  23 +
+ evals/model-routing/thresholds.frozen.json         |  22 +
+ lib/clientConfig.ts                                |  11 +
+ lib/irisEmail.ts                                   |  16 +-
+ lib/modelAttemptTelemetry.ts                       | 146 ++++++
+ lib/modelPricing.ts                                | 170 +++++++
+ lib/modelRouting.ts                                | 177 +++++++
+ lib/theoTelemetry.ts                               |  12 +-
+ package.json                                       |   1 +
+ scripts/evalModelRouting.ts                        | 205 ++++++++
+ scripts/generate-model-routing-corpus.mjs          | 232 +++++++++
+ tests/test_channel_webhook_contracts.py            |  11 +-
+ .../clientConfigRoutingProfile.test.ts             |  17 +
+ tests/ts/modelRouting/corpusPii.test.ts            |  60 +++
+ .../inboxDataContractUnchanged.test.ts             |  40 ++
+ tests/ts/modelRouting/labelPlanUnchanged.test.ts   |  35 ++
+ .../ts/modelRouting/modelAttemptTelemetry.test.ts  |  73 +++
+ tests/ts/modelRouting/modelPricing.test.ts         |  85 ++++
+ tests/ts/modelRouting/modelRouting.test.ts         | 164 +++++++
+ 40 files changed, 3084 insertions(+), 17 deletions(-)
+---no .env staged---
+none
+---no migrations applied (031 file exists but was never run against a DB in this session)---
+no vercel/deploy/aria:provision/migrate commands were run in this session

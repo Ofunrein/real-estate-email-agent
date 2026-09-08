@@ -7,6 +7,7 @@ import { recordChannelInteraction, type ChannelIngestInput } from "@/lib/channel
 import { upsertVoiceCallToDatabase, type VoiceCallRecord } from "@/lib/database";
 import { runAriaTool } from "@/lib/ariaTools";
 import { IRIS_AGENT_NAME } from "@/lib/agentIdentity";
+import { redactSensitivePii } from "@/lib/sharedIntelligence";
 import { clientConfig } from "@/lib/clientConfig";
 import { notifyAgent, type NotifyEvent } from "@/lib/notify";
 import {
@@ -137,8 +138,8 @@ export async function handleAriaEndOfCall(
     duration_sec: report.durationSec,
     disposition: report.endedReason,
     ended_reason: report.endedReason,
-    summary: report.summary,
-    transcript: report.transcript,
+    summary: redactSensitivePii(report.summary),
+    transcript: redactSensitivePii(report.transcript),
     recording_url: report.recordingUrl,
   };
 
@@ -152,8 +153,8 @@ export async function handleAriaEndOfCall(
       source: "vapi",
       threadRef,
       eventType: "voice_call_completed",
-      messageText: report.transcript,
-      summary: report.summary || "Voice call completed.",
+      messageText: redactSensitivePii(report.transcript),
+      summary: redactSensitivePii(report.summary) || "Voice call completed.",
       transcriptUrl: "",
       recordingUrl: report.recordingUrl,
       aiAction: "call_completed",
