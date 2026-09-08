@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
+
 import { writeRequestAuditEvent } from "@/lib/requestAudit";
 import type { TheoMetric } from "@/lib/theoTelemetry";
+import { recordUsageAttempt } from "@/lib/usageLedger";
 
 type MetricAuditBase = {
   requestId?: string;
@@ -23,28 +26,48 @@ function metricCostUnits(metric: TheoMetric): Record<string, unknown> {
 }
 
 export async function writeTheoMetricAuditEvents(metrics: TheoMetric[], base: MetricAuditBase): Promise<void> {
+  const correlationId = base.requestId || randomUUID();
   await Promise.allSettled(
-    metrics
-      .filter((metric) => Number(metric.costUsd || 0) > 0)
-      .map((metric) => writeRequestAuditEvent({
-        requestId: base.requestId,
-        route: base.route,
-        method: base.method || "LLM",
+    metrics.flatMap((metric, index) => {
+      const units = metricCostUnits(metric);
+      const audit = Number(metric.costUsd || 0) > 0
+        ? writeRequestAuditEvent({
+            requestId: correlationId,
+            route: base.route,
+            method: base.method || "LLM",
+            channel: base.channel,
+            provider: base.provider || metric.service,
+            threadRef: base.threadRef || "",
+            contactRef: base.contactRef || "",
+            providerMessageId: base.providerMessageId || "",
+            stage: metric.label || "agent_metric",
+            outcome: metric.status === "ok" ? "sent" : "failed",
+            durationMs: metric.elapsedMs,
+            errorCode: metric.status === "ok" ? "" : metric.status,
+            costUsd: metric.costUsd || 0,
+            costService: metric.service || "unknown",
+            costUnits: units,
+            metadata: { detail: metric.detail || "" },
+          })
+        : Promise.resolve();
+      const ledger = recordUsageAttempt({
+        correlationId,
+        attemptId: `${correlationId}:${index}:${metric.label || "agent_metric"}:${metric.service || "unknown"}`,
+        requestId: correlationId,
+        agent: "theo",
         channel: base.channel,
+        operation: metric.label || "agent_metric",
         provider: base.provider || metric.service,
-        threadRef: base.threadRef || "",
-        contactRef: base.contactRef || "",
-        providerMessageId: base.providerMessageId || "",
-        stage: metric.label || "agent_metric",
-        outcome: metric.status === "ok" ? "sent" : "failed",
-        durationMs: metric.elapsedMs,
-        errorCode: metric.status === "ok" ? "" : metric.status,
+        model: String(units.model || ""),
+        status: metric.status === "ok" ? "succeeded" : "failed",
+        latencyMs: metric.elapsedMs,
+        inputUnits: Number(units.input_tokens || 0),
+        outputUnits: Number(units.output_tokens || 0),
+        billableQuantity: Number(units.input_tokens || 0) + Number(units.output_tokens || 0),
+        billableUnit: "tokens",
         costUsd: metric.costUsd || 0,
-        costService: metric.service || "unknown",
-        costUnits: metricCostUnits(metric),
-        metadata: {
-          detail: metric.detail || "",
-        },
-      })),
+      });
+      return [audit, ledger];
+    }),
   );
 }

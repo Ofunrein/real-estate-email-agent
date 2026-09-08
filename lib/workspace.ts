@@ -1,4 +1,10 @@
-export type Workspace = { id: string; name: string };
+export type WorkspaceRole = "tenant_user" | "platform_admin";
+export type Workspace = { id: string; name: string; role?: WorkspaceRole };
+export type WorkspaceViewer = {
+  workspaceId: string;
+  workspaceName: string;
+  role: WorkspaceRole;
+};
 
 type WorkspaceMap = Record<string, Workspace>;
 
@@ -12,7 +18,21 @@ export function workspaceForEmail(email: string | null | undefined, map: Workspa
   const key = clean(email).toLowerCase();
   const workspace = map[key];
   if (!workspace?.id || !workspace.name) return null;
-  return { id: workspace.id, name: workspace.name };
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    ...(workspace.role ? { role: workspace.role } : {}),
+  };
+}
+
+export function viewerForEmail(email: string | null | undefined, map: WorkspaceMap): WorkspaceViewer | null {
+  const workspace = workspaceForEmail(email, map);
+  if (!workspace) return null;
+  return {
+    workspaceId: workspace.id,
+    workspaceName: workspace.name,
+    role: workspace.role || "tenant_user",
+  };
 }
 
 export function parseWorkspaceMap(configured: string): WorkspaceMap {
@@ -29,6 +49,10 @@ export function parseWorkspaceMap(configured: string): WorkspaceMap {
       const workspace = workspaceForEmail(email, { [email]: rawWorkspace as Workspace });
       if (!email.includes("@") || !workspace || !WORKSPACE_ID.test(workspace.id)) {
         throw new Error(`Invalid workspace configuration for ${email || "unknown email"}`);
+      }
+      const rawRole = clean((rawWorkspace as Workspace)?.role);
+      if (rawRole && rawRole !== "tenant_user" && rawRole !== "platform_admin") {
+        throw new Error(`Invalid workspace role for ${email}`);
       }
       if (result[email]) throw new Error(`Duplicate workspace email: ${email}`);
       if (workspaceIds.has(workspace.id)) throw new Error(`Duplicate workspace id: ${workspace.id}`);
@@ -56,6 +80,10 @@ export function configuredWorkspaces(): WorkspaceMap {
 
 export function workspaceForConfiguredEmail(email: string | null | undefined): Workspace | null {
   return workspaceForEmail(email, configuredWorkspaces());
+}
+
+export function viewerForConfiguredEmail(email: string | null | undefined): WorkspaceViewer | null {
+  return viewerForEmail(email, configuredWorkspaces());
 }
 
 export function mayUseSharedEnvironmentConnections(

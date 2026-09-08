@@ -11,6 +11,7 @@ import {
   Database,
   FileText,
   Globe2,
+  Gauge,
   Inbox,
   Image as ImageIcon,
   LogOut,
@@ -28,6 +29,8 @@ import {
   X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { resetProductViewer, captureProductEvent } from "@/components/analytics/ProductAnalyticsProvider";
+import { CommandCenterView } from "@/components/command-center/CommandCenterView";
 import { useInboxModel } from "@/components/inbox-mui/InboxDataContext";
 import { useReplayKey } from "@/components/inbox-mui/hooks/useReplayKey";
 import { MailboxOrganizationCard } from "@/components/iris-dashboard/MailboxOrganizationCard";
@@ -68,7 +71,7 @@ type UnifiedThread = {
   subject?: string;
   voiceCalls?: Call[];
 };
-type DashboardViewId = ChannelId | "overview" | "settings";
+type DashboardViewId = ChannelId | "overview" | "command-center" | "settings";
 type VoiceProvider = "deepgram" | "cartesia";
 type VoiceAttachment = { url: string; filename: string; transcript?: string; kind?: "voice-note" | "file" };
 type VoicePreset = { id: string; label: string; provider: VoiceProvider; gender: string; style: string; cloned?: boolean };
@@ -232,6 +235,7 @@ export function IrisDashboard() {
 
   const navItems = [
     { id: "overview" as DashboardViewId, label: "Overview", icon: ActivityGlyph, count: model.metrics.events, accent: "var(--iris-accent)" },
+    { id: "command-center" as DashboardViewId, label: "Command center", icon: Gauge, count: 0, accent: "var(--iris-success)" },
     { id: "all" as DashboardViewId, label: "Inbox", icon: Inbox, count: threads.length, accent: "var(--iris-accent)" },
     ...MESSAGE_CHANNELS.map((id) => ({ id: id as DashboardViewId, label: CHANNEL_LABEL[id], icon: CHANNEL_ICON[id], count: threads.filter((thread) => thread.channel === id).length, accent: CHANNEL_ACCENT[id] })),
     { id: "calendar" as DashboardViewId, label: "Appointments", icon: CalendarDays, count: model.metrics.appointments, accent: "var(--iris-success)" },
@@ -271,6 +275,7 @@ export function IrisDashboard() {
 
   const renderMain = () => {
     if (activeNav === "overview") return <OverviewPanel model={model} spark={spark} maxSpark={maxSpark} hoverBucket={hoverBucket} hoverValue={hoverValue} hoverEvents={hoverEvents} setHoverBucket={setHoverBucket} metricCards={metricCards} onOpenEvent={openEventThread} />;
+    if (activeNav === "command-center") return <CommandCenterView />;
     if (activeNav === "properties") return <PropertiesPanel properties={model.properties} propertyHealth={model.propertyHealth} />;
     if (activeNav === "calendar") return <AppointmentsPanel events={model.activityEvents} metrics={model.metrics} />;
     if (activeNav === "contacts") return <ContactsPanel threads={threads} />;
@@ -305,17 +310,17 @@ export function IrisDashboard() {
         <label className="iris-top-search"><Search size={15} /><input value={query} onFocus={() => { if (query.trim()) setActiveNav("all"); }} onChange={(event) => updateGlobalSearch(event.target.value)} placeholder="Search people, messages, HTML, media..." /></label>
         <button className="iris-round" onClick={toggle} aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>{mode === "dark" ? <Moon size={18} /> : <Sun size={18} />}</button>
         <button className="iris-round" onClick={() => setActiveNav("settings")} aria-label="Settings"><Settings size={17} /></button>
-        <button className="iris-round" onClick={() => signOut({ callbackUrl: "/login" })} aria-label="Log out"><LogOut size={17} /></button>
+        <button className="iris-round" onClick={() => { resetProductViewer(); void signOut({ callbackUrl: "/login" }); }} aria-label="Log out"><LogOut size={17} /></button>
         <button className="iris-user-chip" onClick={() => setActiveNav("settings")}><span>MO</span><b>Martin</b></button>
       </header>
       <div className={`iris-dashboard-grid ${showActivityRail ? "" : "no-activity-rail"}`}>
         <aside className={`iris-side-col ${mobileNavOpen ? "is-open" : ""}`}>
           <div className="iris-brand-lockup"><img src="/iris-design/iris-mark.png" alt="Iris" /><div><strong>Iris</strong><span>Austin Realty</span></div><button className="iris-round hide-desktop" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><X size={16} /></button></div>
-          <nav className="iris-nav-list">{navItems.map((item) => { const Icon = item.icon; return <button key={item.id} className={activeNav === item.id ? "is-active" : ""} onClick={() => { setActiveNav(item.id); setMobileNavOpen(false); }}><span style={{ color: item.accent }}><Icon size={16} /></span><b>{item.label}</b>{Boolean(item.count) && <em>{compactMetric(item.count)}</em>}</button>; })}</nav>
+          <nav className="iris-nav-list">{navItems.map((item) => { const Icon = item.icon; return <button key={item.id} className={activeNav === item.id ? "is-active" : ""} onClick={() => { setActiveNav(item.id); setMobileNavOpen(false); captureProductEvent("dashboard_navigation_selected", { section: item.id }); }}><span style={{ color: item.accent }}><Icon size={16} /></span><b>{item.label}</b>{Boolean(item.count) && <em>{compactMetric(item.count)}</em>}</button>; })}</nav>
           <div className="iris-agent-card"><img src="/iris-design/iris-avatar.png" alt="Iris avatar" /><div><strong>Iris</strong><span>Active across {MESSAGE_CHANNELS.length} channels</span></div></div>
         </aside>
         <button className={`iris-scrim ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />
-        <main className={`iris-main ${["overview", "properties", "calendar", "contacts", "imports", "ops", "settings"].includes(activeNav) ? "is-wide" : ""}`}>{renderMain()}</main>
+        <main className={`iris-main ${["overview", "command-center", "properties", "calendar", "contacts", "imports", "ops", "settings"].includes(activeNav) ? "is-wide" : ""}`}>{renderMain()}</main>
         {showActivityRail && <ActivityRail metricCards={sideMetrics} spark={spark} maxSpark={maxSpark} hoverBucket={hoverBucket} hoverValue={hoverValue} hoverEvents={hoverEvents} events={model.activityEvents} setHoverBucket={setHoverBucket} onOpenEvent={openEventThread} />}
       </div>
     </div>

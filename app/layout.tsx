@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import { ProductAnalyticsProvider } from "@/components/analytics/ProductAnalyticsProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agent Inbox",
-  description: "Read-only monitor for Lumenosis real estate agent conversations.",
+  title: "Lumenosis Command Center",
+  description: "Tenant-scoped agent operations, usage, and inbox dashboard.",
 };
 
 export default function RootLayout({
@@ -30,7 +31,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <ProductAnalyticsProvider>{children}</ProductAnalyticsProvider>
         <Analytics />
         <SpeedInsights />
       </body>

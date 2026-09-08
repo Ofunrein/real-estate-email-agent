@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { adaptInboxData } from "@/lib/inboxDataAdapter";
 import type { AgentInboxData } from "@/lib/inboxData";
 import { IrisDashboard } from "@/components/iris-dashboard/IrisDashboard";
+import { identifyProductViewer } from "@/components/analytics/ProductAnalyticsProvider";
 import { ColorModeProvider } from "./theme/ColorModeContext";
 import { CategoryColorProvider } from "./theme/CategoryColorContext";
 import { InboxDataProvider } from "./InboxDataContext";
@@ -12,12 +13,15 @@ const DASHBOARD_REFRESH_MS = 5000;
 
 interface InboxAppProps {
   data: AgentInboxData;
-  teamName?: string;
-  userEmail?: string;
+  analyticsIdentity?: {
+    distinctId: string;
+    tenantId: string;
+    viewerRole: string;
+  };
   loadError?: string;
 }
 
-export function InboxApp({ data }: InboxAppProps) {
+export function InboxApp({ data, analyticsIdentity }: InboxAppProps) {
   const [inboxData, setInboxData] = useState<AgentInboxData>(data);
   const refreshData = useCallback(async () => {
     const res = await fetch("/api/data", { cache: "no-store" });
@@ -46,6 +50,10 @@ export function InboxApp({ data }: InboxAppProps) {
       document.removeEventListener("visibilitychange", refresh);
     };
   }, [refreshData]);
+
+  useEffect(() => {
+    if (analyticsIdentity) identifyProductViewer(analyticsIdentity);
+  }, [analyticsIdentity]);
 
   const model = useMemo(() => adaptInboxData(inboxData), [inboxData]);
 
