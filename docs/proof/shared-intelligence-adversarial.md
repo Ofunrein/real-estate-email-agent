@@ -1,6 +1,6 @@
 # Shared intelligence adversarial evaluation
 
-Generated: 2026-09-08T10:22:07.507Z
+Generated: 2026-09-08T10:39:53.139Z
 
 Execution: `npm run eval:shared-intelligence:proof`
 
