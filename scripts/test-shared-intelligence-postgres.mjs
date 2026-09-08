@@ -30,7 +30,7 @@ async function main() {
   await writeFile(pw, "local-test-password", { mode: 0o600 });
   const listenPort = await port();
   execFileSync(bin("initdb"), ["-D", data, "--username=postgres", "--auth-local=trust", "--auth-host=trust", `--pwfile=${pw}`, "--no-locale"], { stdio: "ignore" });
-  const server = spawn(bin("postgres"), ["-D", data, "-h", "127.0.0.1", "-p", String(listenPort)], { stdio: "ignore" });
+  const server = spawn(bin("postgres"), ["-D", data, "-h", "127.0.0.1", "-k", temp, "-p", String(listenPort)], { stdio: "ignore" });
   let client;
   try {
     for (let attempt = 0; attempt < 60; attempt += 1) {
