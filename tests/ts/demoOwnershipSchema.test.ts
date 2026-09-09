@@ -270,13 +270,26 @@ test("lookup cannot enumerate rooms or expose tokens, mailboxes, or drafts", () 
 });
 
 test("neither role may create objects or become privileged from the migration", () => {
-  assert.match(roles, /create role demo_public_reader nologin;/i);
-  assert.match(roles, /create role demo_engagement_writer nologin;/i);
+  // Roles are created behind an existence guard so re-running the migration is safe.
+  assert.match(roles, /create role demo_public_reader nologin noinherit;/i);
+  assert.match(roles, /create role demo_engagement_writer nologin noinherit;/i);
   assert.match(
     roles,
     /revoke all privileges on schema public\s+from demo_public_reader, demo_engagement_writer;/i,
   );
-  assert.match(roles, /nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls/i);
+  // NOINHERIT is the one boundary attribute a CREATEROLE owner can assert, so it is
+  // reasserted on every run. The elevated attributes are NOT named in CREATE/ALTER ROLE:
+  // naming them requires true superuser, which a managed Postgres owner (Neon's
+  // neon_superuser) does not have. They default off and are verified below instead.
+  assert.match(roles, /alter role demo_public_reader noinherit;/i);
+  assert.match(roles, /alter role demo_engagement_writer noinherit;/i);
+  assert.doesNotMatch(roles, /(create|alter) role \w+[^;]*\bnosuperuser\b/i);
+  // The migration fails loudly if either role ever holds an elevated attribute.
+  assert.match(
+    roles,
+    /where rolname in \('demo_public_reader', 'demo_engagement_writer'\)\s+and \(rolsuper or rolcreatedb or rolcreaterole or rolreplication or rolbypassrls\)/i,
+  );
+  assert.match(roles, /raise exception 'demo site role holds an elevated attribute: %'/i);
 });
 
 test("future tables and sequences default to no access for either role", () => {
