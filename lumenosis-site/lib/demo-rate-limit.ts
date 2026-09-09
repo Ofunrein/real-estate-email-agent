@@ -2,7 +2,10 @@ type Hit = { count: number; resetsAt: number };
 
 const hits = new Map<string, Hit>();
 
-// ponytail: per-instance limiter; replace with shared KV before sending more than one bounded prospect demo.
+// Per-instance burst guard only. On Vercel each serverless instance holds its own Map, so this
+// cannot enforce a spend cap across instances -- durable caps live in Postgres
+// (demo_public_api.reserve_email_generation / reserve_voice_session). Keep this for cheap
+// per-IP throttling; do not add money-bounded limits here.
 export function allowRequest(key: string, limit: number, windowMs: number) {
   const now = Date.now();
   const current = hits.get(key);
