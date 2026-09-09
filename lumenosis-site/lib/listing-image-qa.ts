@@ -60,7 +60,10 @@ export async function verifyListingImages(
               type: "text",
               text: `Exact listing: ${address}\nPrimary source: ${listingUrl}\nCheck every image. Matching means the source context identifies it as this exact address, not merely that it looks like a house.`,
             },
-            ...imageUrls.map((url) => ({ type: "image_url", image_url: { url } })),
+            ...imageUrls.flatMap((url) => [
+              { type: "text", text: `Assess this exact image URL: ${url}` },
+              { type: "image_url", image_url: { url } },
+            ]),
           ],
         },
       ],
