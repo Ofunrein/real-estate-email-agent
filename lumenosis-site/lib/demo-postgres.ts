@@ -81,9 +81,9 @@ export async function reservePostgresDemoGeneration(token: string, query: DemoQu
 }
 
 export async function reservePostgresVoiceSession(token: string, query: DemoQuery = writeQuery) {
-  const result = await query<{ accepted: boolean }>(
-    "select demo_public_api.reserve_voice_session($1) as accepted",
+  const result = await query<{ remaining: number }>(
+    "select demo_public_api.reserve_voice_session_v2($1) as remaining",
     [tokenHash(token)],
   );
-  return result.rows[0]?.accepted === true;
+  return result.rows[0]?.remaining ?? -1;
 }

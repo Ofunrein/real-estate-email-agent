@@ -8,7 +8,7 @@ async function source(path: string) {
 }
 
 async function migration() {
-  return readFile(`${root}/../db/migrations/035_demo_voice_session_cap.sql`, "utf8");
+  return readFile(`${root}/../db/migrations/036_demo_voice_session_limit.sql`, "utf8");
 }
 
 // The bug this guards: the voice route's only cap was an in-process Map, so on Vercel the
@@ -29,12 +29,14 @@ test("voice route reserves a durable session before handing out Vapi credentials
 
   // A database failure must not degrade into unlimited paid minutes.
   expect(route).toMatch(/catch[\s\S]{0,200}status:\s*503/);
-  expect(route).toMatch(/reserved[\s\S]{0,200}status:\s*429/);
+  expect(route).toMatch(/remaining\s*<\s*0[\s\S]{0,200}status:\s*429/);
+  expect(route).toContain("callLimit: admin ? null : 10");
+  expect(route).toContain("if (!admin && !allowRequest(key, 10");
 });
 
 test("voice reservation goes through the least-privilege function, never a raw table write", async () => {
   const postgres = await source("lib/demo-postgres.ts");
-  expect(postgres).toContain("select demo_public_api.reserve_voice_session($1) as accepted");
+  expect(postgres).toContain("select demo_public_api.reserve_voice_session_v2($1) as remaining");
   expect(postgres).toContain("tokenHash(token)");
   // Same boundary the email cap already respects: no direct table access from the site.
   expect(postgres).not.toMatch(/\binsert\s+into\s+demo_engagement_events\b/i);
@@ -48,7 +50,7 @@ test("in-memory limiter is not documented as a spend cap", async () => {
   expect(limiter).not.toContain("replace with shared KV");
 });
 
-test("migration 035 enforces the cap atomically and stays least-privilege", async () => {
+test("migration 036 enforces the 10-call cap atomically and returns remaining calls", async () => {
   const sql = await migration();
 
   // security definer + a lock is what makes the count-then-insert race-free.
@@ -61,12 +63,12 @@ test("migration 035 enforces the cap atomically and stays least-privilege", asyn
   expect(sql).toMatch(/status\s*=\s*'approved'/);
 
   // Both ceilings present: per-room and client-wide.
-  expect(sql).toMatch(/>=\s*3\s+then\s+return\s+false/i);
-  expect(sql).toMatch(/>=\s*40\s+then\s+return\s+false/i);
+  expect(sql).toMatch(/>=\s*10\s+then\s+return\s+-1/i);
+  expect(sql).toContain("return 9 - v_used");
   expect(sql).toContain("voice_session_started");
 
   // Grants: revoked from the world, executable only by the writer role.
-  expect(sql).toMatch(/revoke\s+all\s+on\s+function\s+demo_public_api\.reserve_voice_session/i);
+  expect(sql).toMatch(/revoke\s+all\s+on\s+function\s+demo_public_api\.reserve_voice_session_v2/i);
   expect(sql).toMatch(/to\s+demo_engagement_writer/i);
   expect(sql).not.toMatch(/grant[\s\S]{0,80}\bto\s+public\b/i);
 

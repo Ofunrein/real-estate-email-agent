@@ -12,6 +12,8 @@ type VoiceConfig = {
   publicKey: string;
   assistantId: string;
   assistantOverrides: Parameters<Vapi["start"]>[1];
+  callLimit: number | null;
+  remainingCalls: number | null;
 };
 
 function money(value: number) {
@@ -495,7 +497,7 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                   <span className="min-w-0">
                     <strong className="block text-lg">Start private voice demo</strong>
                     <span className="mt-1 block text-sm text-black/70">
-                      Browser microphone · 3-minute limit
+                      Browser microphone · 3-minute call
                     </span>
                   </span>
                 </button>
@@ -522,6 +524,11 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
               ) : null}
               <p className="mt-4 text-xs leading-5 text-white/55">
                 No phone number. Recording disabled. No live calendar or CRM access.
+                {voiceConfig?.callLimit === null
+                  ? " Admin testing has no call limit."
+                  : voiceConfig?.remainingCalls != null
+                    ? ` ${voiceConfig.remainingCalls} of ${voiceConfig.callLimit} calls remain on this link today.`
+                    : " This link allows 10 calls per 24 hours."}
               </p>
               {voiceError ? (
                 <p role="alert" className="mt-4 text-sm text-red-300">
