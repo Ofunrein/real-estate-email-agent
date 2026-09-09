@@ -1,5 +1,6 @@
 export const listingImageHosts = [
   "ap.rdcpix.com",
+  "property-images.realgeeks.com",
   "images-listings.coldwellbanker.com",
   "photos.zillowstatic.com",
   "maps.googleapis.com",

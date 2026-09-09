@@ -3,6 +3,7 @@ import { isAllowedListingImage } from "../lib/listing-image-hosts";
 
 test("listing image hosts cover the CDNs demo listings actually use", () => {
   const live = [
+    "https://property-images.realgeeks.com/corecolorado/5a136536b8f52ab8c4b903fc92a46ec3.jpg",
     "https://photos.zillowstatic.com/fp/abc-cc_ft_960.jpg",
     "https://ssl.cdn-redfin.com/photo/86/mbpaddedwide/337/genMid.7020337_2.jpg",
     "https://cdn.photos.sparkplatform.com/az/20260527054156559341000000-o.jpg",
