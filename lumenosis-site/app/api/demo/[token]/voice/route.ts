@@ -4,6 +4,8 @@ import { allowRequest, clientAddress } from "@/lib/demo-rate-limit";
 import { demoPostgresEnabled, reservePostgresVoiceSession } from "@/lib/demo-postgres";
 import { demoRoomForToken } from "@/lib/demo-room";
 import { demoVoiceOverrides } from "@/lib/demo-voice";
+import { reserveTursoVoiceSession } from "@/lib/demo-voice-budget";
+import { sql } from "@/lib/turso";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +23,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
     return NextResponse.json({ error: "Voice demo limit reached" }, { status: 429 });
   }
 
-  // The real cap. Handing out publicKey + assistantId is what lets a browser start a paid Vapi
-  // call, so the reservation belongs here rather than on a later event the client may never send.
-  // In-memory counting was per-serverless-instance and therefore bypassable; this is one row in
-  // Postgres behind an advisory lock. Admins previewing a demo do not burn a prospect's budget.
+  // Persist reservations in the selected database, never just in serverless memory.
+  // Admin previews do not burn the prospect's budget.
   let remainingCalls: number | null = null;
-  if (!admin && demoPostgresEnabled()) {
+  if (!admin) {
     let remaining = -1;
     try {
-      remaining = await reservePostgresVoiceSession(token);
+      remaining = demoPostgresEnabled()
+        ? await reservePostgresVoiceSession(token)
+        : await reserveTursoVoiceSession(match.id, sql);
     } catch {
       // Fail closed. A database blip must not silently become unlimited paid voice minutes.
       return NextResponse.json({ error: "Voice demo is unavailable" }, { status: 503 });

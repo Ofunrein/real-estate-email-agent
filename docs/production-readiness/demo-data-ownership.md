@@ -1,6 +1,27 @@
-# Demo data ownership production-readiness gate
+# Demo data ownership
 
-Status: code-ready; no production migration or cutover has been performed.
+## Current production recovery
+
+The public-site Postgres cutover was premature: `/api/admin/demos/generate` and the
+site approval service still write Turso. New approved rooms therefore returned 404
+through the Postgres reader. Production is restored to `DEMO_DATA_SOURCE=turso`;
+the primary app continues using the signed platform API. Do not set the site flag
+to `postgres` until generation, authenticated draft preview, approval, and send all
+use the same owner and pass an end-to-end test with a newly generated room.
+
+Before rollback, run `node scripts/reconcile-demo-rollback.mjs` with the existing
+Turso and Postgres credentials. It aborts on missing/divergent shared records.
+Then run with `--apply` to preserve Postgres-native engagement in Turso, keyed by
+Postgres event ID so retries cannot duplicate activity. Rerun after the deployment
+drains. It does not delete Postgres data, rotate tokens, approve, or send anything.
+Turso voice authorization now persists an atomic reservation in `engagement_events`,
+retaining the ten-call rolling daily limit and one-hundred-call global limit.
+
+The Postgres architecture below remains the migration target, not a claim that
+the generator has already moved.
+## Original migration production-readiness gate
+
+Original pre-cutover status: code-ready; no production migration or cutover had been performed.
 
 This checklist separates repository-complete controls from release actions that require an
 operator. `scripts/release-demo-ownership.mjs` never deploys, changes application flags,
