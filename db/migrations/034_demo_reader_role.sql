@@ -131,24 +131,45 @@ begin
 end
 $$;
 
+-- Roles are created without any elevated attribute. A freshly created PostgreSQL role is
+-- already NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION and NOBYPASSRLS by
+-- default, so those attributes are never named explicitly: naming them in CREATE/ALTER
+-- ROLE requires actual superuser, which a managed Postgres owner role (Neon's
+-- neon_superuser, RDS's rds_superuser) does not have. NOINHERIT is set at creation and
+-- reasserted below, because it is the one attribute that must differ from the default and
+-- it is settable by a CREATEROLE owner.
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'demo_public_reader') then
-    create role demo_public_reader nologin;
+    create role demo_public_reader nologin noinherit;
   end if;
   if not exists (select 1 from pg_roles where rolname = 'demo_engagement_writer') then
-    create role demo_engagement_writer nologin;
+    create role demo_engagement_writer nologin noinherit;
   end if;
 end
 $$;
 
--- Re-applying the migration reasserts the whole boundary, including attributes and any
--- accidental grants added later. NOINHERIT prevents either role from gaining privileges
--- through role membership.
-alter role demo_public_reader
-  nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls;
-alter role demo_engagement_writer
-  nosuperuser nocreatedb nocreaterole noinherit noreplication nobypassrls;
+-- Re-applying the migration reasserts the boundary attributes this owner is allowed to
+-- assert, plus every grant below. NOINHERIT prevents either role from gaining privileges
+-- through role membership. The remaining restrictions are verified rather than issued:
+-- the release gate reads pg_roles and fails if any elevated attribute ever appears.
+alter role demo_public_reader noinherit;
+alter role demo_engagement_writer noinherit;
+
+do $$
+declare
+  v_elevated text;
+begin
+  select string_agg(rolname, ',' order by rolname) into v_elevated
+    from pg_roles
+   where rolname in ('demo_public_reader', 'demo_engagement_writer')
+     and (rolsuper or rolcreatedb or rolcreaterole or rolreplication or rolbypassrls);
+  if v_elevated is not null then
+    raise exception 'demo site role holds an elevated attribute: %', v_elevated
+      using errcode = '42501';
+  end if;
+end
+$$;
 
 revoke all privileges on all tables in schema public
   from demo_public_reader, demo_engagement_writer;

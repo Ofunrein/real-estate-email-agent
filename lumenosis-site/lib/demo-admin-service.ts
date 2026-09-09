@@ -111,10 +111,16 @@ export type SendResult =
   | { ok: false; reason: "not_found" | "not_configured" | "provider_failed" };
 
 /**
- * Idempotent send. The draft lookup requires status = 'draft', so a replayed
+ * Idempotent send. The draft lookup requires a pre-send status, so a replayed
  * request finds nothing to send; if the draft is already 'sent' we return ok
  * with alreadySent instead of double-sending or reporting a failure.
+ *
+ * Two pre-send statuses exist in the corpus: 'draft' (what the current code writes)
+ * and 'scheduled' (older rows). Both are sendable and neither is terminal — see
+ * db/migrations/037_demo_outreach_scheduled_status.sql.
  */
+export const SENDABLE_OUTREACH_STATUSES = ["draft", "scheduled"] as const;
+
 export async function sendDemoOutreach(
   id: string,
   exec: SqlExecutor,
@@ -122,7 +128,7 @@ export async function sendDemoOutreach(
 ): Promise<SendResult> {
   const rows = await exec(
     `SELECT o.id, o.sender_inbox, o.recipient, o.subject, o.body FROM outreach_drafts o
-    JOIN demo_rooms d ON d.id = o.demo_room_id WHERE o.demo_room_id = ? AND o.status = 'draft' AND d.status = 'approved' LIMIT 1`,
+    JOIN demo_rooms d ON d.id = o.demo_room_id WHERE o.demo_room_id = ? AND o.status IN ('draft', 'scheduled') AND d.status = 'approved' LIMIT 1`,
     [id],
   );
   const draft = rows[0];
