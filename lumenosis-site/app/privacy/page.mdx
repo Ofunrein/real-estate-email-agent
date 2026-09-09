@@ -1,0 +1,66 @@
+import { AuroraBackground } from "@/components/aurora-background";
+import { Footer } from "@/components/sections/footer";
+import { Topbar } from "@/components/sections/topbar";
+
+export const metadata = { title: "Privacy — Lumenosis AI" };
+
+<AuroraBackground />
+<Topbar />
+
+<main className="pt-20">
+<div className="mx-auto w-[min(820px,calc(100vw_-_32px))] py-20">
+
+<div className="mb-8 flex items-center gap-4">
+  <a
+    href="/"
+    className="inline-flex shrink-0 items-center rounded-full border border-[var(--color-line)] px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink-charcoal)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-purple)] focus-visible:ring-offset-2"
+  >
+    Back
+  </a>
+  <h1 className="m-0 font-[family-name:var(--font-display)] text-[length:var(--text-display-section)] font-semibold leading-[1.05] text-[var(--color-ink-charcoal)]">
+    Privacy
+  </h1>
+</div>
+
+_Last updated: 2026-05-25_
+
+Lumenosis AI ("we", "our") provides AI agent services to real estate and property operators.
+This policy describes what we collect, why, and how we keep it secure.
+
+## What we collect
+
+- Contact information you submit through forms or calls (name, email, phone, company).
+- Voice recordings of calls answered by our AI agents on your behalf, where two-party
+  consent permits.
+- Email and SMS content sent through your inbound channels for the purpose of replying.
+- CRM records you authorize us to read or write.
+
+## Why we collect it
+
+To deliver the service you hired us for: answer your calls, qualify inquiries, route
+handoffs, and log everything in your CRM. We do not sell your data. We do not use
+your data to train any third-party model.
+
+## How long we keep it
+
+For the duration of your contract plus thirty days. After that, we purge.
+
+## Your rights
+
+You can request a copy of your data, request deletion, or revoke consent at any time
+by emailing privacy@lumenosis.com.
+
+## Subprocessors
+
+We use Twilio (telephony), OpenAI / Anthropic (model inference), Vercel (hosting),
+GoHighLevel (CRM), and Fillout (forms). Each subprocessor signs a data processing
+agreement covering the standards we hold ourselves to.
+
+## Contact
+
+privacy@lumenosis.com
+
+</div>
+
+</main>
+<Footer />

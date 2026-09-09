@@ -1,0 +1,224 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Surface */
+  --color-bg: #f5f4ee;
+  --color-bg-cream: #f5f4ee;
+  --color-bg-dark: #070708;
+  --color-ink: #0e0e0f;
+  --color-ink-charcoal: #0e0e0f;
+  --color-ink-muted: rgba(14, 14, 15, 0.82);
+  --color-muted: rgba(14, 14, 15, 0.82);
+  --color-line: rgba(14, 14, 15, 0.1);
+  --color-brand-amber: #c49a52;
+  --color-brand-amber-soft: rgba(196, 154, 82, 0.12);
+  /* keep legacy aliases so existing components don't break */
+  --color-brand-violet: #c49a52;
+  --color-brand-violet-soft: rgba(196, 154, 82, 0.12);
+  --color-brand-purple: #c49a52;
+  --color-brand-purple-soft: rgba(196, 154, 82, 0.12);
+  --color-gold-italic: #c49a52;
+  --color-dark-section: #0c0c0d;
+  --color-brand-charcoal: #0e0e0f;
+  --color-primary-indigo: #c49a52;
+
+  /* Typography */
+  --font-display: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), "DM Mono", ui-monospace, monospace;
+
+  /* Type scale */
+  --text-display-hero: clamp(2.8rem, 6.5vw, 5.5rem);
+  --text-display-section: clamp(2rem, 4vw, 3.25rem);
+  --text-body-lg: 1.125rem;
+  --text-body: 1rem;
+  --text-eyebrow: 0.6875rem;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.06);
+  --shadow-glow-amber: 0 0 40px rgba(196, 154, 82, 0.25);
+  --shadow-glow-violet: 0 0 40px rgba(196, 154, 82, 0.25);
+
+  /* Radius */
+  --radius: 0.5rem;
+  --radius-pill: 999px;
+}
+
+/* ---------- BASE ---------- */
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:where(body, section, nav, header, footer, a, button, svg, path, circle) {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 0.5s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.72s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  animation-name: theme-fade-out;
+}
+
+::view-transition-new(root) {
+  animation-name: theme-fade-in;
+}
+
+html[data-theme-transition="dark"]::view-transition-new(root) {
+  animation-name: theme-fade-in-dark;
+}
+
+html[data-theme-transition="light"]::view-transition-new(root) {
+  animation-name: theme-fade-in-light;
+}
+
+@keyframes theme-fade-out {
+  from {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+  }
+  to {
+    opacity: 0;
+    filter: brightness(0.96) blur(10px);
+  }
+}
+
+@keyframes theme-fade-in {
+  from {
+    opacity: 0;
+    filter: brightness(1.04) blur(12px);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+  }
+}
+
+@keyframes theme-fade-in-dark {
+  from {
+    opacity: 0;
+    filter: brightness(1.18) saturate(1.04) blur(14px);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1) saturate(1) blur(0);
+  }
+}
+
+@keyframes theme-fade-in-light {
+  from {
+    opacity: 0;
+    filter: brightness(0.92) saturate(1.02) blur(14px);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1) saturate(1) blur(0);
+  }
+}
+
+.headline-plain {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.dark {
+  --color-bg: #070708;
+  --color-bg-cream: #070708;
+  --color-ink: #f0eeeb;
+  --color-ink-charcoal: #f0eeeb;
+  --color-ink-muted: rgba(240, 238, 235, 0.9);
+  --color-muted: rgba(240, 238, 235, 0.9);
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-brand-amber: #c49a52;
+  --color-brand-amber-soft: rgba(196, 154, 82, 0.12);
+  --color-brand-violet: #c49a52;
+  --color-brand-violet-soft: rgba(196, 154, 82, 0.12);
+  --color-brand-purple: #c49a52;
+  --color-gold-italic: #c49a52;
+  --color-dark-section: #0c0c0d;
+}
+
+.dark body {
+  background: #070708;
+  color: #f0eeeb;
+}
+
+main,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+header {
+  z-index: 50;
+}
+
+@keyframes voice-wave {
+  0%,
+  100% {
+    transform: scaleY(0.42);
+  }
+  50% {
+    transform: scaleY(1.08);
+  }
+}
+
+@keyframes typing-dot {
+  0%,
+  70%,
+  100% {
+    opacity: 0.42;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------- REDUCED MOTION ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,67 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: mautic
+      MARIADB_USER: mautic
+      MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
+    volumes:
+      - mautic-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mautic:
+    image: mautic/mautic:5-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      MAUTIC_DB_HOST: db
+      MAUTIC_DB_NAME: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+      MAUTIC_RUN_CRON_JOBS: "false"
+    volumes:
+      - mautic-config:/var/www/html/config
+      - mautic-media:/var/www/html/media
+      - mautic-plugins:/var/www/html/plugins
+      - mautic-themes:/var/www/html/themes
+
+  cron:
+    image: mautic/mautic:5-apache
+    restart: unless-stopped
+    depends_on:
+      - mautic
+    environment:
+      MAUTIC_DB_HOST: db
+      MAUTIC_DB_NAME: mautic
+      MAUTIC_DB_USER: mautic
+      MAUTIC_DB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+    volumes:
+      - mautic-config:/var/www/html/config
+      - mautic-media:/var/www/html/media
+      - mautic-plugins:/var/www/html/plugins
+      - mautic-themes:/var/www/html/themes
+    command: >-
+      /bin/sh -c 'while true; do
+      php /var/www/html/bin/console mautic:segments:update --no-interaction;
+      php /var/www/html/bin/console mautic:campaigns:update --no-interaction;
+      php /var/www/html/bin/console mautic:campaigns:trigger --no-interaction;
+      php /var/www/html/bin/console mautic:emails:send --no-interaction;
+      sleep 300;
+      done'
+
+volumes:
+  mautic-db:
+  mautic-config:
+  mautic-media:
+  mautic-plugins:
+  mautic-themes:
