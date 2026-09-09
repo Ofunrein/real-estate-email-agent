@@ -1,5 +1,14 @@
 import type { DemoRoom } from "@/content/demo-rooms";
 import type Vapi from "@vapi-ai/web";
+import { callClock, callTimePromptSection } from "@/lib/demo-voice-clock";
+import { EDGE_CASE_PROMPT } from "@/lib/demo-voice-edge-cases";
+import {
+  CONVERSATION_FLOW_PROMPT,
+  maxDurationSeconds,
+  messagePlan,
+  startSpeakingPlan,
+  stopSpeakingPlan,
+} from "@/lib/demo-voice-flow";
 
 type DemoAssistantOverrides = NonNullable<Parameters<Vapi["start"]>[1]>;
 
@@ -66,8 +75,11 @@ function compact<T extends Record<string, unknown>>(value: T): Partial<T> {
   ) as Partial<T>;
 }
 
-export function demoVoiceOverrides(room: DemoRoom): DemoAssistantOverrides {
+export function demoVoiceOverrides(room: DemoRoom, now: Date = new Date()): DemoAssistantOverrides {
   const addressForSpeech = spokenAddress(room.listing.address);
+  // Timezone is the listing's market, not the server's. A Houston listing should reason about
+  // Houston business hours even though the function runs on a UTC serverless box.
+  const clock = callClock(now, room.timeZone ?? "America/Chicago", room.timeZoneLabel ?? "Central time");
   const listingFacts = compact({
     address: addressForSpeech,
     status: room.listing.status,
@@ -105,6 +117,12 @@ SOUND HUMAN
 - Don't repeat the greeting, question, answer, property summary, or caller's full sentence. Refer back naturally: "that home," "the price," or "Tuesday afternoon."
 - Use tiny self-corrections only when genuinely useful, such as "Tuesday—sorry, Wednesday." Never manufacture stumbles, laughter, breathing noises, or filler words to imitate a human.
 - End naturally after the caller's need is resolved: confirm the next step if any, then one clean goodbye. Never keep reopening the conversation.
+
+${callTimePromptSection(clock)}
+
+${CONVERSATION_FLOW_PROMPT}
+
+${EDGE_CASE_PROMPT}
 
 SPEAK FOR THE EAR
 - Never read JSON keys, raw identifiers, source URLs, MLS IDs, trailing decimal zeros, or symbols aloud.
@@ -156,10 +174,15 @@ ${JSON.stringify(facts, null, 2)}`;
       model: "aura-2",
     },
     firstMessageInterruptionsEnabled: true,
-    startSpeakingPlan: { waitSeconds: 0.55 },
-    stopSpeakingPlan: { numWords: 2, voiceSeconds: 0.2, backoffSeconds: 1 },
+    startSpeakingPlan,
+    stopSpeakingPlan,
+    // @vapi-ai/web 2.7.0 ships an AssistantOverrides type that predates messagePlan, but the
+    // API accepts and honours it (silenceTimeoutMessage was added to Assistant.messagePlan in
+    // the Feb 2025 release). Cast narrowly here rather than widening the whole object, so the
+    // remaining fields keep their type checking.
+    ...({ messagePlan } as Record<string, unknown>),
     backgroundSpeechDenoisingPlan: { smartDenoisingPlan: { enabled: true } },
-    maxDurationSeconds: 300,
+    maxDurationSeconds,
     backgroundSound: "off" as const,
   };
 }

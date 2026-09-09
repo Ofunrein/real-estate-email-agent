@@ -1,0 +1,49 @@
+name: Site tests
+
+# Hoisted from lumenosis-site/.github/workflows/test.yml. GitHub Actions only reads
+# workflows from .github/workflows at the REPOSITORY ROOT, so once the site became a
+# subdirectory of this repo its own workflow file went inert and its 68 tests stopped
+# running on push. This runs them again from the root.
+#
+# Path-filtered for the same reason the Vercel ignore steps are: a change to the parent's
+# app/ or lib/ cannot affect the site (verified: nothing under lumenosis-site/ imports from
+# outside it), so running the site suite on those pushes would be noise. db/migrations is
+# included because the site consumes the demo_public_api contract those migrations define.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lumenosis-site/**"
+      - "db/migrations/**"
+      - ".github/workflows/site-tests.yml"
+  pull_request:
+    paths:
+      - "lumenosis-site/**"
+      - "db/migrations/**"
+      - ".github/workflows/site-tests.yml"
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: lumenosis-site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: lumenosis-site/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # `pnpm test` runs `next build && playwright test` with placeholder env, so the suite
+      # exercises the real build and never touches production Neon. The demo datastore vars
+      # are deliberately empty there: demoPostgresEnabled() is an exact-match flag, so the
+      # tests run against static fixtures rather than the live database.
+      - run: pnpm test

@@ -102,7 +102,12 @@ test("speech planner makes addresses, money, and counts unambiguous for TTS", ()
 test("voice override includes natural turn-taking and interruption controls", () => {
   const value = demoVoiceOverrides(room("Patricia", "ERA Team", "85500 Oak Dr, Austin, TX", "MLS-A"));
   expect(value.transcriber).toEqual({ provider: "deepgram", model: "flux-general-en", language: "en" });
-  expect(value.startSpeakingPlan).toMatchObject({ waitSeconds: 0.55 });
+  // Turn-taking now comes from the shared flow module: a slightly longer base wait plus smart
+  // endpointing, so a caller mid-thought is not cut off.
+  expect(value.startSpeakingPlan).toMatchObject({
+    waitSeconds: 0.6,
+    smartEndpointingPlan: { provider: "livekit" },
+  });
   expect(value.stopSpeakingPlan).toMatchObject({ numWords: 2, voiceSeconds: 0.2, backoffSeconds: 1 });
   expect(value.firstMessageInterruptionsEnabled).toBe(true);
   expect(value.backgroundSpeechDenoisingPlan).toEqual({ smartDenoisingPlan: { enabled: true } });

@@ -5,7 +5,7 @@ import type { DemoRoom } from "@/content/demo-rooms";
 import { isAdmin } from "@/lib/admin-auth";
 import { tokenHash } from "@/lib/demo-room";
 import { verifyListingImages } from "@/lib/listing-image-qa";
-import { isAllowedListingImage } from "@/lib/listing-image-hosts";
+import { sourceListingPhotos } from "@/lib/listing-photo-source";
 import { sql } from "@/lib/turso";
 
 const Input = z.object({
@@ -39,7 +39,6 @@ const Listing = z
     summary: z.string().min(30),
     highlights: z.array(z.string()).min(3).max(8),
     buyerNotes: z.array(z.string()).max(6),
-    imageUrls: z.array(z.string().url()).length(3),
   })
   .refine((l) => l.price >= 25000, { message: "price looks like a rent amount, not a sale price" })
   .refine((l) => !/lease|rent/i.test(l.propertyType), {
@@ -116,7 +115,6 @@ export async function POST(request: Request) {
               summary: { type: "string" },
               highlights: { type: "array", items: { type: "string" } },
               buyerNotes: { type: "array", items: { type: "string" } },
-              imageUrls: { type: "array", items: { type: "string" } },
             },
             required: [
               "status",
@@ -134,7 +132,6 @@ export async function POST(request: Request) {
               "summary",
               "highlights",
               "buyerNotes",
-              "imageUrls",
             ],
           },
         },
@@ -143,7 +140,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "Extract only verified facts for the exact listing. The listing must be currently for sale and active; never use a lease, rental, or off-market record, and never mix facts or photos from a different listing, unit, or past sale of the same address. Use 0 for unavailable numeric facts. Never infer. Return exactly three direct source image URLs clearly tied to this exact listing. Each must be a real exterior or interior property photograph, never a logo, brokerage graphic, map, screenshot, placeholder, or stock image.",
+            "Extract only verified facts for the exact listing. The listing must be currently for sale and active; never use a lease, rental, or off-market record, and never mix facts from a different listing, unit, or past sale of the same address. Use 0 for unavailable numeric facts. Never infer. Do not return image URLs: photos are retrieved separately from the listing page and any URL you produce would be an invented string.",
         },
         {
           role: "user",
@@ -165,10 +162,9 @@ export async function POST(request: Request) {
       extracted.highlights = extracted.highlights.slice(0, 8);
     if (Array.isArray(extracted.buyerNotes))
       extracted.buyerNotes = extracted.buyerNotes.slice(0, 6);
-    if (Array.isArray(extracted.imageUrls))
-      extracted.imageUrls = extracted.imageUrls
-        .filter((url: unknown) => typeof url === "string" && isAllowedListingImage(url))
-        .slice(0, 3);
+    // Any imageUrls the model volunteers despite the schema are discarded outright rather
+    // than filtered: photos come only from sourceListingPhotos below.
+    delete extracted.imageUrls;
   }
   const listing = Listing.safeParse(extracted);
   if (!listing.success)
@@ -180,10 +176,32 @@ export async function POST(request: Request) {
       { status: 422 },
     );
 
+  // Photos are RETRIEVED, never generated. The model above no longer returns image URLs:
+  // asking an LLM to emit a CDN path is asking it to produce a plausible string, and a
+  // plausible Zillow path frequently belongs to a different property — that is exactly how a
+  // neighbouring building's photo reached a live demo. Instead we fetch the listing page,
+  // require it to actually assert this MLS number, and take only photos that page carries.
+  const sourced = await sourceListingPhotos({
+    listingUrl: input.listingUrl,
+    mls: listing.data.mls,
+    address: input.listingAddress,
+    streetViewKey: process.env.GOOGLE_STREET_VIEW_API_KEY,
+    allowStreetViewFallback: true,
+  });
+  if (!sourced.ok)
+    return NextResponse.json(
+      { error: "Listing photos could not be verified", reason: sourced.reason },
+      { status: 422 },
+    );
+  const imageUrls = sourced.photos.map((photo) => photo.url);
+
+  // Vision QA still runs, but it is now the second gate rather than the only one. It can
+  // catch a logo or floor plan that slipped through the markup; it cannot be expected to
+  // catch a real photo of the wrong house, which is why provenance above does that job.
   const imageQa = await verifyListingImages(
     input.listingAddress,
     input.listingUrl,
-    listing.data.imageUrls,
+    imageUrls,
     openaiKey,
   );
   if (!imageQa.passed)
@@ -219,7 +237,7 @@ export async function POST(request: Request) {
     listing: {
       address: input.listingAddress,
       ...facts,
-      images: facts.imageUrls.map((src, index) => ({
+      images: imageUrls.map((src, index) => ({
         src,
         alt: `${input.listingAddress} listing photo ${index + 1}`,
       })),

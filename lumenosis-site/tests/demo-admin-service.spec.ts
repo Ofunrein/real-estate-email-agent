@@ -99,8 +99,41 @@ test("send does not double-send an already-sent draft", async () => {
   );
   expect(result).toEqual({ ok: true, alreadySent: true });
   expect(fetched).toBe(0);
-  expect(calls[0].query).toContain("o.status = 'draft'");
+  // Both pre-send statuses must be sendable: 'draft' is what the current code writes and
+  // 'scheduled' is what the migrated corpus contains. Asserting on both prevents a
+  // regression that would silently make older rows unsendable.
+  expect(calls[0].query).toContain("o.status IN ('draft', 'scheduled')");
   expect(calls[0].query).toContain("d.status = 'approved'");
+});
+
+test("send treats a scheduled draft as sendable", async () => {
+  process.env.AGENTMAIL_API_KEY = ["agentmail", "test-key-000000"].join("-");
+  const { exec, calls } = stubSql([
+    [
+      /SELECT o.id, o.sender_inbox/,
+      [
+        {
+          id: "draft-1",
+          sender_inbox: "aria@agentmail.to",
+          recipient: "buyer@example.com",
+          subject: "subject",
+          body: "body",
+        },
+      ],
+    ],
+  ]);
+  let fetched = 0;
+  const result = await sendDemoOutreach(
+    "room-1",
+    exec as never,
+    (async () => {
+      fetched += 1;
+      return new Response(JSON.stringify({ id: "msg-1" }), { status: 200 });
+    }) as unknown as typeof fetch,
+  );
+  expect(result.ok).toBe(true);
+  expect(fetched).toBe(1);
+  expect(calls[0].query).toContain("'scheduled'");
 });
 
 test("send reports not_found when there is no draft at all", async () => {

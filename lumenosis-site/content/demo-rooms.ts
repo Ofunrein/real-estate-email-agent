@@ -28,6 +28,13 @@ export type DemoRoom = {
     responsiveViewports: number[];
   };
   safetyBoundaries?: string[];
+  /**
+   * IANA timezone of the listing's market, e.g. "America/Chicago". The voice agent reasons
+   * about business hours in the caller's market, not the server's UTC clock.
+   */
+  timeZone?: string;
+  /** Speech-ready label for that zone, e.g. "Central time". Read aloud, so no abbreviations. */
+  timeZoneLabel?: string;
   expiresAt: string;
   approved: boolean;
 };
