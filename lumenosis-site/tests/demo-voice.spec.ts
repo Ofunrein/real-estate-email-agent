@@ -91,8 +91,20 @@ test("speech planner makes addresses, money, and counts unambiguous for TTS", ()
   expect(spokenAddress("85500 Oak Dr, Austin, TX 78701")).toBe(
     "eight five five zero zero Oak Drive, Austin, Texas seven eight seven zero one",
   );
+  // Street numbers are grouped the way people say them, not digit by digit. The real TTS/STT
+  // gate caught "1204 Oak Drive" being read "one two zero four oak drive".
   expect(spokenAddress("1205 N St. Johns Ave., Unit 4B")).toBe(
-    "one two zero five North Saint Johns Avenue, Unit four B",
+    "twelve oh five North Saint Johns Avenue, Unit four B",
+  );
+  expect(spokenAddress("1204 Oak Dr")).toBe("twelve oh four Oak Drive");
+  expect(spokenAddress("1250 Oak Dr")).toBe("twelve fifty Oak Drive");
+  expect(spokenAddress("1200 Oak Dr")).toBe("twelve hundred Oak Drive");
+  expect(spokenAddress("850 Oak Dr")).toBe("eight fifty Oak Drive");
+  // Short house numbers are left alone; TTS already reads them correctly.
+  expect(spokenAddress("1 Private Road")).toBe("1 Private Road");
+  // Five-plus digits have no natural grouping, so they stay digit-split. ZIP unchanged.
+  expect(spokenAddress("85500 Oak Dr, Austin, TX 78701")).toBe(
+    "eight five five zero zero Oak Drive, Austin, Texas seven eight seven zero one",
   );
   expect(spokenMoney(800000)).toBe("eight hundred thousand dollars");
   expect(spokenMoney(85500.5)).toBe("eighty-five thousand five hundred dollars and fifty cents");

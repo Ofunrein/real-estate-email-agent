@@ -28,7 +28,7 @@ for (const [width, height] of [
       }),
     );
     await page.goto(demo);
-    await page.getByRole("button", { name: "Run email demo" }).click();
+    await page.getByRole("button", { name: /Send to Iris/ }).click();
     await expect(page.getByText("Property details", { exact: true })).toBeVisible();
     await page.getByLabel("Average commission").fill("100000");
     expect(
@@ -112,7 +112,7 @@ test("email preview reads like a team member", async ({ page }) => {
     }),
   );
   await page.goto(demo);
-  await page.getByRole("button", { name: "Run email demo" }).click();
+  await page.getByRole("button", { name: /Send to Iris/ }).click();
   await expect(page.getByText(/I had the home listed as active/i)).toBeVisible();
   await expect(
     page.getByText(/From: Patricia Mack · American Real Estate, ERA Powered/i),

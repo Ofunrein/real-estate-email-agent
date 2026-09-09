@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Expand, Mic, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, Mic, SendHorizontal, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type Vapi from "@vapi-ai/web";
@@ -327,12 +327,15 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                 </span>
                 <h3 className="mt-3 text-3xl font-semibold">Write as the buyer.</h3>
                 <div className="mt-6 grid gap-2">
+                  <span className="text-xs font-medium text-black/55">
+                    Tap a question to fill it in, or write your own below.
+                  </span>
                   {presets.map((preset) => (
                     <button
                       key={preset}
                       type="button"
                       onClick={() => setMessage(preset)}
-                      className="rounded-[10px] border border-black/10 bg-white/60 px-4 py-3 text-left text-sm leading-5 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-amber)]"
+                      className="cursor-pointer rounded-[10px] border border-black/15 bg-white/60 px-4 py-3 text-left text-sm leading-5 shadow-sm transition hover:-translate-y-px hover:border-[var(--color-brand-amber)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-amber)]"
                     >
                       {preset}
                     </button>
@@ -347,15 +350,17 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                   onChange={(e) => setMessage(e.target.value)}
                   maxLength={1200}
                   rows={4}
-                  className="mt-2 w-full rounded-[10px] border border-black/15 bg-white p-4 text-base leading-6 text-[#151515] outline-none focus:border-[var(--color-brand-amber)] focus:ring-2 focus:ring-[var(--color-brand-amber)]/20"
+                  placeholder="Type your question about this property here…"
+                  className="mt-2 w-full cursor-text rounded-[10px] border-2 border-black/20 bg-white p-4 text-base leading-6 text-[#151515] shadow-inner outline-none transition placeholder:text-black/40 hover:border-black/30 focus:border-[var(--color-brand-amber)] focus:ring-2 focus:ring-[var(--color-brand-amber)]/20"
                 />
                 <button
                   type="button"
                   disabled={sending || message.trim().length < 2}
                   onClick={runEmailDemo}
-                  className="mt-4 rounded-[10px] bg-[#151515] px-5 py-3 font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 flex w-full items-center justify-center gap-3 rounded-[12px] bg-[#151515] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-[transform,background-color] duration-150 hover:bg-black active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                 >
-                  {sending ? "Iris is responding…" : "Run email demo"}
+                  <SendHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
+                  {sending ? "Iris is responding…" : "Send to Iris"}
                 </button>
                 {emailError ? (
                   <p

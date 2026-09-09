@@ -37,6 +37,24 @@ function spokenDigits(value: string): string {
   return [...value].map((digit) => SMALL[Number(digit)]).join(" ");
 }
 
+/**
+ * House numbers the way people actually say them: 1204 -> "twelve oh four", 850 -> "eight fifty",
+ * 85500 -> falls back to digits because there is no natural grouping for five-plus digits.
+ * This is deliberately different from spokenDigits, which is correct for ZIPs.
+ */
+function spokenHouseNumber(value: string): string {
+  if (value.length === 3) return `${SMALL[Number(value[0])]} ${spokenNumber(Number(value.slice(1)))}`;
+  if (value.length === 4) {
+    const head = Number(value.slice(0, 2));
+    const tail = value.slice(2);
+    // "1204" -> "twelve oh four"; "1250" -> "twelve fifty"; "1200" -> "twelve hundred".
+    if (tail === "00") return `${spokenNumber(head)} hundred`;
+    if (tail[0] === "0") return `${spokenNumber(head)} oh ${SMALL[Number(tail[1])]}`;
+    return `${spokenNumber(head)} ${spokenNumber(Number(tail))}`;
+  }
+  return spokenDigits(value);
+}
+
 export function spokenMoney(value: number): string {
   const cents = Math.round((value - Math.floor(value)) * 100);
   const dollars = `${spokenNumber(Math.floor(value))} dollars`;
@@ -56,7 +74,13 @@ export function spokenAddress(address: string): string {
     N: "North", S: "South", E: "East", W: "West", TX: "Texas",
   };
   return address
-    .replace(/^\s*(\d{3,6})\b/, (_, digits: string) => spokenDigits(digits))
+    // House number. People say street numbers as grouped numbers ("twelve-oh-four Oak"), not
+    // digit by digit. Verified via the real TTS/STT gate: "1204 Oak Drive" was being spoken as
+    // "one two zero four oak drive", which is exactly the robotic readout we avoid elsewhere.
+    // ZIP codes below stay digit-split, because those genuinely are read digit by digit.
+    // Only 3+ digits need regrouping. One- and two-digit numbers are already read correctly by
+    // TTS, and rewriting them ("1" -> "one") just churns the address for no gain.
+    .replace(/^\s*(\d{3,6})\b/, (_, digits: string) => spokenHouseNumber(digits))
     .replace(/\b(\d{5})(?:-\d{4})?\b/g, (_, digits: string) => spokenDigits(digits))
     .replace(/\bUnit\s+(\d+)([A-Za-z])?\b/gi, (_, digits: string, letter = "") =>
       `Unit ${spokenNumber(Number(digits))}${letter ? ` ${letter.toUpperCase()}` : ""}`,
