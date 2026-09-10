@@ -104,6 +104,16 @@ test("voice demo and opportunity result follow the active light theme", async ({
   await expect(opportunityCard).toHaveCSS("color", "rgb(21, 21, 21)");
 });
 
+test("final walkthrough CTA is prominent without overflowing", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(demo);
+
+  const cta = page.getByRole("link", { name: "Book a 15-minute walkthrough" });
+  await expect(cta).toHaveCSS("font-size", "20px");
+  await expect(cta).toHaveCSS("min-height", "72px");
+  expect(await cta.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test("gallery supports mobile swipe", async ({ page }) => {
   await page.goto(demo);
   await page.getByRole("button", { name: "Open photo 1 of 3" }).click();

@@ -638,7 +638,7 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
             target="_blank"
             rel="noreferrer"
             onClick={() => void event("booking_clicked")}
-            className="mt-8 inline-block rounded-[var(--radius)] bg-[var(--color-brand-amber)] px-6 py-4 font-semibold text-black"
+            className="mt-8 inline-flex min-h-[72px] w-full items-center justify-center rounded-[var(--radius)] bg-[var(--color-brand-amber)] px-8 py-5 text-center text-xl font-semibold text-black shadow-[0_16px_42px_rgba(196,154,82,0.28)] transition-[transform,box-shadow,background-color] hover:-translate-y-0.5 hover:bg-[#d3aa62] hover:shadow-[0_20px_52px_rgba(196,154,82,0.36)] active:translate-y-0 sm:w-auto sm:px-10"
           >
             Book a 15-minute walkthrough
           </a>
