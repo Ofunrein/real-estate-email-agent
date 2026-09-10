@@ -37,7 +37,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "Email demo is not configured" }, { status: 503 });
 
-  if (!(await reserveDemoGeneration(match.id, token, allowDraft))) {
+  const reserved = await reserveDemoGeneration(match.id, token, match.source, allowDraft);
+  if (!reserved) {
     return NextResponse.json({ error: "Demo usage limit reached" }, { status: 429 });
   }
 

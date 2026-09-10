@@ -9,9 +9,10 @@ export const DEMO_GENERATIONS_PER_DAY = 100;
 export async function reserveDemoGeneration(
   demoRoomId: string,
   token: string,
+  source: "postgres" | "turso" | "static",
   _allowDraft = false,
 ) {
-  if (demoPostgresEnabled()) {
+  if (source === "postgres" && demoPostgresEnabled()) {
     return reservePostgresDemoGeneration(token);
   }
   const rows = await sql(

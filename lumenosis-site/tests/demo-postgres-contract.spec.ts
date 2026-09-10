@@ -18,7 +18,7 @@ test("Postgres cutover uses the exact PR #7 function contract", async () => {
   expect(postgres).not.toMatch(/\binsert\s+into\s+demo_engagement_events\b/i);
 });
 
-test("only exact postgres selects direct Neon and missing URLs fail closed", async () => {
+test("exact postgres selects Neon first and target-only rooms fall back to Turso", async () => {
   const postgres = await source("lib/demo-postgres.ts");
   const room = await source("lib/demo-room.ts");
   expect(postgres).toContain('env.DEMO_DATA_SOURCE === "postgres"');
@@ -26,10 +26,11 @@ test("only exact postgres selects direct Neon and missing URLs fail closed", asy
   expect(room.indexOf("if (demoPostgresEnabled())")).toBeLessThan(
     room.indexOf("if (tursoConfigured())"),
   );
-  const branch = room.match(/if \(demoPostgresEnabled\(\)\) \{[\s\S]*?\n {2}\}/)?.[0] ?? "";
-  expect(branch).toContain("if (!row) return null");
-  expect(branch).not.toContain("turso");
-  expect(branch).not.toContain("demoRooms.find");
+  expect(room).toContain('source: "postgres" as const');
+  expect(room).toContain('source: "turso" as const');
+  expect(room.indexOf("postgresDemoRoomForToken(token)")).toBeLessThan(
+    room.indexOf("if (tursoConfigured())"),
+  );
 });
 
 test("site receives only least-privilege URLs and verifies Neon TLS", async () => {
@@ -45,13 +46,13 @@ test("site receives only least-privilege URLs and verifies Neon TLS", async () =
   expect(example).not.toMatch(/^DATABASE_URL=/m);
 });
 
-test("event and generation writes switch with the same exact source flag", async () => {
+test("event and generation writes follow the room's resolved source", async () => {
   const event = await source("app/api/demo/[token]/event/route.ts");
   const budget = await source("lib/demo-budget.ts");
-  expect(event).toContain("if (demoPostgresEnabled())");
+  expect(event).toContain('if (match.source === "postgres")');
   expect(event).toContain("recordPostgresDemoEngagement(");
-  expect(event).toContain("} else if (tursoConfigured()");
-  expect(budget).toContain("if (demoPostgresEnabled())");
+  expect(event).toContain('} else if (match.source === "turso" && tursoConfigured())');
+  expect(budget).toContain('if (source === "postgres" && demoPostgresEnabled())');
   expect(budget).toContain("reservePostgresDemoGeneration(");
 });
 

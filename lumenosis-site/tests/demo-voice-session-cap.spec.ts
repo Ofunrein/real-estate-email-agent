@@ -18,7 +18,7 @@ async function migration() {
 test("voice route reserves a durable session before handing out Vapi credentials", async () => {
   const route = await source("app/api/demo/[token]/voice/route.ts");
   expect(route).toContain("reservePostgresVoiceSession(");
-  expect(route).toContain("demoPostgresEnabled()");
+  expect(route).toContain('match.source === "postgres"');
 
   // The reservation must happen BEFORE the response that contains publicKey/assistantId,
   // otherwise a caller can start a call without ever being counted.

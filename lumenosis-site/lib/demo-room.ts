@@ -29,17 +29,20 @@ export async function demoRoomForToken(token: string, allowDraft = false) {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
 
   if (demoPostgresEnabled()) {
-    // Exact-flag cutover, fail closed: a missing URL or query failure must never fall
-    // through to Turso/static data and create a split read path.
     const row = await postgresDemoRoomForToken(token);
-    if (!row) return null;
-    const room = JSON.parse(String(row.config_json)) as DemoRoom;
-    if (!passedQa(room)) return null;
-    return {
-      id: String(row.id),
-      room,
-      expired: Date.now() >= new Date(String(row.expires_at)).getTime(),
-    };
+    if (row) {
+      const room = JSON.parse(String(row.config_json)) as DemoRoom;
+      if (!passedQa(room)) return null;
+      return {
+        id: String(row.id),
+        room,
+        expired: Date.now() >= new Date(String(row.expires_at)).getTime(),
+        source: "postgres" as const,
+      };
+    }
+    // Transitional safety net: generation remained on Turso after the public reader
+    // cut over to Postgres. Resolve target-only rooms from their actual store so newly
+    // approved URLs do not 404 while ownership is reconciled.
   }
 
   if (tursoConfigured()) {
@@ -54,6 +57,7 @@ export async function demoRoomForToken(token: string, allowDraft = false) {
         id: String(rows[0].id),
         room,
         expired: Date.now() >= new Date(String(rows[0].expires_at)).getTime(),
+        source: "turso" as const,
       };
     }
   }
@@ -64,5 +68,10 @@ export async function demoRoomForToken(token: string, allowDraft = false) {
     return expected.length === supplied.length && timingSafeEqual(expected, supplied);
   });
   if (!room?.approved || !passedQa(room)) return null;
-  return { id: room.slug, room, expired: Date.now() >= new Date(room.expiresAt).getTime() };
+  return {
+    id: room.slug,
+    room,
+    expired: Date.now() >= new Date(room.expiresAt).getTime(),
+    source: "static" as const,
+  };
 }

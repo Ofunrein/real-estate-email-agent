@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { allowRequest, clientAddress } from "@/lib/demo-rate-limit";
-import { demoPostgresEnabled, reservePostgresVoiceSession } from "@/lib/demo-postgres";
+import { reservePostgresVoiceSession } from "@/lib/demo-postgres";
 import { demoRoomForToken } from "@/lib/demo-room";
 import { demoVoiceOverrides } from "@/lib/demo-voice";
 import { reserveTursoVoiceSession } from "@/lib/demo-voice-budget";
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
   if (!admin) {
     let remaining = -1;
     try {
-      remaining = demoPostgresEnabled()
+      remaining = match.source === "postgres"
         ? await reservePostgresVoiceSession(token)
         : await reserveTursoVoiceSession(match.id, sql);
     } catch {
