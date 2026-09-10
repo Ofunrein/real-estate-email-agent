@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import { propertyEmbeddingText, vectorLiteral } from "@/lib/propertyEmbeddings";
 import { retrievePropertiesForAgent } from "@/lib/propertyRetrieval";
-import { propertyMatchesCriteria } from "@/lib/database";
 import type { SheetRow } from "@/lib/sheetSchema";
 
 function property(address: string, features = ""): SheetRow {
@@ -38,16 +37,6 @@ test("propertyEmbeddingText: combines structured and descriptive property facts"
   assert.match(text, /2 baths/);
   assert.match(text, /modern kitchen natural light/);
   assert.equal(vectorLiteral([0.1, Number.NaN, 0.3]), "[0.1,0,0.3]");
-});
-
-test("propertyMatchesCriteria: rejects listings that are not active", () => {
-  const sold = property("810 Ethel St");
-  sold.status = "SOLD";
-  assert.equal(propertyMatchesCriteria(sold, { query: "Austin" }), false);
-
-  const active = property("811 Ethel St");
-  active.status = "FOR_SALE";
-  assert.equal(propertyMatchesCriteria(active, { query: "Austin" }), true);
 });
 
 test("retrievePropertiesForAgent: falls back to structured order when RAG is disabled", async () => {

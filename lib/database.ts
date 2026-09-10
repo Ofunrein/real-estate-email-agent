@@ -1927,11 +1927,6 @@ function propertyLooksRental(property: SheetRow): boolean {
     || /\/apartments\//i.test(property.listing_url || "");
 }
 
-function propertyIsActive(property: SheetRow): boolean {
-  const status = normalizeSearchText(property.status || "").replace(/\s+/g, "_").toUpperCase();
-  return status === "ACTIVE" || status === "FOR_SALE" || status === "FOR_RENT";
-}
-
 function hasHardStructuredCriteria(criteria: PropertySearchCriteria): boolean {
   return numericValue(criteria.beds) != null
     || numericValue(criteria.baths) != null
@@ -1955,7 +1950,6 @@ function referenceRange(criteria: PropertySearchCriteria, key: "price" | "beds" 
 }
 
 export function propertyMatchesCriteria(property: SheetRow, criteria: PropertySearchCriteria): boolean {
-  if (!propertyIsActive(property)) return false;
   const excluded = new Set((criteria.excludeAddresses || []).map((address) => normalizeSearchText(address)));
   if (excluded.has(normalizeSearchText(property.address))) return false;
   if (wantsRental(criteria) && !propertyLooksRental(property)) return false;
@@ -2075,7 +2069,6 @@ export async function findPropertiesByAddressesFromDatabase(addresses: string[],
       `select ${PROPERTIES_HEADERS.join(", ")}
          from properties
         where client_id = $1
-          and upper(replace(trim(status), ' ', '_')) in ('ACTIVE', 'FOR_SALE', 'FOR_RENT')
           and (
             lower(address) = $2
             or lower(regexp_replace(address, '[^a-zA-Z0-9#]+', ' ', 'g')) like $3
