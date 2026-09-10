@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Expand, Mic, SendHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, Mic, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type Vapi from "@vapi-ai/web";
@@ -13,8 +13,6 @@ type VoiceConfig = {
   publicKey: string;
   assistantId: string;
   assistantOverrides: Parameters<Vapi["start"]>[1];
-  callLimit: number | null;
-  remainingCalls: number | null;
 };
 
 function money(value: number) {
@@ -290,14 +288,14 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
         </div>
       </section>
 
-      <section className="bg-[var(--color-dark-section)] py-20 text-white md:py-28">
+      <section className="bg-[var(--color-bg-cream)] py-20 text-[var(--color-ink)] dark:bg-[var(--color-dark-section)] dark:text-white md:py-28">
         <div className="mx-auto w-[min(1200px,calc(100%-32px))]">
           <div className="max-w-3xl">
             <p className="text-sm font-medium text-[var(--color-brand-amber)]">Start here</p>
             <h2 className="mt-3 text-[clamp(2.4rem,4.6vw,4.2rem)] font-semibold leading-[1.02] tracking-[-0.04em]">
               Watch Iris work a buyer email.
             </h2>
-            <p className="mt-6 max-w-2xl text-[var(--text-body-lg)] leading-relaxed text-white/70">
+            <p className="mt-6 max-w-2xl text-[var(--text-body-lg)] leading-relaxed text-[var(--color-muted)] dark:text-white/70">
               Try one property here. The same agent can identify any listing in your inventory,
               answer from its current source data, capture buyer intent, and prepare the next
               action.
@@ -333,15 +331,12 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                 </span>
                 <h3 className="mt-3 text-3xl font-semibold">Write as the buyer.</h3>
                 <div className="mt-6 grid gap-2">
-                  <span className="text-xs font-medium text-black/55">
-                    Tap a question to fill it in, or write your own below.
-                  </span>
                   {presets.map((preset) => (
                     <button
                       key={preset}
                       type="button"
                       onClick={() => setMessage(preset)}
-                      className="cursor-pointer rounded-[10px] border border-black/15 bg-white/60 px-4 py-3 text-left text-sm leading-5 shadow-sm transition hover:-translate-y-px hover:border-[var(--color-brand-amber)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-amber)]"
+                      className="rounded-[10px] border border-black/10 bg-white/60 px-4 py-3 text-left text-sm leading-5 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-amber)]"
                     >
                       {preset}
                     </button>
@@ -356,17 +351,15 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                   onChange={(e) => setMessage(e.target.value)}
                   maxLength={1200}
                   rows={4}
-                  placeholder="Type your question about this property here…"
-                  className="mt-2 w-full cursor-text rounded-[10px] border-2 border-black/20 bg-white p-4 text-base leading-6 text-[#151515] shadow-inner outline-none transition placeholder:text-black/40 hover:border-black/30 focus:border-[var(--color-brand-amber)] focus:ring-2 focus:ring-[var(--color-brand-amber)]/20"
+                  className="mt-2 w-full rounded-[10px] border border-black/15 bg-white p-4 text-base leading-6 text-[#151515] outline-none focus:border-[var(--color-brand-amber)] focus:ring-2 focus:ring-[var(--color-brand-amber)]/20"
                 />
                 <button
                   type="button"
                   disabled={sending || message.trim().length < 2}
                   onClick={runEmailDemo}
-                  className="mt-4 flex w-full items-center justify-center gap-3 rounded-[12px] bg-[#151515] px-5 py-4 text-base font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-[transform,background-color] duration-150 hover:bg-black active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  className="mt-4 rounded-[10px] bg-[#151515] px-5 py-3 font-semibold text-white transition hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <SendHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
-                  {sending ? "Iris is responding…" : "Send to Iris"}
+                  {sending ? "Iris is responding…" : "Run email demo"}
                 </button>
                 {emailError ? (
                   <p
@@ -479,13 +472,13 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
           </article>
 
           <div className="mt-16 grid gap-8 lg:grid-cols-[0.75fr_1.25fr]">
-            <article className="rounded-[var(--radius)] border border-[var(--color-brand-amber)]/40 bg-[var(--color-brand-amber-soft)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.24)] md:p-8">
+            <article className="rounded-[var(--radius)] border border-[var(--color-brand-amber)]/40 bg-[#f8f7f3] p-6 text-[#151515] shadow-[0_20px_60px_rgba(0,0,0,0.16)] dark:bg-[var(--color-brand-amber-soft)] dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.24)] md:p-8">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-brand-amber)]">
                 <span className="h-2 w-2 rounded-full bg-[var(--color-brand-amber)] motion-safe:animate-pulse" />
                 Voice channel available
               </div>
               <h2 className="mt-4 text-3xl font-semibold">Call Iris now.</h2>
-              <p className="mt-3 text-sm leading-6 text-white/75">
+              <p className="mt-3 text-sm leading-6 text-[#555] dark:text-white/75">
                 Ask about this property as a real buyer. Iris answers from the same verified listing
                 details and responds in {room.prospect.firstName}&apos;s voice.
               </p>
@@ -501,7 +494,7 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                   <span className="min-w-0">
                     <strong className="block text-lg">Start private voice demo</strong>
                     <span className="mt-1 block text-sm text-black/70">
-                      Browser microphone · 3-minute call
+                      Browser microphone · 3-minute limit
                     </span>
                   </span>
                 </button>
@@ -526,13 +519,8 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                   </div>
                 </div>
               ) : null}
-              <p className="mt-4 text-xs leading-5 text-white/55">
+              <p className="mt-4 text-xs leading-5 text-[#666] dark:text-white/55">
                 No phone number. Recording disabled. No live calendar or CRM access.
-                {voiceConfig?.callLimit === null
-                  ? " Admin testing has no call limit."
-                  : voiceConfig?.remainingCalls != null
-                    ? ` ${voiceConfig.remainingCalls} of ${voiceConfig.callLimit} calls remain on this link today.`
-                    : " This link allows 10 calls per 24 hours."}
               </p>
               {voiceError ? (
                 <p role="alert" className="mt-4 text-sm text-red-300">
@@ -546,17 +534,17 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                 {room.listing.highlights.map((item) => (
                   <div
                     key={item}
-                    className="border-t border-white/15 pt-4 text-sm leading-6 text-white/75"
+                    className="border-t border-black/10 pt-4 text-sm leading-6 text-[var(--color-muted)] dark:border-white/15 dark:text-white/75"
                   >
                     {item}
                   </div>
                 ))}
-                <div className="border-t border-white/15 pt-4 text-sm leading-6 text-white/75">
+                <div className="border-t border-black/10 pt-4 text-sm leading-6 text-[var(--color-muted)] dark:border-white/15 dark:text-white/75">
                   {room.listing.lotSquareFeet.toLocaleString()} sq ft lot · $
                   {room.listing.pricePerSquareFoot}/sq ft · listed {room.listing.listedAt}
                 </div>
               </div>
-              <p className="mt-8 text-sm leading-6 text-white/50">
+              <p className="mt-8 text-sm leading-6 text-[var(--color-muted)] dark:text-white/50">
                 Iris drafts verified facts in {room.prospect.firstName}&apos;s voice. For
                 availability, financing, insurance, restrictions, condition, or negotiations, the
                 draft says what still needs confirmation instead of guessing.
@@ -621,14 +609,14 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
               </label>
             ))}
           </div>
-          <div className="flex flex-col justify-center rounded-[var(--radius)] bg-[var(--color-dark-section)] p-6 text-white">
-            <p className="text-sm text-white/60">Estimated monthly opportunity range</p>
+          <div className="flex flex-col justify-center rounded-[var(--radius)] bg-[#ece9e1] p-6 text-[#151515] dark:bg-[var(--color-dark-section)] dark:text-white">
+            <p className="text-sm text-[#666] dark:text-white/60">Estimated monthly opportunity range</p>
             <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-[var(--color-gold-italic)]">
               <span>{money(recovered.low)}</span>
               <span>–</span>
               <span>{money(recovered.high)}</span>
             </p>
-            <p className="mt-4 text-sm leading-6 text-white/60">
+            <p className="mt-4 text-sm leading-6 text-[#666] dark:text-white/60">
               Directional estimate from your assumptions. Closings depend on lead quality,
               inventory, pricing, and agent performance.
             </p>

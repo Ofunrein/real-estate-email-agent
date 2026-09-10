@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
-const demoSecret = ["test", "demo-room-secret-at-least-32-characters"].join("-");
+const demoSecret = "test-demo-room-secret-at-least-32-characters";
 const demoToken = createHmac("sha256", demoSecret)
   .update("lumenosis-demo:patricia-any-old-street")
   .digest("base64url");
@@ -28,7 +28,7 @@ for (const [width, height] of [
       }),
     );
     await page.goto(demo);
-    await page.getByRole("button", { name: /Send to Iris/ }).click();
+    await page.getByRole("button", { name: "Run email demo" }).click();
     await expect(page.getByText("Property details", { exact: true })).toBeVisible();
     await page.getByLabel("Average commission").fill("100000");
     expect(
@@ -91,6 +91,19 @@ test("demo defaults to light mode and uses the landing-page theme toggle", async
   await expect(page.getByRole("button", { name: "Switch to light mode" })).toBeVisible();
 });
 
+test("voice demo and opportunity result follow the active light theme", async ({ page }) => {
+  await page.goto(demo);
+  await expect(page.locator("html")).toHaveClass(/light/);
+
+  const voiceCard = page.getByRole("heading", { name: "Call Iris now." }).locator("..");
+  const opportunityCard = page.getByText("Estimated monthly opportunity range").locator("..");
+
+  await expect(voiceCard).toHaveCSS("background-color", "rgb(248, 247, 243)");
+  await expect(voiceCard).toHaveCSS("color", "rgb(21, 21, 21)");
+  await expect(opportunityCard).toHaveCSS("background-color", "rgb(236, 233, 225)");
+  await expect(opportunityCard).toHaveCSS("color", "rgb(21, 21, 21)");
+});
+
 test("gallery supports mobile swipe", async ({ page }) => {
   await page.goto(demo);
   await page.getByRole("button", { name: "Open photo 1 of 3" }).click();
@@ -124,7 +137,7 @@ test("email preview reads like a team member", async ({ page }) => {
     }),
   );
   await page.goto(demo);
-  await page.getByRole("button", { name: /Send to Iris/ }).click();
+  await page.getByRole("button", { name: "Run email demo" }).click();
   await expect(page.getByText(/I had the home listed as active/i)).toBeVisible();
   await expect(
     page.getByText(/From: Patricia Mack · American Real Estate, ERA Powered/i),
