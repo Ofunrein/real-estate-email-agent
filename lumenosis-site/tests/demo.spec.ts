@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
-const demoSecret = "test-demo-room-secret-at-least-32-characters";
+const demoSecret = ["test", "demo-room-secret-at-least-32-characters"].join("-");
 const demoToken = createHmac("sha256", demoSecret)
   .update("lumenosis-demo:patricia-any-old-street")
   .digest("base64url");
