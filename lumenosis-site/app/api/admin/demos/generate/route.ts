@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { DemoRoom } from "@/content/demo-rooms";
@@ -72,11 +72,13 @@ export async function POST(request: Request) {
   const input = parsed.data;
   if (automated && !input.idempotencyKey)
     return NextResponse.json({ error: "idempotencyKey is required" }, { status: 400 });
-  if (input.idempotencyKey) {
+  const automationRoomId = input.idempotencyKey
+    ? `agentmail-${createHash("sha256").update(input.idempotencyKey).digest("hex")}`
+    : null;
+  if (automationRoomId) {
     const existing = await sql(
-      `SELECT d.id, d.access_token FROM outreach_drafts o
-       JOIN demo_rooms d ON d.id = o.demo_room_id WHERE o.idempotency_key = ? LIMIT 1`,
-      [input.idempotencyKey],
+      "SELECT d.id, d.access_token FROM demo_rooms d WHERE d.id = ? LIMIT 1",
+      [automationRoomId],
     );
     if (existing[0]) {
       const existingId = String(existing[0].id);
@@ -233,7 +235,7 @@ export async function POST(request: Request) {
     );
 
   const firstName = input.fullName.split(/\s+/)[0];
-  const id = randomUUID();
+  const id = automationRoomId ?? randomUUID();
   const prospectId = randomUUID();
   const listingId = randomUUID();
   const token = randomBytes(32).toString("base64url");
@@ -310,8 +312,8 @@ export async function POST(request: Request) {
     [id, prospectId, listingId, slug, tokenHash(token), token, JSON.stringify(room), expiresAt],
   );
   await sql(
-    "INSERT INTO outreach_drafts (id, demo_room_id, sender_name, sender_inbox, recipient, subject, body, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [randomUUID(), id, senderName, input.senderInbox, input.email, subject, body, input.idempotencyKey ?? null],
+    "INSERT INTO outreach_drafts (id, demo_room_id, sender_name, sender_inbox, recipient, subject, body) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [randomUUID(), id, senderName, input.senderInbox, input.email, subject, body],
   );
   if (automated)
     return NextResponse.json({ id, demoUrl, adminUrl: `https://lumenosis.com/admin/demos#demo-${id}`, approved: false, reused: false });
