@@ -79,6 +79,18 @@ test("approved demo loads and property gallery works", async ({ page }) => {
   await expect(gallery).toBeHidden();
 });
 
+test("demo defaults to light mode and uses the landing-page theme toggle", async ({ page }) => {
+  await page.goto(demo);
+
+  await expect(page.locator("html")).toHaveClass(/light/);
+  const toggle = page.getByRole("button", { name: "Switch to dark mode" });
+  await expect(toggle).toBeVisible();
+
+  await toggle.click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(page.getByRole("button", { name: "Switch to light mode" })).toBeVisible();
+});
+
 test("gallery supports mobile swipe", async ({ page }) => {
   await page.goto(demo);
   await page.getByRole("button", { name: "Open photo 1 of 3" }).click();

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type Vapi from "@vapi-ai/web";
 import type { DemoRoom } from "@/content/demo-rooms";
 import { emailBodyHtml } from "@/lib/email-html";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type EmailResult = { subject: string; reply: string; captured: string[]; nextAction: string };
 type VoiceConfig = {
@@ -193,9 +194,12 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
               Prepared for {room.prospect.fullName} · {room.prospect.role}
             </span>
           </div>
-          <span className="font-[var(--font-mono)] text-xs uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
-            Private demo · expires in 14 days
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-[var(--font-mono)] text-xs uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
+              Private demo · expires in 14 days
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
