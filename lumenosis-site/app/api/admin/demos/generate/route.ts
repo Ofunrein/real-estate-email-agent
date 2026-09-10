@@ -14,12 +14,9 @@ const Input = z.object({
   businessName: z.string().trim().min(2).max(150),
   listingAddress: z.string().trim().min(8).max(200),
   listingUrl: z.string().url(),
-  senderInbox: z.enum([
-    "iris-demo@agentmail.to",
-    "iris-outreach@agentmail.to",
-    "olivia-outreach@agentmail.to",
-    "aria-outreach@agentmail.to",
-  ]),
+  senderInbox: z.string().email().refine((value) => value.endsWith("@agentmail.to")),
+  idempotencyKey: z.string().min(1).max(255).optional(),
+  approved: z.literal(false).optional(),
 });
 
 const Listing = z
@@ -61,10 +58,32 @@ function slugify(value: string) {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = Input.safeParse(Object.fromEntries(await request.formData()));
+  const configuredToken = process.env.LUMENOSIS_DEMO_AUTOMATION_TOKEN ?? "";
+  const suppliedToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  const automated = Boolean(configuredToken && suppliedToken === configuredToken);
+  if (!automated && !(await isAdmin()))
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const contentType = request.headers.get("content-type") ?? "";
+  const rawInput = contentType.includes("application/json")
+    ? await request.json()
+    : Object.fromEntries(await request.formData());
+  const parsed = Input.safeParse(rawInput);
   if (!parsed.success) return NextResponse.json({ error: "Invalid prospect" }, { status: 400 });
   const input = parsed.data;
+  if (automated && !input.idempotencyKey)
+    return NextResponse.json({ error: "idempotencyKey is required" }, { status: 400 });
+  if (input.idempotencyKey) {
+    const existing = await sql(
+      `SELECT d.id, d.access_token FROM outreach_drafts o
+       JOIN demo_rooms d ON d.id = o.demo_room_id WHERE o.idempotency_key = ? LIMIT 1`,
+      [input.idempotencyKey],
+    );
+    if (existing[0]) {
+      const existingId = String(existing[0].id);
+      const existingToken = String(existing[0].access_token);
+      return NextResponse.json({ id: existingId, demoUrl: `https://lumenosis.com/demo/${existingToken}`, adminUrl: `https://lumenosis.com/admin/demos#demo-${existingId}`, approved: false, reused: true });
+    }
+  }
   const tavilyKey = process.env.TAVILY_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
   if (!tavilyKey || !openaiKey)
@@ -258,7 +277,7 @@ export async function POST(request: Request) {
     expiresAt,
     approved: false,
   };
-  const senderName = senderNames[input.senderInbox];
+  const senderName = senderNames[input.senderInbox] ?? input.senderInbox.split("@")[0];
   const demoUrl = `https://lumenosis.com/demo/${token}`;
   const subject = "I built you an AI agent to try for free";
   const body = `Hi ${firstName},\n\nMy name is ${senderName}. I’m an AI consultant, and I help businesses implement AI solutions to save time, improve operations, and generate more revenue.\n\nI put together a [private AI demo for ${input.businessName}](${demoUrl}) built around your listing at ${input.listingAddress}. You can try the voice and email agent completely free, and you can [learn more about what we do here](https://lumenosis.com).\n\nNo pressure. I thought it could be useful for your business and wanted to let you try it.\n\nIf you want to see how we would set it up, reply yes and I’ll send the next step.\n\nBest,\n${senderName}`;
@@ -291,8 +310,10 @@ export async function POST(request: Request) {
     [id, prospectId, listingId, slug, tokenHash(token), token, JSON.stringify(room), expiresAt],
   );
   await sql(
-    "INSERT INTO outreach_drafts (id, demo_room_id, sender_name, sender_inbox, recipient, subject, body) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [randomUUID(), id, senderName, input.senderInbox, input.email, subject, body],
+    "INSERT INTO outreach_drafts (id, demo_room_id, sender_name, sender_inbox, recipient, subject, body, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [randomUUID(), id, senderName, input.senderInbox, input.email, subject, body, input.idempotencyKey ?? null],
   );
+  if (automated)
+    return NextResponse.json({ id, demoUrl, adminUrl: `https://lumenosis.com/admin/demos#demo-${id}`, approved: false, reused: false });
   return NextResponse.redirect(new URL("/admin/demos", request.url), 303);
 }
