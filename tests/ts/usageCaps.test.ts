@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 import { checkUsageCap, usageCaps } from "@/lib/usageCaps";
 
-function resetUsageEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+function resetUsageEnv(env: Record<string, string | undefined>): Record<string, string | undefined> {
   const prior = { ...process.env };
   delete process.env.DATABASE_URL;
   delete process.env.CLIENT_DAILY_AI_COST_USD_CAP;
@@ -16,21 +16,21 @@ function resetUsageEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return prior;
 }
 
-function withEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
+function withEnv<T>(env: Record<string, string | undefined>, run: () => T): T {
   const prior = resetUsageEnv(env);
   try {
     return run();
   } finally {
-    process.env = prior;
+    process.env = prior as NodeJS.ProcessEnv;
   }
 }
 
-async function withEnvAsync<T>(env: NodeJS.ProcessEnv, run: () => Promise<T>): Promise<T> {
+async function withEnvAsync<T>(env: Record<string, string | undefined>, run: () => Promise<T>): Promise<T> {
   const prior = resetUsageEnv(env);
   try {
     return await run();
   } finally {
-    process.env = prior;
+    process.env = prior as NodeJS.ProcessEnv;
   }
 }
 

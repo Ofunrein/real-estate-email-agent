@@ -48,7 +48,10 @@ function twilioSignatureFor(url: string, params: Record<string, string>, authTok
   return createHmac("sha1", authToken).update(Buffer.from(payload, "utf8")).digest("base64");
 }
 
-function withEnv<T>(env: NodeJS.ProcessEnv, run: () => T): T {
+// Record<string, string> rather than NodeJS.ProcessEnv: this repo augments ProcessEnv with
+// required keys, so a small literal of just the vars under test is not assignable to it. Every
+// caller here passes plain string env vars.
+function withEnv<T>(env: Record<string, string>, run: () => T): T {
   const prior = { ...process.env };
   // Clear the whole state-secret precedence chain first. stateSecret() prefers
   // EMAIL_ACCOUNT_OAUTH_STATE_SECRET, so an ambient value in the developer's

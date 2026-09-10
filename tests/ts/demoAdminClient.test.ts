@@ -19,7 +19,7 @@ const SECRET = "example-platform-signing-key-not-real";
 const CONFIGURED = {
   LUMENOSIS_PLATFORM_API_URL: "https://lumenosis.com",
   LUMENOSIS_PLATFORM_API_SECRET: SECRET,
-} as unknown as NodeJS.ProcessEnv;
+};
 
 /**
  * Independent re-implementation of the site's verifier (lib/platform-auth.ts in
@@ -93,9 +93,9 @@ test("the secret never appears in the outgoing headers", () => {
 });
 
 test("config requires both halves and is otherwise unconfigured", () => {
-  assert.equal(platformApiConfigured({} as NodeJS.ProcessEnv), false);
-  assert.equal(platformApiConfigured({ LUMENOSIS_PLATFORM_API_URL: "https://lumenosis.com" } as unknown as NodeJS.ProcessEnv), false);
-  assert.equal(platformApiConfigured({ LUMENOSIS_PLATFORM_API_SECRET: SECRET } as unknown as NodeJS.ProcessEnv), false);
+  assert.equal(platformApiConfigured({}), false);
+  assert.equal(platformApiConfigured({ LUMENOSIS_PLATFORM_API_URL: "https://lumenosis.com" }), false);
+  assert.equal(platformApiConfigured({ LUMENOSIS_PLATFORM_API_SECRET: SECRET }), false);
   assert.equal(platformApiConfigured(CONFIGURED), true);
   assert.equal(platformApiConfig(CONFIGURED)?.baseUrl, "https://lumenosis.com");
 });
@@ -104,7 +104,7 @@ test("a trailing slash on the base URL does not produce a double slash", () => {
   const config = platformApiConfig({
     LUMENOSIS_PLATFORM_API_URL: "https://lumenosis.com/",
     LUMENOSIS_PLATFORM_API_SECRET: SECRET,
-  } as unknown as NodeJS.ProcessEnv);
+  });
   assert.equal(config?.baseUrl, "https://lumenosis.com");
 });
 
@@ -116,9 +116,9 @@ test("every call reports not_configured without performing a request when env is
   }) as unknown as typeof fetch;
 
   for (const result of [
-    await listDemos({} as NodeJS.ProcessEnv, fetchImpl),
-    await approveDemo("abc", {} as NodeJS.ProcessEnv, fetchImpl),
-    await sendDemoOutreach("abc", {} as NodeJS.ProcessEnv, fetchImpl),
+    await listDemos({}, fetchImpl),
+    await approveDemo("abc", {}, fetchImpl),
+    await sendDemoOutreach("abc", {}, fetchImpl),
   ]) {
     assert.equal(result.ok, false);
     assert.equal(result.ok === false && result.reason, "not_configured");

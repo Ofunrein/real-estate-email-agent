@@ -98,20 +98,20 @@ test("listDemos scopes every read to the caller's tenant", async () => {
 });
 
 test("the tenant id resolves from DEMO_CLIENT_ID, then CLIENT_ID, then a default", () => {
-  assert.equal(demoClientId({ DEMO_CLIENT_ID: "a", CLIENT_ID: "b" } as NodeJS.ProcessEnv), "a");
-  assert.equal(demoClientId({ CLIENT_ID: "b" } as NodeJS.ProcessEnv), "b");
-  assert.equal(demoClientId({} as NodeJS.ProcessEnv), "default");
+  assert.equal(demoClientId({ DEMO_CLIENT_ID: "a", CLIENT_ID: "b" }), "a");
+  assert.equal(demoClientId({ CLIENT_ID: "b" }), "b");
+  assert.equal(demoClientId({}), "default");
   // Whitespace-only configuration must not produce an empty tenant predicate.
-  assert.equal(demoClientId({ DEMO_CLIENT_ID: "   " } as NodeJS.ProcessEnv), "default");
+  assert.equal(demoClientId({ DEMO_CLIENT_ID: "   " }), "default");
 });
 
 test("ownership is off unless the flag names postgres exactly", () => {
-  assert.equal(demoOwnershipEnabled({} as NodeJS.ProcessEnv), false);
-  assert.equal(demoOwnershipEnabled({ DEMO_DATA_OWNER: "postgres" } as NodeJS.ProcessEnv), true);
+  assert.equal(demoOwnershipEnabled({}), false);
+  assert.equal(demoOwnershipEnabled({ DEMO_DATA_OWNER: "postgres" }), true);
   // Fail closed: anything else leaves the pre-cutover path in charge.
   for (const value of ["POSTGRES", "true", "1", "neon", ""]) {
     assert.equal(
-      demoOwnershipEnabled({ DEMO_DATA_OWNER: value } as unknown as NodeJS.ProcessEnv),
+      demoOwnershipEnabled({ DEMO_DATA_OWNER: value }),
       false,
       value,
     );

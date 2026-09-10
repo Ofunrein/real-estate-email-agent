@@ -1228,7 +1228,13 @@ function irisEmailCtaHtml(cta: { label: string; url: string; color: string }): s
 }
 
 export function buildHtmlEmailReply(text: string, properties: SheetRow[] = [], classification?: IrisEmailClassification): IrisEmailReplyDraft {
-  const cleanProperties = dedupeProperties(properties);
+  // Property cards only belong on property intents. The live caller already filters the list, but
+  // that made this function's own safety depend entirely on every caller remembering to do it —
+  // pass an unrelated cold email plus a property list and it would still render the card, address
+  // and price. Gate here too so the leak is impossible rather than merely unlikely.
+  const intentAllowsProperties = classification == null
+    || ["property_search", "property_details", "showing_request"].includes(classification.intent);
+  const cleanProperties = intentAllowsProperties ? dedupeProperties(properties) : [];
   const featured = cleanProperties[0];
   const rest = cleanProperties.slice(1, 4);
   const bodyText = refineShowingReplyForSelectedProperty(text, featured, classification);

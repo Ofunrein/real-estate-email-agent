@@ -1154,8 +1154,12 @@ export async function runAriaTool(
   name: string,
   args: Record<string, unknown>,
   ctx: AriaToolContext,
-  deps: AriaToolDeps = defaultDeps,
+  // Partial + merge: callers (and tests) legitimately override only the deps a given tool path
+  // touches. Typing this as a full AriaToolDeps forced every caller to hand-build ~15 unrelated
+  // functions, and taking it raw meant a partial object would blow up on the first unset dep.
+  overrides: Partial<AriaToolDeps> = {},
 ): Promise<AriaToolOutcome> {
+  const deps: AriaToolDeps = { ...defaultDeps, ...overrides };
   if (name !== "getCallerContext" && name !== "sendBookingSmsConfirmation") {
     const hydrated = await hydrateContext(ctx, deps);
     const validation = validateToolRequest(

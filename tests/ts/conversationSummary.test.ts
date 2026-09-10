@@ -74,6 +74,8 @@ test("buildConversationSummary: scheduled appointment wins over request wording"
 test("customFieldFromConversationSummary: prefers field id over field key", () => {
   const summary = buildConversationSummary({ events: [row({ channel: "sms", direction: "inbound", message_text: "Hi" })] });
   const field = customFieldFromConversationSummary(summary, { fieldId: "cf_123", fieldKey: "conversation_summary" });
+  // The return is an id-or-key union, so narrow before reading .id rather than assuming a shape.
+  assert.ok("id" in field, "expected the id variant when a fieldId is supplied");
   assert.equal(field.id, "cf_123");
   assert.equal("key" in field, false);
   assert.match(field.fieldValue, /Austin Realty/);

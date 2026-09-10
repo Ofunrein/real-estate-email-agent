@@ -44,14 +44,14 @@ export type PlatformApiConfig = { baseUrl: string; secret: string };
  * Resolve config from the environment. Returns null when either half is missing,
  * which is what drives the disabled UI state.
  */
-export function platformApiConfig(env: NodeJS.ProcessEnv = process.env): PlatformApiConfig | null {
+export function platformApiConfig(env: Record<string, string | undefined> = process.env): PlatformApiConfig | null {
   const baseUrl = env.LUMENOSIS_PLATFORM_API_URL?.trim();
   const secret = env.LUMENOSIS_PLATFORM_API_SECRET?.trim();
   if (!baseUrl || !secret) return null;
   return { baseUrl: baseUrl.replace(/\/$/, ""), secret };
 }
 
-export function platformApiConfigured(env: NodeJS.ProcessEnv = process.env) {
+export function platformApiConfigured(env: Record<string, string | undefined> = process.env) {
   return platformApiConfig(env) !== null;
 }
 
@@ -59,7 +59,7 @@ export function platformApiConfigured(env: NodeJS.ProcessEnv = process.env) {
  * Which side owns demo data right now. Exposed so the UI can name the active source in
  * its not-configured copy instead of guessing.
  */
-export function demoDataSource(env: NodeJS.ProcessEnv = process.env): "postgres" | "platform-api" {
+export function demoDataSource(env: Record<string, string | undefined> = process.env): "postgres" | "platform-api" {
   return demoOwnershipEnabled(env) ? "postgres" : "platform-api";
 }
 
@@ -93,7 +93,7 @@ async function call<T>(
   method: "GET" | "POST",
   path: string,
   bodyValue: unknown,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<T>> {
   const config = platformApiConfig(env);
@@ -131,7 +131,7 @@ async function call<T>(
  * can embed a connection string, so it is never propagated to the UI.
  */
 export async function listDemos(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ demos: DemoSummary[] }>> {
   if (demoOwnershipEnabled(env)) {
@@ -147,7 +147,7 @@ export async function listDemos(
 
 export async function approveDemo(
   id: string,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ ok: boolean; approved: boolean }>> {
   if (demoOwnershipEnabled(env)) {
@@ -166,7 +166,7 @@ export async function approveDemo(
 
 export async function sendDemoOutreach(
   id: string,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): Promise<DemoAdminResult<{ ok: boolean; alreadySent: boolean }>> {
   if (demoOwnershipEnabled(env)) {

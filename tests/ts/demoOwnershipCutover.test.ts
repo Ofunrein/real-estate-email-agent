@@ -23,12 +23,12 @@ const SECRET = "example-platform-signing-key-not-real";
 const PLATFORM = {
   LUMENOSIS_PLATFORM_API_URL: "https://lumenosis.com",
   LUMENOSIS_PLATFORM_API_SECRET: SECRET,
-} as unknown as NodeJS.ProcessEnv;
+};
 
 test("the active data source is named by the flag", () => {
-  assert.equal(demoDataSource({} as NodeJS.ProcessEnv), "platform-api");
+  assert.equal(demoDataSource({}), "platform-api");
   assert.equal(
-    demoDataSource({ DEMO_DATA_OWNER: "postgres" } as unknown as NodeJS.ProcessEnv),
+    demoDataSource({ DEMO_DATA_OWNER: "postgres" }),
     "postgres",
   );
 });
@@ -59,7 +59,7 @@ test("after cutover, a read makes no outbound request even when the platform API
   // silently falling back to the remote app. A fallback would reintroduce the hop and,
   // worse, allow two writers during a mixed-version deploy.
   const result = await listDemos(
-    { ...PLATFORM, DEMO_DATA_OWNER: "postgres" } as unknown as NodeJS.ProcessEnv,
+    { ...PLATFORM, DEMO_DATA_OWNER: "postgres" },
     fetchImpl,
   );
 
@@ -78,6 +78,6 @@ test("an unrecognised flag value leaves the pre-cutover path in charge", async (
     });
   }) as unknown as typeof fetch;
 
-  await listDemos({ ...PLATFORM, DEMO_DATA_OWNER: "neon" } as unknown as NodeJS.ProcessEnv, fetchImpl);
+  await listDemos({ ...PLATFORM, DEMO_DATA_OWNER: "neon" }, fetchImpl);
   assert.equal(called, true, "only the exact value 'postgres' may switch ownership");
 });

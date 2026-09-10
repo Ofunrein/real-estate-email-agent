@@ -13,7 +13,7 @@ import { verifyProviderOAuthState } from "@/lib/providerOAuthState";
 // scanner does not flag it as a hardcoded key.
 const TEST_STATE_SECRET = "state-fixture";
 
-async function withMetaConnectEnv<T>(env: NodeJS.ProcessEnv, run: () => T | Promise<T>): Promise<T> {
+async function withMetaConnectEnv<T>(env: Record<string, string | undefined>, run: () => T | Promise<T>): Promise<T> {
   const prior = {
     META_APP_ID: process.env.META_APP_ID,
     FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID,

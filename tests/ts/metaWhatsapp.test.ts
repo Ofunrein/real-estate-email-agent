@@ -58,8 +58,9 @@ test("extractMetaWhatsAppMessages keeps image captions as message text", () => {
   assert.equal(messages[0]?.from, "15125550100");
   assert.equal(messages[0]?.body, "Is this property still available?");
   assert.equal(messages[0]?.messageType, "image");
-  assert.equal(messages[0]?.media.length, 1);
-  assert.equal(messages[0]?.media[0]?.type, "image");
+  // media is optional on the parsed message, so assert it exists before indexing into it.
+  assert.equal(messages[0]?.media?.length, 1);
+  assert.equal(messages[0]?.media?.[0]?.type, "image");
 });
 
 test("sendMetaWhatsApp does not call Meta when the WhatsApp agent is disabled", async () => {

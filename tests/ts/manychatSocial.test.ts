@@ -183,7 +183,11 @@ test("formatManyChatDynamicBlock: marks Instagram content type", () => {
   });
   const block = formatManyChatDynamicBlock(result);
   assert.equal(block.content.type, "instagram");
-  assert.equal(block.content.messages?.[0]?.text, "Yes, it is available.");
+  // ManyChatMessage is a text|image union, so narrow before reading .text. Asserting the type
+  // first is also the stronger check: it proves this is a text message, not an image block.
+  const first = block.content.messages?.[0];
+  assert.equal(first?.type, "text");
+  assert.equal(first?.type === "text" ? first.text : undefined, "Yes, it is available.");
 });
 
 test("socialMediaUrls: caps image URLs and returns direct URLs", () => {
@@ -237,7 +241,9 @@ test("shouldTheoHandleDirectMetaDm: a shared non-property reel abstains and send
       shouldSend: true,
       reply: "What would you like me to look for from that post?",
       mediaUrls: [],
-      classification: { intent: "general_question", leadRole: "unknown", handoffReason: "", status: "ready_to_reply" },
+      // "general_question" was not a TheoIntent, so this literal never type-checked. The guard
+      // (not the classification) drives what this test asserts, so use a real intent value.
+      classification: { intent: "property_details", leadRole: "unknown", handoffReason: "", status: "ready_to_reply" },
     },
   });
 

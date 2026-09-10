@@ -210,13 +210,13 @@ test("checksum input is hashes, so no plaintext token can be reconstructed from 
 /* ------------------------------------------------------------------ source cfg ----- */
 
 test("the source config is absent unless both Turso variables are set", () => {
-  assert.equal(tursoConfig({} as unknown as NodeJS.ProcessEnv), null);
+  assert.equal(tursoConfig({}), null);
   assert.equal(
-    tursoConfig({ LUMENOSIS_TURSO_DATABASE_URL: "libsql://example.turso.io" } as unknown as NodeJS.ProcessEnv),
+    tursoConfig({ LUMENOSIS_TURSO_DATABASE_URL: "libsql://example.turso.io" }),
     null,
   );
   assert.equal(
-    tursoConfig({ LUMENOSIS_TURSO_AUTH_TOKEN: "example-token" } as unknown as NodeJS.ProcessEnv),
+    tursoConfig({ LUMENOSIS_TURSO_AUTH_TOKEN: "example-token" }),
     null,
   );
 });
@@ -225,7 +225,7 @@ test("a libsql:// source URL is normalised to https and de-slashed", () => {
   const config = tursoConfig({
     LUMENOSIS_TURSO_DATABASE_URL: "libsql://example.turso.io/",
     LUMENOSIS_TURSO_AUTH_TOKEN: "example-token",
-  } as unknown as NodeJS.ProcessEnv);
+  });
   assert.equal(config.url, "https://example.turso.io");
   assert.equal(config.token, "example-token");
 });

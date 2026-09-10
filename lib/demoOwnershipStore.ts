@@ -55,12 +55,12 @@ function defaultQuery(): DemoQuery {
  * Tenant id that owns the demo corpus. Turso was single-tenant, so the migration stamps
  * every imported row with this one id and it stays the owner afterwards.
  */
-export function demoClientId(env: NodeJS.ProcessEnv = process.env) {
+export function demoClientId(env: Record<string, string | undefined> = process.env) {
   return (env.DEMO_CLIENT_ID || env.CLIENT_ID || "default").trim() || "default";
 }
 
 /** True once this app owns the data — the cutover flag read by the legacy gate. */
-export function demoOwnershipEnabled(env: NodeJS.ProcessEnv = process.env) {
+export function demoOwnershipEnabled(env: Record<string, string | undefined> = process.env) {
   return env.DEMO_DATA_OWNER === "postgres";
 }
 

@@ -579,9 +579,11 @@ test("processIrisEmailPoll: spam closes without a review draft", async () => {
   assert.equal(calls.drafts?.length, 0);
   // No send and no human stop, so no label at all. `Closed No Reply` is internal state now: Iris
   // does not file a stranger's cold pitch into the user's mailbox taxonomy.
-  assert.deepEqual(calls.labels[0], []);
+  // The specific-label checks run before the deepEqual: asserting deepEqual against [] first
+  // narrows the value to never[], which made both includes() assertions dead code.
   assert.ok(!calls.labels[0].includes("Closed No Reply"));
   assert.ok(!calls.labels[0].includes("NEEDS_HUMAN"));
+  assert.deepEqual(calls.labels[0], []);
 });
 
 test("iris email cron: live env sends by default unless explicitly overridden", () => {
@@ -1031,7 +1033,9 @@ const COLD_OUTBOUND_CASES: Array<{ id: string; subject: string; from: string; bo
 
 test("cold outbound sales email is never auto-replied to and never gets a property pitch", () => {
   for (const item of COLD_OUTBOUND_CASES) {
-    const classification = classifyIrisEmailText({ subject: item.subject, body: item.body, from: item.from });
+    // classifyIrisEmailText is deliberately subject/body only, so passing `from` here implied a
+    // sender-based signal that does not exist. The classification is driven by content alone.
+    const classification = classifyIrisEmailText({ subject: item.subject, body: item.body });
     const execution = decideIrisEmailExecution(classification);
 
     // 1. No send, ever.
@@ -1063,7 +1067,6 @@ test("the autonomy floor requires affirmative real-estate evidence", () => {
   const withoutEvidence = classifyIrisEmailText({
     subject: "following up",
     body: "Just circling back on my note from last week. Worth a quick chat?",
-    from: "Sender Name <bd@examplevendor.com>",
   });
   assert.ok(!withoutEvidence.opportunity_tags.includes("autonomy_floor_reply"));
   assert.equal(decideIrisEmailExecution(withoutEvidence).canReply, false);
@@ -1071,7 +1074,6 @@ test("the autonomy floor requires affirmative real-estate evidence", () => {
   const withEvidence = classifyIrisEmailText({
     subject: "following up",
     body: "Just circling back on my note from last week. Is the condo at 70 Rainey St still available? Worth a quick chat?",
-    from: "Lead Name <lead@example.com>",
   });
   assert.ok(withEvidence.intent !== "human_required", "real real-estate mail must stay answerable");
 });
@@ -1079,7 +1081,7 @@ test("the autonomy floor requires affirmative real-estate evidence", () => {
 test("ambiguous mail from a possible lead drafts for a human instead of going silent", () => {
   // No resolvable real-estate context, but this is not affirmatively someone else's business.
   // Silence on a real lead is its own failure, so this is Tier B: a draft, not a no-op.
-  const classification = classifyIrisEmailText({ subject: "question", body: "How much is it?", from: "Lead Name <lead@example.com>" });
+  const classification = classifyIrisEmailText({ subject: "question", body: "How much is it?" });
   const execution = decideIrisEmailExecution(classification);
   assert.equal(execution.canReply, false, "must not auto-send on unresolved ambiguity");
   assert.equal(execution.aiAction, "draft_reply", "must still produce a draft, not silence");
@@ -1109,7 +1111,12 @@ test("unrelated mail gets no property card, listing, price or real-estate pitch 
   for (const item of COLD_OUTBOUND_CASES) {
     const message = { id: "m1", threadId: "t1", from: item.from, subject: item.subject, body: item.body };
     const classification = classifyIrisEmailText(message);
-    const reply = generateIrisEmailReply(message, classification, properties) || "";
+    const plain = generateIrisEmailReply(message, classification) || "";
+    // The plain generator never receives properties, so asserting against it alone can't fail.
+    // buildHtmlEmailReply is the path that actually gets the property list and decides whether to
+    // attach a card, so the leak assertions have to run against its output to mean anything.
+    const rendered = buildHtmlEmailReply(plain, properties, classification);
+    const reply = `${plain}\n${rendered.text}\n${rendered.html}`;
 
     assert.doesNotMatch(reply, /70 Rainey St/, `${item.id}: leaked a property address`);
     assert.doesNotMatch(reply, /zillow\.com/, `${item.id}: leaked a listing URL`);
