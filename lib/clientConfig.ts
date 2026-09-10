@@ -77,13 +77,26 @@ function channel(value: string, fallback: NotifyConfig["preferredChannel"]): Not
   return value === "sms" || value === "email" || value === "dashboard" ? value : fallback;
 }
 
+// Turns an internal client slug into something safe to say on a live call. Placeholder slugs have
+// no business name behind them, so they become a generic phrase rather than being read aloud.
+function speakableClientName(clientId: string): string {
+  const slug = clientId.trim().toLowerCase();
+  if (slug === "" || slug === "default" || slug === "demo" || slug === "test" || slug === "local") {
+    return "the team";
+  }
+  return clientId;
+}
+
 function modelRoutingProfile(value: string): ClientConfig["modelRoutingProfile"] {
   return value === "canary" || value === "candidate" ? value : "legacy";
 }
 
 export function resolveClientConfig(env: Env = process.env): ClientConfig {
   const clientId = str(env, "CLIENT_ID", "default");
-  const clientName = str(env, "CLIENT_NAME", clientId);
+  // CLIENT_NAME is what agents say out loud ("I'm Aria, <name>'s virtual assistant"). Falling back
+  // to clientId leaked the internal slug into live speech as "default's virtual assistant", so the
+  // fallback is a neutral speakable phrase and only a real slug-free name is used verbatim.
+  const clientName = str(env, "CLIENT_NAME") || speakableClientName(clientId);
   const teamName = str(env, "TEAM_NAME", clientName);
 
   return {

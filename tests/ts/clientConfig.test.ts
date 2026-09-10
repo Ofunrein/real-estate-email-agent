@@ -6,7 +6,9 @@ import { resolveClientConfig } from "@/lib/clientConfig";
 test("resolveClientConfig: defaults when env empty", () => {
   const config = resolveClientConfig({});
   assert.equal(config.clientId, "default");
-  assert.equal(config.clientName, "default");
+  // clientId stays the internal slug, but clientName is spoken aloud by the voice agents, so the
+  // placeholder slug must not surface there. See tests/ts/clientConfigSpokenName.test.ts.
+  assert.equal(config.clientName, "the team");
   assert.equal(config.agentNames.voice, "Iris");
   assert.equal(config.agentNames.email, "Iris");
   assert.equal(config.agentNames.sms, "Iris");
