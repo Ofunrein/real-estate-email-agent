@@ -24,10 +24,10 @@ export type AttioOnboardingResult = {
   taskId: string;
 };
 
-async function attioRequest(path: string, body: Record<string, unknown>, fetchImpl: typeof fetch): Promise<Record<string, unknown>> {
+async function attioRequest(path: string, body: Record<string, unknown>, fetchImpl: typeof fetch, method: "POST" | "PUT" | "PATCH" = "POST"): Promise<Record<string, unknown>> {
   const token = process.env.ATTIO_API_KEY || "";
   const response = await fetchImpl(`${ATTIO_BASE}${path}`, {
-    method: "POST",
+    method,
     signal: AbortSignal.timeout(8_000),
     headers: {
       Authorization: ["Bearer", token].join(" "),
@@ -39,6 +39,33 @@ async function attioRequest(path: string, body: Record<string, unknown>, fetchIm
   const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) throw new Error(`Attio request failed (${response.status})`);
   return (payload.data && typeof payload.data === "object" ? payload.data : payload) as Record<string, unknown>;
+}
+
+async function findRecordByName(object: string, name: string, fetchImpl: typeof fetch): Promise<string> {
+  const token = process.env.ATTIO_API_KEY || "";
+  const response = await fetchImpl(`${ATTIO_BASE}/objects/${object}/records/query`, {
+    method: "POST",
+    signal: AbortSignal.timeout(8_000),
+    headers: { Authorization: ["Bearer", token].join(" "), "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ filter: { name }, limit: 1 }),
+  });
+  const payload = await response.json().catch(() => ({})) as { data?: Array<Record<string, unknown>> };
+  if (!response.ok) throw new Error(`Attio query failed (${response.status})`);
+  return payload.data?.[0] ? nestedId(payload.data[0], "record_id") : "";
+}
+
+async function attioOwnerId(fetchImpl: typeof fetch): Promise<string> {
+  const configured = process.env.ATTIO_OWNER_WORKSPACE_MEMBER_ID || "";
+  if (configured) return configured;
+  const token = process.env.ATTIO_API_KEY || "";
+  const response = await fetchImpl(`${ATTIO_BASE}/self`, {
+    method: "GET",
+    signal: AbortSignal.timeout(8_000),
+    headers: { Authorization: ["Bearer", token].join(" "), Accept: "application/json" },
+  });
+  const payload = await response.json().catch(() => ({})) as { authorized_by_workspace_member_id?: string };
+  if (!response.ok || !payload.authorized_by_workspace_member_id) throw new Error(`Attio owner lookup failed (${response.status})`);
+  return payload.authorized_by_workspace_member_id;
 }
 
 function nestedId(payload: Record<string, unknown>, key: string): string {
@@ -67,7 +94,7 @@ export async function syncPaidCustomerToAttio(input: PaidCustomer, fetchImpl: ty
   const companyValues: Record<string, unknown> = { name: companyName };
   const domain = domainFromEmail(input.email);
   if (domain) companyValues.domains = [domain];
-  const company = await attioRequest(`/objects/companies/records?matching_attribute=${domain ? "domains" : "name"}`, { values: companyValues }, fetchImpl);
+  const company = await attioRequest(`/objects/companies/records?matching_attribute=${domain ? "domains" : "name"}`, { values: companyValues }, fetchImpl, "PUT");
   const companyId = nestedId(company, "record_id");
 
   const personValues: Record<string, unknown> = {
@@ -76,17 +103,23 @@ export async function syncPaidCustomerToAttio(input: PaidCustomer, fetchImpl: ty
   };
   if (input.phone) personValues.phone_numbers = [input.phone];
   if (companyId) personValues.company = [companyId];
-  const person = await attioRequest("/objects/people/records?matching_attribute=email_addresses", { values: personValues }, fetchImpl);
+  const person = await attioRequest("/objects/people/records?matching_attribute=email_addresses", { values: personValues }, fetchImpl, "PUT");
   const personId = nestedId(person, "record_id");
 
   const dealName = `Lumenosis onboarding · ${input.customerId || input.email}`;
+  const ownerId = await attioOwnerId(fetchImpl);
   const dealValues: Record<string, unknown> = {
     name: dealName,
-    value: [{ currency_value: input.amount / 100, currency_code: input.currency || "USD" }],
+    value: [{ currency_value: input.amount / 100 }],
+    stage: process.env.ATTIO_ONBOARDING_DEAL_STAGE || "Won 🎉",
+    owner: [{ referenced_actor_type: "workspace-member", referenced_actor_id: ownerId }],
   };
   if (personId) dealValues.associated_people = [personId];
   if (companyId) dealValues.associated_company = [companyId];
-  const deal = await attioRequest("/objects/deals/records?matching_attribute=name", { values: dealValues }, fetchImpl);
+  const existingDealId = await findRecordByName("deals", dealName, fetchImpl);
+  const deal = existingDealId
+    ? await attioRequest(`/objects/deals/records/${existingDealId}`, { values: dealValues }, fetchImpl, "PATCH")
+    : await attioRequest("/objects/deals/records", { values: dealValues }, fetchImpl);
   const dealId = nestedId(deal, "record_id");
 
   if (!createActivities) return { personId, companyId, dealId, noteId: "", taskId: "" };

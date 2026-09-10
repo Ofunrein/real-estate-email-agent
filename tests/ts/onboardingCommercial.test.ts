@@ -33,20 +33,19 @@ test("kickoff email includes intake, scheduling, and secure-access guidance", ()
   assert.doesNotMatch(html, /<p>Martin<br>/);
 });
 
-test("AgentMail is the primary onboarding email provider", async () => {
+test("Resend remains the only onboarding email provider even when AgentMail is configured", async () => {
   process.env.AGENTMAIL_API_KEY = "example-agentmail-key";
-  process.env.ONBOARDING_AGENTMAIL_INBOX = "onboarding@trylumenosis.com";
+  process.env.RESEND_API_KEY = "example-resend-key";
   process.env.TYPEFORM_ONBOARDING_URL = "https://example.com/intake";
   process.env.ONBOARDING_KICKOFF_BOOKING_URL = "https://example.com/book";
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
   const fetchImpl = async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), body: JSON.parse(String(init?.body)) });
-    return new Response(JSON.stringify({ message_id: "am_1" }), { status: 200 });
+    return new Response(JSON.stringify({ id: "re_1" }), { status: 200 });
   };
   const result = await sendKickoffEmail({ to: "client@example.com", name: "A Client" }, fetchImpl as typeof fetch);
-  assert.deepEqual(result, { id: "am_1", provider: "agentmail" });
-  assert.match(calls[0].url, /api\.agentmail\.to/);
-  assert.deepEqual(calls[0].body.labels, ["onboarding", "payment-confirmed"]);
+  assert.equal(result, "re_1");
+  assert.equal(calls[0].url, "https://api.resend.com/emails");
 });
 
 test("onboarding SMS requires explicit Stripe consent", async () => {

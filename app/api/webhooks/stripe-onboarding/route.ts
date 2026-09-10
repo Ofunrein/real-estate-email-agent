@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const attioRecords = await syncPaidCustomerToAttio({ eventId: event.id, ...customer }, fetch, false);
-    const email = await sendKickoffEmail({ to: customer.email, name: customer.name });
+    const emailId = await sendKickoffEmail({ to: customer.email, name: customer.name });
     const sms = await sendKickoffSms({ to: customer.phone, name: customer.name, consent: customer.smsConsent }).catch((error) => {
       console.error("stripe_onboarding_sms_failed", { eventId: event.id, error: String(error).slice(0, 200) });
       return { skipped: true, id: "" };
@@ -38,15 +38,15 @@ export async function POST(request: NextRequest) {
     const attio = await syncPaidCustomerToAttio({
       eventId: event.id,
       ...customer,
-      emailProvider: email.provider,
-      emailMessageId: email.id,
+      emailProvider: "resend",
+      emailMessageId: emailId,
       smsMessageId: sms.id,
     }).catch((error) => {
       console.error("stripe_onboarding_attio_activity_failed", { eventId: event.id, error: String(error).slice(0, 200) });
       return attioRecords;
     });
-    await finishCommercialEvent(event.id, "complete", email.id);
-    return NextResponse.json({ ok: true, emailId: email.id, emailProvider: email.provider, smsId: sms.id, smsSkipped: sms.skipped, attio });
+    await finishCommercialEvent(event.id, "complete", emailId);
+    return NextResponse.json({ ok: true, emailId, emailProvider: "resend", smsId: sms.id, smsSkipped: sms.skipped, attio });
   } catch (error) {
     await finishCommercialEvent(event.id, "failed", "", String(error).slice(0, 500));
     throw error;

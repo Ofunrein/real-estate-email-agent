@@ -62,34 +62,13 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char] || char);
 }
 
-export async function sendKickoffEmail(input: { to: string; name: string }, fetchImpl: typeof fetch = fetch): Promise<{ id: string; provider: "agentmail" | "resend" }> {
-  const agentMailKey = process.env.AGENTMAIL_API_KEY || "";
-  const agentMailInbox = process.env.ONBOARDING_AGENTMAIL_INBOX || process.env.ONBOARDING_EMAIL_INBOX || "onboarding@trylumenosis.com";
+export async function sendKickoffEmail(input: { to: string; name: string }, fetchImpl: typeof fetch = fetch): Promise<string> {
+  const apiKey = process.env.RESEND_API_KEY || "";
   const from = process.env.ONBOARDING_EMAIL_FROM || "Olivia <olivia@trylumenosis.com>";
   const intakeUrl = process.env.TYPEFORM_ONBOARDING_URL || "https://form.typeform.com/to/v3hPCHwT";
   const bookingUrl = process.env.ONBOARDING_KICKOFF_BOOKING_URL || "";
   if (!bookingUrl) throw new Error("ONBOARDING_KICKOFF_BOOKING_URL is required");
-  const html = kickoffEmailHtml({ name: input.name, intakeUrl, bookingUrl });
-  if (agentMailKey) {
-    const response = await fetchImpl(`https://api.agentmail.to/v0/inboxes/${encodeURIComponent(agentMailInbox)}/messages/send`, {
-      method: "POST",
-      signal: AbortSignal.timeout(10_000),
-      headers: { Authorization: ["Bearer", agentMailKey].join(" "), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: input.to,
-        subject: "Payment confirmed: complete your Lumenosis kickoff steps",
-        text: `Hi${input.name ? ` ${input.name}` : ""},\n\nYour payment is confirmed. Complete your onboarding form: ${intakeUrl}\n\nSchedule kickoff: ${bookingUrl}\n\nDo not email passwords or API keys.`,
-        html,
-        labels: ["onboarding", "payment-confirmed"],
-      }),
-    });
-    const body = await response.json().catch(() => ({})) as { message_id?: string; message?: string };
-    if (!response.ok || !body.message_id) throw new Error(`AgentMail failed (${response.status}): ${body.message || "unknown error"}`);
-    return { id: body.message_id, provider: "agentmail" };
-  }
-
-  const apiKey = process.env.RESEND_API_KEY || "";
-  if (!apiKey) throw new Error("AGENTMAIL_API_KEY or RESEND_API_KEY is required");
+  if (!apiKey) throw new Error("RESEND_API_KEY is required");
   const response = await fetchImpl("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -97,7 +76,7 @@ export async function sendKickoffEmail(input: { to: string; name: string }, fetc
       from,
       to: [input.to],
       subject: "Payment confirmed: complete your Iris kickoff steps",
-      html,
+      html: kickoffEmailHtml({ name: input.name, intakeUrl, bookingUrl }),
       tags: [
         { name: "workflow", value: "onboarding" },
         { name: "trigger", value: "payment-confirmed" },
@@ -107,7 +86,7 @@ export async function sendKickoffEmail(input: { to: string; name: string }, fetc
   const body = await response.json() as { id?: string; message?: string };
   const messageId = body.id;
   if (!response.ok || !messageId) throw new Error(`Resend failed (${response.status}): ${body.message || "unknown error"}`);
-  return { id: messageId, provider: "resend" };
+  return messageId;
 }
 
 export async function sendKickoffSms(
