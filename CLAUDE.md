@@ -12,6 +12,51 @@ Multi-channel real estate AI agent platform. Four named agents share one cross-c
 
 Dashboard is a **Next.js 15 App Router + React 19 + TypeScript** read-only inbox at `http://localhost:3000`. Python handles zero UI — it is a background daemon only.
 
+## Repository layout: two sites, one repo
+
+This repo deploys **two** Vercel projects from one history. `lumenosis-site/` is not a copy,
+mirror, or vendored snapshot of the marketing site — it *is* the site that serves
+lumenosis.com. The old standalone site repo no longer deploys anywhere.
+
+| Vercel project | Root directory | Domain | Owns |
+|---|---|---|---|
+| `real-estate-email-agent` | repo root | app.lumenosis.com | agents, demo datastore, generation, admin |
+| `lumenosis-site` | `lumenosis-site/` | lumenosis.com | public marketing pages + public demo rooms |
+
+Why one repo instead of a submodule: the site calls
+`demo_public_api.lookup_room()` with a SHA-256 token hash whose signature is defined by
+`db/migrations/`. That is a hard contract across the boundary, so a schema change and the
+site code that depends on it must land in **one** commit. With a submodule they would be two
+commits in two repos plus a pointer bump, and between them production runs site code against
+a schema that lacks the change.
+
+### Landing-page copy changes must not trigger the full suite
+
+Edits confined to `lumenosis-site/**` rebuild and test **only** the site. This is enforced in
+three places, all path-filtered on the same rule — change one, change all three:
+
+- `scripts/vercel-ignore-site.sh` — site builds only for `lumenosis-site/**` or `db/migrations/**`
+- `scripts/vercel-ignore-app.sh` — app skips when every changed path is under `lumenosis-site/**`
+- `.github/workflows/site-tests.yml` — site Playwright suite runs only on those same paths
+
+So a one-letter copy fix on the landing page runs the site suite and redeploys lumenosis.com
+alone; app.lumenosis.com is untouched and the root test suite does not run.
+
+`db/migrations/**` deliberately triggers the **site** build too, because the site consumes
+the `demo_public_api` contract and should fail fast rather than drift.
+
+Both ignore scripts fail **open**: if the diff cannot be computed (shallow clone, missing
+base SHA, first deploy) they build. A needless build is cheap; a silently skipped deploy that
+leaves production stale is not.
+
+### Creating demos vs editing the site
+
+- **New demos, voice, property data, admin** → root (`app/`, `lib/`, `db/`) → app.lumenosis.com
+- **Copy, images, landing pages** → `lumenosis-site/` → lumenosis.com
+
+Either way it is the same repo and one `git push`. Which folder you touched decides what
+redeploys.
+
 ## Commands
 
 ```bash
