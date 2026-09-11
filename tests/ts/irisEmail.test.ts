@@ -7,6 +7,7 @@ import {
   classifyIrisEmailText,
   coalesceIrisEmailThreadFollowUps,
   decideIrisEmailExecution,
+  finalizeIrisReplyForMessage,
   formatPlainTextEmail,
   generateIrisEmailReply,
   generateIrisPublicDataReply,
@@ -91,7 +92,37 @@ test("exact-address guard accepts suffix expansion but rejects other units and p
   assert.equal(isExactPropertyAddressMatch("100 E 51st St #7", "100 E 51st St #7, Austin, TX"), true);
   assert.equal(isExactPropertyAddressMatch("100 E 51st St #7", "100 E 51st St #8, Austin, TX"), false);
   assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1707 S Lamar Blvd, Austin, TX"), false);
+  assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1701 S Lamar Blvd #204, Austin, TX"), false);
   assert.equal(isExactPropertyAddressMatch("1701 South Lamar", "1701 S Lamar Blvd Apt 204, Austin, TX"), false);
+  assert.equal(isExactPropertyAddressMatch("70 Rainey St #1509", "70 Rainey St, Unit 1509, Austin, TX 78701"), true);
+  assert.equal(isExactPropertyAddressMatch("70 Rainey St Apt. 1509", "70 Rainey St #1509"), true);
+});
+
+test("classifyIrisEmailText: preserves a listing unit in a showing request", () => {
+  const classification = classifyIrisEmailText(email({
+    subject: "Question about 70 Rainey St #1509",
+    body: "I saw 70 Rainey St #1509 and wanted to check whether it is still available. If it is, could I tour it this weekend?",
+  }));
+
+  assert.equal(classification.intent, "showing_request");
+  assert.equal(classification.address, "70 Rainey St #1509");
+  assert.equal(isExactPropertyAddressMatch(classification.address || "", "70 Rainey St #1509, Austin, TX 78701"), true);
+});
+
+test("classifyIrisEmailText: preserves common unit formats", () => {
+  for (const [input, expected] of [
+    ["70 Rainey St, Unit 1509", "70 Rainey St, Unit 1509"],
+    ["70 Rainey St Apt. 1509", "70 Rainey St Apt. 1509"],
+    ["70 Rainey St Unit #1509", "70 Rainey St Unit #1509"],
+    ["70 Rainey St Apt #1509", "70 Rainey St Apt #1509"],
+    ["70 Rainey St Apartment 1509", "70 Rainey St Apartment 1509"],
+  ]) {
+    const classification = classifyIrisEmailText(email({
+      subject: `Tour ${input}`,
+      body: `Can I tour ${input} Saturday at 11 AM?`,
+    }));
+    assert.equal(classification.address, expected);
+  }
 });
 
 test("adversarial: vague property ask and conflicting showings require human review", () => {
@@ -268,6 +299,222 @@ test("classifyIrisEmailText: valuation acceptance sends booking path", () => {
   assert.equal(classification.recommended_next_action, "send_booking_link");
 });
 
+test("sell-before-buy showing request acknowledges supplied time and direct valuation request", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    const message = email({
+      subject: "Re: Question about 70 Rainey St #1509",
+      body: [
+        "Saturday at 11:00 AM would work. This would be my second purchase.",
+        "I currently own a condo in East Austin that I would prefer to sell before buying.",
+        "I am hoping to move within two to three months.",
+        "Can you help coordinate both the showing and a valuation of my current home?",
+      ].join(" "),
+    });
+    const classification = classifyIrisEmailText(message);
+    const reply = generateIrisEmailReply(message, classification) || "";
+    const rendered = buildHtmlEmailReply(reply, [], classification);
+
+    assert.equal(classification.address, "70 Rainey St #1509");
+    assert.equal(classification.lead_fields.timeline, "within two to three months");
+    assert.ok(classification.opportunity_tags.includes("sell_before_buy"));
+    assert.ok(classification.opportunity_tags.includes("valuation_consented"));
+    assert.equal(classification.next_best_question, null);
+    assert.equal(classification.recommended_next_action, "send_booking_link");
+    assert.match(reply, /70 Rainey St #1509/);
+    assert.match(reply, /Saturday at 11:00 AM/);
+    assert.match(reply, /confirm availability/i);
+    assert.match(reply, /valuation/i);
+    assert.doesNotMatch(reply, /Would you like/i);
+    assert.equal((rendered.html || "").match(/>Get Free Home Valuation<\/a>/g)?.length, 1);
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
+test("valuation consent rejects negation and accepts common direct requests", () => {
+  const context = "\n\nThread context for classification only:\nPrior summary: Lead role: second_time_buyer. Current property status: owns.";
+  const declinedMessage = email({
+    subject: "Re: 70 Rainey St #1509",
+    body: `Could you coordinate the showing but not a valuation?${context}`,
+  });
+  const declined = classifyIrisEmailText(declinedMessage);
+  const declinedRendered = buildHtmlEmailReply(generateIrisEmailReply(declinedMessage, declined) || "", [], declined);
+  assert.ok(!declined.opportunity_tags.includes("valuation_consented"));
+  assert.equal(declined.intent, "showing_request");
+  assert.doesNotMatch(declinedRendered.html || "", /Get Free Home Valuation/);
+
+  for (const body of [
+    "Can you provide a valuation?",
+    "Could you help me get a property appraisal?",
+    "Can I get a valuation?",
+    "Could I get a property appraisal?",
+  ]) {
+    const accepted = classifyIrisEmailText(email({ body: `${body}${context}` }));
+    assert.ok(accepted.opportunity_tags.includes("valuation_consented"), body);
+    assert.doesNotMatch(accepted.next_best_question || "", /valuation/i);
+  }
+
+  const sellerMessage = email({ body: "I want to sell my house, but I do not need a valuation." });
+  const seller = classifyIrisEmailText(sellerMessage);
+  const sellerReply = generateIrisEmailReply(sellerMessage, seller) || "";
+  assert.equal(seller.intent, "seller_lead");
+  assert.ok(seller.opportunity_tags.includes("valuation_declined"));
+  assert.ok(!seller.opportunity_tags.includes("valuation_interest"));
+  assert.doesNotMatch(sellerReply, /valuation|value/i);
+  for (const body of [
+    "Please help me list the house, but I do not need a valuation.",
+    "I want to move forward with listing my home, without a valuation.",
+  ]) {
+    const commonSeller = classifyIrisEmailText(email({ body }));
+    assert.equal(commonSeller.intent, "seller_lead", body);
+    assert.ok(commonSeller.opportunity_tags.includes("valuation_declined"), body);
+  }
+
+  const nextTurnMessage = email({
+    body: "I am looking for a home in Austin.\n\nThread context for classification only:\nPrior summary: Lead role: second_time_buyer. Opportunity tags: valuation_declined.",
+  });
+  const nextTurn = classifyIrisEmailText(nextTurnMessage);
+  const nextTurnReply = generateIrisEmailReply(nextTurnMessage, nextTurn) || "";
+  assert.ok(nextTurn.opportunity_tags.includes("valuation_declined"));
+  assert.doesNotMatch(nextTurnReply, /valuation/i);
+});
+
+test("property-value and appraisal requests route to the valuation CTA", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    for (const body of ["Can you provide a property value?", "Could you arrange an appraisal?"]) {
+      const message = email({ body });
+      const classification = classifyIrisEmailText(message);
+      const rendered = buildHtmlEmailReply(generateIrisEmailReply(message, classification) || "", [], classification);
+      assert.equal(classification.intent, "seller_lead", body);
+      assert.match(rendered.html || "", />Get Free Home Valuation<\/a>/, body);
+    }
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
+test("word and hyphen timeline ranges stay intact", () => {
+  for (const timeline of [
+    "within two to three months",
+    "within two or three months",
+    "within two-three months",
+    "within 2-3 months",
+    "within the next 2 to 3 months",
+    "2-3 months",
+    "within 2–3 months",
+  ]) {
+    const classification = classifyIrisEmailText(email({ body: `I am hoping to move ${timeline}.` }));
+    assert.equal(classification.lead_fields.timeline, timeline);
+  }
+});
+
+test("finalizeIrisReplyForMessage enforces live combined commitments and verified availability", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    const availabilityMessage = email({
+      subject: "Question about 70 Rainey St #1509",
+      body: "Is 70 Rainey St #1509 still available, and can I tour it this weekend?",
+    });
+    const availabilityClassification = classifyIrisEmailText(availabilityMessage);
+    const availability = finalizeIrisReplyForMessage(
+      availabilityMessage,
+      availabilityClassification,
+      [{ address: "70 Rainey St #1509", status: "For Sale" }],
+      "Hello,\n\nThe HOA is $500 per month. That unit appears unavailable. I can help arrange a showing.\n\nBest,\nIris",
+    );
+    assert.match(availability, /70 Rainey St #1509 is currently listed as For Sale/i);
+    assert.doesNotMatch(availability, /not For Sale|appears unavailable/i);
+    assert.match(availability, /HOA is \$500 per month/i);
+
+    const appointmentMessage = email({
+      subject: "Re: Question about 70 Rainey St #1509",
+      body: "Saturday, 11 AM works.",
+    });
+    const appointmentClassification = classifyIrisEmailText(appointmentMessage);
+    const appointment = finalizeIrisReplyForMessage(
+      appointmentMessage,
+      appointmentClassification,
+      [],
+      "Hello,\n\nThe HOA is $500 per month. What day and time works best for a showing?\n\nBest,\nIris",
+    );
+    assert.equal(appointmentClassification.intent, "showing_request");
+    assert.match(appointment, /Saturday at 11 AM/);
+    assert.doesNotMatch(appointment, /What day and time/);
+    assert.match(appointment, /HOA is \$500 per month/i);
+
+    const reverseAppointmentMessage = email({
+      subject: "Re: Question about 70 Rainey St #1509",
+      body: "11 AM on Saturday works.",
+    });
+    const reverseAppointmentClassification = classifyIrisEmailText(reverseAppointmentMessage);
+    const reverseAppointment = finalizeIrisReplyForMessage(
+      reverseAppointmentMessage,
+      reverseAppointmentClassification,
+      [],
+      "Hello,\n\nWhat time works best?\n\nBest,\nIris",
+    );
+    assert.match(reverseAppointment, /Saturday at 11 AM/);
+    assert.doesNotMatch(reverseAppointment, /What time works best/);
+
+    const combinedMessage = email({
+      subject: "Re: Question about 70 Rainey St #1509",
+      body: "Saturday, 11 AM works. Can you arrange a valuation too?\n\nThread context for classification only:\nPrior summary: Lead role: second_time_buyer. Current property status: owns.",
+    });
+    const combinedClassification = classifyIrisEmailText(combinedMessage);
+    const combined = finalizeIrisReplyForMessage(
+      combinedMessage,
+      combinedClassification,
+      [],
+      "Hello,\n\nWould you like a valuation?\n\nBest,\nIris",
+    );
+    assert.match(combined, /Saturday at 11 AM/);
+    assert.match(combined, /70 Rainey St #1509/);
+    assert.doesNotMatch(combined, /Would you like/);
+
+    const sensitiveMessage = email({
+      subject: "Re: 70 Rainey St #1509",
+      body: "I am a second-time buyer. What exact price should I offer, and how much below asking should I start? Arrange the Saturday 11 AM showing plus a valuation.",
+    });
+    const sensitiveClassification = classifyIrisEmailText(sensitiveMessage);
+    const reviewDraft = "Hello,\n\nI can prepare the safe parts. What day and time works best?\n\nBest,\nIris\n\n[Review before sending: broker approval. Delete this line before you send.]";
+    const sensitive = finalizeIrisReplyForMessage(sensitiveMessage, sensitiveClassification, [], reviewDraft);
+    assert.equal(sensitiveClassification.intent, "human_required");
+    assert.match(sensitive, /Saturday at 11 AM/);
+    assert.doesNotMatch(sensitive, /What day and time works best/);
+    assert.match(sensitive, /\[Review before sending: broker approval/);
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
+test("valuation replies never substitute the showing calendar for valuation intake", () => {
+  const priorValuation = process.env.FILLOUT_VALUATION_URL;
+  const priorCalendar = process.env.CALENDLY_URL;
+  delete process.env.FILLOUT_VALUATION_URL;
+  process.env.CALENDLY_URL = "https://example.com/showing-calendar";
+  try {
+    const message = email({
+      subject: "Re: 70 Rainey St #1509",
+      body: "I am a second-time buyer. Saturday at 11 AM works, and please arrange a valuation too.",
+    });
+    const reply = generateIrisEmailReply(message, classifyIrisEmailText(message)) || "";
+    assert.doesNotMatch(reply, /showing-calendar/);
+  } finally {
+    if (priorValuation === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = priorValuation;
+    if (priorCalendar === undefined) delete process.env.CALENDLY_URL;
+    else process.env.CALENDLY_URL = priorCalendar;
+  }
+});
+
 test("generateIrisEmailReply: second-time buyer gets valuation booking link", () => {
   const prior = process.env.FILLOUT_VALUATION_URL;
   process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
@@ -294,7 +541,7 @@ test("generateIrisEmailReply: a second-time buyer can advance to a showing", () 
 
   assert.equal(classification.primary_lead_role, "second_time_buyer");
   assert.equal(classification.intent, "showing_request");
-  assert.match(reply, /requested time|showing/i);
+  assert.match(reply, /request to see|showing/i);
   assert.doesNotMatch(reply, /free valuation/i);
 });
 

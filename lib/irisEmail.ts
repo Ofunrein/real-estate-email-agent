@@ -258,7 +258,7 @@ const SENSITIVE_FLAGS = new Set([
 ]);
 
 const STREET_ADDRESS_RE =
-  /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b/gi;
+  /\b\d{2,6}\s+[A-Za-z0-9.'-]+(?:\s+[A-Za-z0-9.'-]+){0,7}\s+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|cir|circle|blvd|boulevard|way|pkwy|parkway|pl|place|path|trl|trail|ter|terrace)\b(?:\s*,?\s*(?:#\s*|(?:unit|apt|apartment)\.?\s*#?\s*)[A-Za-z0-9-]+)?/gi;
 const PROPERTY_URL_RE =
   /\bhttps?:\/\/(?:www\.)?(?:zillow|realtor|redfin|homes|trulia)\.com\/[^\s<>"')]+/gi;
 
@@ -465,8 +465,20 @@ function extractBeds(text: string): string | null {
 }
 
 function extractTimeline(text: string): string | null {
-  const match = text.match(/\b(asap|today|tomorrow|this week|next week|this weekend|next month|(?:by|before)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|in \d+\s+(?:days|weeks|months)|within \d+\s+(?:days|weeks|months)|\d+\s+(?:days|weeks|months))\b/i);
+  const amount = "(?:\\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)";
+  const range = `${amount}\\s*(?:to|-|–|or)\\s*${amount}`;
+  const match = text.match(new RegExp(`\\b(asap|today|tomorrow|this week|next week|this weekend|next month|(?:by|before)\\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|(?:in|within)\\s+(?:the\\s+next\\s+)?(?:${range}|${amount})\\s+(?:days|weeks|months)|${range}\\s+(?:days|weeks|months)|${amount}\\s+(?:days|weeks|months))\\b`, "i"));
   return match ? match[0] : null;
+}
+
+function extractShowingAppointment(text: string): string | null {
+  const dayFirst = text.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this weekend)\b(?:\s*,?\s*(?:at\s+)?)?(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i);
+  const timeFirst = text.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b\s*(?:on\s+)?\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this weekend)\b/i);
+  const day = dayFirst?.[1] || timeFirst?.[2];
+  const time = dayFirst?.[2] || timeFirst?.[1];
+  if (!day || !time) return null;
+  const normalizedDay = day[0].toUpperCase() + day.slice(1).toLowerCase();
+  return `${normalizedDay} at ${time.replace(/\s+/g, " ").toUpperCase()}`;
 }
 
 function extractArea(text: string): string | null {
@@ -502,7 +514,7 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: Iri
       && /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(latestText);
     return hasDayAndTime ? null : "What day and time works best for a quick showing?";
   }
-  if (role === "second_time_buyer" && !tags.includes("valuation_consented")) return "Would you like a free valuation of your current property while we help with your next purchase?";
+  if (role === "second_time_buyer" && !tags.includes("valuation_consented") && !tags.includes("valuation_declined")) return "Would you like a free valuation of your current property while we help with your next purchase?";
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
   if (!fields.budget && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "What price range should I stay under?";
@@ -527,7 +539,23 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
   const secondTimeBuyer = /\b(second[ -]?time buyer|bought before|already own|currently own|own(?:s)? (?:a|my|our) (?:[\w-]+\s+){0,3}(?:home|house|property)|have (?:a|our) (?:home|house|property) to sell|need to sell (?:my|our) (?:home|house|property))\b/i.test(latestClean);
   const contextSecondTimeBuyer = /\b(second_time_buyer|second[ -]?time buyer|currently own|already own|current property status:\s*owns)\b/i.test(contextClean);
-  const valuationConsent = /\b(?:yes|sure|please|interested|sounds good|let'?s do it|book|schedule)\b.{0,80}\b(?:valuation|home value|property value|appraisal|cma)\b|\b(?:valuation|home value|property value|appraisal|cma)\b.{0,80}\b(?:yes|sure|please|interested|book|schedule)\b/i.test(latestClean);
+  const valuationTerms = "(?:valuation|home value|property value|appraisal|cma)";
+  const valuationNegated = new RegExp(
+    `\\b(?:no|not|without|skip|decline|don't|do not)\\b[^.!?\\n]{0,50}\\b${valuationTerms}\\b|\\b${valuationTerms}\\b[^.!?\\n]{0,30}\\b(?:no|not|decline|skip)\\b`,
+    "i",
+  ).test(latestClean);
+  const valuationConsent = !valuationNegated && new RegExp(
+    `\\b(?:yes|sure|please|interested|sounds good|let'?s do it|book|schedule)\\b[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
+    `\\b${valuationTerms}\\b[^.!?\\n]{0,80}\\b(?:yes|sure|please|interested|book|schedule)\\b|` +
+    `\\b(?:can|could|would)\\s+you\\s+(?:help\\s+(?:me\\s+)?)?(?:coordinate|arrange|schedule|book|provide|get)\\b[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
+    `\\b(?:can|could|would)\\s+(?:i|we)\\s+(?:please\\s+)?(?:get|book|schedule|arrange|request|have)\\b[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
+    `\\b(?:i|we)\\s+(?:would|'d)\\s+like(?:\\s+to)?[^.!?\\n]{0,80}\\b${valuationTerms}\\b`,
+    "i",
+  ).test(latestClean);
+  const contextValuationDeclined = /\bvaluation_declined\b|\b(?:no|not|without|skip|decline|don't|do not)\b[^.!?\n]{0,50}\b(?:valuation|home value|property value|appraisal|cma)\b/i.test(contextClean);
+  const valuationDeclined = valuationNegated || (!valuationConsent && contextValuationDeclined);
+  const explicitSellerIntent = /\b(?:sell|selling|listing (?:appointment|expired)|list my|list (?:it|this|the property|the house|the home|our (?:home|house|property)|my (?:home|house|property)) for sale|(?:help me|help us|ready to|want to|would like to|move forward with)\s+(?:list|sell)(?:ing)?|relist(?:ing)?|expired listing)\b/i.test(latestClean);
+  const valuationInterest = !valuationDeclined && /\b(?:home value|property value|valuation|appraisal|what is my house worth|what could it be worth|cma)\b/i.test(latestClean);
   const fields: IrisLeadFields = {
     // Fields carry forward across the thread: a follow-up email that answers only
     // budget must not wipe the area/beds the lead already gave earlier. Latest
@@ -582,12 +610,12 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     intent = "property_search";
     role = "buyer";
     opportunityTags.push("property_pivot");
-  } else if (/\b(?:sell|selling|listing (?:appointment|expired)|list my|list (?:it|this|the property|my (?:home|house|property)) for sale|relist(?:ing)?|home value|valuation|what is my house worth|what could it be worth|cma)\b/i.test(latestClean)) {
+  } else if (explicitSellerIntent || valuationInterest) {
     intent = "seller_lead";
     role = "seller";
-    opportunityTags.push("valuation_interest");
+    if (valuationInterest) opportunityTags.push("valuation_interest");
   } else if (addresses.length || propertyUrls.length) {
-    if (/(show|tour|see|visit|schedule|available today|open house|take a look|look at|check out|walk through|view it|view this|see it)/i.test(latestClean) || (!latestAddresses.length && canResolveFromPriorProperty(latestClean))) {
+    if (/(show|tour|see|visit|schedule|available today|open house|take a look|look at|check out|walk through|view it|view this|see it)/i.test(latestClean) || extractShowingAppointment(cleanBody(latestEmailBody(message.body || ""))) || (!latestAddresses.length && canResolveFromPriorProperty(latestClean))) {
       intent = "showing_request";
     } else if (/(monthly payment|payment estimate|down payment|mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) {
       intent = "buyer_lead";
@@ -661,9 +689,11 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   if (/(mortgage|loan|preapproved|pre-approved|lender|rate)/i.test(latestClean)) opportunityTags.push("mortgage_interest");
   if (/\bsell(?:ing)?\b.{0,80}\bbefore\s+(?:(?:i|we)\s+)?buy(?:ing)?\b|need to sell first|contingent/i.test(latestClean)) opportunityTags.push("sell_before_buy");
   if (noSignal) opportunityTags.push(noSignal === "stop" ? "opt_out" : "clear_no");
+  if (valuationDeclined) opportunityTags.push("valuation_declined");
   if (secondTimeBuyer || contextSecondTimeBuyer) {
     role = "second_time_buyer";
-    opportunityTags.push("sell_before_buy", "valuation_interest");
+    opportunityTags.push("sell_before_buy");
+    if (!valuationDeclined) opportunityTags.push("valuation_interest");
   }
   if (valuationConsent && (secondTimeBuyer || contextSecondTimeBuyer)) opportunityTags.push("valuation_consented");
 
@@ -921,6 +951,61 @@ function irisReviewDraftParts(classification: IrisEmailClassification): { answer
   };
 }
 
+function combinedShowingValuationReply(
+  message: Pick<IrisEmailMessage, "body">,
+  classification: IrisEmailClassification,
+): string | null {
+  if (!decideIrisEmailExecution(classification).canReply) return null;
+  if (classification.primary_lead_role !== "second_time_buyer") return null;
+  if (!classification.opportunity_tags.includes("valuation_consented")) return null;
+  if (!classification.address) return null;
+  const showingAppointment = extractShowingAppointment(cleanBody(latestEmailBody(message.body)));
+  if (!showingAppointment) return null;
+  const valuationUrl = (process.env.FILLOUT_VALUATION_URL || "").trim();
+  return [
+    "Hello,",
+    "",
+    `Thanks for confirming. I have your request to see ${classification.address} on ${showingAppointment}, and I will have the team confirm availability.`,
+    "",
+    "We can also help with your next purchase and the free valuation of your current property. Use the valuation link below to send the property details.",
+    "",
+    valuationUrl || "What is the address of the property you would like valued?",
+    "",
+    "Best,",
+    IRIS_AGENT_NAME,
+  ].join("\n");
+}
+
+function showingAppointmentAcknowledgement(
+  message: Pick<IrisEmailMessage, "body">,
+  classification: IrisEmailClassification,
+): { appointment: string; text: string } | null {
+  if (!decideIrisEmailExecution(classification).canReply) return null;
+  if (classification.intent !== "showing_request" || !classification.address) return null;
+  const appointment = extractShowingAppointment(cleanBody(latestEmailBody(message.body)));
+  if (!appointment) return null;
+  return {
+    appointment,
+    text: `Thanks, I have your request to see ${classification.address} on ${appointment}, and I will have the team confirm availability.`,
+  };
+}
+
+function showingAppointmentReply(
+  message: Pick<IrisEmailMessage, "body">,
+  classification: IrisEmailClassification,
+): string | null {
+  const acknowledgement = showingAppointmentAcknowledgement(message, classification);
+  if (!acknowledgement) return null;
+  return [
+    "Hello,",
+    "",
+    acknowledgement.text,
+    "",
+    "Best,",
+    IRIS_AGENT_NAME,
+  ].join("\n");
+}
+
 export function generateIrisEmailReply(message: IrisEmailMessage, classification: IrisEmailClassification): string | null {
   const execution = decideIrisEmailExecution(classification);
   if (!execution.canReply) {
@@ -937,6 +1022,10 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
     ].join("\n");
   }
   const question = classification.next_best_question;
+  const combinedReply = combinedShowingValuationReply(message, classification);
+  if (combinedReply) return combinedReply;
+  const appointmentReply = showingAppointmentReply(message, classification);
+  if (appointmentReply) return appointmentReply;
   if (classification.intent === "showing_request") {
     const showingCopy = question
       ? `I can help arrange a showing${classification.address ? ` for ${classification.address}` : ""}. ${question}`
@@ -952,7 +1041,20 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
   }
   if (classification.primary_lead_role === "second_time_buyer") {
     const valuationAccepted = classification.opportunity_tags.includes("valuation_consented");
-    const valuationUrl = (process.env.FILLOUT_VALUATION_URL || process.env.CALENDLY_URL || "").trim();
+    const valuationDeclined = classification.opportunity_tags.includes("valuation_declined");
+    const valuationUrl = (process.env.FILLOUT_VALUATION_URL || "").trim();
+    if (valuationDeclined) {
+      return [
+        "Hello,",
+        "",
+        "Thanks for letting me know. I will focus on your next purchase and leave that service out.",
+        "",
+        question || "What would be most helpful for your home search?",
+        "",
+        "Best,",
+        IRIS_AGENT_NAME,
+      ].join("\n");
+    }
     return [
       "Hello,",
       "",
@@ -981,10 +1083,13 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
     ].join("\n");
   }
   if (classification.intent === "seller_lead") {
+    const valuationDeclined = classification.opportunity_tags.includes("valuation_declined");
     return [
       "Hello,",
       "",
-      `I can help you get a realistic read on value${classification.address ? ` for ${classification.address}` : ""} and next steps.`,
+      valuationDeclined
+        ? "I can help plan the sale and next steps."
+        : `I can help you get a realistic read on value${classification.address ? ` for ${classification.address}` : ""} and next steps.`,
       "",
       question || "What address should I look at, and what timeline are you considering?",
       "",
@@ -1167,6 +1272,9 @@ function normalizedAddressIdentity(value: string): string {
     .replace(/\b(south|north|east|west)\b/g, (direction) => directions[direction] || direction)
     .replace(/\b(street|road|drive|avenue|boulevard|lane|court|circle|trail|cove)\b/g, (suffix) => suffixes[suffix] || suffix)
     .replace(/\b(?:austin|tx|texas)\b/g, " ")
+    .replace(/\s+\d{5}(?:-\d{4})?\s*$/g, "")
+    .replace(/\b(?:unit|apt|apartment)\.?\s*#?\s*([a-z0-9-]+)/g, "#$1")
+    .replace(/#\s+/g, "#")
     .replace(/[^a-z0-9#]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -1177,10 +1285,94 @@ export function isExactPropertyAddressMatch(requested: string, candidate: string
   const found = normalizedAddressIdentity(candidate);
   if (!wanted || !found) return false;
   if (wanted === found) return true;
-  const wantedHasUnit = /(?:#|\b(?:unit|apt)\b)\s*\w+/i.test(requested);
-  if (wantedHasUnit || /(?:#|\b(?:unit|apt)\b)\s*\w+/i.test(candidate)) return false;
+  const wantedHasUnit = /(?:#|\b(?:unit|apt|apartment)\b)\s*\w+/i.test(requested);
+  if (wantedHasUnit || /(?:#|\b(?:unit|apt|apartment)\b)\s*\w+/i.test(candidate)) return false;
   return found.startsWith(`${wanted} `)
     && /\b(?:st|rd|dr|ave|blvd|ln|ct|cir|trl|cv)\b/.test(found.slice(wanted.length));
+}
+
+function filterReplySentences(reply: string, remove: (sentence: string) => boolean): string {
+  return reply
+    .split("\n")
+    .map((line) => line
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => sentence.trim() && !remove(sentence.trim()))
+      .join(" "))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function insertReplyParagraphAfterGreeting(reply: string, paragraph: string): string {
+  if (reply.toLowerCase().includes(paragraph.toLowerCase())) return reply;
+  return /^Hello,\s*\n\s*\n/i.test(reply)
+    ? reply.replace(/^Hello,\s*\n\s*\n/i, `Hello,\n\n${paragraph}\n\n`)
+    : `${paragraph}\n\n${reply}`;
+}
+
+function insertReplyParagraphBeforeSignature(reply: string, paragraph: string): string {
+  if (!paragraph || reply.includes(paragraph)) return reply;
+  return /\n\s*Best,\s*\n/i.test(reply)
+    ? reply.replace(/\n\s*Best,\s*\n/i, `\n\n${paragraph}\n\nBest,\n`)
+    : `${reply}\n\n${paragraph}`;
+}
+
+export function finalizeIrisReplyForMessage(
+  message: Pick<IrisEmailMessage, "body">,
+  classification: IrisEmailClassification,
+  properties: ReadonlyArray<Record<string, string | undefined>>,
+  generatedReply: string,
+): string {
+  let reply = generatedReply;
+  const latestText = cleanBody(latestEmailBody(message.body));
+  const combinedReply = combinedShowingValuationReply(message, classification);
+  const appointmentAcknowledgement = showingAppointmentAcknowledgement(message, classification);
+  const appointment = extractShowingAppointment(latestText);
+  const address = classification.address || "";
+  const requiredAppointmentText = appointment && address
+    ? `Thanks, I have your request to see ${address} on ${appointment}, and I will have the team confirm availability.`
+    : appointmentAcknowledgement?.text || "";
+  const explicitShowingAppointment = Boolean(
+    requiredAppointmentText && /\b(?:show|showing|tour|see|visit|schedule|view)\b/i.test(latestText),
+  );
+
+  if (combinedReply || appointmentAcknowledgement || explicitShowingAppointment) {
+    reply = filterReplySentences(reply, (sentence) =>
+      sentence.includes("?") && /\b(?:what|which|when|day|time)\b/i.test(sentence) && /\b(?:show|showing|tour|visit|works?|available|day|time)\b/i.test(sentence),
+    );
+    if (requiredAppointmentText && !(reply.includes(appointment || "") && normalizedAddressIdentity(reply).includes(normalizedAddressIdentity(address)))) {
+      reply = insertReplyParagraphAfterGreeting(reply, requiredAppointmentText);
+    }
+  }
+
+  if (combinedReply) {
+    reply = filterReplySentences(reply, (sentence) =>
+      sentence.includes("?") && /\b(?:valuation|appraisal|home value|property value)\b/i.test(sentence),
+    );
+    if (!/\b(?:valuation|appraisal|home value|property value)\b/i.test(reply)) {
+      reply = insertReplyParagraphBeforeSignature(
+        reply,
+        "We can also help with your next purchase and the free valuation of your current property.",
+      );
+    }
+    const valuationUrl = (process.env.FILLOUT_VALUATION_URL || "").trim();
+    if (valuationUrl) reply = insertReplyParagraphBeforeSignature(reply, valuationUrl);
+  }
+
+  if (!/\b(?:still\s+)?available\b|\bavailability\b/i.test(latestText) || !address) {
+    return removeEmDashes(reply);
+  }
+  const property = properties.find((candidate) =>
+    Boolean(candidate.address) && isExactPropertyAddressMatch(address, String(candidate.address)),
+  );
+  const verifiedAddress = String(property?.address || "").trim();
+  const status = String(property?.status || "").trim();
+  if (!verifiedAddress || !status) return removeEmDashes(reply);
+  reply = filterReplySentences(reply, (sentence) =>
+    /\b(?:is|isn't|is not|currently|listed|listing status|status|shows?|appears?|looks?)\b[^.!?]{0,80}\b(?:available|unavailable|not available|no longer available|for sale|active|pending|sold|off market)\b/i.test(sentence),
+  );
+  reply = insertReplyParagraphAfterGreeting(reply, `${verifiedAddress} is currently listed as ${status}.`);
+  return removeEmDashes(reply);
 }
 
 async function exactAddressProperties(addresses: string[], limit = 4): Promise<SheetRow[]> {
@@ -1206,7 +1398,8 @@ async function exactAddressProperties(addresses: string[], limit = 4): Promise<S
 function irisEmailCta(classification?: IrisEmailClassification): { label: string; url: string; color: string } | null {
   if (!classification) return null;
   const scheduling = classification.intent === "showing_request" || classification.intent === "property_details";
-  const valuation = classification.intent === "seller_lead";
+  const valuation = classification.intent === "seller_lead"
+    && !classification.opportunity_tags.includes("valuation_declined");
   const rawUrl = scheduling
     ? process.env.CALENDLY_URL || ""
     : valuation
@@ -1348,8 +1541,11 @@ ${advancedQualificationPlaybook()}
 - Use only provided facts. Do not invent availability, schools, neighborhood claims, lending advice, legal advice, or broker judgment.
 - When public data is provided, answer requested rent, area-statistic, rate, source, and data-date questions directly. A Census median gross rent is an area benchmark, not a property-specific rent estimate, so label it accurately.
 - The app will render property facts in an HTML property card below your body, so do not repeat the full price/beds/baths/sqft block in prose.
-- Mention the primary address at most once.
+- Mention the primary address at most once, preserving its full unit or apartment identifier exactly.
+- If verified property facts include a status and the lead asks whether the property is available, answer that question directly from the verified status.
 - If this is a showing request and a primary property is provided, treat that property as selected. Do not ask which property or which option they want.
+- If the latest inbound provides a showing day and time, acknowledge both and say the team will confirm availability. Do not ask for the day or time again, and do not claim the showing is confirmed.
+- A direct request to arrange, coordinate, schedule, book, provide, or get a valuation is consent. Give the valuation next step and do not ask whether they want a valuation again.
 - If the latest inbound says they are no longer interested in a prior property or asks for other options, pivot to the new search. Do not lead with the previous property.
 - Ask at most one next-step question.
 - ${reviewDraft
@@ -1432,7 +1628,10 @@ ${publicDataContext || "(none)"}`;
   }).catch(() => null);
   const content = Array.isArray(payload.content) ? payload.content as Array<{ type?: string; text?: string }> : [];
   const text = content.find((block) => block.type === "text")?.text?.trim() || "";
-  if (!text || !/Best,\s*\n\s*Iris\s*$/i.test(text)) return null;
+  const validEnding = reviewDraft
+    ? /Best,\s*\n\s*Iris\s*\n+\s*\[Review before sending:[^\n]+\]\s*$/i.test(text)
+    : /Best,\s*\n\s*Iris\s*$/i.test(text);
+  if (!text || !validEnding) return null;
   return validateSchedulingClaimLanguage(text, false).ok ? text : null;
 }
 
@@ -1455,7 +1654,8 @@ async function generateIrisEmailReplyRich(
   if (!fallbackPlain) return null;
   const styleContext = await fetchStyleContext(classification.intent, undefined, message.mailboxEmail || "");
   if (!databaseEnabled()) {
-    const plain = await generateClaudeIrisEmailReplyText(message, classification, [], styleContext).catch(() => null) || fallbackPlain;
+    const generated = await generateClaudeIrisEmailReplyText(message, classification, [], styleContext).catch(() => null) || fallbackPlain;
+    const plain = finalizeIrisReplyForMessage(message, classification, [], generated);
     return { text: plain, html: buildHtmlEmailReply(plain, [], classification).html };
   }
   const latestBody = cleanBody(latestEmailBody(message.body));
@@ -1489,9 +1689,10 @@ async function generateIrisEmailReplyRich(
   const publicDataContext = publicDataRequested
     ? (await fetchPublicPropertyContext(publicDataSeed).catch(() => ({ context: "", metrics: [] }))).context
     : "";
-  const plain = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null)
+  const generated = await generateClaudeIrisEmailReplyText(message, classification, properties, styleContext, publicDataContext).catch(() => null)
     || generateIrisPublicDataReply(publicDataContext)
     || fallbackPlain;
+  const plain = finalizeIrisReplyForMessage(message, classification, properties, generated);
   return buildHtmlEmailReply(plain, publicDataRequested ? [] : properties, classification);
 }
 
