@@ -463,6 +463,22 @@ test("finalizeIrisReplyForMessage enforces live combined commitments and verifie
     assert.match(reverseAppointment, /Saturday at 11 AM/);
     assert.doesNotMatch(reverseAppointment, /What time works best/);
 
+    const sellBeforeBuyAppointmentMessage = email({
+      subject: "Re: Showing request for 9605 Corbe Dr",
+      body: "Saturday at 11:00 AM works. I already own a home and need to sell before buying. I am hoping to move in the next two to three months.",
+    });
+    const sellBeforeBuyAppointmentClassification = classifyIrisEmailText(sellBeforeBuyAppointmentMessage);
+    const sellBeforeBuyAppointment = finalizeIrisReplyForMessage(
+      sellBeforeBuyAppointmentMessage,
+      sellBeforeBuyAppointmentClassification,
+      [],
+      "Hello,\n\nWe can help with both your current sale and your next purchase. Would you like a free valuation of your current property?\n\nBest,\nIris",
+    );
+    assert.equal(sellBeforeBuyAppointmentClassification.intent, "seller_lead");
+    assert.match(sellBeforeBuyAppointment, /9605 Corbe Dr/);
+    assert.match(sellBeforeBuyAppointment, /Saturday at 11:00 AM/);
+    assert.match(sellBeforeBuyAppointment, /valuation/i);
+
     const combinedMessage = email({
       subject: "Re: Question about 70 Rainey St #1509",
       body: "Saturday, 11 AM works. Can you arrange a valuation too?\n\nThread context for classification only:\nPrior summary: Lead role: second_time_buyer. Current property status: owns.",

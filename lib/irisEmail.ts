@@ -1335,8 +1335,14 @@ export function finalizeIrisReplyForMessage(
   const explicitShowingAppointment = Boolean(
     requiredAppointmentText && /\b(?:show|showing|tour|see|visit|schedule|view)\b/i.test(latestText),
   );
+  const sellBeforeBuyShowingFollowup = Boolean(
+    requiredAppointmentText
+    && classification.intent === "seller_lead"
+    && classification.primary_lead_role === "second_time_buyer"
+    && classification.opportunity_tags.includes("sell_before_buy"),
+  );
 
-  if (combinedReply || appointmentAcknowledgement || explicitShowingAppointment) {
+  if (combinedReply || appointmentAcknowledgement || explicitShowingAppointment || sellBeforeBuyShowingFollowup) {
     reply = filterReplySentences(reply, (sentence) =>
       sentence.includes("?") && /\b(?:what|which|when|day|time)\b/i.test(sentence) && /\b(?:show|showing|tour|visit|works?|available|day|time)\b/i.test(sentence),
     );
