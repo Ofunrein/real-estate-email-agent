@@ -696,6 +696,15 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     if (!valuationDeclined) opportunityTags.push("valuation_interest");
   }
   if (valuationConsent && (secondTimeBuyer || contextSecondTimeBuyer)) opportunityTags.push("valuation_consented");
+  if (
+    role === "second_time_buyer"
+    && intent === "seller_lead"
+    && addresses.length > 0
+    && extractShowingAppointment(bodyOnlyClean)
+    && !valuationInterest
+    && !valuationConsent
+    && !valuationDeclined
+  ) opportunityTags.push("valuation_prompt_pending");
 
   if (role === "mortgage_adjacent_lead" && flags.includes("mortgage_license")) intent = "human_required";
   if (intent === "human_required" && role === "unknown" && /(complaint|angry|upset|report|legal|attorney|lawyer)/i.test(latestClean)) {
@@ -1329,18 +1338,22 @@ export function finalizeIrisReplyForMessage(
   const appointmentAcknowledgement = showingAppointmentAcknowledgement(message, classification);
   const appointment = extractShowingAppointment(latestText);
   const address = classification.address || "";
-  const requiredAppointmentText = appointment && address
+  const baseAppointmentText = appointment && address
     ? `Thanks, I have your request to see ${address} on ${appointment}, and I will have the team confirm availability.`
     : appointmentAcknowledgement?.text || "";
   const explicitShowingAppointment = Boolean(
-    requiredAppointmentText && /\b(?:show|showing|tour|see|visit|schedule|view)\b/i.test(latestText),
+    baseAppointmentText && /\b(?:show|showing|tour|see|visit|schedule|view)\b/i.test(latestText),
   );
   const sellBeforeBuyShowingFollowup = Boolean(
-    requiredAppointmentText
+    baseAppointmentText
     && classification.intent === "seller_lead"
     && classification.primary_lead_role === "second_time_buyer"
     && classification.opportunity_tags.includes("sell_before_buy"),
   );
+  const timeline = classification.lead_fields.timeline;
+  const requiredAppointmentText = sellBeforeBuyShowingFollowup && timeline
+    ? `${baseAppointmentText} I also noted that you are hoping to move ${timeline}.`
+    : baseAppointmentText;
 
   if (combinedReply || appointmentAcknowledgement || explicitShowingAppointment || sellBeforeBuyShowingFollowup) {
     reply = filterReplySentences(reply, (sentence) =>
@@ -1405,7 +1418,8 @@ function irisEmailCta(classification?: IrisEmailClassification): { label: string
   if (!classification) return null;
   const scheduling = classification.intent === "showing_request" || classification.intent === "property_details";
   const valuation = classification.intent === "seller_lead"
-    && !classification.opportunity_tags.includes("valuation_declined");
+    && !classification.opportunity_tags.includes("valuation_declined")
+    && !classification.opportunity_tags.includes("valuation_prompt_pending");
   const rawUrl = scheduling
     ? process.env.CALENDLY_URL || ""
     : valuation

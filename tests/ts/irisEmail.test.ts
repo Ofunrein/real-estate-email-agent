@@ -475,9 +475,17 @@ test("finalizeIrisReplyForMessage enforces live combined commitments and verifie
       "Hello,\n\nWe can help with both your current sale and your next purchase. Would you like a free valuation of your current property?\n\nBest,\nIris",
     );
     assert.equal(sellBeforeBuyAppointmentClassification.intent, "seller_lead");
+    assert.equal(sellBeforeBuyAppointmentClassification.lead_fields.timeline, "in the next two to three months");
     assert.match(sellBeforeBuyAppointment, /9605 Corbe Dr/);
     assert.match(sellBeforeBuyAppointment, /Saturday at 11:00 AM/);
+    assert.match(sellBeforeBuyAppointment, /move in the next two to three months/i);
     assert.match(sellBeforeBuyAppointment, /valuation/i);
+    const sellBeforeBuyRendered = buildHtmlEmailReply(
+      sellBeforeBuyAppointment,
+      [],
+      sellBeforeBuyAppointmentClassification,
+    );
+    assert.doesNotMatch(sellBeforeBuyRendered.html || "", /Get Free Home Valuation/);
 
     const combinedMessage = email({
       subject: "Re: Question about 70 Rainey St #1509",
