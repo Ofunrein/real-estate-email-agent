@@ -1,4 +1,11 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lumenosis marketing site
+
+Public website and Demo Room web runtime for Lumenosis. The separate outreach queue owns AgentMail polling, campaign state, and same-thread delivery; this repository owns Demo Room generation and rendering routes.
+
+## Architecture pointers
+
+- [Outreach architecture](docs/OUTREACH_ARCHITECTURE.md): where positive-reply automation and Demo Room generation actually live.
+- [Brand kit](docs/brand-kit.md): visual and messaging rules.
 
 ## Getting Started
 

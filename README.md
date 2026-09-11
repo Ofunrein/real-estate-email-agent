@@ -118,6 +118,7 @@ Start here rather than reading this README end to end.
 |---|---|
 | **[docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md)** | Clean-clone setup with no third-party credentials: prerequisites, safe env template rules, local Postgres + pgvector, expected command output, verification curls, and a troubleshooting index |
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | How the live system works: the Gmail push → Inngest runtime, data flow, channel boundaries, storage and schema, property retrieval/RAG, reliability, security, multi-tenancy, deployment, and the design decisions behind each |
+| **[docs/OUTREACH_DEMO_ROOM_HANDOFF.md](docs/OUTREACH_DEMO_ROOM_HANDOFF.md)** | Plain-language boundary between this app’s Demo Room generator and the AgentMail outreach queue, including automatic-vs-draft delivery |
 | **[docs/CRM_INTEGRATION.md](docs/CRM_INTEGRATION.md)** | The `CrmAdapter` contract, per-provider support (GHL live; FUB/kvCORE partially stubbed), all 31 catalogued CRMs, event mirroring via `npm run sync:ghl`, and how to add an adapter |
 | [docs/iris-email-stress-workflow.md](docs/iris-email-stress-workflow.md) | Adding email scenarios and verifying a live Gmail round trip |
 | [docs/proof/iris-email-scenarios.md](docs/proof/iris-email-scenarios.md) | Recorded output of `npm run proof` |

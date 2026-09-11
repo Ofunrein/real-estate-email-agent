@@ -2,7 +2,8 @@
 
 ## Overview
 - Active app inside the broader `atlas` workspace. Work in this repo, not the archive/research files at the parent root.
-- Marketing site for Lumenosis AI built on Next.js App Router with MDX legal pages and one webhook-style API route.
+- Lumenosis public site and Demo Room web runtime built on Next.js App Router. It includes marketing pages, demo/admin routes, and supporting API routes.
+- For positive-reply work, read [`docs/OUTREACH_ARCHITECTURE.md`](docs/OUTREACH_ARCHITECTURE.md). This repo owns Demo Room generation and rendering; `Ofunrein/iris-outreach-queue` owns AgentMail classification, delivery, campaign state, and follow-ups.
 
 ## Tech Stack
 - TypeScript 5, `strict: true`
