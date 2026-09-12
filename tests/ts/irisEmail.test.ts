@@ -239,6 +239,27 @@ test("classifyIrisEmailText: detects a second-time buyer and opens the valuation
   assert.match(classification.next_best_question || "", /free valuation/i);
 });
 
+test("homeowner disclosure without a showing time does not authorize a valuation CTA", () => {
+  const prior = process.env.FILLOUT_VALUATION_URL;
+  process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
+  try {
+    for (const body of [
+      "We currently own our home and need to sell before buying. We hope to move in the next two to three months.",
+      "We currently own our home and need to sell before buying. Can we tour 9605 Corbe Dr?",
+    ]) {
+      const message = email({ subject: "Our next home", body });
+      const classification = classifyIrisEmailText(message);
+      assert.equal(classification.intent, "seller_lead");
+      const rendered = buildHtmlEmailReply(generateIrisEmailReply(message, classification) || "", [], classification);
+      assert.doesNotMatch(rendered.html || "", /Get Free Home Valuation/);
+      assert.doesNotMatch(rendered.text, /https:\/\/example\.com\/free-valuation/);
+    }
+  } finally {
+    if (prior === undefined) delete process.env.FILLOUT_VALUATION_URL;
+    else process.env.FILLOUT_VALUATION_URL = prior;
+  }
+});
+
 test("classifyIrisEmailText: keeps realistic sell-before-buy context and CTA", () => {
   const prior = process.env.FILLOUT_VALUATION_URL;
   process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";
@@ -1107,7 +1128,7 @@ test("buildHtmlEmailReply: seller flow includes a Gmail-compatible free valuatio
   try {
     const classification = classifyIrisEmailText(email({
       subject: "Selling my Austin home",
-      body: "I own a home and want to sell it this fall.",
+      body: "I own a home and want to sell it this fall. Please arrange a free valuation.",
     }));
     const reply = buildHtmlEmailReply(
       "Hello,\n\nWhat timeline are you working with?\n\nBest,\nIris",

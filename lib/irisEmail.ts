@@ -549,7 +549,8 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
     `\\b${valuationTerms}\\b[^.!?\\n]{0,80}\\b(?:yes|sure|please|interested|book|schedule)\\b|` +
     `\\b(?:can|could|would)\\s+you\\s+(?:help\\s+(?:me\\s+)?)?(?:coordinate|arrange|schedule|book|provide|get)\\b[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
     `\\b(?:can|could|would)\\s+(?:i|we)\\s+(?:please\\s+)?(?:get|book|schedule|arrange|request|have)\\b[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
-    `\\b(?:i|we)\\s+(?:would|'d)\\s+like(?:\\s+to)?[^.!?\\n]{0,80}\\b${valuationTerms}\\b`,
+    `\\b(?:i|we)\\s+(?:would|'d)\\s+like(?:\\s+to)?[^.!?\\n]{0,80}\\b${valuationTerms}\\b|` +
+    `\\bwhat\\s+(?:(?:is|could|may|might|would)\\s+)?(?:my|our)\\s+(?:current\\s+)?(?:home|house|property)\\b[^.!?\\n]{0,30}\\bworth\\b`,
     "i",
   ).test(latestClean);
   const contextValuationDeclined = /\bvaluation_declined\b|\b(?:no|not|without|skip|decline|don't|do not)\b[^.!?\n]{0,50}\b(?:valuation|home value|property value|appraisal|cma)\b/i.test(contextClean);
@@ -699,8 +700,6 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   if (
     role === "second_time_buyer"
     && intent === "seller_lead"
-    && addresses.length > 0
-    && extractShowingAppointment(bodyOnlyClean)
     && !valuationInterest
     && !valuationConsent
     && !valuationDeclined
