@@ -22,7 +22,8 @@ export async function POST(request:Request){
   const parsed=Input.safeParse(await request.json());
   if(!parsed.success) return NextResponse.json({error:"Invalid verified listing",fields:parsed.error.issues.map(i=>i.path.join("."))},{status:400});
   const input=parsed.data;
-  if(!input.listingUrl.includes("realtor.com/realestateandhomes-detail/")||!input.imageUrls.every(allowedPhoto)) return NextResponse.json({error:"Unsupported provenance"},{status:422});
+  const supportedListing = input.listingUrl.includes("realtor.com/realestateandhomes-detail/") || input.listingUrl.includes("redfin.com/");
+  if(!supportedListing||!input.imageUrls.every(allowedPhoto)) return NextResponse.json({error:"Unsupported provenance"},{status:422});
   const id=`agentmail-${createHash("sha256").update(input.idempotencyKey).digest("hex")}`;
   const existing=await sql("SELECT access_token FROM demo_rooms WHERE id = ? LIMIT 1",[id]);
   if(existing[0]) return NextResponse.json({id,demoUrl:`https://lumenosis.com/demo/${String(existing[0].access_token)}`,reused:true});
