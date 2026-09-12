@@ -144,6 +144,64 @@ html[data-theme-transition="light"]::view-transition-new(root) {
   }
 }
 
+/* ---------- CHANNEL DEMO SURFACES (dual-mode) ----------
+   Used by the "Context across every channel" section so the email desk,
+   SMS phone, and call card follow the active theme instead of being
+   hardcoded dark. Light values here; dark overrides live in `.dark`. */
+:root {
+  --demo-section-bg: #f5f4ee;
+  --demo-shell: #ffffff;
+  --demo-panel: #faf9f5;
+  --demo-panel-alt: #f1efe8;
+  --demo-inset: #ffffff;
+  --demo-device: #e9e6dd;
+  --demo-device-screen: #ffffff;
+  --demo-notch: #cfcabc;
+  --demo-border: rgba(14, 14, 15, 0.12);
+  --demo-border-strong: rgba(14, 14, 15, 0.2);
+  --demo-text: #0e0e0f;
+  --demo-text-muted: rgba(14, 14, 15, 0.62);
+  --demo-text-faint: rgba(14, 14, 15, 0.45);
+  --demo-icon: rgba(14, 14, 15, 0.7);
+  --demo-bubble-ai: rgba(196, 154, 82, 0.14);
+  --demo-bubble-lead: #f1efe8;
+  --demo-chip: rgba(196, 154, 82, 0.16);
+  --demo-track: rgba(14, 14, 15, 0.12);
+  --demo-scroll-thumb: #c49a52;
+  --demo-scroll-track: #f1efe8;
+  --demo-shadow: 0 18px 44px rgba(14, 14, 15, 0.08);
+  --demo-shadow-lg: 0 34px 120px rgba(14, 14, 15, 0.14);
+  --demo-image-scrim: rgba(14, 14, 15, 0.62);
+  --demo-card-backdrop: rgba(255, 255, 255, 0.62);
+}
+
+.dark {
+  --demo-section-bg: #0a0e0c;
+  --demo-shell: #0e1010;
+  --demo-panel: #0f1010;
+  --demo-panel-alt: #131315;
+  --demo-inset: #0a0a0b;
+  --demo-device: #080809;
+  --demo-device-screen: #0d0e0f;
+  --demo-notch: #000000;
+  --demo-border: #2e2e32;
+  --demo-border-strong: #3d3d40;
+  --demo-text: #ffffff;
+  --demo-text-muted: rgba(255, 255, 255, 0.9);
+  --demo-text-faint: rgba(255, 255, 255, 0.5);
+  --demo-icon: rgba(255, 255, 255, 0.85);
+  --demo-bubble-ai: #1e1508;
+  --demo-bubble-lead: #1c1c1f;
+  --demo-chip: #221c10;
+  --demo-track: rgba(255, 255, 255, 0.15);
+  --demo-scroll-thumb: #c49a52;
+  --demo-scroll-track: #0a0a0b;
+  --demo-shadow: 0 18px 44px rgba(3, 7, 5, 0.28);
+  --demo-shadow-lg: 0 34px 120px rgba(0, 0, 0, 0.44);
+  --demo-image-scrim: rgba(0, 0, 0, 0.8);
+  --demo-card-backdrop: rgba(18, 12, 28, 0.28);
+}
+
 .headline-plain {
   font-family: var(--font-body);
   font-weight: 700;
