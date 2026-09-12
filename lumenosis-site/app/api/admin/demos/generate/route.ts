@@ -16,6 +16,7 @@ const Input = z.object({
   listingUrl: z.string().url(),
   senderInbox: z.string().email().refine((value) => value.endsWith("@agentmail.to")),
   idempotencyKey: z.string().min(1).max(255).optional(),
+  verifiedListingPhotos: z.array(z.string().url()).min(1).max(12).optional(),
   approved: z.literal(false).optional(),
 });
 
@@ -202,19 +203,28 @@ export async function POST(request: Request) {
   // plausible Zillow path frequently belongs to a different property — that is exactly how a
   // neighbouring building's photo reached a live demo. Instead we fetch the listing page,
   // require it to actually assert this MLS number, and take only photos that page carries.
-  const sourced = await sourceListingPhotos({
-    listingUrl: input.listingUrl,
-    mls: listing.data.mls,
-    address: input.listingAddress,
-    streetViewKey: process.env.GOOGLE_STREET_VIEW_API_KEY,
-    allowStreetViewFallback: true,
-  });
-  if (!sourced.ok)
-    return NextResponse.json(
-      { error: "Listing photos could not be verified", reason: sourced.reason },
-      { status: 422 },
-    );
-  const imageUrls = sourced.photos.map((photo) => photo.url);
+  const locallyVerifiedPhotos = automated
+    ? (input.verifiedListingPhotos ?? []).filter((url) => {
+        const parsed = new URL(url);
+        return parsed.protocol === "https:" && parsed.hostname === "ap.rdcpix.com";
+      })
+    : [];
+  let imageUrls = locallyVerifiedPhotos;
+  if (!imageUrls.length) {
+    const sourced = await sourceListingPhotos({
+      listingUrl: input.listingUrl,
+      mls: listing.data.mls,
+      address: input.listingAddress,
+      streetViewKey: process.env.GOOGLE_STREET_VIEW_API_KEY,
+      allowStreetViewFallback: true,
+    });
+    if (!sourced.ok)
+      return NextResponse.json(
+        { error: "Listing photos could not be verified", reason: sourced.reason },
+        { status: 422 },
+      );
+    imageUrls = sourced.photos.map((photo) => photo.url);
+  }
 
   // Vision QA still runs, but it is now the second gate rather than the only one. It can
   // catch a logo or floor plan that slipped through the markup; it cannot be expected to
