@@ -239,6 +239,19 @@ test("classifyIrisEmailText: detects a second-time buyer and opens the valuation
   assert.match(classification.next_best_question || "", /free valuation/i);
 });
 
+test("dated showing requests preserve the appointment and timeline after homeowner disclosure", () => {
+  const message = email({
+    subject: "Question about 9605 Corbe Dr",
+    body: "Can we see 9605 Corbe Dr next Saturday, September 19, at 11:00 AM? We currently own our home and need to sell before buying. We hope to move in the next two to three months.",
+  });
+  const classification = classifyIrisEmailText(message);
+  const reply = finalizeIrisReplyForMessage(message, classification, [], generateIrisEmailReply(message, classification) || "");
+  assert.match(reply, /9605 Corbe Dr/);
+  assert.match(reply, /Saturday, September 19.*11:00 AM/i);
+  assert.match(reply, /two to three months/);
+  assert.doesNotMatch(reply, /(?:showing|appointment) (?:is )?(?:confirmed|booked)/i);
+});
+
 test("homeowner disclosure without a showing time does not authorize a valuation CTA", () => {
   const prior = process.env.FILLOUT_VALUATION_URL;
   process.env.FILLOUT_VALUATION_URL = "https://example.com/free-valuation";

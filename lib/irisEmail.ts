@@ -472,6 +472,8 @@ function extractTimeline(text: string): string | null {
 }
 
 function extractShowingAppointment(text: string): string | null {
+  const dated = text.match(/\b((?:(?:next|this)\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?),?\s+(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i);
+  if (dated) return `${dated[1]} at ${dated[2].replace(/\s+/g, " ").toUpperCase()}`;
   const dayFirst = text.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this weekend)\b(?:\s*,?\s*(?:at\s+)?)?(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i);
   const timeFirst = text.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b\s*(?:on\s+)?\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this weekend)\b/i);
   const day = dayFirst?.[1] || timeFirst?.[2];
