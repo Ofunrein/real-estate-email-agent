@@ -612,7 +612,7 @@ test("coalesceIrisEmailThreadFollowUps: keeps one latest message and combines qu
 
   assert.deepEqual(result.superseded.map((message) => message.id), ["first"]);
   assert.deepEqual(result.messages.map((message) => message.id), ["follow_up"]);
-  assert.match(result.messages[0].body, /Looking in Round Rock\.\n\nAlso need a backyard\./);
+  assert.match(result.messages[0].body, /^Also need a backyard\.\n\nThread context for classification only:\nLooking in Round Rock\./);
 });
 
 test("classifyIrisEmailText: carries forward area and beds from thread context (no re-ask)", () => {

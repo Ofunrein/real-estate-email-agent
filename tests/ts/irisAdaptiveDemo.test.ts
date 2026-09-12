@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyIrisEmailText, generateIrisEmailReply, finalizeIrisReplyForMessage, buildHtmlEmailReply } from "../../lib/irisEmail";
+import { coalesceIrisEmailThreadFollowUps, classifyIrisEmailText, generateIrisEmailReply, finalizeIrisReplyForMessage, buildHtmlEmailReply } from "../../lib/irisEmail";
 
 test("MIME wrapping and changed valuation consent preserve the current showing request", () => {
   const body = "We also need to change the possible tour to Sunday, September 20 at 2 PM\r\ninstead of Saturday. Keep that tentative, not booked. And I have changed my\r\nmind about the free home valuation: yes, please send me the link.";
@@ -19,4 +19,15 @@ test("property cards omit empty and literal null fields", () => {
   assert.match(result.html || "", /<img src="https:\/\/m1\.cbhomes\.com/);
   assert.doesNotMatch(result.html || "", /Not available|<strong>Pet policy:|<strong>Parking:/);
   assert.match(result.text, /Price: \$500,000/);
+});
+
+test("coalescing unread older messages cannot override renewed valuation consent", () => {
+  const base = {threadId: "test-thread", from: "buyer@example.com", subject: "126 Vailco Ln", to: "agent@example.com"};
+  const batch = coalesceIrisEmailThreadFollowUps([
+    {...base, id: "older", receivedAt: "2026-09-12T21:00:00Z", body: "We already own our home. Not yet on the valuation. Saturday at 11 AM."},
+    {...base, id: "latest", receivedAt: "2026-09-12T21:01:00Z", body: "Yes, we would like the free home valuation now. Please send the form. Change the showing to Sunday at 2 PM."},
+  ]);
+  const c = classifyIrisEmailText(batch.messages[0]);
+  assert.ok(c.opportunity_tags.includes("valuation_consented"));
+  assert.ok(!c.opportunity_tags.includes("valuation_declined"));
 });

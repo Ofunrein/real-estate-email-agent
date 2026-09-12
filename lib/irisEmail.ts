@@ -192,7 +192,10 @@ export function coalesceIrisEmailThreadFollowUps(messages: IrisEmailMessage[]): 
   for (const group of groups.values()) {
     group.sort((a, b) => a.receivedAt - b.receivedAt);
     const latest = group.at(-1)!;
-    current.push({ ...latest.message, body: group.map(({ message }) => message.body.trim()).filter(Boolean).join("\n\n") || latest.message.body });
+    const earlier = group.slice(0, -1).map(({ message }) => message.body.trim()).filter(Boolean).join("\n\n");
+    current.push({ ...latest.message, body: earlier
+      ? `${latest.message.body}\n\n${THREAD_CONTEXT_MARKER}\n${earlier}`
+      : latest.message.body });
     superseded.push(...group.slice(0, -1).map(({ message }) => message));
   }
   return { messages: current, superseded };
