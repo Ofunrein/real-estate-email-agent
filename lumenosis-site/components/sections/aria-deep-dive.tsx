@@ -378,8 +378,8 @@ function IrisEmailDemo() {
                     className={[
                       "rounded-2xl border p-3 shadow-sm transition-all duration-300",
                       isIris
-                        ? "border-[var(--color-brand-violet)]/45 bg-[var(--demo-bubble-lead)]"
-                        : "border-[var(--demo-border)] bg-[var(--demo-panel-alt)]",
+                        ? "border-[var(--demo-bubble-ai-border)] bg-[var(--demo-bubble-ai)]"
+                        : "border-[var(--demo-bubble-lead-border)] bg-[var(--demo-bubble-lead)]",
                     ].join(" ")}
                   >
                     <div className="flex items-start gap-3">
@@ -882,10 +882,10 @@ function TheoSmsDemo() {
                 )}
                 <div
                   className={[
-                    "max-w-[88%] rounded-[22px] px-4 py-3 text-sm leading-relaxed shadow-[0_12px_36px_rgba(0,0,0,0.18)]",
+                    "max-w-[88%] rounded-[22px] border px-4 py-3 text-sm leading-relaxed shadow-[0_12px_36px_rgba(0,0,0,0.18)]",
                     isTheo
-                      ? "self-end bg-[var(--demo-bubble-ai)] text-[var(--demo-text)]"
-                      : "self-start bg-[var(--demo-bubble-lead)] text-[var(--demo-text)]",
+                      ? "self-end border-[var(--demo-bubble-ai-border)] bg-[var(--demo-bubble-ai)] text-[var(--demo-text)]"
+                      : "self-start border-[var(--demo-bubble-lead-border)] bg-[var(--demo-bubble-lead)] text-[var(--demo-text)]",
                   ].join(" ")}
                 >
                   {line.text}

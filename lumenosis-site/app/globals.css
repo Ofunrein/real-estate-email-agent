@@ -163,8 +163,12 @@ html[data-theme-transition="light"]::view-transition-new(root) {
   --demo-text-muted: rgba(14, 14, 15, 0.62);
   --demo-text-faint: rgba(14, 14, 15, 0.45);
   --demo-icon: rgba(14, 14, 15, 0.7);
-  --demo-bubble-ai: rgba(196, 154, 82, 0.14);
-  --demo-bubble-lead: #f1efe8;
+  /* Speaker separation: AI = warm amber wash, lead = cool neutral.
+     Kept apart in both hue and lightness so the two voices never merge. */
+  --demo-bubble-ai: #f6dca6;
+  --demo-bubble-ai-border: rgba(150, 110, 52, 0.55);
+  --demo-bubble-lead: #ccd4e0;
+  --demo-bubble-lead-border: rgba(14, 14, 15, 0.24);
   --demo-chip: rgba(196, 154, 82, 0.16);
   --demo-track: rgba(14, 14, 15, 0.12);
   --demo-scroll-thumb: #c49a52;
@@ -190,8 +194,10 @@ html[data-theme-transition="light"]::view-transition-new(root) {
   --demo-text-muted: rgba(255, 255, 255, 0.9);
   --demo-text-faint: rgba(255, 255, 255, 0.5);
   --demo-icon: rgba(255, 255, 255, 0.85);
-  --demo-bubble-ai: #1e1508;
-  --demo-bubble-lead: #1c1c1f;
+  --demo-bubble-ai: #45300d;
+  --demo-bubble-ai-border: rgba(196, 154, 82, 0.65);
+  --demo-bubble-lead: #191b1f;
+  --demo-bubble-lead-border: rgba(255, 255, 255, 0.18);
   --demo-chip: #221c10;
   --demo-track: rgba(255, 255, 255, 0.15);
   --demo-scroll-thumb: #c49a52;
