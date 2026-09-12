@@ -12,7 +12,7 @@ const Facts = z.object({
 const Input = z.object({
   fullName:z.string().min(2), email:z.string().email(), businessName:z.string().min(2), listingAddress:z.string().min(8), listingUrl:z.string().url(), senderInbox:z.string().email().refine(v=>v.endsWith("@agentmail.to")), idempotencyKey:z.string().min(1).max(255), facts:Facts, imageUrls:z.array(z.string().url()).length(3),
 });
-const allowedPhoto=(url:string)=>{ try { return new URL(url).protocol==="https:" && new URL(url).hostname==="ap.rdcpix.com"; } catch { return false; } };
+const allowedPhoto=(url:string)=>{ try { const parsed=new URL(url); return parsed.protocol==="https:" && new Set(["ap.rdcpix.com","ssl.cdn-redfin.com"]).has(parsed.hostname); } catch { return false; } };
 const slugify=(v:string)=>v.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"").slice(0,60);
 
 export async function POST(request:Request){
