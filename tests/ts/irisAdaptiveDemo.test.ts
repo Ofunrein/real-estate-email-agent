@@ -15,7 +15,8 @@ test("MIME wrapping and changed valuation consent preserve the current showing r
 });
 
 test("property cards omit empty and literal null fields", () => {
-  const result = buildHtmlEmailReply("Here are the details.\n\nBest,\nIris", [{address: "123 Main St", price: "500000", beds: "3", baths: "2", sqft: "1500", status: "Active", pet_policy: "null", parking: "", year_built: "2005"}]);
+  const result = buildHtmlEmailReply("Here are the details.\n\nBest,\nIris", [{address: "123 Main St", price: "500000", beds: "3", baths: "2", sqft: "1500", status: "Active", pet_policy: "null", parking: "", year_built: "2005", photo_url: "https://m1.cbhomes.com/p/1113/example/photo.webp"}]);
+  assert.match(result.html || "", /<img src="https:\/\/m1\.cbhomes\.com/);
   assert.doesNotMatch(result.html || "", /Not available|<strong>Pet policy:|<strong>Parking:/);
   assert.match(result.text, /Price: \$500,000/);
 });

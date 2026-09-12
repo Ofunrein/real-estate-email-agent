@@ -521,7 +521,9 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: Iri
   if (!fields.timeline && ["property_search", "buyer_lead", "seller_lead", "renter_lead"].includes(intent)) return "What timeline are you working with?";
   if (!fields.area && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "Which area should I focus on?";
   if (!fields.budget && ["property_search", "buyer_lead", "renter_lead"].includes(intent)) return "What price range should I stay under?";
-  if (intent === "property_details") return "Would you like to tour it, compare it with similar homes, or confirm anything else?";
+  if (intent === "property_details") return fields.current_property_status === "unknown"
+    ? "Is this your first purchase, or do you have a home to sell before buying?"
+    : "Would you like to arrange a showing?";
   if (intent === "buyer_lead" && fields.current_property_status === "unknown") return "Is this your first purchase, or have you bought a home before?";
   return null;
 }
@@ -1061,7 +1063,7 @@ export function generateIrisEmailReply(message: IrisEmailMessage, classification
         "",
         "Thanks for letting me know. I will focus on your next purchase and leave that service out.",
         "",
-        question || "What would be most helpful for your home search?",
+        question || (classification.address ? "" : "What would be most helpful for your home search?"),
         "",
         "Best,",
         IRIS_AGENT_NAME,
@@ -1696,7 +1698,10 @@ async function generateIrisEmailReplyRich(
   const latestBody = cleanBody(latestEmailBody(message.body));
   const contextAddresses = extractAddresses(threadContextBody(message.body));
   const excludeAddresses = classification.opportunity_tags.includes("property_pivot") ? contextAddresses.slice(0, 1) : [];
-  const shouldAttachProperties = ["property_search", "property_details", "showing_request"].includes(classification.intent);
+  const needsListingAnswer = classification.addresses.length > 0
+    && TIER_A_INTENTS.has(classification.intent)
+    && /\b(?:asking price|pricing|price|availability)\b/i.test(latestBody);
+  const shouldAttachProperties = ["property_search", "property_details", "showing_request"].includes(classification.intent) || needsListingAnswer;
   const budgetRange = extractBudgetRange(
     [classification.lead_fields.budget || "", latestBody].filter(Boolean).join(" "),
   );
