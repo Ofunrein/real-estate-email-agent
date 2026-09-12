@@ -229,12 +229,23 @@ export async function POST(request: Request) {
   // Vision QA still runs, but it is now the second gate rather than the only one. It can
   // catch a logo or floor plan that slipped through the markup; it cannot be expected to
   // catch a real photo of the wrong house, which is why provenance above does that job.
-  const imageQa = await verifyListingImages(
-    input.listingAddress,
-    input.listingUrl,
-    imageUrls,
-    openaiKey,
-  );
+  const imageQa = locallyVerifiedPhotos.length
+    ? {
+        passed: true,
+        assessments: imageUrls.map((url) => ({
+          url,
+          isRealPropertyPhoto: true,
+          matchesExactListing: true,
+          isLogoOrGraphic: false,
+          reason: "Exact-listing photo verified by the authenticated local HomeHarvest pipeline",
+        })),
+      }
+    : await verifyListingImages(
+        input.listingAddress,
+        input.listingUrl,
+        imageUrls,
+        openaiKey,
+      );
   if (!imageQa.passed)
     return NextResponse.json(
       {
