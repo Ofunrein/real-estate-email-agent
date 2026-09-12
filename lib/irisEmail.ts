@@ -528,7 +528,8 @@ function nextQuestion(intent: IrisEmailIntent, fields: IrisLeadFields, role: Iri
 export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" | "body">): IrisEmailClassification {
   const latestClean = cleanBody(`${message.subject || ""}\n${latestEmailBody(message.body || "")}`);
   const contextClean = cleanBody(threadContextBody(message.body || ""));
-  const latestAddresses = extractAddresses(latestClean);
+  const bodyAddresses = extractAddresses(cleanBody(latestEmailBody(message.body || "")));
+  const latestAddresses = bodyAddresses.length ? bodyAddresses : extractAddresses(message.subject || "");
   const contextAddresses = extractAddresses(contextClean);
   const addresses = latestAddresses.length
     ? latestAddresses

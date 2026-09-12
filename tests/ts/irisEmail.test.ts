@@ -241,10 +241,12 @@ test("classifyIrisEmailText: detects a second-time buyer and opens the valuation
 
 test("dated showing requests preserve the appointment and timeline after homeowner disclosure", () => {
   const message = email({
-    subject: "Question about 9605 Corbe Dr",
-    body: "Can we see 9605 Corbe Dr next Saturday, September 19, at 11:00 AM? We currently own our home and need to sell before buying. We hope to move in the next two to three months.",
+    subject: "Question about 9605 Corbe Dr 20260912-152907",
+    body: "For 9605 Corbe Dr, can we arrange a showing next Saturday, September 19, at 11:00 AM? We currently own our home and need to sell before buying. We hope to move in the next two to three months.",
   });
   const classification = classifyIrisEmailText(message);
+  assert.equal(classification.address, "9605 Corbe Dr");
+  assert.deepEqual(classification.addresses, ["9605 Corbe Dr"]);
   const reply = finalizeIrisReplyForMessage(message, classification, [], generateIrisEmailReply(message, classification) || "");
   assert.match(reply, /9605 Corbe Dr/);
   assert.match(reply, /Saturday, September 19.*11:00 AM/i);
