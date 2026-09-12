@@ -287,7 +287,8 @@ function cleanBody(text: string): string {
 const THREAD_CONTEXT_MARKER = "Thread context for classification only:";
 
 function latestEmailBody(body: string): string {
-  return body.split(THREAD_CONTEXT_MARKER)[0] || body;
+  // Unfold MIME-wrapped prose without flattening labeled thread context.
+  return cleanBody(body.split(THREAD_CONTEXT_MARKER)[0] || body).replace(/\r?\n/g, " ");
 }
 
 function threadContextBody(body: string): string {
@@ -296,7 +297,7 @@ function threadContextBody(body: string): string {
 }
 
 function asksForDifferentProperty(text: string): boolean {
-  return /\b(no longer interested|not interested in (?:this|that|the|current) property|what else|else can we do|other options?|different options?|alternatives?|another|better fit|better fits|instead|similar options?|show me options?)\b/i.test(text);
+  return /\b(no longer interested|not interested in (?:this|that|the|current) property|what else|else can we do|other options?|different options?|alternatives?|another|better fit|better fits|similar options?|show me options?)\b/i.test(text);
 }
 
 function canResolveFromPriorProperty(latestText: string): boolean {
@@ -541,7 +542,7 @@ export function classifyIrisEmailText(message: Pick<IrisEmailMessage, "subject" 
   const noSignal = noOrStopSignal(latestClean);
   const pivotingToOtherOptions = asksForDifferentProperty(latestClean);
   const secondTimeBuyer = /\b(second[ -]?time buyer|bought before|already own|currently own|own(?:s)? (?:a|my|our) (?:[\w-]+\s+){0,3}(?:home|house|property)|have (?:a|our) (?:home|house|property) to sell|need to sell (?:my|our) (?:home|house|property))\b/i.test(latestClean);
-  const contextSecondTimeBuyer = /\b(second_time_buyer|second[ -]?time buyer|currently own|already own|current property status:\s*owns)\b/i.test(contextClean);
+  const contextSecondTimeBuyer = /\b(second_time_buyer|second[ -]?time buyer|currently own|already own|own(?:s)? (?:a|my|our) (?:[\w-]+\s+){0,3}(?:home|house|property)|current property status:\s*owns)\b/i.test(contextClean);
   const valuationTerms = "(?:valuation|home value|property value|appraisal|cma)";
   const valuationNegated = new RegExp(
     `\\b(?:no|not|without|skip|decline|don't|do not)\\b[^.!?\\n]{0,50}\\b${valuationTerms}\\b|\\b${valuationTerms}\\b[^.!?\\n]{0,30}\\b(?:no|not|decline|skip)\\b`,
@@ -1167,7 +1168,7 @@ function propertyFacts(property: SheetRow): string {
 
 function displayedPropertyFact(value: string | undefined, formatter?: (value: string) => string): string {
   const clean = (value || "").trim();
-  return clean ? (formatter ? formatter(clean) : clean) : "Not available in current listing data";
+  return clean && !/^(?:null|undefined|n\/?a|unknown)$/i.test(clean) ? (formatter ? formatter(clean) : clean) : "";
 }
 
 function propertyVerifiedFacts(property: SheetRow): Array<[string, string]> {
@@ -1180,7 +1181,7 @@ function propertyVerifiedFacts(property: SheetRow): Array<[string, string]> {
     ["Pet policy", displayedPropertyFact(property.pet_policy)],
     ["Parking", displayedPropertyFact(property.parking)],
     ["Year built", displayedPropertyFact(property.year_built)],
-  ];
+  ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
 }
 
 function propertyHighlights(property: SheetRow): string {
@@ -1378,6 +1379,18 @@ export function finalizeIrisReplyForMessage(
     }
     const valuationUrl = (process.env.FILLOUT_VALUATION_URL || "").trim();
     if (valuationUrl) reply = insertReplyParagraphBeforeSignature(reply, valuationUrl);
+  }
+
+  const pricingQuestion = /\b(?:asking price|pricing|price)\b/i.test(latestText) && /\?|\b(?:confirm|verify|correct|unverified)\b/i.test(latestText);
+  if (pricingQuestion) {
+    const selected = properties.find((candidate) => candidate.address && isExactPropertyAddressMatch(address, String(candidate.address)));
+    const price = String(selected?.price || "").trim();
+    reply = insertReplyParagraphBeforeSignature(reply, price
+      ? `The asking price in our latest verified listing data is ${formatCurrency(price)}.`
+      : "I cannot verify the current asking price from the listing data available to me. Please do not rely on a price quoted in an earlier description until it is confirmed.");
+  }
+  if (timeline) {
+    reply = filterReplySentences(reply, (sentence) => sentence.includes("?") && /\btimeline\b/i.test(sentence));
   }
 
   if (!/\b(?:still\s+)?available\b|\bavailability\b/i.test(latestText) || !address) {
@@ -1741,9 +1754,10 @@ async function messageWithLeadContext(message: IrisEmailMessage): Promise<IrisEm
     && !lead?.summary
     && !threadEvents.length
   ) return { ...message, knownContact };
-  const recentEvents = threadEvents.slice(-6).map((event) => {
+  const recentEvents = threadEvents.filter((event) => event.direction === "inbound").slice(-8).map((event) => {
     const when = event.event_at || event.created_at || "";
-    const text = cleanBody(stripHtml(event.message_text || event.summary || "")).slice(0, 220);
+    // Preserve complete buyer turns, not agent prose or recursively appended history.
+    const text = latestEmailBody(event.message_text || event.summary || "").slice(0, 4000);
     return `${when} ${event.channel || "unknown"} ${event.direction || "unknown"} ${event.status || ""}: ${text}`;
   });
   const context = [

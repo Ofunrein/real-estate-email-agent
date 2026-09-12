@@ -296,8 +296,10 @@ export async function attachPropertyFactEvidence(rows: SheetRow[]): Promise<Shee
     const safe: SheetRow = { ...row, fact_evidence: JSON.stringify(resolved) };
     for (const field of PROPERTY_FACT_FIELDS) {
       const fact = resolved[field];
-      if (fact && fact.status !== "known") safe[field] = "";
+      if (fact) safe[field] = fact.status === "known" ? clean(fact.value) : "";
     }
+    // Free-form copy can retain superseded prices even when structured facts expire.
+    safe.description = "";
     return safe;
   });
 }

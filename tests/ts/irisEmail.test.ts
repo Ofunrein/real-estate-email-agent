@@ -1068,8 +1068,8 @@ test("buildHtmlEmailReply: listing facts are source-backed and missing facts are
   for (const fact of ["Price: $725,000", "Bedrooms: 2", "Bathrooms: 2", "Square footage: 1240 sqft", "Availability: Active", "Parking: 1 reserved space", "Year built: 2018"]) {
     assert.match(rendered.text, new RegExp(fact.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
-  assert.match(rendered.text, /Pet policy: Not available in current listing data/);
-  assert.match(rendered.html || "", /<strong>Pet policy:<\/strong> Not available in current listing data/);
+  assert.doesNotMatch(rendered.text, /Pet policy:|Not available in current listing data/);
+  assert.doesNotMatch(rendered.html || "", /<strong>Pet policy:|Not available in current listing data/);
   assert.doesNotMatch(rendered.text, /pets allowed/i);
 });
 
