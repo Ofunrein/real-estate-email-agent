@@ -150,7 +150,7 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 text-[1.0625rem] leading-[1.65] text-[var(--color-muted)] max-w-[460px]">
-            Close more deals while Iris handles calls, emails, follow-ups, and the busy work.
+            Close more deals while Iris handles calls, emails, follow-ups, appointments, and the busy work.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
