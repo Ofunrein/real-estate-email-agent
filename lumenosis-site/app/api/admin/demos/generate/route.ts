@@ -14,10 +14,13 @@ const Input = z.object({
   businessName: z.string().trim().min(2).max(150),
   listingAddress: z.string().trim().min(8).max(200),
   listingUrl: z.string().url(),
-  senderInbox: z.string().email().refine((value) => value.endsWith("@agentmail.to")),
+  senderInbox: z
+    .string()
+    .email()
+    .refine((value) => value.endsWith("@agentmail.to")),
   idempotencyKey: z.string().min(1).max(255).optional(),
   verifiedListingPhotos: z.array(z.string().url()).min(1).max(12).optional(),
-  approved: z.literal(false).optional(),
+  approved: z.boolean().optional(),
 });
 
 const Listing = z
@@ -71,6 +74,8 @@ export async function POST(request: Request) {
   const parsed = Input.safeParse(rawInput);
   if (!parsed.success) return NextResponse.json({ error: "Invalid prospect" }, { status: 400 });
   const input = parsed.data;
+  const approved = automated && input.approved === true;
+  const approvedAt = approved ? new Date().toISOString() : null;
   if (automated && !input.idempotencyKey)
     return NextResponse.json({ error: "idempotencyKey is required" }, { status: 400 });
   const automationRoomId = input.idempotencyKey
@@ -84,7 +89,13 @@ export async function POST(request: Request) {
     if (existing[0]) {
       const existingId = String(existing[0].id);
       const existingToken = String(existing[0].access_token);
-      return NextResponse.json({ id: existingId, demoUrl: `https://lumenosis.com/demo/${existingToken}`, adminUrl: `https://lumenosis.com/admin/demos#demo-${existingId}`, approved: false, reused: true });
+      return NextResponse.json({
+        id: existingId,
+        demoUrl: `https://lumenosis.com/demo/${existingToken}`,
+        adminUrl: `https://lumenosis.com/admin/demos#demo-${existingId}`,
+        approved: false,
+        reused: true,
+      });
     }
   }
   const tavilyKey = process.env.TAVILY_API_KEY;
@@ -240,12 +251,7 @@ export async function POST(request: Request) {
           reason: "Exact-listing photo verified by the authenticated local HomeHarvest pipeline",
         })),
       }
-    : await verifyListingImages(
-        input.listingAddress,
-        input.listingUrl,
-        imageUrls,
-        openaiKey,
-      );
+    : await verifyListingImages(input.listingAddress, input.listingUrl, imageUrls, openaiKey);
   if (!imageQa.passed)
     return NextResponse.json(
       {
@@ -298,7 +304,7 @@ export async function POST(request: Request) {
       responsiveViewports: [320, 390, 768, 1024, 1440],
     },
     expiresAt,
-    approved: false,
+    approved,
   };
   const senderName = senderNames[input.senderInbox] ?? input.senderInbox.split("@")[0];
   const demoUrl = `https://lumenosis.com/demo/${token}`;
@@ -329,14 +335,31 @@ export async function POST(request: Request) {
     ],
   );
   await sql(
-    "INSERT INTO demo_rooms (id, prospect_id, listing_id, slug, token_hash, access_token, config_json, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, prospectId, listingId, slug, tokenHash(token), token, JSON.stringify(room), expiresAt],
+    "INSERT INTO demo_rooms (id, prospect_id, listing_id, slug, token_hash, access_token, config_json, status, expires_at, approved_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      id,
+      prospectId,
+      listingId,
+      slug,
+      tokenHash(token),
+      token,
+      JSON.stringify(room),
+      approved ? "approved" : "draft",
+      expiresAt,
+      approvedAt,
+    ],
   );
   await sql(
     "INSERT INTO outreach_drafts (id, demo_room_id, sender_name, sender_inbox, recipient, subject, body) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [randomUUID(), id, senderName, input.senderInbox, input.email, subject, body],
   );
   if (automated)
-    return NextResponse.json({ id, demoUrl, adminUrl: `https://lumenosis.com/admin/demos#demo-${id}`, approved: false, reused: false });
+    return NextResponse.json({
+      id,
+      demoUrl,
+      adminUrl: `https://lumenosis.com/admin/demos#demo-${id}`,
+      approved,
+      reused: false,
+    });
   return NextResponse.redirect(new URL("/admin/demos", request.url), 303);
 }

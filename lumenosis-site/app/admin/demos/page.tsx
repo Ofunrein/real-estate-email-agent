@@ -23,9 +23,10 @@ type Demo = {
 export default async function DemoAdminPage() {
   if (!(await isAdmin())) redirect("/admin/demos/login");
   const demos = (await sql(`SELECT d.id, p.full_name, p.business_name, p.email, l.address, d.status,
-    d.access_token, o.subject, o.body, o.status AS outreach_status, d.created_at
+    d.access_token, COALESCE(o.subject, '') AS subject, COALESCE(o.body, '') AS body,
+    COALESCE(o.status, 'not_applicable') AS outreach_status, d.created_at
     FROM demo_rooms d JOIN prospects p ON p.id = d.prospect_id
-    JOIN listings l ON l.id = d.listing_id JOIN outreach_drafts o ON o.demo_room_id = d.id
+    JOIN listings l ON l.id = d.listing_id LEFT JOIN outreach_drafts o ON o.demo_room_id = d.id
     ORDER BY d.created_at DESC`)) as Demo[];
 
   return (
