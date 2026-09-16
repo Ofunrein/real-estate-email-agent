@@ -24,6 +24,15 @@ function money(value: number) {
 }
 
 export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: string }) {
+  const isCondo = /condo|apartment/i.test(room.listing.propertyType);
+  const showAcreage = !isCondo && room.listing.acreage > 0;
+  const listingMeta = [
+    !isCondo && room.listing.lotSquareFeet > 0
+      ? `${room.listing.lotSquareFeet.toLocaleString()} sq ft lot`
+      : null,
+    room.listing.pricePerSquareFoot > 0 ? `$${room.listing.pricePerSquareFoot}/sq ft` : null,
+    room.listing.listedAt ? `listed ${room.listing.listedAt}` : null,
+  ].filter(Boolean).join(" · ");
   const presets = [
     `Is ${room.listing.address} still available, and when could I see it?`,
     `Tell me more about the updates, acreage, location, and anything I should verify before touring ${room.listing.address}.`,
@@ -262,7 +271,7 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
             </p>
             <h2 className="mt-3 text-2xl font-semibold text-white">{room.listing.address}</h2>
             <p className="mt-2 text-3xl font-semibold text-white">{money(room.listing.price)}</p>
-            <div className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+            <div className={`mt-6 grid grid-cols-2 gap-4 text-sm ${showAcreage ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
               <span>
                 <strong className="block text-xl">{room.listing.beds}</strong>Beds
               </span>
@@ -275,9 +284,11 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                 </strong>
                 Sq ft
               </span>
-              <span>
-                <strong className="block text-xl">{room.listing.acreage}</strong>Acres
-              </span>
+              {showAcreage ? (
+                <span>
+                  <strong className="block text-xl">{room.listing.acreage}</strong>Acres
+                </span>
+              ) : null}
             </div>
             <p className="mt-6 text-sm leading-6 text-white/70">{room.listing.summary}</p>
             <p className="mt-4 font-[var(--font-mono)] text-xs text-white/60">
@@ -539,10 +550,11 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
                     {item}
                   </div>
                 ))}
-                <div className="border-t border-black/10 pt-4 text-sm leading-6 text-[var(--color-muted)] dark:border-white/15 dark:text-white/75">
-                  {room.listing.lotSquareFeet.toLocaleString()} sq ft lot · $
-                  {room.listing.pricePerSquareFoot}/sq ft · listed {room.listing.listedAt}
-                </div>
+                {listingMeta ? (
+                  <div className="border-t border-black/10 pt-4 text-sm leading-6 text-[var(--color-muted)] dark:border-white/15 dark:text-white/75">
+                    {listingMeta}
+                  </div>
+                ) : null}
               </div>
               <p className="mt-8 text-sm leading-6 text-[var(--color-muted)] dark:text-white/50">
                 Iris drafts verified facts in {room.prospect.firstName}&apos;s voice. For
