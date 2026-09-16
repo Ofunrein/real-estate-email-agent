@@ -79,6 +79,21 @@ test("approved demo loads and property gallery works", async ({ page }) => {
   await expect(gallery).toBeHidden();
 });
 
+test("every demo room shows the overview video after the interactive email proof", async ({
+  page,
+}) => {
+  await page.goto(demo);
+  const overview = page.getByTestId("demo-overview-video");
+  const video = overview.locator('video[aria-label="How Iris handles a real estate inbox"]');
+
+  await expect(video).toBeVisible();
+  await expect(video).toHaveAttribute("src", "/videos/iris-inbox-overview.mp4");
+  const order = await page
+    .locator('[data-testid="interactive-email-demo"], [data-testid="demo-overview-video"]')
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid")));
+  expect(order).toEqual(["interactive-email-demo", "demo-overview-video"]);
+});
+
 test("demo defaults to light mode and uses the landing-page theme toggle", async ({ page }) => {
   await page.goto(demo);
 

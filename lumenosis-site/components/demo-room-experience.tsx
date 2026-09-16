@@ -1,12 +1,12 @@
 "use client";
 
+import type Vapi from "@vapi-ai/web";
 import { ChevronLeft, ChevronRight, Expand, Mic, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type Vapi from "@vapi-ai/web";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { DemoRoom } from "@/content/demo-rooms";
 import { emailBodyHtml } from "@/lib/email-html";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 type EmailResult = { subject: string; reply: string; captured: string[]; nextAction: string };
 type VoiceConfig = {
@@ -32,7 +32,9 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
       : null,
     room.listing.pricePerSquareFoot > 0 ? `$${room.listing.pricePerSquareFoot}/sq ft` : null,
     room.listing.listedAt ? `listed ${room.listing.listedAt}` : null,
-  ].filter(Boolean).join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const presets = [
     `Is ${room.listing.address} still available, and when could I see it?`,
     `Tell me more about the updates, acreage, location, and anything I should verify before touring ${room.listing.address}.`,
@@ -101,10 +103,13 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
     sessionStorage.setItem(`demo-viewed:${token}`, "1");
   }, [event, token]);
 
-  useEffect(() => () => {
-    vapi.current?.stop();
-    vapi.current = null;
-  }, []);
+  useEffect(
+    () => () => {
+      vapi.current?.stop();
+      vapi.current = null;
+    },
+    [],
+  );
 
   const recovered = useMemo(() => {
     const value =
@@ -271,7 +276,9 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
             </p>
             <h2 className="mt-3 text-2xl font-semibold text-white">{room.listing.address}</h2>
             <p className="mt-2 text-3xl font-semibold text-white">{money(room.listing.price)}</p>
-            <div className={`mt-6 grid grid-cols-2 gap-4 text-sm ${showAcreage ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+            <div
+              className={`mt-6 grid grid-cols-2 gap-4 text-sm ${showAcreage ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+            >
               <span>
                 <strong className="block text-xl">{room.listing.beds}</strong>Beds
               </span>
@@ -312,7 +319,10 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
               action.
             </p>
           </div>
-          <article className="mt-12 overflow-hidden rounded-[var(--radius)] bg-[#ece9e1] text-[#151515] shadow-[0_28px_90px_rgba(0,0,0,0.35)]">
+          <article
+            data-testid="interactive-email-demo"
+            className="mt-12 overflow-hidden rounded-[var(--radius)] bg-[#ece9e1] text-[#151515] shadow-[0_28px_90px_rgba(0,0,0,0.35)]"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#f8f7f3] px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
                 <span className="relative h-8 w-8 overflow-hidden rounded-full border border-black/10 bg-[#151515]">
@@ -482,6 +492,43 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
             </div>
           </article>
 
+          <section
+            data-testid="demo-overview-video"
+            aria-labelledby="demo-overview-heading"
+            className="mx-auto mt-16 max-w-4xl"
+          >
+            <div className="text-center">
+              <p className="text-sm font-medium text-[var(--color-brand-amber)]">
+                60-second overview
+              </p>
+              <h2
+                id="demo-overview-heading"
+                className="mt-3 text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.04em]"
+              >
+                See how Iris handles the rest of the inbox.
+              </h2>
+            </div>
+            <div className="mt-8 overflow-hidden rounded-[var(--radius)] bg-black shadow-[0_28px_90px_rgba(0,0,0,0.3)]">
+              <video
+                aria-label="How Iris handles a real estate inbox"
+                src="/videos/iris-inbox-overview.mp4"
+                poster="/videos/iris-inbox-overview-poster.jpg"
+                controls
+                playsInline
+                preload="metadata"
+                className="aspect-[848/624] w-full bg-black object-contain"
+              >
+                <track
+                  kind="captions"
+                  src="/videos/iris-inbox-overview.vtt"
+                  srcLang="en"
+                  label="English"
+                  default
+                />
+              </video>
+            </div>
+          </section>
+
           <div className="mt-16 grid gap-8 lg:grid-cols-[0.75fr_1.25fr]">
             <article className="rounded-[var(--radius)] border border-[var(--color-brand-amber)]/40 bg-[#f8f7f3] p-6 text-[#151515] shadow-[0_20px_60px_rgba(0,0,0,0.16)] dark:bg-[var(--color-brand-amber-soft)] dark:text-white dark:shadow-[0_20px_60px_rgba(0,0,0,0.24)] md:p-8">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-brand-amber)]">
@@ -522,11 +569,24 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
               {voiceConsent ? (
                 <div className="mt-6 rounded-[12px] border border-white/20 bg-black/30 p-4">
                   <p className="text-sm leading-6 text-white/80">
-                    This is an isolated AI demonstration. Audio is processed to run the conversation. Recording is disabled.
+                    This is an isolated AI demonstration. Audio is processed to run the
+                    conversation. Recording is disabled.
                   </p>
                   <div className="mt-4 flex gap-3">
-                    <button type="button" onClick={() => setVoiceConsent(false)} className="rounded-lg border border-white/30 px-4 py-2 text-sm text-white">Cancel</button>
-                    <button type="button" onClick={startVoiceDemo} className="rounded-lg bg-[var(--color-brand-amber)] px-4 py-2 text-sm font-semibold text-black">Accept and start</button>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceConsent(false)}
+                      className="rounded-lg border border-white/30 px-4 py-2 text-sm text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startVoiceDemo}
+                      className="rounded-lg bg-[var(--color-brand-amber)] px-4 py-2 text-sm font-semibold text-black"
+                    >
+                      Accept and start
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -622,7 +682,9 @@ export function DemoRoomExperience({ room, token }: { room: DemoRoom; token: str
             ))}
           </div>
           <div className="flex flex-col justify-center rounded-[var(--radius)] bg-[#ece9e1] p-6 text-[#151515] dark:bg-[var(--color-dark-section)] dark:text-white">
-            <p className="text-sm text-[#666] dark:text-white/60">Estimated monthly opportunity range</p>
+            <p className="text-sm text-[#666] dark:text-white/60">
+              Estimated monthly opportunity range
+            </p>
             <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-[clamp(1.5rem,3vw,2.25rem)] font-semibold text-[var(--color-gold-italic)]">
               <span>{money(recovered.low)}</span>
               <span>–</span>
