@@ -81,17 +81,39 @@ export async function POST(request: Request) {
     : null;
   if (automationRoomId) {
     const existing = await sql(
-      "SELECT d.id, d.access_token FROM demo_rooms d WHERE d.id = ? LIMIT 1",
+      "SELECT d.id, d.access_token, d.config_json FROM demo_rooms d WHERE d.id = ? LIMIT 1",
       [automationRoomId],
     );
     if (existing[0]) {
       const existingId = String(existing[0].id);
       const existingToken = String(existing[0].access_token);
+      if (approved && input.verifiedListingFacts && input.verifiedListingPhotos?.length) {
+        const room = JSON.parse(String(existing[0].config_json)) as DemoRoom;
+        room.listing = {
+          address: input.listingAddress,
+          ...input.verifiedListingFacts,
+          images: input.verifiedListingPhotos.map((src, index) => ({
+            src,
+            alt: `${input.listingAddress} listing photo ${index + 1}`,
+          })),
+        };
+        room.qa = {
+          passed: true,
+          checkedAt: new Date().toISOString(),
+          images: "exact-listing-property-photos",
+          responsiveViewports: [320, 390, 768, 1024, 1440],
+        };
+        room.approved = true;
+        await sql(
+          "UPDATE demo_rooms SET config_json = ?, status = 'approved', approved_at = ? WHERE id = ?",
+          [JSON.stringify(room), new Date().toISOString(), existingId],
+        );
+      }
       return NextResponse.json({
         id: existingId,
         demoUrl: `https://lumenosis.com/demo/${existingToken}`,
         adminUrl: `https://lumenosis.com/admin/demos#demo-${existingId}`,
-        approved: false,
+        approved,
         reused: true,
       });
     }
