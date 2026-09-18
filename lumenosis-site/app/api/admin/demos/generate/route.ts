@@ -8,21 +8,6 @@ import { verifyListingImages } from "@/lib/listing-image-qa";
 import { sourceListingPhotos } from "@/lib/listing-photo-source";
 import { sql } from "@/lib/turso";
 
-const Input = z.object({
-  fullName: z.string().trim().min(2).max(100),
-  email: z.string().trim().email(),
-  businessName: z.string().trim().min(2).max(150),
-  listingAddress: z.string().trim().min(8).max(200),
-  listingUrl: z.string().url(),
-  senderInbox: z
-    .string()
-    .email()
-    .refine((value) => value.endsWith("@agentmail.to")),
-  idempotencyKey: z.string().min(1).max(255).optional(),
-  verifiedListingPhotos: z.array(z.string().url()).min(1).max(12).optional(),
-  approved: z.boolean().optional(),
-});
-
 const Listing = z
   .object({
     status: z.literal("active"),
@@ -45,6 +30,19 @@ const Listing = z
   .refine((l) => !/lease|rent/i.test(l.propertyType), {
     message: "listing is a lease, not for sale",
   });
+
+const Input = z.object({
+  fullName: z.string().trim().min(2).max(100),
+  email: z.string().trim().email(),
+  businessName: z.string().trim().min(2).max(150),
+  listingAddress: z.string().trim().min(8).max(200),
+  listingUrl: z.string().url(),
+  senderInbox: z.string().email().refine((value) => value.endsWith("@agentmail.to")),
+  idempotencyKey: z.string().min(1).max(255).optional(),
+  verifiedListingPhotos: z.array(z.string().url()).min(1).max(12).optional(),
+  verifiedListingFacts: Listing.optional(),
+  approved: z.boolean().optional(),
+});
 
 const senderNames: Record<string, string> = {
   "iris-demo@agentmail.to": "Iris",
@@ -98,27 +96,28 @@ export async function POST(request: Request) {
       });
     }
   }
-  const tavilyKey = process.env.TAVILY_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
-  if (!tavilyKey || !openaiKey)
-    return NextResponse.json({ error: "Research is not configured" }, { status: 503 });
-
-  const researchResponse = await fetch("https://api.tavily.com/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: tavilyKey,
-      query: `Verify active real estate listing ${input.listingAddress} ${input.listingUrl}`,
-      include_raw_content: true,
-      include_images: true,
-      max_results: 6,
-      search_depth: "advanced",
-    }),
-  });
-  if (!researchResponse.ok) return NextResponse.json({ error: "Research failed" }, { status: 502 });
-  const research = await researchResponse.json();
-
-  const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+  let extracted: unknown = automated ? input.verifiedListingFacts : undefined;
+  if (!extracted) {
+    const tavilyKey = process.env.TAVILY_API_KEY;
+    if (!tavilyKey || !openaiKey)
+      return NextResponse.json({ error: "Research is not configured" }, { status: 503 });
+    const researchResponse = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: tavilyKey,
+        query: `Verify active real estate listing ${input.listingAddress} ${input.listingUrl}`,
+        include_raw_content: true,
+        include_images: true,
+        max_results: 6,
+        search_depth: "advanced",
+      }),
+    });
+    if (!researchResponse.ok)
+      return NextResponse.json({ error: "Research failed" }, { status: 502 });
+    const research = await researchResponse.json();
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -186,18 +185,20 @@ export async function POST(request: Request) {
       ],
     }),
   });
-  if (!aiResponse.ok)
-    return NextResponse.json({ error: "Listing extraction failed" }, { status: 502 });
-  const ai = await aiResponse.json();
-  const extracted = JSON.parse(ai.choices?.[0]?.message?.content ?? "null");
+    if (!aiResponse.ok)
+      return NextResponse.json({ error: "Listing extraction failed" }, { status: 502 });
+    const ai = await aiResponse.json();
+    extracted = JSON.parse(ai.choices?.[0]?.message?.content ?? "null");
+  }
   if (extracted && typeof extracted === "object") {
-    if (Array.isArray(extracted.highlights))
-      extracted.highlights = extracted.highlights.slice(0, 8);
-    if (Array.isArray(extracted.buyerNotes))
-      extracted.buyerNotes = extracted.buyerNotes.slice(0, 6);
+    const extractedRecord = extracted as Record<string, unknown>;
+    if (Array.isArray(extractedRecord.highlights))
+      extractedRecord.highlights = extractedRecord.highlights.slice(0, 8);
+    if (Array.isArray(extractedRecord.buyerNotes))
+      extractedRecord.buyerNotes = extractedRecord.buyerNotes.slice(0, 6);
     // Any imageUrls the model volunteers despite the schema are discarded outright rather
     // than filtered: photos come only from sourceListingPhotos below.
-    delete extracted.imageUrls;
+    delete extractedRecord.imageUrls;
   }
   const listing = Listing.safeParse(extracted);
   if (!listing.success)
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
           reason: "Exact-listing photo verified by the authenticated local HomeHarvest pipeline",
         })),
       }
-    : await verifyListingImages(input.listingAddress, input.listingUrl, imageUrls, openaiKey);
+    : await verifyListingImages(input.listingAddress, input.listingUrl, imageUrls, openaiKey ?? "");
   if (!imageQa.passed)
     return NextResponse.json(
       {
